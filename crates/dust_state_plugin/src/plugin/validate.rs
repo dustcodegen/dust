@@ -1,0 +1,217 @@
+use std::collections::HashSet;
+
+use dust_diagnostics::{Diagnostic, SourceLabel};
+use dust_ir::{ClassIr, DartFileIr, MethodIr, TraitApplicationIr};
+
+use super::{
+    model::ViewModelMode,
+    parse::{is_valid_mode_source, parse_view_model_config, view_model_config},
+};
+
+/// Validates state plugin annotations and generated-base-class contracts.
+pub(crate) fn validate_library_state(library: &DartFileIr) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let local_classes = library
+        .classes
+        .iter()
+        .map(|class| class.name.as_str())
+        .collect::<HashSet<_>>();
+    let local_enums = library
+        .enums
+        .iter()
+        .map(|enum_ir| enum_ir.name.as_str())
+        .collect::<HashSet<_>>();
+
+    for class in &library.classes {
+        let Some(config) = view_model_config(&class.configs) else {
+            continue;
+        };
+        let Some(annotation) = parse_view_model_config(config) else {
+            diagnostics.push(Diagnostic::error(format!(
+                "`@ViewModel` on `{}` requires `state: SomeState`",
+                class.name
+            )));
+            continue;
+        };
+
+        let expected_base = format!("${}", class.name);
+        if class.superclass_name.as_deref() != Some(expected_base.as_str()) {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` must extend `{expected_base}`",
+                class.name
+            )));
+        }
+
+        if let Some(mode_source) = annotation.mode_source.as_deref()
+            && !is_valid_mode_source(mode_source)
+        {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` mode `{mode_source}` must be `ViewModelMode.sync` or `ViewModelMode.async`",
+                class.name
+            )));
+        }
+
+        if !local_classes.contains(annotation.state_type.as_str())
+            && !local_enums.contains(annotation.state_type.as_str())
+            && !has_imports(library)
+        {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` state `{}` must be declared in the same library or imported",
+                class.name, annotation.state_type
+            )));
+        }
+
+        if annotation.mode == ViewModelMode::Async && annotation.initial_source.is_some() {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` uses async mode, so remove `initial:`; Dust owns AsyncState initialization",
+                class.name
+            )));
+        }
+
+        if annotation.mode == ViewModelMode::Sync
+            && annotation.initial_source.is_none()
+            && local_enums.contains(annotation.state_type.as_str())
+        {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` enum state `{}` requires `initial: {}.someValue`",
+                class.name, annotation.state_type, annotation.state_type
+            )));
+        }
+
+        if annotation.mode == ViewModelMode::Sync
+            && let Some(state_class) = local_state_class(library, &annotation.state_type)
+        {
+            if annotation.initial_source.is_none() {
+                validate_default_initial_state(class, state_class, &mut diagnostics);
+            }
+            validate_state_value_equality(class, state_class, &mut diagnostics);
+        }
+
+        if let Some(args_type) = annotation.args_type.as_deref() {
+            validate_args_type(library, class, args_type, &mut diagnostics);
+        }
+    }
+
+    diagnostics
+}
+
+/// Finds a state class declared in the same library.
+fn local_state_class<'a>(library: &'a DartFileIr, state_type: &str) -> Option<&'a ClassIr> {
+    library
+        .classes
+        .iter()
+        .find(|candidate| candidate.name == state_type)
+}
+
+/// Ensures Dust can create a default initial state when no `initial` is given.
+fn validate_default_initial_state(
+    view_model: &ClassIr,
+    state_class: &ClassIr,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if state_class.constructors.is_empty() {
+        if state_class.fields.iter().all(|field| field.has_default) {
+            return;
+        }
+        diagnostics.push(Diagnostic::error(format!(
+            "view model `{}` state `{}` needs `initial:` because Dust cannot prove `const {}()` is valid",
+            view_model.name, state_class.name, state_class.name
+        )));
+        return;
+    }
+
+    let Some(constructor) = state_class
+        .constructors
+        .iter()
+        .find(|constructor| constructor.name.is_none() && !constructor.is_factory)
+    else {
+        diagnostics.push(Diagnostic::error(format!(
+            "view model `{}` state `{}` needs an unnamed generative constructor or explicit `initial:`",
+            view_model.name, state_class.name
+        )));
+        return;
+    };
+
+    if constructor
+        .params
+        .iter()
+        .any(|param| !param.has_default && !param.ty.is_nullable())
+    {
+        diagnostics.push(Diagnostic::error(format!(
+            "view model `{}` state `{}` default constructor has required params; add `initial:`",
+            view_model.name, state_class.name
+        )));
+    }
+}
+
+/// Warns when a local sync state class does not expose value equality.
+fn validate_state_value_equality(
+    view_model: &ClassIr,
+    state_class: &ClassIr,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if has_eq_derive(&state_class.traits) || has_manual_equality_operator(&state_class.methods) {
+        return;
+    }
+
+    diagnostics.push(
+        Diagnostic::warning(format!(
+            "view model `{}` state `{}` should implement value equality",
+            view_model.name, state_class.name
+        ))
+        .with_label(SourceLabel::new(
+            state_class.span.file_id,
+            state_class.span.range,
+            "state changes are compared with `==`",
+        ))
+        .with_note("Add `Eq()` to the state class derive list, or implement `operator ==` and `hashCode` manually."),
+    );
+}
+
+/// Returns whether the state class has Dust's Eq derive.
+fn has_eq_derive(traits: &[TraitApplicationIr]) -> bool {
+    traits.iter().any(|application| {
+        application.symbol.0 == "dust_dart::Eq"
+            || application.symbol.0.rsplit("::").next() == Some("Eq")
+    })
+}
+
+/// Returns whether the state class defines equality itself.
+fn has_manual_equality_operator(methods: &[MethodIr]) -> bool {
+    methods
+        .iter()
+        .any(|method| !method.is_static && matches!(method.name.as_str(), "==" | "operator =="))
+}
+
+/// Validates that a declared args type is available and extends `ViewModelArgs`.
+fn validate_args_type(
+    library: &DartFileIr,
+    class: &ClassIr,
+    args_type: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(args_class) = library
+        .classes
+        .iter()
+        .find(|candidate| candidate.name == args_type)
+    else {
+        if !has_imports(library) {
+            diagnostics.push(Diagnostic::error(format!(
+                "view model `{}` args `{args_type}` must be declared in the same library or imported",
+                class.name
+            )));
+        }
+        return;
+    };
+    if args_class.superclass_name.as_deref() != Some("ViewModelArgs") {
+        diagnostics.push(Diagnostic::error(format!(
+            "view model `{}` args `{args_type}` must extend `ViewModelArgs`",
+            class.name
+        )));
+    }
+}
+
+/// Returns whether the library can satisfy references through imports.
+fn has_imports(library: &DartFileIr) -> bool {
+    !library.imports.is_empty()
+}

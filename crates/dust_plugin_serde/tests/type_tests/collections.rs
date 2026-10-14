@@ -1,0 +1,94 @@
+use dust_ir::{ParamKind, TypeIr};
+use dust_plugin_api::{DustPlugin, SymbolPlan};
+use dust_plugin_serde::register_plugin;
+
+use super::support::{class, constructor, constructor_param, field, library};
+
+#[test]
+fn handles_collection_types() {
+    let plugin = register_plugin();
+    let library = library(
+        vec![class(
+            "Collections",
+            vec![
+                field("l", TypeIr::generic("List", vec![TypeIr::string()])),
+                field("s", TypeIr::generic("Set", vec![TypeIr::string()])),
+                field(
+                    "m",
+                    TypeIr::generic("Map", vec![TypeIr::string(), TypeIr::string()]),
+                ),
+            ],
+            vec![constructor(
+                None,
+                vec![
+                    constructor_param(
+                        "l",
+                        TypeIr::generic("List", vec![TypeIr::string()]),
+                        ParamKind::Named,
+                    ),
+                    constructor_param(
+                        "s",
+                        TypeIr::generic("Set", vec![TypeIr::string()]),
+                        ParamKind::Named,
+                    ),
+                    constructor_param(
+                        "m",
+                        TypeIr::generic("Map", vec![TypeIr::string(), TypeIr::string()]),
+                        ParamKind::Named,
+                    ),
+                ],
+            )],
+            &["dust_dart::Serialize", "dust_dart::Deserialize"],
+        )],
+        vec![],
+    );
+
+    let contribution = plugin
+        .generate(
+            &library,
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+    let to_json = &contribution.top_level_functions[0];
+    let from_json = &contribution.top_level_functions[1];
+
+    assert_eq!(
+        to_json,
+        r#"Map<String, Object?> _$CollectionsSerialize(Collections instance) {
+  return <String, Object?>{
+    'l': instance.l
+        .map((item) => item)
+        .toList(),
+    's': instance.s
+        .map((item) => item)
+        .toList(),
+    'm': instance.m
+        .map((key, value) => MapEntry(key, value)),
+  };
+}
+
+Map<String, Object?> _$CollectionsToJson(Collections instance) =>
+    _$CollectionsSerialize(instance);"#
+    );
+    assert_eq!(
+        from_json,
+        r#"// factory Collections.fromJson(Map<String, Object?> json) => _$CollectionsFromJson(json);
+Collections _$CollectionsDeserialize(Map<String, Object?> json) {
+  final lValue = JsonHelper.decodeList(json['l'], 'l',
+      (item, itemKey) => JsonHelper.as<String>(item, itemKey, 'String'));
+  final sValue = JsonHelper.decodeSet(json['s'], 's',
+      (item, itemKey) => JsonHelper.as<String>(item, itemKey, 'String'));
+  final mValue = JsonHelper.decodeMap(json['m'], 'm',
+      (value, valueKey) => JsonHelper.as<String>(value, valueKey, 'String'));
+
+  return Collections(l: lValue, s: sValue, m: mValue);
+}
+
+Collections _$CollectionsFromJson(Map<String, Object?> json) =>
+    _$CollectionsDeserialize(json);"#
+    );
+}

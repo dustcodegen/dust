@@ -1,0 +1,19 @@
+//! Integration tests for class serde generation.
+
+#[path = "class_tests/support.rs"]
+mod support;
+
+#[path = "class_tests/basic.rs"]
+mod basic;
+
+#[path = "class_tests/nested.rs"]
+mod nested;
+
+#[path = "class_tests/config.rs"]
+mod config;
+
+#[path = "class_tests/sealed.rs"]
+mod sealed;
+
+#[path = "class_tests/sealed_generated_variants.rs"]
+mod sealed_generated_variants;

@@ -1,0 +1,19 @@
+[package]
+publish = false
+name = "dust_dart_emit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared Dart code emission helpers for Dust plugins."
+
+[dependencies]
+dust_dart_syntax = { path = "../dust_dart_syntax", version = "0.2.1" }
+dust_ir = { path = "../dust_ir", version = "0.2.1" }
+minijinja = { workspace = true }
+serde = { workspace = true }
+
+[lib]
+path = "src/lib.rs"

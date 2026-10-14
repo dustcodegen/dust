@@ -1,0 +1,41 @@
+[workspace]
+members = [
+    "crates/dust_text",
+    "crates/dust_diagnostics",
+    "crates/dust_dart_syntax",
+    "crates/dust_dart_emit",
+    "crates/dust_cache",
+    "crates/dust_parser_dart",
+    "crates/dust_parser_dart_ts",
+    "crates/dust_ir",
+    "crates/dust_resolver",
+    "crates/dust_plugin_api",
+    "crates/dust_plugin_derive",
+    "crates/dust_plugin_serde",
+    "crates/dust_emitter",
+    "crates/dust_workspace",
+    "crates/dust_driver",
+    "crates/dust_cli",
+    "crates/dust_http_client_plugin",
+    "crates/dust_route_plugin",
+    "crates/dust_state_plugin",
+    "crates/dust_db_plugin",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.2.1"
+edition = "2024"
+license = "MIT"
+rust-version = "1.85"
+repository = "https://github.com/y3l1n4ung/dust"
+homepage = "https://github.com/y3l1n4ung/dust"
+
+[workspace.dependencies]
+clap = { version = "4.5.31", features = ["derive"] }
+heck = "0.5.0"
+minijinja = "=2.20.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

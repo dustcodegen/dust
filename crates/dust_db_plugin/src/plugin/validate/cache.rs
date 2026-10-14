@@ -1,0 +1,269 @@
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+};
+
+use serde::{Deserialize, Serialize};
+
+use crate::plugin::{dialect::Dialect, model::QuerySpec};
+
+use super::{
+    hash::stable_hash_hex,
+    query::{query_row_type, validate_placeholders},
+};
+
+/// Version for the persisted DB query metadata cache format.
+pub(super) const QUERY_CACHE_VERSION: u32 = 3;
+
+/// Persisted DB query metadata cache.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(super) struct QueryCache {
+    /// Cache format version.
+    pub(super) version: u32,
+    /// Cached query metadata entries.
+    pub(super) entries: Vec<QueryCacheEntry>,
+}
+
+impl Default for QueryCache {
+    fn default() -> Self {
+        Self {
+            version: QUERY_CACHE_VERSION,
+            entries: Vec::new(),
+        }
+    }
+}
+
+/// One cached SQL describe result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(super) struct QueryCacheEntry {
+    /// Driver the entry was described against.
+    ///
+    /// Part of the key rather than a note: the same SQL describes differently
+    /// per dialect, so a cache written against one driver cannot answer for
+    /// another.
+    pub(super) driver: String,
+    /// Migration directory used for validation.
+    pub(super) migrations: String,
+    /// Stable hash of migration file names and contents.
+    pub(super) schema_hash: String,
+    /// Stable hash of the SQL source text.
+    pub(super) sql_hash: String,
+    /// Original SQL source text.
+    pub(super) sql: String,
+    /// Number of user-supplied bind parameters.
+    pub(super) user_parameter_count: usize,
+    /// Number of driver placeholders after `$n` expansion.
+    pub(super) expanded_parameter_count: usize,
+    /// Fetch mode string used by the query.
+    pub(super) fetch_mode: String,
+    /// Row type name for typed row queries.
+    pub(super) row_type: Option<String>,
+    /// Column names returned by SQLx describe.
+    pub(super) columns: Vec<String>,
+}
+
+/// Validates queries against the offline metadata cache.
+pub(super) fn validate_from_query_cache(
+    library: &dust_ir::DartFileIr,
+    dialect: &Dialect,
+    migrations: &str,
+    schema_hash: &str,
+    queries: &[QuerySpec],
+    row_columns: &HashMap<String, HashSet<String>>,
+) -> Result<(), String> {
+    let cache_path = query_cache_path(library);
+    let cache_source = fs::read_to_string(&cache_path).map_err(|error| {
+        format!(
+            "Database offline query metadata cache is missing or unreadable at `{}`: {error}",
+            cache_path.display()
+        )
+    })?;
+    let cache: QueryCache = serde_json::from_str(&cache_source).map_err(|error| {
+        format!(
+            "Database offline query metadata cache `{}` is invalid: {error}",
+            cache_path.display()
+        )
+    })?;
+    if cache.version != QUERY_CACHE_VERSION {
+        return Err(format!(
+            "Database offline query metadata cache `{}` uses unsupported version {}; run `dust db build` online first",
+            cache_path.display(),
+            cache.version
+        ));
+    }
+
+    for query in queries {
+        validate_cached_query(dialect, migrations, schema_hash, query, row_columns, &cache)?;
+    }
+    Ok(())
+}
+
+/// Writes successful SQLx describe metadata to the query cache.
+pub(super) fn write_query_cache(
+    library: &dust_ir::DartFileIr,
+    entries: Vec<QueryCacheEntry>,
+) -> Result<(), String> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    let path = query_cache_path(library);
+    // Every query in this library is described in one pass, so the file is
+    // rewritten rather than merged into. Merging is what made a shared cache
+    // racy; there is nothing to preserve here that this pass did not produce.
+    let mut cache = QueryCache::default();
+    for entry in entries {
+        cache.entries.retain(|existing| {
+            !(existing.migrations == entry.migrations
+                && existing.schema_hash == entry.schema_hash
+                && existing.sql_hash == entry.sql_hash
+                && existing.fetch_mode == entry.fetch_mode
+                && existing.row_type == entry.row_type)
+        });
+        cache.entries.push(entry);
+    }
+    cache.entries.sort_by(|left, right| {
+        left.migrations
+            .cmp(&right.migrations)
+            .then(left.schema_hash.cmp(&right.schema_hash))
+            .then(left.sql_hash.cmp(&right.sql_hash))
+            .then(left.fetch_mode.cmp(&right.fetch_mode))
+    });
+
+    let source = serde_json::to_string_pretty(&cache)
+        .map_err(|error| format!("failed to encode Database query cache: {error}"))?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            format!(
+                "failed to create Database query cache directory `{}`: {error}",
+                parent.display()
+            )
+        })?;
+    }
+    fs::write(&path, format!("{source}\n")).map_err(|error| {
+        format!(
+            "failed to write Database query cache `{}`: {error}",
+            path.display()
+        )
+    })
+}
+
+/// Validates cached returned columns against row mapper requirements.
+pub(super) fn validate_cached_columns(
+    query: &QuerySpec,
+    row_columns: &HashMap<String, HashSet<String>>,
+    returned_columns: &[String],
+) -> Result<(), String> {
+    let Some(row_type) = query_row_type(query) else {
+        return Ok(());
+    };
+    let Some(required_columns) = row_columns.get(row_type) else {
+        return Ok(());
+    };
+    let returned_columns = returned_columns.iter().collect::<HashSet<_>>();
+    if let Some(missing) = required_columns
+        .iter()
+        .find(|column| !returned_columns.contains(*column))
+    {
+        return Err(format!(
+            "cached SQL metadata for `{}` does not return required column `{missing}` for row `{row_type}`",
+            query.display_name()
+        ));
+    }
+    Ok(())
+}
+
+/// Directory holding the committed DB query metadata cache.
+///
+/// Package root rather than `.dart_tool/`, because this is a build input and
+/// not a build artifact: it is what lets a checkout with no database validate
+/// its SQL, so it is committed and `dust clean` leaves it alone. SQLx keeps
+/// `.sqlx/` for the same reason.
+pub(super) const QUERY_CACHE_DIR: &str = ".dust_sql";
+
+/// Returns the DB query metadata cache path for one library.
+///
+/// One file per library, not one per package. Libraries are validated in
+/// parallel worker threads, so a shared path meant several threads
+/// read-modify-writing the same file at once: entries were lost, and the file
+/// was often left as invalid JSON. A library owns its own cache, so there is
+/// nothing to race over and nothing to merge.
+pub(super) fn query_cache_path(library: &dust_ir::DartFileIr) -> PathBuf {
+    let source = Path::new(&library.source_path);
+    let stem = source
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or("library");
+    let digest = stable_hash_hex(library.source_path.as_bytes());
+    Path::new(&library.package_root)
+        .join(QUERY_CACHE_DIR)
+        .join(format!("{stem}-{digest}.json"))
+}
+
+/// Validates one query against a matching cache entry.
+fn validate_cached_query(
+    dialect: &Dialect,
+    migrations: &str,
+    schema_hash: &str,
+    query: &QuerySpec,
+    row_columns: &HashMap<String, HashSet<String>>,
+    cache: &QueryCache,
+) -> Result<(), String> {
+    let rewrite = validate_placeholders(&query.sql, query.parameter_count)?;
+    // The bind count a statement implies is dialect-specific: a repeated `$1`
+    // is two binds where the driver rewrites to `?`, and one where the database
+    // reads `$n` itself. Checking the SQLite rule against a Postgres cache
+    // rejects a query the online build accepted.
+    let expected_parameters = if dialect.rewrites_placeholders {
+        rewrite.expanded_parameter_count()
+    } else {
+        query.parameter_count
+    };
+    let sql_hash = stable_hash_hex(query.sql.as_bytes());
+    let matches_query = |entry: &&QueryCacheEntry| {
+        entry.migrations == migrations
+            && entry.schema_hash == schema_hash
+            && entry.sql_hash == sql_hash
+            && entry.sql == query.sql
+            && entry.fetch_mode == query.fetch.as_str()
+            && entry.row_type == query.row_type
+    };
+    let Some(entry) = cache
+        .entries
+        .iter()
+        .find(|entry| matches_query(entry) && entry.driver == dialect.name)
+    else {
+        // A cache built against another dialect is the likely reason on a
+        // project that has just gained a second driver, and "missing entry"
+        // sends the reader looking for the wrong thing.
+        if let Some(other) = cache.entries.iter().find(matches_query) {
+            return Err(format!(
+                "Database offline query metadata cache for `{}` was written for driver `{}`, but this build targets `{}`; run `dust db build` online against `{}` first",
+                query.display_name(),
+                other.driver,
+                dialect.name,
+                dialect.name
+            ));
+        }
+        return Err(format!(
+            "Database offline query metadata cache is missing entry for `{}`; run `dust db build` online first",
+            query.display_name()
+        ));
+    };
+    if entry.user_parameter_count != query.parameter_count {
+        return Err(format!(
+            "cached SQL metadata for `{}` expects {} parameters but query binds {} args",
+            query.display_name(),
+            entry.user_parameter_count,
+            query.parameter_count
+        ));
+    }
+    if entry.expanded_parameter_count != expected_parameters {
+        return Err(format!(
+            "cached SQL metadata for `{}` has stale placeholder expansion; run `dust db build` online first",
+            query.display_name()
+        ));
+    }
+    validate_cached_columns(query, row_columns, &entry.columns)
+}

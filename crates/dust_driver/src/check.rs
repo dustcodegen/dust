@@ -1,0 +1,106 @@
+use std::time::Instant;
+
+use crate::{
+    build::{
+        ApplyOutcomeConfig, BatchConfig, RegistrySelection, flush_cache_into_result,
+        prepare_and_process_batch,
+    },
+    context::CachedDriverContext,
+    i18n_bootstrap::check_i18n_bootstrap,
+    progress::ProgressPhase,
+    request::CheckRequest,
+    result::{CheckedLibrary, CommandResult},
+};
+
+/// Runs a no-write freshness check across the discovered workspace.
+pub fn run_check(request: CheckRequest) -> CommandResult {
+    let started = Instant::now();
+    let mut result = CommandResult::default();
+
+    let CachedDriverContext {
+        workspace,
+        registry,
+        catalog,
+        tool_hash,
+        package_config_hash,
+        mut cache,
+        mut cache_report,
+    } = match CachedDriverContext::load(&request.cwd, RegistrySelection::for_check(request.db)) {
+        Ok(context) => context,
+        Err(diagnostic) => {
+            result.diagnostics.push(diagnostic);
+            result.elapsed_ms = started.elapsed().as_millis();
+            return result;
+        }
+    };
+
+    let batch = prepare_and_process_batch(
+        BatchConfig {
+            cache_root: &workspace.cache_root,
+            package_root: &workspace.package_root,
+            package_name: &workspace.package_name,
+            is_flutter_package: workspace.is_flutter_package,
+            dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
+            package_config_hash,
+            tool_hash,
+            cache: &cache,
+            catalog: &catalog,
+            registry: &registry,
+            write_output: false,
+            fail_fast: request.fail_fast,
+            jobs: request.jobs,
+            file_id_base: 1,
+            phase: ProgressPhase::Build,
+            progress: None,
+        },
+        &workspace.libraries,
+        &mut cache_report,
+    );
+
+    let apply_config = ApplyOutcomeConfig {
+        cache_root: &workspace.cache_root,
+        package_config_hash,
+        workspace_analysis_hash: batch.workspace_analysis_hash,
+        fail_fast: request.fail_fast,
+    };
+
+    for indexed_outcome in batch.outcomes {
+        let has_error = indexed_outcome
+            .outcome
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.is_error());
+        result.checked_libraries.push(CheckedLibrary {
+            source_path: indexed_outcome.outcome.artifact.source_path.clone(),
+            output_path: indexed_outcome.outcome.artifact.output_path.clone(),
+            auxiliary_output_paths: indexed_outcome
+                .outcome
+                .artifact
+                .auxiliary_output_paths
+                .clone(),
+            stale: !has_error && indexed_outcome.outcome.artifact.changed,
+            cached: indexed_outcome.outcome.artifact.cached,
+        });
+
+        if crate::build::apply_indexed_outcomes(
+            std::iter::once(indexed_outcome),
+            apply_config,
+            &mut cache,
+            &mut result,
+            None,
+        ) {
+            break;
+        }
+    }
+
+    match check_i18n_bootstrap(&workspace.package_root, &workspace.dust_config) {
+        Ok(Some(checked)) => result.checked_libraries.push(checked),
+        Ok(None) => {}
+        Err(diagnostic) => result.diagnostics.push(diagnostic),
+    }
+
+    flush_cache_into_result(&mut cache, &mut result);
+    result.cache = Some(cache_report);
+    result.elapsed_ms = started.elapsed().as_millis();
+    result
+}

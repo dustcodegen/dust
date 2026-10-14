@@ -1,0 +1,12 @@
+Page<dynamic> {{ build_page_function }}(
+  {{ route_base_class }} route,
+  LocalKey key,
+  PopInvokedWithResultCallback<Object?> onPopInvoked,
+) {
+  assert(
+    generatedRouteShellsMatch({{ routes_variable }}, _$appliedShellsByPage),
+    'Shell mismatch between \{{ routes_variable }} and {{ build_page_function }}',
+  );
+  return switch (route) {
+{{ cases }}  };
+}

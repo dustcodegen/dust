@@ -1,0 +1,101 @@
+use dust_diagnostics::Diagnostic;
+use dust_ir::DartFileIr;
+use dust_plugin_api::{DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder};
+
+/// Collects route, router, and guard facts across the workspace.
+mod analysis;
+/// Builds the final router generation spec from local IR and workspace facts.
+mod build;
+/// Shared route annotation names and workspace analysis keys.
+mod constants;
+/// Renders generated Flutter route code.
+mod emit;
+/// Route inspection output built from route analysis facts.
+pub mod inspect;
+/// Deterministic sample values for route fixture output.
+/// Deep-link fixture output built from route analysis facts.
+/// Internal route plugin model used by validation and emission.
+mod model;
+/// Parses route annotations from lowered IR and source-surface facts.
+mod parse;
+/// Validates route pages and router configuration.
+mod validate;
+
+use self::analysis::collect_route_workspace_analysis_ir;
+use self::build::build_router_spec;
+use self::constants::{CLAIMED_CONFIG_SYMBOLS, SUPPORTED_ANNOTATIONS};
+use self::emit::render_route_generated_files;
+use self::validate::validate_library_routes;
+
+/// Dust plugin for typed Flutter Navigator 2.0 routing.
+pub struct RoutePlugin;
+
+impl RoutePlugin {
+    /// Creates a new route plugin.
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for RoutePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Creates the route plugin.
+pub fn register_plugin() -> RoutePlugin {
+    RoutePlugin::new()
+}
+
+impl DustPlugin for RoutePlugin {
+    fn plugin_name(&self) -> &'static str {
+        "Route"
+    }
+
+    fn claimed_configs(&self) -> &'static [&'static str] {
+        CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn partless_configs(&self) -> &'static [&'static str] {
+        CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn supported_annotations(&self) -> &'static [&'static str] {
+        SUPPORTED_ANNOTATIONS
+    }
+
+    fn collect_workspace_analysis_ir(
+        &self,
+        library: &DartFileIr,
+        analysis: &mut WorkspaceAnalysisBuilder,
+    ) {
+        collect_route_workspace_analysis_ir(library, analysis);
+    }
+
+    fn validate(&self, library: &DartFileIr) -> Vec<Diagnostic> {
+        validate_library_routes(library)
+    }
+
+    fn generate(
+        &self,
+        library: &DartFileIr,
+        context: &PluginContext<'_>,
+    ) -> Vec<PluginContribution> {
+        let spec = match build_router_spec(library, context.symbol_plan) {
+            Ok(Some(spec)) => spec,
+            Ok(None) => return vec![PluginContribution::default()],
+            Err(diagnostics) => {
+                return vec![PluginContribution {
+                    diagnostics,
+                    ..PluginContribution::default()
+                }];
+            }
+        };
+        vec![PluginContribution {
+            suppress_primary_output: true,
+            auxiliary_outputs: render_route_generated_files(library, &spec),
+            ..PluginContribution::default()
+        }]
+    }
+}

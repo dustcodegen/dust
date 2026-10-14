@@ -1,0 +1,273 @@
+use dust_plugin_api::{DustPlugin, SymbolPlan};
+use dust_state_plugin::register_plugin;
+
+use super::support::{extract_doc_before, extract_extension};
+use crate::support::{args_class, library_with_classes, state_class, view_model_class};
+
+#[test]
+fn emits_generated_base_with_args_getters() {
+    let plugin = register_plugin();
+    let contribution = plugin
+        .generate(
+            &library_with_classes(vec![
+                state_class(),
+                args_class(),
+                view_model_class(
+                    "TaskBoardViewModel",
+                    "(state: TaskBoardState, args: TaskBoardArgs)",
+                ),
+            ]),
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+
+    assert_eq!(contribution.support_types.len(), 1);
+    let source = &contribution.support_types[0];
+    assert!(source.contains("abstract class $TaskBoardViewModel"));
+    assert!(source.contains("extends ViewModelBase<TaskBoardState, TaskBoardArgs>"));
+    assert!(source.contains(
+        "$TaskBoardViewModel(super.args) : super(initialState: const TaskBoardState());"
+    ));
+    assert!(!source.contains("get repository => args.repository"));
+    assert!(source.contains("class TaskBoardViewModelScope extends StatefulWidget"));
+    assert!(source.contains("void didUpdateWidget(TaskBoardViewModelScope oldWidget)"));
+    assert!(source.contains("this.identity"));
+    assert!(source.contains("final Object? Function(BuildContext context)? identity;"));
+    assert!(source.contains("class TaskBoardViewModelSelector<R> extends StatefulWidget"));
+    assert!(source.contains("final R Function(TaskBoardState state) selector;"));
+    assert!(source.contains("final bool Function(R previous, R next)? equals;"));
+    assert!(
+        source.contains("final nextViewModel = TaskBoardViewModelScope._watchInstance(context);")
+    );
+    assert!(source.contains("class _TaskBoardViewModelInstance extends InheritedWidget"));
+    assert!(source.contains("scheduleMicrotask(() async {"));
+    assert!(source.contains("await viewModel.init();"));
+    assert!(source.contains("FlutterError.reportError("));
+    assert!(source.contains("ErrorDescription('TaskBoardViewModelScope init failed')"));
+    assert!(source.contains("Error.throwWithStackTrace(error, stackTrace);"));
+    assert!(!source.contains("Original error: $error"));
+    assert!(!source.contains("ViewModelOwner<"));
+    assert!(!source.contains("ListenableBuilder("));
+    assert!(!source.contains("if (ownsViewModel) {"));
+    assert!(source.contains("class TaskBoardViewModelListener extends StatefulWidget"));
+    assert_eq!(
+        extract_doc_before(source, "abstract class $TaskBoardViewModel"),
+        r#"/// Base class generated for TaskBoardViewModel.
+///
+/// Extend it from your ViewModel and forward typed args:
+///
+/// ```dart
+/// final class TaskBoardViewModel extends $TaskBoardViewModel {
+///   TaskBoardViewModel(super.args);
+/// }
+/// ```"#
+    );
+    assert_eq!(
+        extract_doc_before(source, "class _$TaskBoardViewModelProxy"),
+        r#"/// Reads TaskBoardViewModel state from `BuildContext`.
+///
+/// Read `value` when the widget should rebuild for any state change.
+///
+/// ```dart
+/// final state = context.watchTaskBoardViewModel().value;
+/// ```"#
+    );
+    assert_eq!(
+        extract_doc_before(source, "class TaskBoardViewModelScope"),
+        r#"/// Creates and provides TaskBoardViewModel to descendants.
+///
+/// The default constructor owns the ViewModel. Use `.value` for externally
+/// owned ViewModels.
+///
+/// ```dart
+/// TaskBoardViewModelScope(
+///   args: (context) => TaskBoardArgs(...),
+///   create: (context, args) => TaskBoardViewModel(args),
+///   child: const FeaturePage(),
+/// )
+/// ```"#
+    );
+    assert_eq!(
+        extract_doc_before(source, "const TaskBoardViewModelScope({"),
+        r#"  /// Creates and owns TaskBoardViewModel from typed args."#
+    );
+    assert_eq!(
+        extract_doc_before(source, "const TaskBoardViewModelScope.value({"),
+        r#"  /// Provides an externally owned TaskBoardViewModel without disposing it."#
+    );
+    assert_eq!(
+        extract_doc_before(source, "static TaskBoardViewModel read"),
+        r#"  /// Reads TaskBoardViewModel without rebuilding when state changes."#
+    );
+    assert_eq!(
+        extract_doc_before(source, "static TaskBoardViewModel of"),
+        r#"  /// Watches TaskBoardViewModel and rebuilds when state changes."#
+    );
+    assert_eq!(
+        extract_doc_before(source, "class TaskBoardViewModelListener"),
+        r#"/// Handles one-shot effects from TaskBoardViewModel.
+///
+/// Effects are delivered without changing state and do not rebuild `child`.
+///
+/// ```dart
+/// TaskBoardViewModelListener(
+///   listener: onEffect,
+///   child: const FeaturePage(),
+/// )
+/// ```"#
+    );
+    assert_eq!(
+        extract_doc_before(source, "extension TaskBoardViewModelBuildContext"),
+        r#"/// BuildContext helpers generated for TaskBoardViewModel.
+///
+/// ```dart
+/// final vm = context.readTaskBoardViewModel();
+/// final state = context.watchTaskBoardViewModel().value;
+/// ```"#
+    );
+    assert_eq!(
+        extract_extension(source, "extension TaskBoardViewModelBuildContext"),
+        r#"extension TaskBoardViewModelBuildContext on BuildContext {
+  _$TaskBoardViewModelProxy watchTaskBoardViewModel() {
+    return _$TaskBoardViewModelProxy(this);
+  }
+
+  TaskBoardViewModel readTaskBoardViewModel() => TaskBoardViewModelScope.read(this);
+}"#
+    );
+}
+
+#[test]
+fn emits_explicit_initial_expression() {
+    let plugin = register_plugin();
+    let contribution = plugin
+        .generate(
+            &library_with_classes(vec![
+                args_class(),
+                view_model_class(
+                    "ShellViewModel",
+                    "(state: ShellTab, args: TaskBoardArgs, initial: ShellTab.dashboard)",
+                ),
+            ]),
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+
+    let source = &contribution.support_types[0];
+    assert!(
+        source.contains("$ShellViewModel(super.args) : super(initialState: ShellTab.dashboard);")
+    );
+}
+
+#[test]
+fn emits_async_view_model_base() {
+    let plugin = register_plugin();
+    let contribution = plugin
+        .generate(
+            &library_with_classes(vec![
+                args_class(),
+                view_model_class(
+                    "ProfileViewModel",
+                    "(state: Profile, args: TaskBoardArgs, mode: ViewModelMode.async)",
+                ),
+            ]),
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+
+    let source = &contribution.support_types[0];
+    assert!(source.contains("abstract class $ProfileViewModel"));
+    assert!(source.contains("extends AsyncViewModelBase<Profile, TaskBoardArgs>"));
+    assert!(source.contains("$ProfileViewModel(super.args);"));
+    assert!(source.contains("AsyncState<Profile> get value"));
+    assert!(source.contains("final R Function(AsyncState<Profile> state) selector;"));
+    assert!(source.contains("class ProfileViewModelBuilder extends StatelessWidget"));
+    assert!(source.contains("final Widget Function(BuildContext context, Profile data) data;"));
+    assert!(source.contains("AsyncLoading<Profile>("));
+    assert!(source.contains("hasPreviousData: true"));
+    assert!(source.contains("AsyncLoading<Profile>() => loading(context)"));
+    assert!(source.contains("AsyncInitial<Profile>() => loading(context)"));
+    assert!(!source.contains("_ => loading(context)"));
+    assert!(!source.contains("const Profile()"));
+    assert!(!source.contains("initialState:"));
+}
+
+#[test]
+fn emits_value_only_proxy_for_fieldless_state() {
+    let plugin = register_plugin();
+    let contribution = plugin
+        .generate(
+            &library_with_classes(vec![
+                state_class(),
+                args_class(),
+                view_model_class(
+                    "TaskBoardViewModel",
+                    "(state: TaskBoardState, args: TaskBoardArgs)",
+                ),
+            ]),
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+
+    let source = &contribution.support_types[0];
+    assert!(!source.contains("enum _TaskBoardViewModelAspect"));
+    assert!(source.contains("TaskBoardState get value"));
+    assert!(!source.contains("select<R>"));
+    assert!(!source.contains("int get count"));
+    assert_eq!(
+        extract_extension(source, "extension TaskBoardViewModelBuildContext"),
+        r#"extension TaskBoardViewModelBuildContext on BuildContext {
+  _$TaskBoardViewModelProxy watchTaskBoardViewModel() {
+    return _$TaskBoardViewModelProxy(this);
+  }
+
+  TaskBoardViewModel readTaskBoardViewModel() => TaskBoardViewModelScope.read(this);
+}"#
+    );
+}
+
+#[test]
+fn emits_single_output_per_annotated_view_model() {
+    let plugin = register_plugin();
+    let contribution = plugin
+        .generate(
+            &library_with_classes(vec![
+                state_class(),
+                args_class(),
+                view_model_class(
+                    "TaskBoardViewModel",
+                    "(state: TaskBoardState, args: TaskBoardArgs)",
+                ),
+                view_model_class(
+                    "SecondaryViewModel",
+                    "(state: TaskBoardState, args: TaskBoardArgs)",
+                ),
+            ]),
+            &dust_plugin_api::PluginContext {
+                symbol_plan: &SymbolPlan::default(),
+            },
+        )
+        .into_iter()
+        .next()
+        .expect("plugin must generate one contribution");
+
+    assert_eq!(contribution.support_types.len(), 2);
+    assert!(contribution.support_types[0].contains("$TaskBoardViewModel"));
+    assert!(contribution.support_types[1].contains("$SecondaryViewModel"));
+}

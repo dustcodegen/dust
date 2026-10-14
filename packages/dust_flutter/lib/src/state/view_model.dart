@@ -1,0 +1,281 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import 'async_state.dart';
+import 'observers.dart';
+
+export 'async_state.dart';
+export 'observers.dart';
+
+/// Token used by view models to ignore stale async results.
+@immutable
+final class ViewModelActionToken {
+  const ViewModelActionToken._(this.key, this.version);
+
+  /// Logical action key, usually a private string or symbol.
+  final Object key;
+
+  /// Version assigned when this action started.
+  final int version;
+}
+
+/// Base class used by generated Dust view model bases.
+abstract class ViewModelBase<TState, TArgs extends ViewModelArgs>
+    extends ValueNotifier<TState> {
+  /// Creates a view model with typed [args] and [initialState].
+  ViewModelBase(this.args, {required TState initialState})
+      : _initialState = initialState,
+        super(initialState);
+
+  /// Typed dependencies for this view model.
+  final TArgs args;
+
+  final TState _initialState;
+  final StreamController<Object> _effects =
+      StreamController<Object>.broadcast();
+  final Map<Object, int> _actionVersions = <Object, int>{};
+  Future<void>? _initFuture;
+  bool _didAttemptInit = false;
+  bool _didInit = false;
+  bool _isDisposed = false;
+
+  /// Current state. Prefer this over [value] in app code.
+  TState get state => value;
+
+  @override
+  set value(TState next) {
+    if (_isDisposed || super.value == next) return;
+    final previous = super.value;
+    super.value = next;
+    observer?.onChanged(this, previous, next);
+  }
+
+  /// Observer inherited from [args].
+  StateObserver? get observer => args.observer;
+
+  /// Broadcast stream of one-shot effects.
+  ///
+  /// Effects are delivered asynchronously to currently subscribed listeners.
+  /// Effects emitted before subscription are not replayed.
+  Stream<Object> get effects => _effects.stream;
+
+  /// Emits [next] if it differs from the current state.
+  @protected
+  // Generated APIs use `emit(next)` as the stable view-model verb.
+  // ignore: use_setters_to_change_properties
+  void emit(TState next) {
+    value = next;
+  }
+
+  /// Emits a one-shot [effect] without mutating state.
+  @protected
+  void emitEffect(Object effect) {
+    if (_isDisposed) return;
+    final deliveredEffect = _unwrapEffect(effect);
+    observer?.onEffect(this, deliveredEffect);
+    _effects.add(deliveredEffect);
+  }
+
+  /// Runs an async action and ignores stale results for [key].
+  ///
+  /// Use this for normal async commands on sync ViewModels. [onStart] runs
+  /// immediately after the action token is created. [onSuccess] or [onError]
+  /// runs only when this action is still current after [run] completes.
+  ///
+  /// Returns `true` when the current result or error was handled, and `false`
+  /// when the ViewModel was disposed or a newer action superseded this one.
+  /// If [run] throws and [onError] is omitted, the current error is rethrown.
+  @protected
+  Future<bool> runAction<TResult>(
+    Object key, {
+    required FutureOr<TResult> Function() run,
+    void Function()? onStart,
+    void Function(TResult result)? onSuccess,
+    void Function(Object error, StackTrace stackTrace)? onError,
+  }) async {
+    if (_isDisposed) return false;
+    final token = beginAction(key);
+    onStart?.call();
+
+    try {
+      final result = await run();
+      if (!isCurrentAction(token)) return false;
+      onSuccess?.call(result);
+      return true;
+    } on Object catch (error, stackTrace) {
+      if (!isCurrentAction(token)) return false;
+      if (onError == null) rethrow;
+      onError(error, stackTrace);
+      return true;
+    }
+  }
+
+  /// Starts or supersedes an async action result identified by [key].
+  ///
+  /// Store the returned token before awaiting. After the await, call
+  /// [isCurrentAction] before emitting state. This prevents older async results
+  /// from overwriting newer state.
+  @protected
+  ViewModelActionToken beginAction(Object key) {
+    final version = (_actionVersions[key] ?? 0) + 1;
+    _actionVersions[key] = version;
+    return ViewModelActionToken._(key, version);
+  }
+
+  /// Returns whether [token] still belongs to the latest result for its key.
+  @protected
+  bool isCurrentAction(ViewModelActionToken token) {
+    return !_isDisposed && _actionVersions[token.key] == token.version;
+  }
+
+  /// Invalidates any pending action result for [key].
+  ///
+  /// This does not abort a running [Future], network request, upload, or other
+  /// resource. It only makes older tokens fail [isCurrentAction].
+  @protected
+  void cancelAction(Object key) {
+    _actionVersions[key] = (_actionVersions[key] ?? 0) + 1;
+  }
+
+  void _cancelActions() {
+    for (final key in _actionVersions.keys.toList()) {
+      cancelAction(key);
+    }
+  }
+
+  /// Invalidates pending action results and restores the initial state.
+  ///
+  /// This does not abort running async work. In-flight work must cooperate with
+  /// [isCurrentAction] before emitting later results.
+  void invalidateSelf() {
+    if (_isDisposed) return;
+    _cancelActions();
+    emit(_initialState);
+  }
+
+  /// Override for one-time initialization.
+  @protected
+  FutureOr<void> onInit() {}
+
+  /// Runs one [onInit] attempt, even under concurrent scope rebuilds.
+  ///
+  /// If [onInit] fails, later scope rebuilds do not retry it implicitly. Use
+  /// [retryInit] when app code intentionally wants another initialization
+  /// attempt after a failure.
+  Future<void> init() {
+    if (_isDisposed) return Future<void>.value();
+    if (_initFuture case final pending?) return pending;
+    if (_didAttemptInit) return Future<void>.value();
+    return _startInit();
+  }
+
+  /// Explicitly retries [onInit] after a failed initialization attempt.
+  ///
+  /// Concurrent calls share the same pending initialization. Once [onInit] has
+  /// completed successfully, this method becomes a no-op.
+  Future<void> retryInit() {
+    if (_isDisposed || _didInit) return Future<void>.value();
+    if (_initFuture case final pending?) return pending;
+    return _startInit();
+  }
+
+  Future<void> _startInit() {
+    _didAttemptInit = true;
+    return _initFuture ??= _runInit();
+  }
+
+  Future<void> _runInit() async {
+    try {
+      await onInit();
+      _didInit = true;
+    } finally {
+      _initFuture = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isDisposed) return;
+    _isDisposed = true;
+    _actionVersions.clear();
+    unawaited(_effects.close());
+    super.dispose();
+  }
+}
+
+Object _unwrapEffect(Object effect) {
+  // ignore: deprecated_member_use_from_same_package
+  if (effect case StateEffect(:final value)) return value;
+  return effect;
+}
+
+/// Base class used by generated async Dust view model bases.
+abstract class AsyncViewModelBase<TData, TArgs extends ViewModelArgs>
+    extends ViewModelBase<AsyncState<TData>, TArgs> {
+  /// Creates an async view model.
+  AsyncViewModelBase(super.args) : super(initialState: AsyncInitial<TData>());
+
+  static const Object _loadAction = Object();
+
+  /// Loads fresh data for this view model.
+  Future<TData> loadData();
+
+  /// Starts initial loading.
+  Future<void> load() => _runLoad(preserveData: false);
+
+  /// Reloads data while preserving visible data when present.
+  Future<void> refresh() => _runLoad(preserveData: true);
+
+  /// Retries after an error while preserving previous data when present.
+  Future<void> retry() => refresh();
+
+  /// Current visible data.
+  TData? get data => state.data;
+
+  /// Current or previous visible data.
+  TData? get visibleData {
+    if (state.hasData) return state.data;
+    if (state.hasPreviousData) return state.previousData;
+    return null;
+  }
+
+  @override
+  Future<void> onInit() => load();
+
+  @override
+  void invalidateSelf() {
+    if (_isDisposed) return;
+    _cancelActions();
+    unawaited(load());
+  }
+
+  Future<void> _runLoad({required bool preserveData}) async {
+    if (_isDisposed) return;
+    final token = beginAction(_loadAction);
+    final previousData = preserveData ? visibleData : null;
+    final hasPreviousData =
+        preserveData && (state.hasData || state.hasPreviousData);
+    emit(
+      AsyncLoading<TData>(
+        previousData: previousData,
+        hasPreviousData: hasPreviousData,
+      ),
+    );
+    try {
+      final nextData = await loadData();
+      if (!isCurrentAction(token)) return;
+      emit(AsyncData<TData>(nextData));
+    } on Object catch (error, stackTrace) {
+      if (!isCurrentAction(token)) return;
+      emit(
+        AsyncFailure<TData>(
+          error,
+          stackTrace,
+          previousData: previousData,
+          hasPreviousData: hasPreviousData,
+        ),
+      );
+    }
+  }
+}

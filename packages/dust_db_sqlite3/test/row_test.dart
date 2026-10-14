@@ -1,0 +1,157 @@
+import 'package:dust_dart/db.dart';
+import 'package:dust_db_sqlite3/dust_db_sqlite3.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:test/test.dart';
+
+import 'support/unsafe_rows.dart';
+
+void main() {
+  test('sqlite row reads every supported conversion', () async {
+    final pool = SqlitePool.open(':memory:');
+    addTearDown(() async {
+      await pool.close();
+    });
+
+    final rows = await unsafeRows(
+        pool,
+        "SELECT 1 AS id, 2 AS score, 3.5 AS ratio, 'Ada' AS name, "
+        "1 AS one_bool, 0 AS zero_bool, 'true' AS true_text, "
+        "'false' AS false_text, '2026-01-01T10:00:00+06:30' AS created_at, "
+        "NULL AS empty_value",
+        const []);
+    final row = rows.single;
+
+    expect(row, isA<Sqlite3Row>());
+    expect(row.read<int>('id'), 1);
+    expect(row.read<double>('score'), 2.0);
+    expect(row.read<num>('ratio'), 3.5);
+    expect(row.read<String>('name'), 'Ada');
+    expect(row.readBool('one_bool'), isTrue);
+    expect(row.readBool('zero_bool'), isFalse);
+    expect(row.readBool('true_text'), isTrue);
+    expect(row.readBool('false_text'), isFalse);
+    expect(row.readDateTime('created_at'), DateTime.utc(2026, 1, 1, 3, 30));
+    expect(row.readNullable<Object?>('empty_value'), isNull);
+    expect(row.readIndex<int>(0), 1);
+    expect(row.readIndexNullable<Object?>(99), isNull);
+  });
+
+  test(
+    'sqlite row reports null and unsupported values as decode errors',
+    () async {
+      final pool = SqlitePool.open(':memory:');
+      addTearDown(() async {
+        await pool.close();
+      });
+
+      final rows = await unsafeRows(
+          pool,
+          "SELECT NULL AS value, 'maybe' AS bad_bool, x'01' AS blob_value, "
+          "'not-a-date' AS bad_date",
+          const []);
+      final row = rows.single;
+
+      expect(row.readDateTimeNullable('value'), isNull);
+      expect(row.readIndexNullable<int>(0), isNull);
+      expect(() => row.readIndex<int>(0), throwsA(isA<SqlxDecodeError>()));
+      expect(() => row.readBool('value'), throwsA(isA<SqlxDecodeError>()));
+      expect(() => row.readBool('bad_bool'), throwsA(isA<SqlxDecodeError>()));
+      expect(() => row.readBool('blob_value'), throwsA(isA<SqlxDecodeError>()));
+      expect(() => row.readDateTime('value'), throwsA(isA<SqlxDecodeError>()));
+      expect(
+        () => row.readDateTime('bad_date'),
+        throwsA(isA<SqlxDecodeError>()),
+      );
+      expect(
+        () => row.readDateTime('blob_value'),
+        throwsA(isA<SqlxDecodeError>()),
+      );
+      expect(
+        () => row.read<int>('blob_value'),
+        throwsA(isA<SqlxDecodeError>()),
+      );
+    },
+  );
+
+  test('Sqlite3Row wraps direct sqlite3 result rows', () {
+    final database = sqlite.sqlite3.openInMemory();
+    addTearDown(database.close);
+
+    database.execute('CREATE TABLE users (id INTEGER, active INTEGER)');
+    database.execute('INSERT INTO users (id, active) VALUES (7, 1)');
+
+    final sqliteRow = database.select('SELECT id, active FROM users').single;
+    final row = Sqlite3Row(sqliteRow);
+
+    expect(row.read<int>('id'), 7);
+    expect(row.readBool('active'), isTrue);
+  });
+
+  test('reads columns without trailing nullability markers', () {
+    final database = sqlite.sqlite3.openInMemory();
+    addTearDown(database.close);
+
+    final row = Sqlite3Row(
+      database.select('SELECT 42 AS "total!", 7 AS "maybe?"').single,
+    );
+
+    expect(row.read<int>('total'), 42);
+    expect(row.readNullable<int>('maybe'), 7);
+    expect(row.read<int>('total!'), 42);
+  });
+
+  group('column index', () {
+    // Rows are read out of the result's own data through one name index built
+    // for the whole result, rather than through the driver's row. These are
+    // the behaviours that has to keep.
+    late sqlite.Database database;
+
+    setUp(() {
+      database = sqlite.sqlite3.openInMemory();
+      addTearDown(database.close);
+    });
+
+    test('a name selected twice resolves to the last of them', () {
+      final result = database.select('SELECT 1 AS v, 2 AS v');
+      final row = Sqlite3Row(result.single);
+
+      expect(row.read<int>('v'), 2);
+    });
+
+    test('a column the result does not have reads as null', () {
+      final result = database.select('SELECT 1 AS present');
+      final row = Sqlite3Row(result.single);
+
+      expect(row.readNullable<int>('absent'), isNull);
+      expect(row.readBoolNullable('absent'), isNull);
+      expect(row.readDateTimeNullable('absent'), isNull);
+      expect(() => row.read<int>('absent'), throwsA(isA<SqlxError>()));
+    });
+
+    test('an index outside the row reads as null', () {
+      final result = database.select('SELECT 1 AS only');
+      final row = Sqlite3Row(result.single);
+
+      expect(row.readIndexNullable<int>(0), 1);
+      expect(row.readIndexNullable<int>(1), isNull);
+      expect(row.readIndexNullable<int>(-1), isNull);
+    });
+
+    test('rows of one result keep their own values apart', () {
+      // The index is shared; the data is not. A row reading its neighbour's
+      // values would pass every single-row test and fail here.
+      database
+        ..execute('CREATE TABLE items (id INTEGER, name TEXT)')
+        ..execute("INSERT INTO items VALUES (1, 'first'), (2, 'second')");
+
+      final result = database.select('SELECT id, name FROM items ORDER BY id');
+      final rows = <Sqlite3Row>[for (final row in result) Sqlite3Row(row)];
+
+      expect(rows.map((row) => row.read<int>('id')), <int>[1, 2]);
+      expect(
+        rows.map((row) => row.read<String>('name')),
+        <String>['first', 'second'],
+      );
+    });
+  });
+}

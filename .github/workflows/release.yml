@@ -1,0 +1,678 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing tag to use for GitHub release assets, for example v0.1.3. Required unless binary_targets is none."
+        required: false
+        type: string
+      binary_targets:
+        description: "Rust binary architecture set to build."
+        required: true
+        type: choice
+        default: default
+        options:
+          - none
+          - default
+          - all
+          - linux
+          - linux-x64
+          - linux-arm64
+          - macos
+          - macos-x64
+          - macos-arm64
+          - windows
+          - windows-x64
+          - windows-arm64
+      package_mode:
+        description: "Package action. Manual runs support dry-run only; pub.dev publish requires a tag-push workflow."
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - none
+          - dry-run
+          - publish
+      package_targets:
+        description: "Dart/Flutter package set."
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - dust_dart
+          - dust_flutter
+          - dust_db_sqlite3
+          - dust_db_postgres
+          - dust_server
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release-inputs:
+    name: Release inputs
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.normalize.outputs.release_tag }}
+      checkout_ref: ${{ steps.normalize.outputs.checkout_ref }}
+      binary_targets: ${{ steps.normalize.outputs.binary_targets }}
+      package_mode: ${{ steps.normalize.outputs.package_mode }}
+      package_targets: ${{ steps.normalize.outputs.package_targets }}
+    steps:
+      - name: Normalize release inputs
+        id: normalize
+        shell: bash
+        env:
+          DISPATCH_RELEASE_TAG: ${{ inputs.release_tag || '' }}
+          DISPATCH_BINARY_TARGETS: ${{ inputs.binary_targets || '' }}
+          DISPATCH_PACKAGE_MODE: ${{ inputs.package_mode || '' }}
+          DISPATCH_PACKAGE_TARGETS: ${{ inputs.package_targets || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            release_tag="$GITHUB_REF_NAME"
+            checkout_ref="$GITHUB_REF_NAME"
+            binary_targets="all"
+            package_mode="publish"
+            package_targets="all"
+          else
+            release_tag="$DISPATCH_RELEASE_TAG"
+            checkout_ref="${DISPATCH_RELEASE_TAG:-$GITHUB_REF_NAME}"
+            binary_targets="${DISPATCH_BINARY_TARGETS:-default}"
+            package_mode="${DISPATCH_PACKAGE_MODE:-dry-run}"
+            package_targets="${DISPATCH_PACKAGE_TARGETS:-all}"
+
+            if [[ "$binary_targets" != "none" && -z "$release_tag" ]]; then
+              echo "::error::release_tag is required when binary_targets is not none."
+              exit 1
+            fi
+            if [[ "$package_mode" == "publish" ]]; then
+              echo "::error::pub.dev publishing from GitHub Actions requires a tag-push workflow. Use package_mode=dry-run here, or push the release tag."
+              exit 1
+            fi
+          fi
+
+          case "$binary_targets" in
+            none|default|all|linux|linux-x64|linux-arm64|macos|macos-x64|macos-arm64|windows|windows-x64|windows-arm64) ;;
+            *) echo "::error::unsupported binary_targets value: $binary_targets"; exit 1 ;;
+          esac
+
+          case "$package_mode" in
+            none|dry-run|publish) ;;
+            *) echo "::error::unsupported package_mode value: $package_mode"; exit 1 ;;
+          esac
+
+          case "$package_targets" in
+            all|dust_dart|dust_flutter|dust_db_sqlite3|dust_db_postgres|dust_server) ;;
+            *) echo "::error::unsupported package_targets value: $package_targets"; exit 1 ;;
+          esac
+
+          {
+            echo "release_tag=$release_tag"
+            echo "checkout_ref=$checkout_ref"
+            echo "binary_targets=$binary_targets"
+            echo "package_mode=$package_mode"
+            echo "package_targets=$package_targets"
+          } >> "$GITHUB_OUTPUT"
+
+  build-binaries:
+    name: ${{ matrix.asset_name }}
+    needs: release-inputs
+    if: needs.release-inputs.outputs.binary_targets != 'none'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: linux-x64
+            group: linux
+            default_target: true
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            archive_ext: tar.gz
+            asset_name: dust-x86_64-unknown-linux-gnu.tar.gz
+            binary_name: dust
+          - key: linux-arm64
+            group: linux
+            default_target: false
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive_ext: tar.gz
+            asset_name: dust-aarch64-unknown-linux-gnu.tar.gz
+            binary_name: dust
+          - key: macos-x64
+            group: macos
+            default_target: true
+            runner: macos-15-intel
+            target: x86_64-apple-darwin
+            archive_ext: tar.gz
+            asset_name: dust-x86_64-apple-darwin.tar.gz
+            binary_name: dust
+          - key: macos-arm64
+            group: macos
+            default_target: true
+            runner: macos-15
+            target: aarch64-apple-darwin
+            archive_ext: tar.gz
+            asset_name: dust-aarch64-apple-darwin.tar.gz
+            binary_name: dust
+          - key: windows-x64
+            group: windows
+            default_target: true
+            runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
+            asset_name: dust-x86_64-pc-windows-msvc.zip
+            binary_name: dust.exe
+          - key: windows-arm64
+            group: windows
+            default_target: false
+            runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            archive_ext: zip
+            asset_name: dust-aarch64-pc-windows-msvc.zip
+            binary_name: dust.exe
+
+    steps:
+      - name: Select binary target
+        id: select
+        shell: bash
+        env:
+          BINARY_TARGETS: ${{ needs.release-inputs.outputs.binary_targets }}
+          TARGET_KEY: ${{ matrix.key }}
+          TARGET_GROUP: ${{ matrix.group }}
+          DEFAULT_TARGET: ${{ matrix.default_target }}
+        run: |
+          set -euo pipefail
+
+          selected=false
+          case "$BINARY_TARGETS" in
+            all) selected=true ;;
+            default) [[ "$DEFAULT_TARGET" == "true" ]] && selected=true ;;
+            "$TARGET_GROUP"|"$TARGET_KEY") selected=true ;;
+          esac
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          if [[ "$selected" == "true" ]]; then
+            echo "selected $TARGET_KEY"
+          else
+            echo "skipped $TARGET_KEY for binary_targets=$BINARY_TARGETS"
+          fi
+
+      - name: Checkout
+        if: steps.select.outputs.selected == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-inputs.outputs.release_tag }}
+
+      - name: Install Rust toolchain
+        if: steps.select.outputs.selected == 'true'
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build binary (Unix)
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'tar.gz'
+        shell: bash
+        run: cargo build --locked --release --target ${{ matrix.target }} -p dust_cli --bin dust
+
+      - name: Build binary (Windows)
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'zip'
+        shell: pwsh
+        run: cargo build --locked --release --target ${{ matrix.target }} -p dust_cli --bin dust
+
+      - name: Stage archive contents (Unix)
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'tar.gz'
+        shell: bash
+        run: |
+          mkdir -p dist/${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.target }}/${{ matrix.binary_name }}
+
+      - name: Stage archive contents (Windows)
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'zip'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist/${{ matrix.target }}" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.target }}/${{ matrix.binary_name }}" -Force
+
+      - name: Create tarball
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'tar.gz'
+        shell: bash
+        run: |
+          cd dist/${{ matrix.target }}
+          tar -czf ../../${{ matrix.asset_name }} ${{ matrix.binary_name }}
+
+      - name: Create zip
+        if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'zip'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/${{ matrix.target }}/${{ matrix.binary_name }}" -DestinationPath "${{ matrix.asset_name }}" -Force
+
+      - name: Upload packaged binary
+        if: steps.select.outputs.selected == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  publish-release:
+    name: Publish GitHub release
+    needs:
+      - release-inputs
+      - build-binaries
+    if: needs.release-inputs.outputs.binary_targets != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release-inputs.outputs.release_tag }}
+
+      - name: Validate compatibility contract
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.release-inputs.outputs.release_tag }}
+        run: python3 scripts/validate_compatibility_contract.py --release-tag "$RELEASE_TAG"
+
+      # Before any package is published, not after: the publish step runs them
+      # in order and stops at the first refusal, so a mismatch leaves a partial
+      # release that cannot be undone.
+      - name: Check every package can publish from this tag
+        run: python3 scripts/check_release_versions.py
+
+      # Network-dependent, so it lives here rather than in the lint gate. A
+      # package pub.dev has never seen cannot have automated publishing
+      # configured, and finding that out mid-publish strands the packages
+      # already out.
+      - name: Check every package is publishable at all
+        run: python3 scripts/check_publish_readiness.py
+
+      - name: Download packaged binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: release-artifacts
+
+      - name: Flatten artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upload
+          find release-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} upload/ \;
+          if ! find upload -type f \( -name '*.tar.gz' -o -name '*.zip' \) | grep -q .; then
+            echo "no release archives were downloaded" >&2
+            exit 1
+          fi
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd upload
+          find . -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -printf '%f\n' \
+            | sort \
+            | xargs sha256sum > SHA256SUMS.txt
+
+      - name: Verify expected assets
+        shell: bash
+        env:
+          BINARY_TARGETS: ${{ needs.release-inputs.outputs.binary_targets }}
+        run: |
+          set -euo pipefail
+
+          expected_assets=()
+
+          add_asset() {
+            expected_assets+=("$1")
+          }
+
+          add_group() {
+            case "$1" in
+              linux)
+                add_asset dust-x86_64-unknown-linux-gnu.tar.gz
+                add_asset dust-aarch64-unknown-linux-gnu.tar.gz
+                ;;
+              macos)
+                add_asset dust-x86_64-apple-darwin.tar.gz
+                add_asset dust-aarch64-apple-darwin.tar.gz
+                ;;
+              windows)
+                add_asset dust-x86_64-pc-windows-msvc.zip
+                add_asset dust-aarch64-pc-windows-msvc.zip
+                ;;
+              *)
+                echo "::error::unknown asset group: $1"
+                exit 1
+                ;;
+            esac
+          }
+
+          case "$BINARY_TARGETS" in
+            default)
+              add_asset dust-x86_64-unknown-linux-gnu.tar.gz
+              add_asset dust-x86_64-apple-darwin.tar.gz
+              add_asset dust-aarch64-apple-darwin.tar.gz
+              add_asset dust-x86_64-pc-windows-msvc.zip
+              ;;
+            all)
+              add_group linux
+              add_group macos
+              add_group windows
+              ;;
+            linux|macos|windows)
+              add_group "$BINARY_TARGETS"
+              ;;
+            linux-x64)
+              add_asset dust-x86_64-unknown-linux-gnu.tar.gz
+              ;;
+            linux-arm64)
+              add_asset dust-aarch64-unknown-linux-gnu.tar.gz
+              ;;
+            macos-x64)
+              add_asset dust-x86_64-apple-darwin.tar.gz
+              ;;
+            macos-arm64)
+              add_asset dust-aarch64-apple-darwin.tar.gz
+              ;;
+            windows-x64)
+              add_asset dust-x86_64-pc-windows-msvc.zip
+              ;;
+            windows-arm64)
+              add_asset dust-aarch64-pc-windows-msvc.zip
+              ;;
+            *)
+              echo "::error::unsupported binary_targets value: $BINARY_TARGETS"
+              exit 1
+              ;;
+          esac
+
+          archive_count="$(
+            find upload -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) \
+              | wc -l \
+              | tr -d ' '
+          )"
+          if [[ "$archive_count" != "${#expected_assets[@]}" ]]; then
+            echo "::error::expected ${#expected_assets[@]} archives, found $archive_count"
+            find upload -maxdepth 1 -type f -printf '%f\n' | sort
+            exit 1
+          fi
+
+          for asset in "${expected_assets[@]}"; do
+            if [[ ! -f "upload/$asset" ]]; then
+              echo "::error::missing release asset: $asset"
+              exit 1
+            fi
+            if ! grep -q "  $asset$" upload/SHA256SUMS.txt; then
+              echo "::error::SHA256SUMS.txt is missing $asset"
+              exit 1
+            fi
+          done
+
+          echo "expected release assets verified"
+
+      - name: Prepare release notes
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.release-inputs.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          awk -v tag="$RELEASE_TAG" '
+            BEGIN {
+              wanted = "## [" tag "]"
+              found = 0
+              started = 0
+              print "# Dust " tag
+              print ""
+            }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, wanted) == 1) found = 1
+              next
+            }
+            found {
+              if (!started && $0 == "") next
+              started = 1
+              if ($0 ~ /^### /) sub(/^### /, "## ")
+              print
+            }
+            END { if (!found) exit 42 }
+          ' CHANGELOG.md > release-notes.md
+
+          if grep -Eiq '^#{2,6}[[:space:]]+(install(ation)?|install or update|updates?|updated|updating|included packages|package inventory|notes|validation)\b' release-notes.md; then
+            echo "::error::release notes must not include install/update, package inventory, notes, or validation sections."
+            exit 1
+          fi
+
+      - name: Create or update GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-inputs.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          TAG="$RELEASE_TAG"
+          TITLE="$TAG"
+
+          upload_with_retry() {
+            local asset="$1"
+
+            for attempt in 1 2 3; do
+              if gh release upload "$TAG" "$asset" --clobber; then
+                return 0
+              fi
+
+              echo "::warning::failed to upload $asset on attempt $attempt"
+              sleep $((attempt * 10))
+            done
+
+            echo "::error::failed to upload $asset after 3 attempts"
+            return 1
+          }
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file release-notes.md
+          else
+            gh release create "$TAG" --draft --verify-tag --title "$TITLE" --notes-file release-notes.md
+          fi
+
+          for asset in upload/*; do
+            upload_with_retry "$asset"
+          done
+
+          gh release view "$TAG" --json assets --jq '.assets[].name' | sort > published-assets.txt
+          find upload -maxdepth 1 -type f -printf '%f\n' | sort > expected-assets.txt
+
+          if ! diff -u expected-assets.txt published-assets.txt; then
+            echo "::error::published release assets do not match expected upload assets"
+            exit 1
+          fi
+
+          gh release edit "$TAG" --draft=false --latest
+
+  package-dry-run:
+    name: Package dry-run
+    needs: release-inputs
+    if: needs.release-inputs.outputs.package_mode == 'dry-run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-inputs.outputs.checkout_ref }}
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+
+      - name: Publish dry-run packages
+        shell: bash
+        env:
+          PACKAGE_TARGETS: ${{ needs.release-inputs.outputs.package_targets }}
+        run: |
+          set -euo pipefail
+
+          selected_package() {
+            local package="$1"
+            [[ "$PACKAGE_TARGETS" == "all" || "$PACKAGE_TARGETS" == "$package" ]]
+          }
+
+          dry_run_package() {
+            local package="$1"
+            local path="$2"
+            local tool="$3"
+
+            if ! selected_package "$package"; then
+              echo "skipped $package for package_targets=$PACKAGE_TARGETS"
+              return
+            fi
+
+            echo "::group::dry-run $package"
+            (
+              cd "$path"
+              "$tool" pub get
+              "$tool" pub publish --dry-run
+            )
+            echo "::endgroup::"
+          }
+
+          dry_run_package dust_dart packages/dust_dart dart
+          dry_run_package dust_flutter packages/dust_flutter flutter
+          dry_run_package dust_db_sqlite3 packages/dust_db_sqlite3 dart
+          dry_run_package dust_db_postgres packages/dust_db_postgres dart
+          dry_run_package dust_server packages/dust_server dart
+
+  publish-packages:
+    name: Publish packages
+    needs:
+      - release-inputs
+      - publish-release
+    if: needs.release-inputs.outputs.package_mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: pub.dev
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-inputs.outputs.release_tag }}
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+
+      - name: Publish packages
+        shell: bash
+        env:
+          PACKAGE_TARGETS: ${{ needs.release-inputs.outputs.package_targets }}
+        run: |
+          set -euo pipefail
+
+          selected_package() {
+            local package="$1"
+            [[ "$PACKAGE_TARGETS" == "all" || "$PACKAGE_TARGETS" == "$package" ]]
+          }
+
+          package_version() {
+            local path="$1"
+            python3 - "$path/pubspec.yaml" <<'PY'
+          import sys
+          from pathlib import Path
+
+          pubspec = Path(sys.argv[1])
+          for line in pubspec.read_text(encoding="utf-8").splitlines():
+              if line.startswith("version:"):
+                  print(line.split(":", 1)[1].strip())
+                  raise SystemExit(0)
+          raise SystemExit(f"{pubspec} is missing version")
+          PY
+          }
+
+          is_published() {
+            local package="$1"
+            local version="$2"
+            local status
+            status="$(curl -sS -o /dev/null -w '%{http_code}' "https://pub.dev/api/packages/$package/versions/$version")"
+            [[ "$status" == "200" ]]
+          }
+
+          wait_until_published() {
+            local package="$1"
+            local version="$2"
+
+            for _ in {1..18}; do
+              if is_published "$package" "$version"; then
+                return
+              fi
+              sleep 10
+            done
+
+            echo "::error::$package $version was published but is not visible from pub.dev yet."
+            exit 1
+          }
+
+          publish_package() {
+            local package="$1"
+            local path="$2"
+            local tool="$3"
+            local version
+
+            if ! selected_package "$package"; then
+              echo "skipped $package for package_targets=$PACKAGE_TARGETS"
+              return
+            fi
+
+            version="$(package_version "$path")"
+            if is_published "$package" "$version"; then
+              echo "$package $version is already published; skipping."
+              return
+            fi
+
+            echo "::group::publish $package $version"
+            (
+              cd "$path"
+              "$tool" pub get
+              "$tool" pub publish --force
+            )
+            echo "::endgroup::"
+
+            wait_until_published "$package" "$version"
+          }
+
+          publish_package dust_dart packages/dust_dart dart
+          publish_package dust_flutter packages/dust_flutter flutter
+          publish_package dust_db_sqlite3 packages/dust_db_sqlite3 dart
+          publish_package dust_db_postgres packages/dust_db_postgres dart
+          publish_package dust_server packages/dust_server dart

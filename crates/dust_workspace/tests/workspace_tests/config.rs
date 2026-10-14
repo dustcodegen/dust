@@ -1,0 +1,241 @@
+use dust_workspace::{
+    I18nConfig, I18nIosConfig, PackageConfigKind, load_dust_config, load_flutter_assets,
+    load_is_flutter_package, load_package_config,
+};
+use tempfile::tempdir;
+
+use crate::support::write_file;
+
+#[test]
+fn load_package_config_requires_real_file() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+
+    let error = load_package_config(root.path()).unwrap_err();
+    assert!(error.message.contains("missing package configuration"));
+
+    write_file(&root.path().join(".dart_tool/package_config.json"), "{}\n");
+    let config = load_package_config(root.path()).unwrap();
+
+    assert_eq!(
+        config.path,
+        root.path().join(".dart_tool/package_config.json")
+    );
+    assert_eq!(config.kind, PackageConfigKind::Direct);
+}
+
+#[test]
+fn load_package_config_uses_shared_workspace_config_for_member_package() {
+    let root = tempdir().unwrap();
+    let workspace_root = root.path();
+    let package_root = workspace_root.join("examples/product_showcase");
+    write_file(
+        &workspace_root.join("pubspec.yaml"),
+        "name: dust_workspace\n",
+    );
+    write_file(
+        &workspace_root.join(".dart_tool/package_config.json"),
+        "{\"configVersion\":2}\n",
+    );
+    write_file(
+        &package_root.join("pubspec.yaml"),
+        "name: product_showcase\n",
+    );
+    write_file(
+        &package_root.join(".dart_tool/package_graph.json"),
+        "{\"configVersion\":1}\n",
+    );
+
+    let config = load_package_config(&package_root).unwrap();
+
+    assert_eq!(
+        config.path,
+        workspace_root.join(".dart_tool/package_config.json")
+    );
+    assert_eq!(
+        config.kind,
+        PackageConfigKind::WorkspaceShared {
+            package_graph_path: package_root.join(".dart_tool/package_graph.json"),
+        }
+    );
+}
+
+#[test]
+fn load_package_config_uses_workspace_ref_for_newer_pub_workspaces() {
+    let root = tempdir().unwrap();
+    let workspace_root = root.path();
+    let package_root = workspace_root.join("examples/dust_db_example");
+    write_file(
+        &workspace_root.join("pubspec.yaml"),
+        "name: dust_workspace\n",
+    );
+    write_file(
+        &workspace_root.join(".dart_tool/package_config.json"),
+        "{\"configVersion\":2}\n",
+    );
+    write_file(
+        &package_root.join("pubspec.yaml"),
+        "name: dust_db_example\n",
+    );
+    write_file(
+        &package_root.join(".dart_tool/pub/workspace_ref.json"),
+        "{\"workspaceRoot\":\"../..\"}\n",
+    );
+
+    let config = load_package_config(&package_root).unwrap();
+
+    assert_eq!(
+        config.path,
+        workspace_root.join(".dart_tool/package_config.json")
+    );
+    assert_eq!(
+        config.kind,
+        PackageConfigKind::WorkspaceShared {
+            package_graph_path: package_root.join(".dart_tool/pub/workspace_ref.json"),
+        }
+    );
+}
+
+#[test]
+fn load_package_config_reports_missing_shared_workspace_config() {
+    let root = tempdir().unwrap();
+    let package_root = root.path().join("examples/product_showcase");
+    write_file(
+        &package_root.join("pubspec.yaml"),
+        "name: product_showcase\n",
+    );
+    write_file(
+        &package_root.join(".dart_tool/package_graph.json"),
+        "{\"configVersion\":1}\n",
+    );
+
+    let error = load_package_config(&package_root).unwrap_err();
+
+    assert!(error.message.contains("workspace member"));
+    assert!(
+        error
+            .message
+            .contains(package_root.to_string_lossy().as_ref())
+    );
+    assert!(error.message.contains(".dart_tool/package_config.json"));
+}
+
+#[test]
+fn load_dust_config_rejects_invalid_suffixes() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+    write_file(
+        &root.path().join("dust.yaml"),
+        "outputs:\n  primary_suffix: generated.dart\n",
+    );
+
+    let error = load_dust_config(root.path()).unwrap_err();
+    assert!(error.message.contains("outputs.primary_suffix"));
+}
+
+#[test]
+fn load_dust_config_reads_i18n_locales() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+    write_file(
+        &root.path().join("dust.yaml"),
+        "i18n:\n  locales: [en, my]\n",
+    );
+
+    let config = load_dust_config(root.path()).unwrap();
+
+    assert_eq!(
+        config.i18n,
+        Some(I18nConfig {
+            locales: vec!["en".to_owned(), "my".to_owned()],
+            ios: None,
+        })
+    );
+}
+
+#[test]
+fn load_dust_config_reads_opt_in_ios_i18n_settings() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+    write_file(
+        &root.path().join("dust.yaml"),
+        "i18n:\n  locales: [en, my, zh_Hans_CN]\n  ios:\n    info_plist: ios/Runner/Info.plist\n    sync_development_region: true\n",
+    );
+
+    let config = load_dust_config(root.path()).unwrap();
+
+    assert_eq!(
+        config.i18n,
+        Some(I18nConfig {
+            locales: vec!["en".to_owned(), "my".to_owned(), "zh_Hans_CN".to_owned()],
+            ios: Some(I18nIosConfig {
+                info_plist: "ios/Runner/Info.plist".into(),
+                sync_development_region: true,
+            }),
+        })
+    );
+}
+
+#[test]
+fn load_flutter_assets_reads_string_and_object_entries() {
+    let root = tempdir().unwrap();
+    write_file(
+        &root.path().join("pubspec.yaml"),
+        r#"
+name: dust_test
+flutter:
+  assets:
+    - assets/i18n/en/
+    - path: assets/i18n/my/shop.arb
+"#,
+    );
+
+    let assets = load_flutter_assets(root.path()).unwrap();
+
+    assert_eq!(
+        assets,
+        vec![
+            "assets/i18n/en/".to_owned(),
+            "assets/i18n/my/shop.arb".to_owned()
+        ]
+    );
+}
+
+#[test]
+fn load_flutter_assets_defaults_to_empty_assets() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+
+    let assets = load_flutter_assets(root.path()).unwrap();
+
+    assert!(assets.is_empty());
+}
+
+#[test]
+fn load_is_flutter_package_detects_flutter_dependency_or_section() {
+    let root = tempdir().unwrap();
+    write_file(
+        &root.path().join("pubspec.yaml"),
+        "name: dust_test\ndependencies:\n  flutter:\n    sdk: flutter\n",
+    );
+
+    assert!(load_is_flutter_package(root.path()).unwrap());
+
+    write_file(
+        &root.path().join("pubspec.yaml"),
+        "name: dust_test\nflutter:\n  assets: []\n",
+    );
+
+    assert!(load_is_flutter_package(root.path()).unwrap());
+}
+
+#[test]
+fn load_is_flutter_package_is_false_for_dart_packages() {
+    let root = tempdir().unwrap();
+    write_file(
+        &root.path().join("pubspec.yaml"),
+        "name: dust_test\ndependencies:\n  dust_dart: ^0.1.0\n",
+    );
+
+    assert!(!load_is_flutter_package(root.path()).unwrap());
+}

@@ -1,0 +1,274 @@
+part of 'sqlite_pool.dart';
+
+/// State belonging to one open database, not to one driver over it.
+///
+/// A transaction is a second `Sqlite3Driver` over the same `sqlite.Database`,
+/// so anything scoped to the connection has to be shared with it rather than
+/// rebuilt: savepoint names have to stay unique across nesting, and a prepared
+/// statement is worth reusing whether the caller holds the pool or a
+/// transaction on it.
+final class _ConnectionState {
+  var _nextSavepointId = 0;
+
+  /// Prepared statements held for this connection.
+  final _StatementCache statements = _StatementCache();
+
+  /// Runs one control statement whose text never varies.
+  ///
+  /// `BEGIN`, `COMMIT` and `ROLLBACK` are the same three strings for the life
+  /// of the process, so they are held like any other statement — a transaction
+  /// per request would otherwise compile two of them every time, which
+  /// measured about 0.7us of a 3.6us transaction.
+  ///
+  /// Savepoints do not come here: their names carry a counter, so every one is
+  /// a statement seen once, and caching them would fill the cache with entries
+  /// that can never hit.
+  SqlxError? _control(sqlite.Database database, String sql, String message) {
+    try {
+      statements.statementFor(database, sql).execute();
+      return null;
+    } catch (error) {
+      return _sqliteTransactionError(message, cause: error, operation: sql);
+    }
+  }
+
+  Future<Result<T, SqlxError>> runRoot<T>(
+    sqlite.Database database,
+    Future<Result<T, SqlxError>> Function(Transaction tx) fn,
+  ) async {
+    final begin = _control(
+      database,
+      'BEGIN',
+      'SQLite transaction begin failed.',
+    );
+    if (begin != null) return Err<T, SqlxError>(begin);
+
+    final tx = _SingleConnectionPool(database, this);
+    try {
+      final result = await fn(tx);
+      return await result.match<Future<Result<T, SqlxError>>>(
+        ok: (value) async {
+          final commit = _control(
+            database,
+            'COMMIT',
+            'SQLite transaction commit failed.',
+          );
+          if (commit != null) return Err<T, SqlxError>(commit);
+          return Ok<T, SqlxError>(value);
+        },
+        err: (error) async {
+          final rollback = _control(
+            database,
+            'ROLLBACK',
+            'SQLite transaction rollback failed.',
+          );
+          if (rollback != null) return Err<T, SqlxError>(rollback);
+          return Err<T, SqlxError>(error);
+        },
+      );
+    } catch (error) {
+      final rollback = _control(
+        database,
+        'ROLLBACK',
+        'SQLite transaction rollback failed.',
+      );
+      if (rollback != null) return Err<T, SqlxError>(rollback);
+      return Err<T, SqlxError>(
+        _sqliteTransactionError(
+          'SQLite transaction failed.',
+          cause: error,
+          operation: 'transaction callback',
+        ),
+      );
+    } finally {
+      tx._deactivate();
+    }
+  }
+
+  Future<Result<T, SqlxError>> runSavepoint<T>(
+    sqlite.Database database,
+    Future<Result<T, SqlxError>> Function(Transaction tx) fn,
+  ) async {
+    final name = '_dust_tx_${++_nextSavepointId}';
+    final begin = _executeControl(
+      database,
+      'SAVEPOINT $name',
+      'SQLite savepoint begin failed.',
+    );
+    if (begin != null) return Err<T, SqlxError>(begin);
+
+    final tx = _SingleConnectionPool(database, this);
+    try {
+      final result = await fn(tx);
+      return await result.match<Future<Result<T, SqlxError>>>(
+        ok: (value) async {
+          final release = _executeControl(
+            database,
+            'RELEASE SAVEPOINT $name',
+            'SQLite savepoint release failed.',
+          );
+          if (release != null) return Err<T, SqlxError>(release);
+          return Ok<T, SqlxError>(value);
+        },
+        err: (error) async {
+          final rollback = _rollbackSavepoint(database, name);
+          if (rollback != null) return Err<T, SqlxError>(rollback);
+          return Err<T, SqlxError>(error);
+        },
+      );
+    } catch (error) {
+      final rollback = _rollbackSavepoint(database, name);
+      if (rollback != null) return Err<T, SqlxError>(rollback);
+      return Err<T, SqlxError>(
+        _sqliteTransactionError(
+          'SQLite transaction failed.',
+          cause: error,
+          operation: name,
+        ),
+      );
+    } finally {
+      tx._deactivate();
+    }
+  }
+
+  SqlxError? _rollbackSavepoint(sqlite.Database database, String name) {
+    final rollback = _executeControl(
+      database,
+      'ROLLBACK TO SAVEPOINT $name',
+      'SQLite savepoint rollback failed.',
+    );
+    final release = _executeControl(
+      database,
+      'RELEASE SAVEPOINT $name',
+      'SQLite savepoint release after rollback failed.',
+    );
+    return rollback ?? release;
+  }
+}
+
+final class _TransactionScope {
+  var active = true;
+}
+
+final class _SingleConnectionPool implements Transaction, Sqlite3Executor {
+  _SingleConnectionPool(
+    sqlite.Database database,
+    _ConnectionState connection,
+  ) : this._scoped(database, connection, _TransactionScope());
+
+  _SingleConnectionPool._scoped(
+    sqlite.Database database,
+    this._connection,
+    this._scope,
+  ) : _driver = Sqlite3Driver._(
+          database,
+          ownsDatabase: false,
+          connection: _connection,
+          transactionScope: _scope,
+        );
+
+  final Sqlite3Driver _driver;
+  final _ConnectionState _connection;
+  final _TransactionScope _scope;
+
+  @override
+  sqlite.Database get database => _driver.database;
+
+  @override
+  Driver get driver => _driver.driver;
+
+  @override
+  Future<Result<T?, SqlxError>> fetchOptional<T>(
+    String sql,
+    List<Object?> parameters,
+    RowMapper<T> mapper,
+  ) {
+    return _driver.fetchOptional(sql, parameters, mapper);
+  }
+
+  @override
+  Future<Result<List<T>, SqlxError>> fetchAll<T>(
+    String sql,
+    List<Object?> parameters,
+    RowMapper<T> mapper,
+  ) {
+    return _driver.fetchAll(sql, parameters, mapper);
+  }
+
+  @override
+  Future<Result<T, SqlxError>> fetchOne<T>(
+    String sql,
+    List<Object?> parameters,
+    RowMapper<T> mapper,
+  ) {
+    return _driver.fetchOne(sql, parameters, mapper);
+  }
+
+  @override
+  Future<Result<T, SqlxError>> fetchScalar<T>(
+    String sql,
+    List<Object?> parameters,
+  ) {
+    return _driver.fetchScalar(sql, parameters);
+  }
+
+  @override
+  Future<Result<ExecResult, SqlxError>> execute(
+    String sql,
+    List<Object?> parameters,
+  ) {
+    return _driver.execute(sql, parameters);
+  }
+
+  @override
+  Future<Result<T, SqlxError>> transaction<T>(
+    Future<Result<T, SqlxError>> Function(Transaction tx) fn,
+  ) {
+    final error = _driver._closedError();
+    if (error != null) return Future.value(Err<T, SqlxError>(error));
+    return _connection.runSavepoint(database, fn);
+  }
+
+  @override
+  Future<Result<Unit, SqlxError>> close() {
+    _deactivate();
+    return Future.value(const Ok<Unit, SqlxError>(unit));
+  }
+
+  void _deactivate() {
+    _scope.active = false;
+  }
+}
+
+extension _Sqlite3TransactionRunner on Sqlite3Driver {
+  Future<Result<T, SqlxError>> _runTransaction<T>(
+    Future<Result<T, SqlxError>> Function(Transaction tx) fn,
+  ) {
+    final error = _closedError();
+    if (error != null) return Future.value(Err<T, SqlxError>(error));
+    if (!_ownsDatabase) return _connection.runSavepoint(database, fn);
+    return _connection.runRoot(database, fn);
+  }
+}
+
+/// Runs one control statement whose text is written for this call.
+///
+/// Savepoint statements name a counter, so each is seen once. Compiling and
+/// discarding is the right thing for a statement that cannot be reused; see
+/// `_ConnectionState._control` for the ones that can.
+SqlxError? _executeControl(
+  sqlite.Database database,
+  String sql,
+  String message,
+) {
+  try {
+    database.execute(sql);
+    return null;
+  } catch (error) {
+    return _sqliteTransactionError(
+      message,
+      cause: error,
+      operation: sql,
+    );
+  }
+}

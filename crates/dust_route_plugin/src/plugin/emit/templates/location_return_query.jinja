@@ -1,0 +1,5 @@
+    return generatedRoutePath(
+      {{ segments }},
+      queryParameters: query.isEmpty ? null : query,
+      uriExtras: generatedRouteUriExtrasOf(this),
+    );

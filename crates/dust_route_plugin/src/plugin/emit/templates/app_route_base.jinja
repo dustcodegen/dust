@@ -1,0 +1,9 @@
+sealed class {{ route_base_class }}<R> {
+  const {{ route_base_class }}();
+
+  String get location;
+
+  /// Defaults to true. Override and return false for public routes
+  /// (login, invite, forbidden, checkout, notFound).
+  bool get requiresAuth => true;
+}

@@ -1,0 +1,290 @@
+use std::{fs, thread};
+
+use dust_driver::{CommandRequest, WatchRequest, run, run_watch};
+
+use super::support::{
+    DustImport, generated_output, make_workspace, replace_dust_file_atomically,
+    replace_file_atomically, wait_for_path, write_dust_file,
+};
+
+#[test]
+fn watch_runs_initial_build_for_existing_candidates() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+
+    let result = run_watch(WatchRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        poll_interval_ms: 10,
+        max_cycles: Some(1),
+    });
+
+    assert!(workspace.path().join("lib/user.g.dart").exists());
+    assert_eq!(result.build_artifacts.len(), 1);
+    assert_eq!(result.watch.as_ref().unwrap().cycles, 1);
+    assert_eq!(result.watch.as_ref().unwrap().rebuild_batches, 0);
+}
+
+#[test]
+fn watch_rebuilds_only_the_changed_library() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+    write_dust_file(
+        &workspace.path().join("lib/team.dart"),
+        &[DustImport::Derive],
+        "part 'team.g.dart';\n\
+         @CopyWith()\n\
+         class Team {\n\
+           final String name;\n\
+           const Team(this.name);\n\
+         }\n",
+    );
+
+    let root = workspace.path().to_path_buf();
+    let user_path = root.join("lib/user.dart");
+    let initial_output = root.join("lib/user.g.dart");
+    let modifier = thread::spawn(move || {
+        wait_for_path(&initial_output);
+        replace_dust_file_atomically(
+            &user_path,
+            &[DustImport::Derive],
+            "part 'user.g.dart';\n\
+             @ToString()\n\
+             class User {\n\
+               final String id;\n\
+               final int age;\n\
+               const User(this.id, this.age);\n\
+             }\n",
+        );
+    });
+
+    let result = run_watch(WatchRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        poll_interval_ms: 20,
+        max_cycles: Some(20),
+    });
+    modifier.join().unwrap();
+
+    let watch = result.watch.unwrap();
+    let user_output = fs::read_to_string(workspace.path().join("lib/user.g.dart")).unwrap();
+    let team_output = fs::read_to_string(workspace.path().join("lib/team.g.dart")).unwrap();
+
+    assert!(watch.rebuild_batches >= 1);
+    assert!(
+        watch
+            .rebuilt_libraries
+            .iter()
+            .any(|path| path == &workspace.path().join("lib/user.dart"))
+    );
+    assert!(
+        watch
+            .rebuilt_libraries
+            .iter()
+            .all(|path| path == &workspace.path().join("lib/user.dart"))
+    );
+    assert_eq!(
+        user_output,
+        generated_output(
+            r#"part of 'user.dart';
+
+mixin _$User {
+  @override
+  String toString() {
+    final self = this as User;
+    return 'User('
+        'id: ${self.id}, '
+        'age: ${self.age}'
+        ')';
+  }
+}
+"#
+        )
+    );
+    assert_eq!(
+        team_output,
+        generated_output(
+            r#"part of 'team.dart';
+
+mixin _$Team {
+  /// Creates a copy of this `Team` with selected fields replaced.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final updated = team.copyWith(name: 'John');
+  /// ```
+  @pragma('vm:prefer-inline')
+  _$TeamCopyWith<Team> get copyWith => _$TeamCopyWithImpl<Team>(this as Team, (value) => value);
+}
+
+// CopyWith API inspired by Freezed.
+
+/// @nodoc
+abstract class _$TeamCopyWith<$Res> {
+  $Res call({
+    String? name,
+  });
+}
+
+/// @nodoc
+final class _$TeamCopyWithImpl<$Res> implements _$TeamCopyWith<$Res> {
+  const _$TeamCopyWithImpl(this._self, this._then);
+
+  final Team _self;
+  final $Res Function(Team) _then;
+
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? name = null,
+  }) {
+    return _then(
+      Team(
+        name == null ? _self.name : name as String,
+      )
+    );
+  }
+}
+"#
+        )
+    );
+    assert!(result.build_artifacts.len() >= 3);
+}
+
+#[test]
+fn watch_rebuilds_all_libraries_when_package_config_changes() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+    write_dust_file(
+        &workspace.path().join("lib/team.dart"),
+        &[DustImport::Derive],
+        "part 'team.g.dart';\n\
+         @CopyWith()\n\
+         class Team {\n\
+           final String name;\n\
+           const Team(this.name);\n\
+         }\n",
+    );
+
+    let root = workspace.path().to_path_buf();
+    let package_config = root.join(".dart_tool/package_config.json");
+    let initial_output = root.join("lib/user.g.dart");
+    let modifier = thread::spawn(move || {
+        wait_for_path(&initial_output);
+        replace_file_atomically(&package_config, "{\"configVersion\":2}\n");
+    });
+
+    let result = run_watch(WatchRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        poll_interval_ms: 20,
+        max_cycles: Some(20),
+    });
+    modifier.join().unwrap();
+
+    let watch = result.watch.unwrap();
+    assert_eq!(watch.rebuild_batches, 1);
+    assert_eq!(
+        watch.rebuilt_libraries,
+        vec![
+            workspace.path().join("lib/team.dart"),
+            workspace.path().join("lib/user.dart"),
+        ]
+    );
+}
+
+#[test]
+fn watch_rebuilds_all_libraries_when_dust_config_changes() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+    write_dust_file(
+        &workspace.path().join("lib/team.dart"),
+        &[DustImport::Derive],
+        "part 'team.g.dart';\n\
+         @CopyWith()\n\
+         class Team {\n\
+           final String name;\n\
+           const Team(this.name);\n\
+         }\n",
+    );
+
+    let root = workspace.path().to_path_buf();
+    let dust_config = root.join("dust.yaml");
+    let initial_output = root.join("lib/user.g.dart");
+    let modifier = thread::spawn(move || {
+        wait_for_path(&initial_output);
+        replace_file_atomically(&dust_config, "outputs:\n  primary_suffix: .g.dart\n");
+    });
+
+    let result = run_watch(WatchRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        poll_interval_ms: 20,
+        max_cycles: Some(20),
+    });
+    modifier.join().unwrap();
+
+    let watch = result.watch.unwrap();
+    assert_eq!(watch.rebuild_batches, 1);
+    assert_eq!(
+        watch.rebuilt_libraries,
+        vec![
+            workspace.path().join("lib/team.dart"),
+            workspace.path().join("lib/user.dart"),
+        ]
+    );
+}
+
+#[test]
+fn run_dispatches_watch_requests() {
+    let workspace = make_workspace();
+    let result = run(CommandRequest::Watch(WatchRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        poll_interval_ms: 10,
+        max_cycles: Some(1),
+    }));
+
+    assert!(result.watch.is_some());
+}
