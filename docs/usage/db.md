@@ -460,6 +460,17 @@ await database.connection.transaction((tx) async {
 Transaction executors are scope-bound. Do not store `tx` and use it after the
 callback returns; operations on a closed transaction return `Err(SqlxError)`.
 
+For SQLite, use the supplied `tx` (including `UserDao(tx)`) throughout the
+callback. Root driver/facade operations and close fail immediately while that
+connection is owned; there is no implicit queue or retry. An active executor
+also cannot escape its callback's async context. Await nested transactions:
+their parent and parallel sibling operations are rejected until they finish,
+and the parent waits for already-started children before commit/rollback.
+Other connections remain independent. Failed rollback/savepoint cleanup blocks
+further queries until close and reopen. Direct native-handle access bypasses
+these guards. See the
+[SQLite ownership example](../../packages/dust_db_sqlite3/example/transaction_ownership.dart).
+
 ## Column Aliases
 
 The database infers whether a column can be null, and inference is sometimes

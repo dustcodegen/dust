@@ -208,10 +208,8 @@ void main() {
 
     final result = await pool.transaction<Unit>((tx) async {
       await _insertUser(tx, 1, 'Ada');
-      final manualRollback = await Sqlite3UnsafeSql(
-        pool,
-      ).execute('ROLLBACK', const []);
-      expect(manualRollback, isA<Ok<ExecResult, SqlxError>>());
+      // Native fault injection deliberately bypasses ownership checks.
+      pool.database.execute('ROLLBACK');
       return const Ok<Unit, SqlxError>(unit);
     });
 
