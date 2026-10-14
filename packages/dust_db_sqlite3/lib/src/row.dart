@@ -9,9 +9,9 @@ part of 'sqlite_pool.dart';
 final class Sqlite3Row implements Row {
   /// Creates a typed view over one native sqlite3 result row.
   Sqlite3Row(sqlite.Row row)
-      : _data = row.values,
-        _names = row.keys,
-        _sharedIndex = null;
+    : _data = row.values,
+      _names = row.keys,
+      _sharedIndex = null;
 
   /// Wraps one row of a result whose rows share [_sharedIndex].
   Sqlite3Row._shared(this._data, this._names, this._sharedIndex);
@@ -39,7 +39,8 @@ final class Sqlite3Row implements Row {
   /// Null rather than a throw, because that is what the driver's own row does
   /// and a caller cannot tell an absent column from a NULL one either way.
   Object? _column(String column) {
-    final index = _columnIndex[column] ??
+    final index =
+        _columnIndex[column] ??
         _columnIndex['$column!'] ??
         _columnIndex['$column?'];
     if (index == null) return null;
@@ -95,9 +96,9 @@ final class Sqlite3Row implements Row {
         'true' || '1' => true,
         'false' || '0' => false,
         _ => throw _sqliteDecodeError(
-            'Column `$column` cannot be read as bool.',
-            operation: 'readBool:$column',
-          ),
+          'Column `$column` cannot be read as bool.',
+          operation: 'readBool:$column',
+        ),
       };
     }
     throw _sqliteDecodeError(

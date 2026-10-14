@@ -1,7 +1,7 @@
 /// sqlite3 runtime for Database.
 library;
 
-export 'src/sqlite_pool.dart';
+export 'src/sqlite_pool.dart' hide initializeSqlite3Connection;
 
 // Every query answers a `Result`, and its methods are extensions, which are in
 // scope only where imported. Exporting the extensions without the types keeps

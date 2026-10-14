@@ -36,7 +36,8 @@ CREATE TABLE tasks (
       <Object?>[id],
     );
     print(
-        'updated: ${closed.unwrapOrElse((error) => throw error).rowsAffected}');
+      'updated: ${closed.unwrapOrElse((error) => throw error).rowsAffected}',
+    );
 
     // A WHERE that matches nothing is Ok with zero rows, not an error. Only the
     // caller knows whether that is fine.
@@ -45,7 +46,8 @@ CREATE TABLE tasks (
       const <Object?>[404],
     );
     print(
-        'no match: ${absent.unwrapOrElse((error) => throw error).rowsAffected}');
+      'no match: ${absent.unwrapOrElse((error) => throw error).rowsAffected}',
+    );
   } finally {
     await db.close();
   }

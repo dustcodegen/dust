@@ -28,9 +28,9 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
     required bool ownsDatabase,
     _ConnectionState? connection,
     _TransactionScope? transactionScope,
-  })  : _ownsDatabase = ownsDatabase,
-        _connection = connection ?? _ConnectionState(),
-        _transactionScope = transactionScope;
+  }) : _ownsDatabase = ownsDatabase,
+       _connection = connection ?? _ConnectionState(),
+       _transactionScope = transactionScope;
 
   /// Opens a database at [path] and applies unapplied migrations in name order.
   factory Sqlite3Driver.open(
@@ -50,15 +50,11 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
     Map<String, String> migrations = const <String, String>{},
   }) {
     options._validate(hasMigrations: migrations.isNotEmpty);
-    final database = _openDatabase(options);
-    try {
-      _applyConnectOptions(database, options);
-      _applyMigrations(database, migrations);
-      return Sqlite3Driver._(database, ownsDatabase: true);
-    } catch (_) {
-      database.close();
-      rethrow;
-    }
+    return initializeSqlite3Connection(
+      _openDatabase(options),
+      options,
+      migrations,
+    );
   }
 
   final sqlite.Database _database;

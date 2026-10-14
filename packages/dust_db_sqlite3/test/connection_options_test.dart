@@ -64,10 +64,11 @@ CREATE TABLE children (
       },
     );
     expectOk(
-        await queryExecute('INSERT INTO users (id, name) VALUES (?, ?)', const [
-      1,
-      'Ada',
-    ]).execute(writable));
+      await queryExecute('INSERT INTO users (id, name) VALUES (?, ?)', const [
+        1,
+        'Ada',
+      ]).execute(writable),
+    );
     await writable.close();
 
     final readOnly = Sqlite3Driver.connect(SqliteConnectOptions.readOnly(path));
@@ -76,7 +77,10 @@ CREATE TABLE children (
     });
 
     final users = await unsafeRows(
-        readOnly, 'SELECT name FROM users ORDER BY id', const []);
+      readOnly,
+      'SELECT name FROM users ORDER BY id',
+      const [],
+    );
     expect(users.single.read<String>('name'), 'Ada');
 
     final write = await readOnly.execute(

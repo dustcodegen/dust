@@ -49,8 +49,8 @@ final class SqliteConnectOptions {
     this.journalMode,
     this.synchronous,
     this.pragmas = const <String, Object>{},
-  })  : path = null,
-        inMemory = false;
+  }) : path = null,
+       inMemory = false;
 
   /// Opens a database file at [path].
   const SqliteConnectOptions.path(
@@ -72,9 +72,9 @@ final class SqliteConnectOptions {
     this.journalMode,
     this.synchronous,
     this.pragmas = const <String, Object>{},
-  })  : createIfMissing = false,
-        readOnly = true,
-        inMemory = false;
+  }) : createIfMissing = false,
+       readOnly = true,
+       inMemory = false;
 
   /// Opens an in-memory SQLite database.
   const SqliteConnectOptions.memory({
@@ -83,10 +83,10 @@ final class SqliteConnectOptions {
     this.journalMode,
     this.synchronous,
     this.pragmas = const <String, Object>{},
-  })  : path = null,
-        createIfMissing = true,
-        readOnly = false,
-        inMemory = true;
+  }) : path = null,
+       createIfMissing = true,
+       readOnly = false,
+       inMemory = true;
 
   /// Database path when this is a path-based connection.
   final String? path;
@@ -185,7 +185,7 @@ final class SqliteConnectOptions {
     final sync = synchronous;
     if (sync != null) yield 'PRAGMA synchronous = ${sync._sql}';
     for (final entry in pragmas.entries) {
-      yield 'PRAGMA ${entry.key} = ${_pragmaValue(entry.value)}';
+      yield 'PRAGMA ${entry.key} = ${_pragmaValue(entry.key, entry.value)}';
     }
   }
 }
@@ -194,19 +194,15 @@ void _validatePragma(String name, Object value) {
   if (!_sqlitePragmaName.hasMatch(name)) {
     throw SqlxError.driver('Invalid SQLite pragma name `$name`.');
   }
-  if (value is bool || value is String) return;
-  if (value is num && value.isFinite) return;
-  throw SqlxError.driver(
-    'Invalid SQLite pragma value for `$name`: ${value.runtimeType}.',
-  );
+  _pragmaValue(name, value);
 }
 
-String _pragmaValue(Object value) {
+String _pragmaValue(String name, Object value) {
   if (value is bool) return value ? 'ON' : 'OFF';
-  if (value is num) return value.toString();
+  if (value is num && value.isFinite) return value.toString();
   if (value is String) return "'${value.replaceAll("'", "''")}'";
   throw SqlxError.driver(
-    'Invalid SQLite pragma value: ${value.runtimeType}.',
+    'Invalid SQLite pragma value for `$name`: ${value.runtimeType}.',
   );
 }
 

@@ -13,12 +13,13 @@ void main() {
     });
 
     final rows = await unsafeRows(
-        pool,
-        "SELECT 1 AS id, 2 AS score, 3.5 AS ratio, 'Ada' AS name, "
-        "1 AS one_bool, 0 AS zero_bool, 'true' AS true_text, "
-        "'false' AS false_text, '2026-01-01T10:00:00+06:30' AS created_at, "
-        "NULL AS empty_value",
-        const []);
+      pool,
+      "SELECT 1 AS id, 2 AS score, 3.5 AS ratio, 'Ada' AS name, "
+      "1 AS one_bool, 0 AS zero_bool, 'true' AS true_text, "
+      "'false' AS false_text, '2026-01-01T10:00:00+06:30' AS created_at, "
+      "NULL AS empty_value",
+      const [],
+    );
     final row = rows.single;
 
     expect(row, isA<Sqlite3Row>());
@@ -45,10 +46,11 @@ void main() {
       });
 
       final rows = await unsafeRows(
-          pool,
-          "SELECT NULL AS value, 'maybe' AS bad_bool, x'01' AS blob_value, "
-          "'not-a-date' AS bad_date",
-          const []);
+        pool,
+        "SELECT NULL AS value, 'maybe' AS bad_bool, x'01' AS blob_value, "
+        "'not-a-date' AS bad_date",
+        const [],
+      );
       final row = rows.single;
 
       expect(row.readDateTimeNullable('value'), isNull);
