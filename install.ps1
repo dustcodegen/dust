@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Repo = if ($env:DUST_REPO) { $env:DUST_REPO } else { "y3l1n4ung/dust" }
+$Repo = if ($env:DUST_REPO) { $env:DUST_REPO } else { "dustcodegen/dust" }
 $Version = if ($env:DUST_VERSION) { $env:DUST_VERSION } else { "latest" }
 $InstallDir = if ($env:DUST_INSTALL_DIR) { $env:DUST_INSTALL_DIR } else { Join-Path $HOME ".local\\bin" }
 $InstallBin = Join-Path $InstallDir "dust.exe"

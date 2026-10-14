@@ -9,10 +9,13 @@
 This source snapshot comes from cached mainline revision
 `45349afab66f25b5092b4a0e7189a785ff578020` of the original repository.
 The original remote is unavailable, so its current state cannot be verified.
-Versions are unchanged; release binaries, tags, CI history and external quality
-integrations have not been migrated. Actions are disabled pending deliberate
-CI setup. Historical documentation and package metadata may still reference
-the original repository.
+Versions are unchanged. The original `v0.2.1` source was rebuilt through
+[Rust-only release CI](https://github.com/dustcodegen/dust/actions/workflows/rust-release.yml)
+with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
+Only manual Rust release CI is enabled, not Dart/Flutter publishing or the
+inherited general CI/Scorecard workflows. Original CI history and external
+quality integrations are not migrated. Historical documentation and package
+metadata may still reference the original repository.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you
@@ -26,19 +29,27 @@ can focus on your product.
 
 ## Installation
 
-Until release binaries are migrated, build from source on macOS, Linux or
-Windows with the [Rust toolchain](https://rustup.rs/) installed:
+macOS and Linux (no Rust toolchain required):
 
 ```bash
-cargo install --locked --git https://github.com/dustcodegen/dust --bin dust dust_cli
+curl -fsSL https://raw.githubusercontent.com/dustcodegen/dust/main/install.sh | bash
 ```
 
-Cargo installs into its configured bin directory (normally `$HOME/.cargo/bin`).
-Verify the installation:
+Windows PowerShell (no Rust toolchain required):
+
+```powershell
+irm https://raw.githubusercontent.com/dustcodegen/dust/main/install.ps1 | iex
+```
+
+The installers verify SHA-256 checksums before installing into `$HOME/.local/bin`.
+Add that directory to `PATH`, then verify:
 
 ```bash
 dust --version
 ```
+
+The unchanged `v0.2.1` binary still has its historical `dust upgrade` destination.
+Until that is updated in a future release, rerun the new installer to reinstall.
 
 Dust packages have their own pub versions. When changing the CLI or packages,
 check the [compatibility guide](docs/usage/compatibility.md).
