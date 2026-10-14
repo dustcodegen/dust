@@ -1,0 +1,261 @@
+# Changelog
+
+All notable changes to `dust_server` are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+## [0.2.1] - 2026-09-28
+
+### Added
+
+- `Rejection.fromSqlxError`: a query that found no row is a 404 carrying the
+  caller's `notFound` message, a `SqlxErrorKind.uniqueViolation` is a 409
+  carrying `conflict`, and anything else is a 500 that reports the error
+  through `ServerErrors.report` and says nothing about the database. It reads
+  `SqlxError.kind`, so it behaves the same on SQLite and PostgreSQL.
+- `example/database_errors.dart` uses it instead of matching SQLite's message
+  text.
+
+### Fixed
+
+- Unknown paths inside a nested router keep the router's JSON 404 instead of
+  falling through to a root SPA fallback. Paths outside the nested prefix still
+  receive the fallback (#587).
+
+## [0.2.0] - 2026-09-13
+
+### Added
+
+- Five database examples, indexed under their own heading. Nothing in the
+  previous 52 touched a database, which left out the combination every server
+  that stores something is:
+
+  - `sqlite_database.dart` — a driver opened in `main`, attached with
+    `withState`, read back by a handler that opens and closes nothing.
+  - `database_transactions.dart` — a checkout that reserves stock and writes an
+    order, or does neither. `Ok` commits and `Err` rolls back, so there is no
+    path out of the closure that skips the decision.
+  - `database_errors.dart` — a missing row as 404 and a duplicate as 409,
+    because answering 500 for both is how a duplicate email pages somebody.
+  - `database_pagination.dart` — `limit` and `offset` bind, and a sort column
+    is a `switch` over an enum, since no dialect binds an identifier and
+    `'ORDER BY $sort'` is how a list endpoint becomes an injection.
+  - `postgres_database.dart` — what changes over a socket: `migrate()` as a
+    separate call before serving, and a transaction holding one pooled
+    connection.
+
+  The four SQLite ones run anywhere. The PostgreSQL one is the only example the
+  package matrix cannot run, since there is no in-memory PostgreSQL, so it is
+  skipped there and run by the job that has a server.
+
+### Changed
+
+- Requires `dust_dart` 0.2.0. No API of this package changed; the constraint
+  had to widen because `dust_dart` went to 0.2.0, and a package that pins
+  `^0.1.4` cannot resolve against it.
+
+- Leaves the `0.1.0-beta` line for the CLI's own version. Generated handlers
+  call this package's API directly, so the compatibility table reads better
+  when the two move together — and pub.dev's automated publishing is configured
+  per package with a `v{version}` tag pattern, which only matches while the two
+  are equal. Every release so far was pushed by hand because `v0.1.4` could not
+  publish `0.1.0-beta.3`; `v0.2.0` publishes `0.2.0`.
+
+## [0.1.0-beta.3] - 2026-09-03
+
+### Added
+
+- `TestClient` testing framework, exported via `package:dust_server/testing.dart`.
+  Three modes: `TestClient(router)` for in-process handler testing with no
+  socket, `TestClient.serve(router)` for real HTTP on port 0, and
+  `TestClient.origin(url)` for connecting to an existing server. `TestRequest`
+  uses void setters for Dart cascade syntax; `TestResponse` carries named status
+  assertions (`assertOk`, `assertCreated`, `assertConflict`, etc.), JSON
+  helpers, and header assertions.
+- `TestResponse.headersAll`, every value for every response header, keyed by
+  lowercased name. A response may send `set-cookie` more than once, and the
+  joined form of that header is not reversible.
+- `TestResponse.bodyBytes`, the response body exactly as it arrived, so a
+  handler answering with an image or a PDF is testable.
+
+### Changed
+
+- Runtime constraint raised to `dust_dart: ^0.1.4`, which is the version this
+  release is built and tested against.
+
+### Fixed
+
+- `TestResponse.headers` lowercases every header name, so a handler that writes
+  `Content-Type` answers `assertHeader('content-type', ...)`. Shelf's header
+  map is case-insensitive but keeps the case the handler wrote, and copying it
+  into a plain map kept the case while losing the lookup — so the same
+  assertion passed under `TestClient.serve`, where `dart:io` had already
+  lowercased, and failed in handler mode.
+- The `saveCookies` jar keeps every `set-cookie` a response sends. It read one
+  joined string and split it on `;`, which kept the first cookie and dropped
+  the rest, and an `Expires` date carries its own comma.
+- A binary response body is no longer destroyed on the way to the assertion.
+  Both modes decoded the body as UTF-8 while reading it, which is lossy and
+  not reversible: a nine-byte PNG signature came back as fifteen bytes with
+  three of them replaced. `TestResponse` keeps the bytes and decodes `body`
+  from them on demand, allowing malformed sequences so a failing assertion can
+  still print something.
+- `TestResponse.body` and `.json` are computed once instead of on every read,
+  so a cascade of assertions decodes the body a single time.
+
+## [0.1.0-beta.2] - 2026-08-25
+
+Naming, brought in line with axum. All three are breaking, with no deprecated
+forwarders — the package is one release old and the names are wrong now rather
+than later. See [axum parity](https://github.com/y3l1n4ung/dust/blob/main/docs/design/server-axum-parity.md).
+
+### Changed
+
+- `serveRouter` is now `serve`. The old name described its argument's type,
+  which the caller can already see.
+- `serve` takes an `InternetAddress` rather than an `Object`. `HttpServer.bind`
+  accepts a `String` host, which buys a hidden DNS lookup and a typo that fails
+  at runtime; `InternetAddress.anyIPv4` and `.loopbackIPv4` say what `0.0.0.0`
+  and `127.0.0.1` mean and cannot be mistyped. `serveIsolates` already took one.
+- `serveIsolates` requires `isolates:`. The old default of two was neither
+  "one, explicitly" nor "use the machine".
+- `serveCluster` is now `serveIsolates`, and `ServerCluster` is now
+  `ServerIsolates`. "Cluster" reads as multiple machines; this forks isolates on
+  one box, the way `uvicorn --workers` forks processes. Naming the isolate is
+  also the clearest warning that state does not cross one.
+
+### Added
+
+- `DisposableLayer`, a `Layer` that also declares `dispose()`. Shutdown walks
+  the router — nested groups and `routeLayer` included — and releases each one
+  after background work has drained. A `dispose` that throws does not stop the
+  others. Separate from `Layer` because Dart's `implements` requires every
+  member re-declared, so adding a method there would break every existing layer.
+- `ServerIsolates.alive` and an `onIsolateError` callback on `serveIsolates`.
+  A dead isolate was invisible: the port stays bound by the survivors, so
+  traffic kept flowing at reduced capacity with nothing to say so. It still
+  cannot be restarted — killing an isolate does not release its socket, so a
+  replacement cannot rebind the port — but the loss is no longer silent.
+- `Service`, with `Router` implementing it. Dart tears off `call` implicitly, so
+  a router is assignable to a shelf `Handler` with no conversion — the same
+  reason `axum::serve(listener, app)` takes a `Router` directly.
+
+### Examples
+
+- `disposable_layers.dart` — releasing what a layer owns, on shutdown.
+- `router_as_handler.dart` — handing a router to `shelf` middleware, since
+  `Router` implements `Service` and is therefore already a `Handler`.
+- `isolate_failure.dart` — knowing when a serving isolate dies, and why it
+  cannot be replaced.
+
+### Fixed
+
+- A response header carrying a control character now answers 500 and reports
+  through `onError`. `dart:io` refuses to write one — which is what stops a
+  response being split — but it threw inside `shelf_io` after the handler had
+  returned, outside every catch in the package. The request never completed,
+  the client waited until it timed out, and nothing in the log said which
+  handler did it: a leaked connection and an invisible failure. Tab is still
+  allowed; every other control character is refused.
+- A server-sent events generator that throws now reaches `onError`. The
+  handler has returned long before the stream runs, so `guard` never saw it:
+  the error arrived in the zone as an unhandled asynchronous failure, the
+  client got a dropped connection, and the application had no record of why.
+  The reporter is captured while the handler is still on the stack, because
+  `ServerErrors.reporter` is zone-scoped and the request's zone is gone by the
+  time the stream is consumed.
+- `RequestId` no longer echoes an arbitrary inbound header. The value reaches
+  the response and every access log line, so an unchecked one handed a client
+  kilobytes of the log per request — a 4096-character id was echoed verbatim.
+  An inbound id longer than `maxLength` (128 by default) or carrying anything
+  outside `A-Z a-z 0-9 - _ .` is replaced by a generated one.
+- A `DisposableLayer` used on more than one router is disposed once, by
+  identity, rather than once per registration. A layer applied at the root and
+  again on a subtree owns one resource, and closing it twice failed silently
+  because the guard around `dispose` swallows the second error. Deduplication
+  is by identity, not equality: two separate instances that compare equal each
+  own their own resource, and collapsing them would leak one.
+- `serveIsolates` no longer hangs forever when the router factory throws
+  inside a spawned isolate. It waited on a port the isolate writes to only
+  after the factory has already succeeded, so a factory that works in the
+  parent and fails in the child — a locked file, an environment variable read
+  per isolate, anything the parent already holds — left the server never
+  started and nothing logged. It now fails with the isolate named and the
+  original error attached, and cleans up: no port left bound, no isolate left
+  running.
+- Numeric coercion no longer accepts surrounding whitespace. Dart's parsers
+  trim before parsing, so `?id=%2010` and `?id=10` produced the same number
+  from two different requests, and anything keyed on the raw text — a cache
+  key, a rate-limit bucket, a dedup check — disagreed with the handler about
+  which request it had. Applies to `int`, `double`, `num`, and `BigInt`. This
+  is the same class as the `0x` prefix already rejected, which the earlier fix
+  did not cover.
+
+### Removed
+
+- `package:dust_server/router.dart` no longer re-exports shelf's `serve`. It
+  occupied the name the package needed for its own entry point. Import
+  `package:shelf/shelf_io.dart` directly if you were using it.
+
+## [0.1.0-beta.1] - 2026-08-24
+
+First beta, and the first release of this package. The runtime is complete
+enough to build on; the API may still change before 1.0, so pin the exact
+version.
+
+### Added
+
+Routing in the shape axum uses — `route`, `nest`, `merge`, `mount`, `layer`,
+`routeLayer`, `withState`, `fallback` — over `shelf`, with its own matcher.
+
+- **Extraction**: path, query, header, host, cookie, state, JSON, form,
+  multipart (buffered and streaming), raw and streamed bodies, bearer tokens,
+  Basic credentials, API keys, session ids, and `firstOf` to compose them.
+  `valid`, `optional`, and `fallible` wrap any of them.
+- **Responses**: typed dispatch from what a handler returns, `Rejection` with a
+  failure taxonomy, redirects, server-sent events, streamed bodies, templates.
+- **Layers**: CORS, compression, request id, access log, path normalization,
+  security headers, request timeout.
+- **Serving**: graceful shutdown that drains requests and background work, TLS,
+  isolate clustering, static files with single-page support.
+- **Observability**: W3C Trace Context spans, an access record carrying the
+  matched route, and `onError` for failures.
+
+51 examples in `example/`, one question each, all served over a real socket by
+`test/example/`.
+
+Pinned at this release: **1275 tests, 1595/1595 lines, 100% line coverage.**
+Prose elsewhere says "over 1,200" on purpose — an exact figure in a document
+nobody recounts goes stale on the next commit, and did so four times before this
+one.
+
+### Known limits
+
+- The code generator this runtime exists for does not exist yet. Everything here
+  is written by hand today.
+- No metrics, sessions, or rate limiting in the runtime. Each is policy, and each
+  ships as an example instead.
+- Range requests work for static files, not for a dynamic body.
+- `serveIsolates` gives each isolate its own state; anything shared belongs
+  outside the process.
+
+### Seventeen defects found and fixed before this beta
+
+Fifteen were found by writing an example or probing a combination of layers,
+two by reading the code. Three were in code written the same day. The ones worth
+knowing about, because each was silent:
+
+| Area | What was wrong |
+| :--- | :--- |
+| Server-sent events | never streamed — every event was held until the stream ended |
+| Streamed responses | a `Stream` return answered 500; a hand-built one buffered |
+| `mount('/')` | claimed only the bare root, so every deep link in a single-page build 404'd |
+| Route order | a router's own routes were flattened ahead of its children whatever the declaration order |
+| Nested `layer` | ran only after a route matched, so `NormalizePath` inside a `nest` did nothing |
+| Body limits | a router limit *loosened* a stricter per-route one |
+| WebSocket upgrades | traced as errors and missing from the access log |
+| Background work | not drained by shutdown, and inheriting a span that had already ended |
+| Coercion | `?id=0x10` and `?id=16` were the same request |
+| 401 challenges | accepted CRLF, which is response splitting |

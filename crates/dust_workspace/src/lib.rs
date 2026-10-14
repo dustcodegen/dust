@@ -1,0 +1,45 @@
+#![forbid(unsafe_code)]
+#![deny(missing_docs)]
+#![doc = "Workspace discovery and Dart library candidate scanning for Dust."]
+
+/// Dust workspace configuration.
+mod config;
+/// Source library discovery.
+mod discover;
+/// Generated output path policy.
+mod output_policy;
+/// Dart package config discovery.
+mod package_config;
+/// Pubspec parsing.
+mod pubspec;
+/// Workspace root detection.
+mod root;
+/// Workspace planning.
+mod workspace;
+
+pub use config::{DustConfig, I18nConfig, I18nIosConfig, OutputConfig, load_dust_config};
+pub use discover::{
+    LibraryDiscovery, SupportedAnnotations, discover_libraries, discover_libraries_with_usage,
+};
+pub use output_policy::{
+    expected_part_uri, generated_test_output_path, is_generated_primary_file, package_import_uri,
+    primary_output_path, rewrite_library_import_uri,
+};
+pub use package_config::{PackageConfig, PackageConfigKind, load_package_config};
+pub use pubspec::{
+    load_dart_sdk_lower_bound, load_flutter_assets, load_is_flutter_package,
+    load_is_pub_workspace_root, load_package_name,
+};
+pub use root::detect_workspace_root;
+pub use workspace::{SourceLibrary, WorkspacePlan, discover_workspace};
+
+/// Dust runtime packages discovery recognises in Dart imports.
+///
+/// Exposed so crates that keep their own list of Dust packages can be tested
+/// against this one instead of drifting from it.
+pub fn dust_runtime_packages() -> Vec<&'static str> {
+    discover::DUST_RUNTIME_PACKAGES
+        .iter()
+        .map(|(package, _)| *package)
+        .collect()
+}

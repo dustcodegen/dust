@@ -1,0 +1,22 @@
+[package]
+publish = false
+name = "dust_workspace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Workspace discovery and output policy helpers for Dust."
+
+[dependencies]
+dust_dart_syntax = { path = "../dust_dart_syntax", version = "0.2.1" }
+dust_diagnostics = { path = "../dust_diagnostics", version = "0.2.1" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_yaml = "0.9.34"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[lib]
+path = "src/lib.rs"

@@ -1,0 +1,26 @@
+final class {{ generated_name }} implements {{ class_name }} {
+  {{ generated_name }}._(this._driver);
+
+  factory {{ generated_name }}.{{ factory }}(
+    {{ factory_parameter }}, {
+    {{ options_type }}? options,
+  }) {
+    final driver = {{ open_expr }};
+    return {{ generated_name }}._(driver);
+  }
+
+  final {{ driver_type }} _driver;
+
+  @override
+  Connection get connection => _driver;
+
+  @override
+  Future<Result<Unit, SqlxError>> migrate() => {{ migrate_expr }};
+
+  @override
+  UnsafeSql get unsafe => {{ unsafe_expr }};
+
+  Pool get pool => _driver;
+}
+
+{{ migrations }}

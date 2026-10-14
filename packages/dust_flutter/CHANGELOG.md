@@ -1,0 +1,126 @@
+# Changelog
+
+All notable changes to `dust_flutter` are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+## [0.2.1] - 2026-09-28
+
+### Added
+
+- `example/async_view_model.dart`: an async ViewModel loading from a
+  `Result`-returning repository. Throwing the `Err` value from `loadData` keeps
+  its type in `AsyncFailure.error`, so the page can offer retry for one failure
+  and not another. Refresh keeps data on screen.
+- `example/stale_actions.dart`: search-as-you-type with `runAction`, where a
+  slow answer for an older query is dropped, and an effect for an empty result.
+- Widget tests for both, and a README section listing the examples (#546).
+
+## [0.2.0] - 2026-09-13
+
+### Fixed
+
+- `AsyncState<T>` compares by value, so an async ViewModel honours its state
+  type's own `==` the way a synchronous one already did. A generated ViewModel
+  only notifies when the next state differs from the current one, and the
+  wrapper compared by identity, so re-emitting equal data rebuilt every listener
+  and `expect(state, AsyncData(page))` never matched.
+
+  `AsyncFailure` includes the stack trace in its comparison: a retry that fails
+  the same way is a new failure and the UI should see it.
+
+  This can suppress a rebuild that used to happen. If a ViewModel mutates a
+  value in place and re-emits it, the two states are now equal and no rebuild
+  follows; emit a new value instead, which is what the synchronous path already
+  required.
+
+### Added
+
+- `AsyncState<T>` variants have a `toString`. Debug output and failed
+  expectations said `Instance of 'AsyncData<HomePageData>'`, which named neither
+  the state nor what it held.
+
+### Changed
+
+- Split `view_model.dart` into `view_model.dart`, `async_state.dart` and
+  `observers.dart`. The library exports the same types from the same import, so
+  nothing a caller writes changes; the files are each small enough to read.
+
+## [0.1.4] - 2026-09-03
+
+### Added
+
+- Add `AppRoute.branch` and generated branch stack runtime support for
+  independent tab-style navigation history.
+- Add `RouterBase.observers` for forwarding `NavigatorObserver` instances to
+  generated routers.
+- Add `RouterBase.onException` for unawaited generated navigation failures.
+- Add `RouterBase.parseRouteInformation` for normalizing Flutter
+  `RouteInformation` before generated route matching.
+- Add generated route query parsing and restoration for enums, `DateTime`,
+  `Uri`, and repeated `List<String>` / `List<int>` values.
+- Add generated route branch constants and result-type metadata for route
+  table inspection.
+- Add shared generated-route runtime helpers for URL construction, URI extras,
+  bool parsing, shell checks, and no-transition pages.
+- Add `RouteGuardBase<T>` as the common supertype of `RouteGuard<T>` and
+  `AsyncRouteGuard<T>`. Generated guard lists use it, so a class that implements
+  neither contract no longer type-checks in `@AppRoute(guards: [...])`.
+
+### Fixed
+
+- Ask the Navigator to pop first on system back, so dialogs, modal bottom
+  sheets, and imperatively pushed routes are dismissed before a generated page
+  is popped, and `PopScope` on a generated page is honoured.
+- Throw instead of skipping a guard that implements neither guard contract, so a
+  mistyped guard cannot silently disable an access check.
+- Log `allow` only for guards that actually ran.
+- Re-run redirects and guards when pop or platform page removal exposes a
+  previous route.
+- Avoid subscribing imperative router controller lookups to route changes.
+
+## [0.1.3] - 2026-07-28
+
+### Added
+
+- Add router stack observer runtime support for generated routing.
+- Add typed route results with `@AppRoute(result: Type)` and generated
+  `Future<T?> push()` helpers.
+- Add `runAction` for stale-safe async commands in sync ViewModels.
+
+### Changed
+
+- Make failed ViewModel initialization retry only through explicit `retryInit()`.
+- Keep v0.1.3 routing, state, and i18n runtime APIs aligned with the Dust CLI.
+
+### Fixed
+
+- Unwrap deprecated `StateEffect` values before effect delivery.
+
+## [0.1.2] - 2026-07-10
+
+### Fixed
+
+- Make generated route `push()` calls awaitable and complete them when the
+  pushed route is popped, including optional pop results.
+- Apply generated route `transition:` annotations at the page route boundary so
+  custom and no-transition builders control the actual navigation animation.
+
+## [0.1.1] - 2026-07-09
+
+### Added
+
+- Add opt-in `AppRouter` debug diagnostics for generated routing.
+- Print generated route tables, named route paths, redirects, guards,
+  navigation actions, and stack changes when diagnostics are enabled.
+
+## [0.1.0] - 2026-05-08
+
+### Added
+
+- Initial public release of Dust Flutter annotations and runtime APIs.
+- Includes Navigator 2.0 route annotations/runtime and ViewModel state
+  annotations/runtime for generated Dust Flutter code.
+- Includes the Flutter i18n runtime for Dust-generated localization workflows.

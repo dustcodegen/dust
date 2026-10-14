@@ -1,0 +1,5 @@
+    return _db.fetchOptional<{{ row_name }}>(
+      {{ sql }},
+      [{{ args }}],
+      const ${{ row_name }}RowDeserializer().deserialize,
+    );

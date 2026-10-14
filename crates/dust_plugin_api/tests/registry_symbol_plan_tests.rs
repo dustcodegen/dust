@@ -1,0 +1,126 @@
+//! Integration tests for plugin registry symbol planning and workspace analysis.
+
+#[path = "support/library.rs"]
+mod library;
+
+use dust_diagnostics::Diagnostic;
+use dust_ir::DartFileIr;
+use dust_plugin_api::{
+    DustPlugin, PluginContext, PluginContribution, PluginRegistry, WorkspaceAnalysisBuilder,
+};
+
+use self::library::sample_library;
+
+struct SymbolPlugin {
+    name: &'static str,
+    requested: Vec<&'static str>,
+}
+
+impl DustPlugin for SymbolPlugin {
+    fn plugin_name(&self) -> &'static str {
+        self.name
+    }
+
+    fn requested_symbols(&self, _library: &DartFileIr) -> Vec<String> {
+        self.requested
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect()
+    }
+
+    fn validate(&self, _library: &DartFileIr) -> Vec<Diagnostic> {
+        Vec::new()
+    }
+
+    fn generate(
+        &self,
+        _library: &DartFileIr,
+        _context: &PluginContext<'_>,
+    ) -> Vec<PluginContribution> {
+        vec![PluginContribution::default()]
+    }
+}
+
+#[test]
+fn symbol_plan_preserves_first_seen_order_and_dedupes() {
+    let library = sample_library();
+    let mut registry = PluginRegistry::new();
+    registry
+        .register(Box::new(SymbolPlugin {
+            name: "plugin_a",
+            requested: vec!["_$UserToJson", "_undefined"],
+        }))
+        .unwrap();
+    registry
+        .register(Box::new(SymbolPlugin {
+            name: "plugin_b",
+            requested: vec!["_undefined", "_$UserFromJson"],
+        }))
+        .unwrap();
+
+    let plan = registry.build_symbol_plan(&library);
+
+    let names = plan
+        .reserved()
+        .iter()
+        .map(|symbol| symbol.name.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["_$UserToJson", "_undefined", "_$UserFromJson"]);
+    assert!(plan.contains("_undefined"));
+}
+
+#[test]
+fn registry_collects_ir_workspace_analysis_in_registration_order() {
+    struct AnalysisPlugin {
+        key: &'static str,
+        value: &'static str,
+    }
+
+    impl DustPlugin for AnalysisPlugin {
+        fn plugin_name(&self) -> &'static str {
+            self.key
+        }
+
+        fn collect_workspace_analysis_ir(
+            &self,
+            _library: &DartFileIr,
+            analysis: &mut WorkspaceAnalysisBuilder,
+        ) {
+            analysis.add_string_set_value(format!("ir_{}", self.key), self.value);
+        }
+
+        fn validate(&self, _library: &dust_ir::DartFileIr) -> Vec<dust_diagnostics::Diagnostic> {
+            Vec::new()
+        }
+
+        fn generate(
+            &self,
+            _library: &dust_ir::DartFileIr,
+            _context: &PluginContext<'_>,
+        ) -> Vec<PluginContribution> {
+            vec![PluginContribution::default()]
+        }
+    }
+
+    let mut registry = PluginRegistry::new();
+    registry
+        .register(Box::new(AnalysisPlugin {
+            key: "a",
+            value: "User",
+        }))
+        .unwrap();
+    registry
+        .register(Box::new(AnalysisPlugin {
+            key: "a",
+            value: "Team",
+        }))
+        .unwrap();
+
+    let mut ir_analysis = WorkspaceAnalysisBuilder::default();
+    registry.collect_workspace_analysis_ir(&sample_library(), &mut ir_analysis);
+    let ir_analysis = ir_analysis.build();
+    assert_eq!(
+        ir_analysis.string_set("ir_a"),
+        Some(&["Team".to_owned(), "User".to_owned()][..])
+    );
+}

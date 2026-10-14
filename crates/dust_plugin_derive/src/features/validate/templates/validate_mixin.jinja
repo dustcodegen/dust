@@ -1,0 +1,30 @@
+/// Validates this `{{ class_name }}`.
+///
+/// Usage:
+/// ```dart
+/// final result = value.validate();
+/// if (result case Invalid(:final errors)) {
+///   print(errors.first.message);
+/// }
+/// ```
+ValidationResult validate() {
+  final {{ self_name }} = this as {{ class_name }};
+  final {{ errors_name }} = <ValidationError>[];
+{%- for field in fields %}
+  {{ extension_name }}.{{ field.helper_name }}({% if field.uses_self %}{{ self_name }}, {% endif %}{{ self_name }}.{{ field.name }}, {{ errors_name }});
+{%- endfor %}
+  return {{ errors_name }}.isEmpty ? const Valid() : Invalid({{ errors_name }});
+}
+
+/// Throws [ValidationException] when this `{{ class_name }}` is invalid.
+///
+/// Usage:
+/// ```dart
+/// value.validateOrThrow();
+/// ```
+void validateOrThrow() {
+  final {{ result_name }} = validate();
+  if ({{ result_name }} case Invalid(errors: final {{ invalid_errors_name }})) {
+    throw ValidationException({{ invalid_errors_name }});
+  }
+}

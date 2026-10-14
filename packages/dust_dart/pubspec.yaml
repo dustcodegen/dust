@@ -1,0 +1,26 @@
+name: dust_dart
+description: Annotations and runtime support for generating Dart code with dust.
+version: 0.2.1
+repository: https://github.com/y3l1n4ung/dust
+issue_tracker: https://github.com/y3l1n4ung/dust/issues
+topics:
+  - codegen
+  - annotations
+  - json
+  - validation
+  - http
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+resolution: workspace
+
+dependencies:
+  collection: ^1.19.1
+  dio: ^5.9.2
+  meta: ^1.16.0
+
+dev_dependencies:
+  coverage: ^1.11.0
+  test: ^1.26.0
+  very_good_analysis: ^10.3.0

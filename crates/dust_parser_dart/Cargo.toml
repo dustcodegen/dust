@@ -1,0 +1,18 @@
+[package]
+publish = false
+name = "dust_parser_dart"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Parser facade and parsed model types for Dart libraries in Dust."
+
+[dependencies]
+dust_dart_syntax = { path = "../dust_dart_syntax", version = "0.2.1" }
+dust_text = { path = "../dust_text", version = "0.2.1" }
+dust_diagnostics = { path = "../dust_diagnostics", version = "0.2.1" }
+
+[lib]
+path = "src/lib.rs"

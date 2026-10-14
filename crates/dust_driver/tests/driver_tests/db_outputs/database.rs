@@ -1,0 +1,184 @@
+use std::fs;
+
+use dust_driver::{BuildRequest, DbRequestOptions, run_build};
+
+use super::helpers::{write_db_workspace, write_row_only_workspace};
+use crate::support::{generated_output, make_workspace};
+
+#[test]
+fn db_build_writes_database_without_from_row_mapper() {
+    let workspace = make_workspace();
+    write_db_workspace(workspace.path(), false);
+
+    let result = run_build(BuildRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: true,
+        jobs: None,
+        db: DbRequestOptions {
+            only_db: true,
+            offline: false,
+        },
+    });
+    let output = fs::read_to_string(workspace.path().join("lib/app_database.g.dart")).unwrap();
+
+    assert!(!result.has_errors(), "{:?}", result.diagnostics);
+    assert_eq!(
+        output,
+        generated_output(
+            r#"part of 'app_database.dart';
+
+UserProfile _$UserProfileFromRow(Row row) {
+  return UserProfile(
+    id: row.read<int>('id'),
+    name: row.read<String>('display_name'),
+    bio: row.readNullable<Object?>('bio') == null ? '' : row.read<String>('bio'),
+  );
+}
+
+/// Row deserializer for [UserProfile].
+final class $UserProfileRowDeserializer implements RowDeserializer<UserProfile> {
+  const $UserProfileRowDeserializer();
+
+  @override
+  UserProfile deserialize(Row row) => _$UserProfileFromRow(row);
+}
+
+/// Typed row query terminals for [UserProfile].
+///
+/// Resolved from the static type of the receiver, so a row type with no
+/// `FromRow` has no terminals and the call does not compile.
+extension $UserProfileQuery on QueryAs<UserProfile> {
+  /// Fetches exactly one row.
+  Future<Result<UserProfile, SqlxError>> fetchOne(Executor db) =>
+      fetchOneWith(db, _$UserProfileFromRow);
+
+  /// Fetches zero or one row.
+  Future<Result<UserProfile?, SqlxError>> fetchOptional(Executor db) =>
+      fetchOptionalWith(db, _$UserProfileFromRow);
+
+  /// Fetches every row.
+  Future<Result<List<UserProfile>, SqlxError>> fetchAll(Executor db) =>
+      fetchAllWith(db, _$UserProfileFromRow);
+}
+
+final class _$AppDatabase implements AppDatabase {
+  _$AppDatabase._(this._driver);
+
+  factory _$AppDatabase.open(
+    String path, {
+    SqliteConnectOptions? options,
+  }) {
+    final driver = Sqlite3Driver.open(
+      path,
+      migrations: _$appDatabaseMigrations,
+      options: options,
+    );
+    return _$AppDatabase._(driver);
+  }
+
+  final Sqlite3Driver _driver;
+
+  @override
+  Connection get connection => _driver;
+
+  @override
+  Future<Result<Unit, SqlxError>> migrate() => Future<Result<Unit, SqlxError>>.value(const Ok(unit));
+
+  @override
+  UnsafeSql get unsafe => Sqlite3UnsafeSql(_driver);
+
+  Pool get pool => _driver;
+}
+
+const Map<String, String> _$appDatabaseMigrations = <String, String>{
+  '0001_init.sql': 'CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  display_name TEXT NOT NULL,\n  bio TEXT NOT NULL DEFAULT \'\'\n);\n',
+};
+"#
+        )
+    );
+}
+
+#[test]
+fn migration_change_invalidates_cached_database_output() {
+    let workspace = make_workspace();
+    write_db_workspace(workspace.path(), false);
+    let request = || BuildRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: true,
+        jobs: None,
+        db: DbRequestOptions {
+            only_db: true,
+            offline: false,
+        },
+    };
+
+    let first = run_build(request());
+    assert!(!first.has_errors(), "{:?}", first.diagnostics);
+
+    fs::write(
+        workspace.path().join("migrations/0001_init.sql"),
+        "CREATE TABLE users (\n  id INTEGER PRIMARY KEY,\n  display_name TEXT NOT NULL,\n  bio TEXT NOT NULL DEFAULT ''\n);\nCREATE TABLE projects (id INTEGER PRIMARY KEY);\n",
+    )
+    .unwrap();
+    let second = run_build(request());
+    let output = fs::read_to_string(workspace.path().join("lib/app_database.g.dart")).unwrap();
+
+    assert!(!second.has_errors(), "{:?}", second.diagnostics);
+    assert!(output.contains("CREATE TABLE projects"), "{output}");
+}
+
+#[test]
+fn normal_build_writes_from_row_trait_without_database_output() {
+    let workspace = make_workspace();
+    write_row_only_workspace(workspace.path());
+
+    let result = run_build(BuildRequest {
+        cwd: workspace.path().to_path_buf(),
+        fail_fast: true,
+        jobs: None,
+        db: Default::default(),
+    });
+    let output = fs::read_to_string(workspace.path().join("lib/user_row.g.dart")).unwrap();
+
+    assert!(!result.has_errors(), "{:?}", result.diagnostics);
+    assert_eq!(
+        output,
+        generated_output(
+            r#"part of 'user_row.dart';
+
+UserProfile _$UserProfileFromRow(Row row) {
+  return UserProfile(
+    id: row.read<int>('id'),
+    name: row.read<String>('display_name'),
+  );
+}
+
+/// Row deserializer for [UserProfile].
+final class $UserProfileRowDeserializer implements RowDeserializer<UserProfile> {
+  const $UserProfileRowDeserializer();
+
+  @override
+  UserProfile deserialize(Row row) => _$UserProfileFromRow(row);
+}
+
+/// Typed row query terminals for [UserProfile].
+///
+/// Resolved from the static type of the receiver, so a row type with no
+/// `FromRow` has no terminals and the call does not compile.
+extension $UserProfileQuery on QueryAs<UserProfile> {
+  /// Fetches exactly one row.
+  Future<Result<UserProfile, SqlxError>> fetchOne(Executor db) =>
+      fetchOneWith(db, _$UserProfileFromRow);
+
+  /// Fetches zero or one row.
+  Future<Result<UserProfile?, SqlxError>> fetchOptional(Executor db) =>
+      fetchOptionalWith(db, _$UserProfileFromRow);
+
+  /// Fetches every row.
+  Future<Result<List<UserProfile>, SqlxError>> fetchAll(Executor db) =>
+      fetchAllWith(db, _$UserProfileFromRow);
+}
+"#
+        )
+    );
+}

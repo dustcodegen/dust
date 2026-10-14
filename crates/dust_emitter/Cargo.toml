@@ -1,0 +1,25 @@
+[package]
+publish = false
+name = "dust_emitter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Primary Dart file emitter for Dust-generated outputs."
+
+[dependencies]
+dust_dart_emit = { path = "../dust_dart_emit", version = "0.2.1" }
+dust_diagnostics = { path = "../dust_diagnostics", version = "0.2.1" }
+dust_ir = { path = "../dust_ir", version = "0.2.1" }
+dust_plugin_api = { path = "../dust_plugin_api", version = "0.2.1" }
+serde = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.15.0"
+dust_text = { path = "../dust_text", version = "0.2.1" }
+dust_plugin_derive = { path = "../dust_plugin_derive", version = "0.2.1" }
+
+[lib]
+path = "src/lib.rs"

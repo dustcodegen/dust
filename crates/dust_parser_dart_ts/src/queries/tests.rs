@@ -1,0 +1,232 @@
+use dust_parser_dart::ParsedQueryCallSurface;
+use dust_text::{FileId, SourceText};
+use tree_sitter::Parser;
+
+use super::{ParsedQueryFunction, extract_query_calls};
+
+#[test]
+fn extracts_query_calls() {
+    let calls = calls_for(
+        "queryAs<UserRow>(r'SELECT * FROM users WHERE id = $1', [id]).fetchOptional(db);",
+    );
+
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].function, ParsedQueryFunction::As);
+    assert_eq!(calls[0].type_arg_source.as_deref(), Some("UserRow"));
+    assert_eq!(calls[0].sql, "SELECT * FROM users WHERE id = $1");
+    assert!(calls[0].sql_source_static);
+    assert_eq!(calls[0].parameter_count, 1);
+    assert!(calls[0].params_source_is_list);
+    assert_eq!(calls[0].fetch_method.as_deref(), Some("fetchOptional"));
+}
+
+#[test]
+fn rejects_dynamic_sql_and_non_list_params() {
+    let calls = calls_for("queryExecute('DELETE FROM $table', args).execute(db);");
+
+    assert_eq!(calls.len(), 1);
+    assert!(!calls[0].sql_source_static);
+    assert!(!calls[0].params_source_is_list);
+}
+
+#[test]
+fn ignores_strings_comments_and_prefixes() {
+    let calls = calls_for(
+        "final text = 'queryExecute(r\"SELECT 1\", [])'; // queryExecute(r'SELECT 1', [])\nmyqueryExecute(r'SELECT 1', []);",
+    );
+
+    assert_eq!(calls.len(), 0);
+}
+
+#[test]
+fn extracts_multiline_sql() {
+    let calls =
+        calls_for("queryExecute(r'''\nDELETE FROM users\nWHERE id = $1\n''', [id]).execute(db);");
+
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].function, ParsedQueryFunction::Execute);
+    assert_eq!(calls[0].sql, "\nDELETE FROM users\nWHERE id = $1\n");
+    assert_eq!(calls[0].parameter_count, 1);
+    assert_eq!(calls[0].fetch_method.as_deref(), Some("execute"));
+}
+
+#[test]
+fn rejects_concatenated_and_variable_sql() {
+    let calls = calls_for(
+        "queryExecute('DELETE ' 'FROM users', []).execute(db); queryExecute(sql, []).execute(db);",
+    );
+
+    assert_eq!(calls.len(), 2);
+    assert!(!calls[0].sql_source_static);
+    assert!(!calls[1].sql_source_static);
+}
+
+#[test]
+fn extracts_fetch_modes_and_default_params() {
+    let calls = calls_for(
+        r#"
+queryScalar<int>(r'SELECT COUNT(*) FROM users', const <Object?>[]).fetchOptional(db);
+queryExecute(r'UPDATE users SET active = 1').execute(db);
+queryExecute(r'DELETE FROM users').execute(db);
+queryAs<List<UserRow>>(r'SELECT * FROM users', [orgId]).fetchAll(db);
+"#,
+    );
+
+    assert_eq!(calls.len(), 4);
+    assert_eq!(calls[0].function, ParsedQueryFunction::Scalar);
+    assert_eq!(calls[0].fetch_method.as_deref(), Some("fetchOptional"));
+    assert_eq!(calls[0].type_arg_source.as_deref(), Some("int"));
+    assert_eq!(calls[0].parameter_count, 0);
+    // No parameter list at all, so the count defaults to zero.
+    assert_eq!(calls[1].function, ParsedQueryFunction::Execute);
+    assert_eq!(calls[1].fetch_method.as_deref(), Some("execute"));
+    assert_eq!(calls[1].parameter_count, 0);
+    assert_eq!(calls[2].function, ParsedQueryFunction::Execute);
+    assert_eq!(calls[2].fetch_method.as_deref(), Some("execute"));
+    assert_eq!(calls[3].function, ParsedQueryFunction::As);
+    assert_eq!(calls[3].fetch_method.as_deref(), Some("fetchAll"));
+    assert_eq!(calls[3].type_arg_source.as_deref(), Some("List<UserRow>"));
+}
+
+#[test]
+fn ignores_unbalanced_query_calls() {
+    let calls = calls_for("queryExecute <Row r'SELECT 1'; queryExecute(r'SELECT 1', []");
+
+    assert_eq!(calls.len(), 0);
+}
+
+#[test]
+fn requires_exact_fetch_method_property() {
+    let calls = calls_for("queryExecute(r'SELECT 1', []).fetching(db);");
+
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].fetch_method, None);
+}
+
+#[test]
+fn records_whether_a_call_brings_its_own_row_mapper() {
+    // The generated terminals decode with the mapping the row type owns. The
+    // `With` terminals take one as an argument, which is how a row type Dust
+    // did not generate is read, and the only case that needs nothing generated.
+    let generated = calls_for("queryAs<UserRow>(r'SELECT id FROM users', []).fetchAll(db);");
+    let supplied =
+        calls_for("queryAs<UserRow>(r'SELECT id FROM users', []).fetchAllWith(db, myMapper);");
+
+    assert!(!generated[0].has_row_mapper_argument);
+    assert!(supplied[0].has_row_mapper_argument);
+    assert_eq!(supplied[0].fetch_method.as_deref(), Some("fetchAllWith"));
+}
+
+fn calls_for(source: &str) -> Vec<ParsedQueryCallSurface> {
+    let source = SourceText::new(FileId::new(1), format!("void main() {{\n{source}\n}}"));
+    let mut parser = Parser::new();
+    parser
+        .set_language(&tree_sitter_dart::LANGUAGE.into())
+        .expect("tree-sitter Dart grammar loads");
+    let tree = parser.parse(source.as_str(), None).expect("source parses");
+
+    extract_query_calls(tree.root_node(), &source)
+}
+
+#[test]
+fn extracts_unchecked_sql_through_the_facade() {
+    let calls = calls_for("database.unsafe.fetch('PRAGMA table_info(users)', const []);");
+
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].function, ParsedQueryFunction::Unsafe);
+    assert_eq!(calls[0].sql, "PRAGMA table_info(users)");
+    assert_eq!(calls[0].fetch_method.as_deref(), Some("fetch"));
+    assert!(!calls[0].unsafe_sql_allowed);
+}
+
+#[test]
+fn extracts_unchecked_sql_terminals_and_type_arguments() {
+    let calls = calls_for(
+        "db.unsafe.execute('VACUUM', const []);\n         db.unsafe.fetchAs<UserRow>('SELECT id FROM users', const [], mapper);",
+    );
+
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].fetch_method.as_deref(), Some("execute"));
+    assert_eq!(calls[1].fetch_method.as_deref(), Some("fetchAs"));
+    assert_eq!(calls[1].type_arg_source.as_deref(), Some("UserRow"));
+}
+
+#[test]
+fn a_marker_comment_allows_one_unchecked_call() {
+    let above = calls_for(
+        "// dust:allow-unsafe-sql\n         database.unsafe.execute('VACUUM', const []);",
+    );
+    let trailing =
+        calls_for("database.unsafe.execute('VACUUM', const []); // dust:allow-unsafe-sql");
+    let unmarked = calls_for(
+        "// dust:allow-unsafe-sql\n\n         database.unsafe.execute('VACUUM', const []);",
+    );
+
+    assert!(above[0].unsafe_sql_allowed);
+    assert!(trailing[0].unsafe_sql_allowed);
+    // Two lines away is not "this call", or one marker would cover a file.
+    assert!(!unmarked[0].unsafe_sql_allowed);
+}
+
+#[test]
+fn records_the_function_a_query_sits_in() {
+    let calls = source_calls(
+        "void placeOrder() {\n        \x20 queryExecute(r'DELETE FROM orders').execute(db);\n         }",
+    );
+
+    assert_eq!(calls[0].enclosing_name.as_deref(), Some("placeOrder"));
+}
+
+#[test]
+fn a_method_reports_its_class() {
+    let calls = source_calls(
+        "class OrdersService {\n        \x20 Future<void> place() async {\n        \x20   queryExecute(r'DELETE FROM orders').execute(db);\n        \x20 }\n         }",
+    );
+
+    assert_eq!(
+        calls[0].enclosing_name.as_deref(),
+        Some("OrdersService.place")
+    );
+}
+
+#[test]
+fn a_closure_reports_the_function_containing_it() {
+    // A closure has no name worth reporting, and the function around it is what
+    // a reader searches for.
+    let calls = source_calls(
+        "void placeOrder() {\n        \x20 run(() {\n        \x20   queryExecute(r'DELETE FROM orders').execute(db);\n        \x20 });\n         }",
+    );
+
+    assert_eq!(calls[0].enclosing_name.as_deref(), Some("placeOrder"));
+}
+
+#[test]
+fn a_query_outside_any_function_keeps_the_helper_name() {
+    let calls = source_calls("final probe = queryExecute(r'DELETE FROM orders');");
+
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].enclosing_name, None);
+}
+
+#[test]
+fn a_second_function_does_not_inherit_the_first() {
+    let calls = source_calls(
+        "void first() {\n        \x20 queryExecute(r'DELETE FROM a').execute(db);\n         }\n         void second() {\n        \x20 queryExecute(r'DELETE FROM b').execute(db);\n         }",
+    );
+
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].enclosing_name.as_deref(), Some("first"));
+    assert_eq!(calls[1].enclosing_name.as_deref(), Some("second"));
+}
+
+/// Parses [source] as a whole library rather than as a function body.
+fn source_calls(source: &str) -> Vec<ParsedQueryCallSurface> {
+    let source = SourceText::new(FileId::new(1), source.to_owned());
+    let mut parser = Parser::new();
+    parser
+        .set_language(&tree_sitter_dart::LANGUAGE.into())
+        .expect("tree-sitter Dart grammar loads");
+    let tree = parser.parse(source.as_str(), None).expect("source parses");
+
+    extract_query_calls(tree.root_node(), &source)
+}

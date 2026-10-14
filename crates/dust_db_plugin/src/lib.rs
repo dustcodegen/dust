@@ -1,0 +1,11 @@
+#![forbid(unsafe_code)]
+#![deny(missing_docs)]
+#![doc = "Database plugin for SQLx-validated sqlite3 generation."]
+
+/// DB plugin implementation and registration surface.
+mod plugin;
+
+pub use plugin::{
+    DATABASE_PLUGIN_NAME, DbPlugin, database_migration_cache_matches, database_runtime_packages,
+    register_plugin, register_row_plugin, register_validating_plugin,
+};

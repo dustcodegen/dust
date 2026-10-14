@@ -1,0 +1,255 @@
+//! Integration tests for Dust CLI argument parsing.
+
+use std::path::PathBuf;
+
+use clap::error::ErrorKind;
+use dust_cli::{CliCommand, parse_cli_args};
+
+#[test]
+fn parses_build_with_root_fail_fast_and_jobs() {
+    let parsed =
+        parse_cli_args(["build", "--root", "/tmp/work", "--fail-fast", "--jobs", "4"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Build);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+    assert!(parsed.options.fail_fast);
+    assert_eq!(parsed.options.jobs, Some(4));
+}
+
+#[test]
+fn parses_build_clean_flag() {
+    let parsed = parse_cli_args(["build", "--clean"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Build);
+    assert!(parsed.options.clean);
+}
+
+#[test]
+fn parses_clean_with_root() {
+    let parsed = parse_cli_args(["clean", "--root", "/tmp/work"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Clean);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+    assert!(!parsed.options.fail_fast);
+    assert_eq!(parsed.options.jobs, None);
+}
+
+#[test]
+fn parses_watch_specific_options() {
+    let parsed = parse_cli_args([
+        "watch",
+        "--poll-ms",
+        "25",
+        "--max-cycles",
+        "3",
+        "--jobs",
+        "2",
+    ])
+    .unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Watch);
+    assert_eq!(parsed.options.jobs, Some(2));
+    assert_eq!(parsed.options.poll_interval_ms, 25);
+    assert_eq!(parsed.options.max_cycles, Some(3));
+}
+
+#[test]
+fn parses_build_db_offline_flags() {
+    let parsed = parse_cli_args(["build", "--db", "--offline"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Build);
+    assert!(parsed.options.db);
+    assert!(parsed.options.db_offline);
+}
+
+#[test]
+fn parses_db_build_with_root_fail_fast_and_jobs() {
+    let parsed = parse_cli_args([
+        "db",
+        "build",
+        "--root",
+        "/tmp/work",
+        "--fail-fast",
+        "--jobs",
+        "4",
+    ])
+    .unwrap();
+
+    assert_eq!(parsed.command, CliCommand::DbBuild);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+    assert!(parsed.options.fail_fast);
+    assert_eq!(parsed.options.jobs, Some(4));
+    assert!(parsed.options.db);
+    assert!(!parsed.options.db_offline);
+}
+
+#[test]
+fn parses_db_build_offline_without_db_flag() {
+    let parsed = parse_cli_args(["db", "build", "--offline"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::DbBuild);
+    assert!(parsed.options.db);
+    assert!(parsed.options.db_offline);
+}
+
+#[test]
+fn parses_i18n_scan_with_root() {
+    let parsed = parse_cli_args(["i18n", "scan", "--root", "/tmp/work"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::I18nScan);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+}
+
+#[test]
+fn parses_i18n_build_with_root() {
+    let parsed = parse_cli_args(["i18n", "build", "--root", "/tmp/work"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::I18nBuild);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+}
+
+#[test]
+fn parses_i18n_source_sync_preview_flags() {
+    let parsed = parse_cli_args([
+        "i18n",
+        "build",
+        "--sync-source",
+        "--dry-run",
+        "--root",
+        "/tmp/work",
+    ])
+    .unwrap();
+
+    assert_eq!(parsed.command, CliCommand::I18nBuild);
+    assert!(parsed.options.i18n_sync_source);
+    assert!(parsed.options.i18n_dry_run);
+}
+
+#[test]
+fn parses_i18n_check_with_root() {
+    let parsed = parse_cli_args(["i18n", "check", "--root", "/tmp/work"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::I18nCheck);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+}
+
+#[test]
+fn parses_route_table_with_root() {
+    let parsed = parse_cli_args(["route", "table", "--root", "/tmp/work"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::RouteTable);
+    assert_eq!(parsed.options.root, Some(PathBuf::from("/tmp/work")));
+}
+
+#[test]
+fn rejects_removed_route_subcommands() {
+    for removed in [["route", "graph"], ["route", "fixtures"]] {
+        assert!(
+            parse_cli_args(removed).is_err(),
+            "expected `dust {} {}` to be rejected",
+            removed[0],
+            removed[1]
+        );
+    }
+}
+
+#[test]
+fn parses_upgrade_check() {
+    let parsed = parse_cli_args(["upgrade", "--check"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Upgrade);
+    assert!(parsed.options.upgrade_check);
+    assert!(!parsed.options.upgrade_dry_run);
+    assert_eq!(parsed.options.upgrade_tag, None);
+}
+
+#[test]
+fn parses_upgrade_dry_run_with_tag() {
+    let parsed = parse_cli_args(["upgrade", "--dry-run", "--tag", "v0.1.3"]).unwrap();
+
+    assert_eq!(parsed.command, CliCommand::Upgrade);
+    assert!(!parsed.options.upgrade_check);
+    assert!(parsed.options.upgrade_dry_run);
+    assert_eq!(parsed.options.upgrade_tag.as_deref(), Some("v0.1.3"));
+}
+
+#[test]
+fn rejects_upgrade_check_and_dry_run_together() {
+    let error = parse_cli_args(["upgrade", "--check", "--dry-run"]).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
+    assert!(error.to_string().contains("--check"));
+}
+
+#[test]
+fn rejects_offline_without_db() {
+    let error = parse_cli_args(["check", "--offline"]).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::MissingRequiredArgument);
+    assert!(error.to_string().contains("--db"));
+}
+
+#[test]
+fn rejects_clean_without_build() {
+    let error = parse_cli_args(["check", "--clean"]).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::UnknownArgument);
+    assert!(error.to_string().contains("--clean"));
+}
+
+#[test]
+fn rejects_build_only_flags_on_db_build() {
+    let clean = parse_cli_args(["db", "build", "--clean"]).unwrap_err();
+    assert_eq!(clean.kind(), ErrorKind::UnknownArgument);
+    assert!(clean.to_string().contains("--clean"));
+
+    let db = parse_cli_args(["db", "build", "--db"]).unwrap_err();
+    assert_eq!(db.kind(), ErrorKind::UnknownArgument);
+    assert!(db.to_string().contains("--db"));
+}
+
+#[test]
+fn empty_args_show_generated_help() {
+    let error = parse_cli_args(Vec::<String>::new()).unwrap_err();
+
+    assert_eq!(
+        error.kind(),
+        ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+    );
+    assert!(
+        error
+            .to_string()
+            .contains("Rust-powered code generation for Dart and Flutter")
+    );
+}
+
+#[test]
+fn rejects_unknown_command() {
+    let error = parse_cli_args(["unknown"]).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::InvalidSubcommand);
+    assert!(error.to_string().contains("unrecognized subcommand"));
+}
+
+#[test]
+fn rejects_missing_flag_value() {
+    let error = parse_cli_args(["watch", "--poll-ms"]).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::InvalidValue);
+    assert!(error.to_string().contains("--poll-ms"));
+    assert!(error.to_string().contains("a value is required"));
+}
+
+#[test]
+fn rejects_fail_fast_on_clean() {
+    let error = parse_cli_args(["clean", "--fail-fast"]).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::UnknownArgument);
+    assert!(error.to_string().contains("--fail-fast"));
+}
+
+#[test]
+fn version_flag_uses_clap_display_path() {
+    let error = parse_cli_args(["--version"]).unwrap_err();
+
+    assert_eq!(error.kind(), ErrorKind::DisplayVersion);
+    assert!(error.to_string().contains(env!("CARGO_PKG_VERSION")));
+}

@@ -1,0 +1,70 @@
+# dust_server
+
+[![pub package](https://img.shields.io/pub/v/dust_server.svg)](https://pub.dev/packages/dust_server)
+[![pub points](https://img.shields.io/pub/points/dust_server)](https://pub.dev/packages/dust_server/score)
+[![downloads](https://img.shields.io/pub/dm/dust_server)](https://pub.dev/packages/dust_server)
+[![coverage](https://codecov.io/gh/y3l1n4ung/dust/graph/badge.svg?component=dust_server)](https://app.codecov.io/gh/y3l1n4ung/dust)
+
+Runtime support for Dust-generated Dart HTTP servers on `shelf`.
+
+> [!IMPORTANT]
+> **0.1.0-beta.2**. Complete enough to build on; the API may still change
+> before 1.0, so pin the exact version.
+>
+> The code generator described in
+> [docs/design/server-plugin.md](../../docs/design/server-plugin.md) does not
+> exist yet. This package is the runtime that generated code will call, built
+> first so the design is checked against working code rather than a sketch —
+> which has found more than twenty defects the generated code would otherwise
+> have been built on top of. See [CHANGELOG.md](CHANGELOG.md).
+
+## Documentation
+
+Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md).
+
+| Section | Covers |
+| :--- | :--- |
+| [Getting started](../../docs/dust_server/getting-started.md) | the smallest server, entry points, layout |
+| [Routing](../../docs/dust_server/routing.md) | paths, methods, nesting, mounting, matching rules, speed |
+| [Extraction](../../docs/dust_server/extraction.md) | the built-in extractors, coercion, writing one |
+| [Responses](../../docs/dust_server/responses.md) | encoders, rejections, `guard`, error reporting |
+| [WebSockets](../../docs/dust_server/websockets.md) | upgrades, sessions, close codes |
+| [Rendering](../../docs/dust_server/rendering.md) | templates, static files, single-page apps |
+| [Serving](../../docs/dust_server/serving.md) | draining, TLS, isolate clustering |
+| [Middleware](../../docs/dust_server/middleware.md) | layers, ordering, what ships |
+| [Testing](../../docs/dust_server/testing.md) | running the suite, testing an application |
+| [Dependencies](../../docs/dust_server/dependencies.md) | what is reused, and what is not |
+
+## At a glance
+
+```dart
+final app = Router()
+  ..layer(const RequestId())
+  ..route('/todos/{id}', get(readTodo))
+  ..route('/chat/{room}', ws(joinRoom))
+  ..mount('/assets', staticFiles('web/assets'))
+  ..withState(repository)
+  ..fallback(singlePageApp('web/index.html'));
+
+final server = await serve(app, InternetAddress.anyIPv4, 8080);
+```
+
+HTTP, WebSockets, server-rendered HTML, static assets, and isolate clustering,
+all on one router.
+
+## Examples
+
+[`example/`](example/README.md) holds one file per question — under 60 lines
+each, named after the question it answers, so the answer is not buried in an
+application. The index lists them by area.
+
+Every one is served over a loopback socket by `test/example/` and driven with a
+real client, which is what keeps a directory that size from rotting.
+
+## Tests
+
+100% line coverage, gated in CI.
+
+```bash
+dart test
+```
