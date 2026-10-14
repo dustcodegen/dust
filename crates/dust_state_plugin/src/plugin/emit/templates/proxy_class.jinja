@@ -1,0 +1,16 @@
+/// Reads {{ view_model_class }} state from `BuildContext`.
+///
+/// Read `value` when the widget should rebuild for any state change.
+///
+/// ```dart
+/// final state = context.watch{{ view_model_class }}().value;
+/// ```
+class {{ proxy_class }} {
+  {{ proxy_class }}(this._context);
+
+  final BuildContext _context;
+
+  {{ state_type }} get value {
+    return {{ scope_class }}.of(_context).value;
+  }
+}

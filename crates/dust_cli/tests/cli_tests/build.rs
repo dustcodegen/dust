@@ -1,0 +1,286 @@
+use dust_cli::run_cli;
+use std::{
+    fs,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use super::helpers::{
+    DustImport, make_pub_workspace_member, make_workspace, write_dust_file, write_file,
+};
+
+#[test]
+fn cli_build_writes_real_output() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+
+    let run = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+
+    assert_eq!(run.exit_code, 0);
+    assert!(run.stderr.is_empty());
+    assert!(run.stdout.contains("scanned: 1"));
+    assert!(run.stdout.contains("generated: 1"));
+    assert!(run.stdout.contains("skipped: 0"));
+    assert!(!run.stdout.contains(workspace.path().to_str().unwrap()));
+    assert!(workspace.path().join("lib/user.g.dart").exists());
+}
+
+#[test]
+fn cli_build_reports_route_contributors_separately() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/route.dart"),
+        &[DustImport::Route],
+        "import 'pages/dashboard_page.dart';\n\
+         import 'pages/not_found_page.dart';\n\
+         import 'route/routes.g.dart';\n\
+         export 'route/routes.g.dart';\n\
+         @AppRouter(initial: '/', notFound: '/404')\n\
+         final class TestRouter extends $TestRouter {\n\
+           const TestRouter();\n\
+         }\n",
+    );
+    write_dust_file(
+        &workspace.path().join("lib/pages/dashboard_page.dart"),
+        &[DustImport::Route],
+        "@AppRoute('/', name: 'dashboard')\n\
+         final class DashboardPage {\n\
+           const DashboardPage();\n\
+         }\n",
+    );
+    write_dust_file(
+        &workspace.path().join("lib/pages/not_found_page.dart"),
+        &[DustImport::Route],
+        "@AppRoute('/404', name: 'notFound', guards: [])\n\
+         final class NotFoundPage {\n\
+           const NotFoundPage({this.path = ''});\n\
+           final String path;\n\
+         }\n",
+    );
+
+    let first = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+    let second = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+
+    assert_eq!(first.exit_code, 0, "{}", first.stderr);
+    assert!(first.stdout.contains("scanned: 3"));
+    assert!(first.stdout.contains("generated: 3"));
+    assert!(!first.stdout.contains("routed:"));
+    assert!(first.stdout.contains("skipped: 0"));
+    assert_eq!(second.exit_code, 0, "{}", second.stderr);
+    assert!(second.stdout.contains("scanned: 3"));
+    assert!(second.stdout.contains("generated: 2"));
+    assert!(!second.stdout.contains("routed:"));
+    assert!(second.stdout.contains("cached: 1"));
+    assert!(second.stdout.contains("skipped: 0"));
+    assert!(workspace.path().join("lib/route/routes.g.dart").exists());
+    assert!(workspace.path().join("lib/route/paths.g.dart").exists());
+    assert!(workspace.path().join("lib/route/metadata.g.dart").exists());
+    assert!(
+        workspace
+            .path()
+            .join("lib/route/navigation.g.dart")
+            .exists()
+    );
+    assert!(workspace.path().join("lib/route/runtime.g.dart").exists());
+    assert!(!workspace.path().join("lib/route.g.dart").exists());
+    assert!(
+        !workspace
+            .path()
+            .join("lib/pages/dashboard_page.g.dart")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .path()
+            .join("lib/pages/not_found_page.g.dart")
+            .exists()
+    );
+}
+
+#[test]
+fn cli_build_with_relative_root_writes_route_outputs_under_package() {
+    let root = relative_target_workspace("route_root");
+    let root_text = root.to_str().unwrap().to_owned();
+    write_dust_file(
+        &root.join("lib/route.dart"),
+        &[DustImport::Route],
+        "import 'pages/dashboard_page.dart';\n\
+         import 'pages/not_found_page.dart';\n\
+         import 'route/routes.g.dart';\n\
+         export 'route/routes.g.dart';\n\
+         @AppRouter(initial: '/', notFound: '/404')\n\
+         final class TestRouter extends $TestRouter {}\n",
+    );
+    write_dust_file(
+        &root.join("lib/pages/dashboard_page.dart"),
+        &[DustImport::Route],
+        "@AppRoute('/', name: 'dashboard')\n\
+         final class DashboardPage {\n\
+           const DashboardPage();\n\
+         }\n",
+    );
+    write_dust_file(
+        &root.join("lib/pages/not_found_page.dart"),
+        &[DustImport::Route],
+        "@AppRoute('/404', name: 'notFound', guards: [])\n\
+         final class NotFoundPage {\n\
+           const NotFoundPage();\n\
+         }\n",
+    );
+
+    let run = run_cli(["build", "--root", root_text.as_str()]);
+
+    assert_eq!(run.exit_code, 0, "{}", run.stderr);
+    assert_eq!(
+        route_output_paths(&root),
+        vec![
+            root.join("lib/route/routes.g.dart"),
+            root.join("lib/route/paths.g.dart"),
+            root.join("lib/route/metadata.g.dart"),
+            root.join("lib/route/navigation.g.dart"),
+            root.join("lib/route/runtime.g.dart"),
+        ]
+    );
+    assert!(route_output_paths(&root).iter().all(|path| path.exists()));
+    assert!(!PathBuf::from("lib/route/routes.g.dart").exists());
+    fs::remove_dir_all(root).expect("remove relative target workspace");
+}
+
+#[test]
+fn cli_second_build_reports_cached_output() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+
+    let first = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+    let second = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+
+    assert_eq!(first.exit_code, 0);
+    assert_eq!(second.exit_code, 0);
+    assert!(second.stdout.contains("scanned: 1"));
+    assert!(second.stdout.contains("generated: 0"));
+    assert!(second.stdout.contains("cached: 1"));
+    assert!(second.stdout.contains("skipped: 0"));
+    assert!(!second.stdout.contains("cache "));
+}
+
+#[test]
+fn cli_build_clean_regenerates_without_previous_cache_hit() {
+    let workspace = make_workspace();
+    write_dust_file(
+        &workspace.path().join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+
+    let first = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+    let cached = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+    let foreign_output = workspace.path().join("lib/foreign.g.dart");
+    write_file(&foreign_output, "// generated by someone else\n");
+    let clean = run_cli([
+        "build",
+        "--clean",
+        "--root",
+        workspace.path().to_str().unwrap(),
+    ]);
+    let later = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+
+    assert_eq!(first.exit_code, 0, "{}", first.stderr);
+    assert_eq!(cached.exit_code, 0, "{}", cached.stderr);
+    assert!(cached.stdout.contains("cached: 1"));
+    assert_eq!(clean.exit_code, 0, "{}", clean.stderr);
+    assert!(clean.stdout.contains("generated: 1"));
+    assert!(clean.stdout.contains("cached: 0"));
+    assert!(workspace.path().join("lib/user.g.dart").exists());
+    assert!(foreign_output.exists());
+    assert!(
+        workspace
+            .path()
+            .join(".dart_tool/dust/build_cache_v1.json")
+            .exists()
+    );
+    assert_eq!(later.exit_code, 0, "{}", later.stderr);
+    assert!(later.stdout.contains("cached: 1"));
+}
+
+#[test]
+fn cli_build_supports_pub_workspace_member_package_graph() {
+    let (workspace, package_root) = make_pub_workspace_member();
+    write_dust_file(
+        &package_root.join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n\
+         @ToString()\n\
+         class User {\n\
+           final String id;\n\
+           const User(this.id);\n\
+         }\n",
+    );
+
+    let first = run_cli(["build", "--root", package_root.to_str().unwrap()]);
+    let second = run_cli(["build", "--root", package_root.to_str().unwrap()]);
+
+    assert_eq!(first.exit_code, 0, "{}", first.stderr);
+    assert_eq!(second.exit_code, 0, "{}", second.stderr);
+    assert!(package_root.join("lib/user.g.dart").exists());
+    assert!(
+        package_root
+            .join(".dart_tool/dust/build_cache_v1.json")
+            .exists()
+    );
+    assert!(
+        !workspace
+            .path()
+            .join(".dart_tool/dust/build_cache_v1.json")
+            .exists()
+    );
+    assert!(second.stdout.contains("generated: 0"));
+    assert!(second.stdout.contains("cached: 1"));
+    assert!(second.stdout.contains("skipped: 0"));
+}
+
+fn relative_target_workspace(name: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock after epoch")
+        .as_nanos();
+    let root = PathBuf::from(format!("target/dust_cli_tests/{name}_{nanos}"));
+    write_file(&root.join("pubspec.yaml"), "name: dust_test\n");
+    write_file(&root.join(".dart_tool/package_config.json"), "{}\n");
+    root
+}
+
+fn route_output_paths(root: &std::path::Path) -> Vec<PathBuf> {
+    [
+        "routes.g.dart",
+        "paths.g.dart",
+        "metadata.g.dart",
+        "navigation.g.dart",
+        "runtime.g.dart",
+    ]
+    .into_iter()
+    .map(|name| root.join("lib/route").join(name))
+    .collect()
+}

@@ -1,0 +1,44 @@
+# Rust
+target/
+Cargo.lock
+
+# Dart & Flutter
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+!crates/**/src/**/build/
+!crates/**/src/**/build/**
+**/pubspec.lock
+
+# Examples & Fixtures
+examples/benchmark_project/lib/generated_models/
+
+# IDEs & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs & Temporary
+*.log
+.env
+coverage/
+.coverage/
+.pr/
+
+# Profiling output
+flamegraph.svg
+cargo-flamegraph.trace/
+perf.data
+perf.data.old
+*.speedscope.json
+
+# Generated API documentation, from `dart doc`.
+doc/api/
+
+# Python bytecode from scripts/.
+__pycache__/
+*.py[cod]

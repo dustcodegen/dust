@@ -1,0 +1,104 @@
+use std::path::PathBuf;
+
+/// Generated members that belong inside one emitted mixin block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClassMixinContribution {
+    /// The source class this mixin targets.
+    pub class_name: String,
+    /// Interfaces implemented by the generated mixin.
+    pub interfaces: Vec<String>,
+    /// The generated members to place inside the mixin.
+    pub members: Vec<String>,
+}
+
+/// One auxiliary generated file emitted alongside the primary `.g.dart` output.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuxiliaryOutputContribution {
+    /// The resolved filesystem output path for the auxiliary file.
+    pub output_path: PathBuf,
+    /// The complete generated source for the auxiliary file.
+    pub source: String,
+}
+
+/// Generated code fragments returned by one plugin for one library.
+///
+/// The emitter will later merge these sections in a fixed order.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PluginContribution {
+    /// Diagnostics discovered while preparing emitted fragments.
+    pub diagnostics: Vec<dust_diagnostics::Diagnostic>,
+    /// Complete primary generated source override for plugins that own a
+    /// standalone output library instead of a `part of` file.
+    pub primary_source: Option<String>,
+    /// Whether the plugin intentionally emits no primary output for this
+    /// source library.
+    pub suppress_primary_output: bool,
+    /// Helper declarations shared across generated output.
+    pub shared_helpers: Vec<String>,
+    /// Class-scoped generated members grouped by target class.
+    pub mixin_members: Vec<ClassMixinContribution>,
+    /// Support types needed by generated output.
+    pub support_types: Vec<String>,
+    /// Top-level generated functions.
+    pub top_level_functions: Vec<String>,
+    /// Additional generated files owned by this library build.
+    pub auxiliary_outputs: Vec<AuxiliaryOutputContribution>,
+}
+
+impl PluginContribution {
+    /// Appends one generated member to the mixin block for the given class.
+    pub fn push_mixin_member(&mut self, class_name: impl Into<String>, member: impl Into<String>) {
+        let class_name = class_name.into();
+        let member = member.into();
+
+        if let Some(existing) = self
+            .mixin_members
+            .iter_mut()
+            .find(|entry| entry.class_name == class_name)
+        {
+            existing.members.push(member);
+        } else {
+            self.mixin_members.push(ClassMixinContribution {
+                class_name,
+                interfaces: Vec::new(),
+                members: vec![member],
+            });
+        }
+    }
+
+    /// Appends one generated interface to the mixin block for the given class.
+    pub fn push_mixin_interface(
+        &mut self,
+        class_name: impl Into<String>,
+        interface: impl Into<String>,
+    ) {
+        let class_name = class_name.into();
+        let interface = interface.into();
+
+        if let Some(existing) = self
+            .mixin_members
+            .iter_mut()
+            .find(|entry| entry.class_name == class_name)
+        {
+            if !existing.interfaces.iter().any(|item| item == &interface) {
+                existing.interfaces.push(interface);
+            }
+        } else {
+            self.mixin_members.push(ClassMixinContribution {
+                class_name,
+                interfaces: vec![interface],
+                members: Vec::new(),
+            });
+        }
+    }
+
+    /// Returns `true` if the contribution contains no generated fragments.
+    pub fn is_empty(&self) -> bool {
+        self.primary_source.is_none()
+            && self.shared_helpers.is_empty()
+            && self.mixin_members.is_empty()
+            && self.support_types.is_empty()
+            && self.top_level_functions.is_empty()
+            && self.auxiliary_outputs.is_empty()
+    }
+}

@@ -1,0 +1,19 @@
+[package]
+publish = false
+name = "dust_ir"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Semantic intermediate representation for Dust code generation."
+
+[dependencies]
+dust_dart_syntax = { path = "../dust_dart_syntax", version = "0.2.1" }
+dust_text = { path = "../dust_text", version = "0.2.1" }
+dust_diagnostics = { path = "../dust_diagnostics", version = "0.2.1" }
+heck = { workspace = true }
+
+[lib]
+path = "src/lib.rs"

@@ -1,0 +1,6 @@
+    return _db.execute(
+      {{ sql }},
+      [{{ args }}],
+    ).then(
+      (result) => result.map<Unit>((_) => unit),
+    );

@@ -1,0 +1,45 @@
+import 'package:dust_flutter/dust_flutter.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('exports routing annotations', () {
+    const route = AppRoute('/', name: 'home', result: bool);
+    const router = AppRouter(initial: '/', notFound: '/404');
+
+    expect(route.path, '/');
+    expect(route.name, 'home');
+    expect(route.result, bool);
+    expect(router.initial, '/');
+    expect(router.notFound, '/404');
+  });
+
+  test('exports state annotations', () {
+    const annotation = ViewModel(state: _State, args: _Args);
+    expect(annotation.state, _State);
+    expect(annotation.args, _Args);
+  });
+
+  test('exports i18n runtime API', () {
+    const config = I18nConfig(
+      locales: ['en'],
+      fallbackLocale: 'en',
+    );
+    const bundle = I18nBundle(
+      locale: 'en',
+      namespace: 'home',
+      messages: {'title': 'Home'},
+    );
+
+    final controller = I18nController(config: config, bundles: [bundle]);
+
+    expect(controller.translate('home_title'), 'Home');
+  });
+}
+
+final class _State {
+  const _State();
+}
+
+final class _Args extends ViewModelArgs {
+  const _Args();
+}

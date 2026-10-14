@@ -1,0 +1,29 @@
+name: dust_flutter
+description: Flutter annotations and runtime APIs for Dust-generated routing, state management, and i18n.
+version: 0.2.1
+homepage: https://github.com/y3l1n4ung/dust
+repository: https://github.com/y3l1n4ung/dust
+issue_tracker: https://github.com/y3l1n4ung/dust/issues
+documentation: https://github.com/y3l1n4ung/dust/tree/main/packages/dust_flutter#readme
+topics:
+  - codegen
+  - flutter
+  - routing
+  - state-management
+  - localization
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  dust_dart: ^0.2.1
+  flutter_test:
+    sdk: flutter
+  test: ^1.26.0
+  very_good_analysis: ^10.3.0
