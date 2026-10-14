@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- SQLite transaction ownership now spans callback awaits, rejects unrelated
+  driver work and parallel savepoints, and waits for started nested work.
+  Failed cleanup blocks further queries until the connection is closed (#20).
 - Failed transaction commits roll back any still-active native transaction,
   preserving the commit error after successful cleanup and allowing reuse (#11).
 

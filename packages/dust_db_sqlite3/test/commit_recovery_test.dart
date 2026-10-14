@@ -155,7 +155,7 @@ CREATE TABLE children (
         addTearDown(db.close);
 
         final result = await db.transaction<Unit>((tx) async {
-          expectOk(await Sqlite3UnsafeSql(db).execute('ROLLBACK', const []));
+          db.database.execute('ROLLBACK');
           return const Ok<Unit, SqlxError>(unit);
         });
 

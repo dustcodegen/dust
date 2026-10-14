@@ -183,6 +183,25 @@ await database.connection.transaction((tx) async {
 Transaction executors are valid only while the callback is running. Operations
 after the callback return `Err(SqlxError)`.
 
+SQLite ownership is per connection. While a transaction is active, unrelated
+driver reads, writes, transactions and `close()` return a transaction error
+immediately; they are not queued or retried. Inside the callback, use `tx`
+(or `UserDao(tx)`), never the captured outer driver or database facade.
+An active transaction executor cannot be used from outside its callback's
+async context. Independent connections remain usable.
+
+Await nested transactions and use their own executors. Parent operations and
+parallel sibling savepoints are rejected while a child is active. A parent
+retains ownership until already-started children settle, even when a callback
+forgets to await one. Still await them to observe their results and avoid
+circular waits. Closing a transaction executor only retires that handle; the
+callback result still controls commit/rollback.
+
+After a rollback or savepoint cleanup failure, Dust blocks further queries and
+transactions on that connection. Close and reopen it before doing more work.
+Direct `database` native-handle access bypasses these checks; never overlap it
+with Dust operations. See the [ownership example](example/transaction_ownership.dart).
+
 ## Error Context
 
 SQLite operations return `Result<T, SqlxError>`. Error strings stay concise, and

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -12,12 +13,16 @@ part 'migrations.dart';
 part 'operations.dart';
 part 'row.dart';
 part 'transaction.dart';
+part 'transaction_scope.dart';
+part 'connection_access.dart';
 part 'statement_cache.dart';
 part 'unsafe_sql.dart';
 
 /// SQLite-backed executor with access to the underlying native database.
 abstract interface class Sqlite3Executor implements Executor {
   /// Native `package:sqlite3` database used by this executor.
+  ///
+  /// Direct access bypasses ownership checks; never overlap it with Dust work.
   sqlite.Database get database;
 }
 
@@ -195,6 +200,8 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
   @override
   Future<Result<Unit, SqlxError>> close() async {
     if (!_ownsDatabase || _closed) return const Ok<Unit, SqlxError>(unit);
+    final error = _closedError(closing: true);
+    if (error != null) return Err<Unit, SqlxError>(error);
     _closed = true;
     try {
       // Before the database, so the cache never holds a statement belonging to
@@ -251,28 +258,6 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
       'SQLite execute failed.',
       () => _executeUnchecked(sql, parameters),
     );
-  }
-
-  void _checkOpen() {
-    final error = _closedError();
-    if (error != null) throw error;
-  }
-
-  SqlxError? _closedError() {
-    if (_closed) {
-      return _sqliteConnectionError(
-        'SQLite connection is closed.',
-        operation: 'checkOpen',
-      );
-    }
-    final scope = _transactionScope;
-    if (scope != null && !scope.active) {
-      return _sqliteTransactionError(
-        'SQLite transaction is closed.',
-        operation: 'checkTransactionOpen',
-      );
-    }
-    return null;
   }
 }
 

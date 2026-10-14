@@ -55,6 +55,7 @@ the answer differs.
 | Reading the written row back in one statement | [`returning.dart`](returning.dart) |
 | Commit on success, revert on failure | [`transactions.dart`](transactions.dart) |
 | Undoing part of a transaction | [`savepoints.dart`](savepoints.dart) |
+| Protecting an awaited transaction from other callers | [`transaction_ownership.dart`](transaction_ownership.dart) |
 
 ## Values and parameters
 

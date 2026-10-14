@@ -9,6 +9,22 @@ part of 'sqlite_pool.dart';
 /// transaction on it.
 final class _ConnectionState {
   var _nextSavepointId = 0;
+  var transactionActive = false;
+  SqlxError? recoveryError;
+
+  SqlxError _failedCleanup(SqlxError error) {
+    recoveryError ??= _sqliteTransactionError(
+      'SQLite transaction cleanup failed. Close and reopen this connection.',
+      cause: error,
+      operation: error.operation,
+    );
+    return error;
+  }
+
+  SqlxError? _rollbackRoot(sqlite.Database database, String message) {
+    final error = _control(database, 'ROLLBACK', message);
+    return error == null ? null : _failedCleanup(error);
+  }
 
   /// Prepared statements held for this connection.
   final _StatementCache statements = _StatementCache();
@@ -44,10 +60,19 @@ final class _ConnectionState {
     if (begin != null) return Err<T, SqlxError>(begin);
 
     final tx = _SingleConnectionPool(database, this);
+    transactionActive = true;
     try {
-      final result = await fn(tx);
+      final result = await tx._invoke(fn);
       return await result.match<Future<Result<T, SqlxError>>>(
         ok: (value) async {
+          final recovery = recoveryError;
+          if (recovery != null) {
+            final rollback = _rollbackRoot(
+              database,
+              'SQLite transaction rollback failed.',
+            );
+            return Err<T, SqlxError>(rollback ?? recovery);
+          }
           final commit = _control(
             database,
             'COMMIT',
@@ -57,9 +82,8 @@ final class _ConnectionState {
             // A failed COMMIT can leave uncommitted writes for the next caller.
             final rollback = database.autocommit
                 ? null
-                : _control(
+                : _rollbackRoot(
                     database,
-                    'ROLLBACK',
                     'SQLite rollback after failed commit failed.',
                   );
             return Err<T, SqlxError>(rollback ?? commit);
@@ -67,9 +91,8 @@ final class _ConnectionState {
           return Ok<T, SqlxError>(value);
         },
         err: (error) async {
-          final rollback = _control(
+          final rollback = _rollbackRoot(
             database,
-            'ROLLBACK',
             'SQLite transaction rollback failed.',
           );
           if (rollback != null) return Err<T, SqlxError>(rollback);
@@ -77,9 +100,8 @@ final class _ConnectionState {
         },
       );
     } catch (error) {
-      final rollback = _control(
+      final rollback = _rollbackRoot(
         database,
-        'ROLLBACK',
         'SQLite transaction rollback failed.',
       );
       if (rollback != null) return Err<T, SqlxError>(rollback);
@@ -92,6 +114,7 @@ final class _ConnectionState {
       );
     } finally {
       tx._deactivate();
+      transactionActive = false;
     }
   }
 
@@ -109,7 +132,7 @@ final class _ConnectionState {
 
     final tx = _SingleConnectionPool(database, this);
     try {
-      final result = await fn(tx);
+      final result = await tx._invoke(fn);
       return await result.match<Future<Result<T, SqlxError>>>(
         ok: (value) async {
           final release = _executeControl(
@@ -117,7 +140,9 @@ final class _ConnectionState {
             'RELEASE SAVEPOINT $name',
             'SQLite savepoint release failed.',
           );
-          if (release != null) return Err<T, SqlxError>(release);
+          if (release != null) {
+            return Err<T, SqlxError>(_failedCleanup(release));
+          }
           return Ok<T, SqlxError>(value);
         },
         err: (error) async {
@@ -152,101 +177,8 @@ final class _ConnectionState {
       'RELEASE SAVEPOINT $name',
       'SQLite savepoint release after rollback failed.',
     );
-    return rollback ?? release;
-  }
-}
-
-final class _TransactionScope {
-  var active = true;
-}
-
-final class _SingleConnectionPool implements Transaction, Sqlite3Executor {
-  _SingleConnectionPool(
-    sqlite.Database database,
-    _ConnectionState connection,
-  ) : this._scoped(database, connection, _TransactionScope());
-
-  _SingleConnectionPool._scoped(
-    sqlite.Database database,
-    this._connection,
-    this._scope,
-  ) : _driver = Sqlite3Driver._(
-        database,
-        ownsDatabase: false,
-        connection: _connection,
-        transactionScope: _scope,
-      );
-
-  final Sqlite3Driver _driver;
-  final _ConnectionState _connection;
-  final _TransactionScope _scope;
-
-  @override
-  sqlite.Database get database => _driver.database;
-
-  @override
-  Driver get driver => _driver.driver;
-
-  @override
-  Future<Result<T?, SqlxError>> fetchOptional<T>(
-    String sql,
-    List<Object?> parameters,
-    RowMapper<T> mapper,
-  ) {
-    return _driver.fetchOptional(sql, parameters, mapper);
-  }
-
-  @override
-  Future<Result<List<T>, SqlxError>> fetchAll<T>(
-    String sql,
-    List<Object?> parameters,
-    RowMapper<T> mapper,
-  ) {
-    return _driver.fetchAll(sql, parameters, mapper);
-  }
-
-  @override
-  Future<Result<T, SqlxError>> fetchOne<T>(
-    String sql,
-    List<Object?> parameters,
-    RowMapper<T> mapper,
-  ) {
-    return _driver.fetchOne(sql, parameters, mapper);
-  }
-
-  @override
-  Future<Result<T, SqlxError>> fetchScalar<T>(
-    String sql,
-    List<Object?> parameters,
-  ) {
-    return _driver.fetchScalar(sql, parameters);
-  }
-
-  @override
-  Future<Result<ExecResult, SqlxError>> execute(
-    String sql,
-    List<Object?> parameters,
-  ) {
-    return _driver.execute(sql, parameters);
-  }
-
-  @override
-  Future<Result<T, SqlxError>> transaction<T>(
-    Future<Result<T, SqlxError>> Function(Transaction tx) fn,
-  ) {
-    final error = _driver._closedError();
-    if (error != null) return Future.value(Err<T, SqlxError>(error));
-    return _connection.runSavepoint(database, fn);
-  }
-
-  @override
-  Future<Result<Unit, SqlxError>> close() {
-    _deactivate();
-    return Future.value(const Ok<Unit, SqlxError>(unit));
-  }
-
-  void _deactivate() {
-    _scope.active = false;
+    final error = rollback ?? release;
+    return error == null ? null : _failedCleanup(error);
   }
 }
 

@@ -24,6 +24,7 @@ import '../../example/row_mappers.dart' as row_mappers;
 import '../../example/savepoints.dart' as savepoints;
 import '../../example/set_membership.dart' as set_membership;
 import '../../example/transactions.dart' as transactions;
+import '../../example/transaction_ownership.dart' as transaction_ownership;
 import '../../example/unchecked_sql.dart' as unchecked_sql;
 import 'capture.dart';
 
@@ -168,6 +169,14 @@ void main() {
   });
 
   group('when it goes wrong', () {
+    test('transaction_ownership', () async {
+      expect(await runExample(transaction_ownership.main), <String>[
+        'outside write rejected: true',
+        'early close rejected: true',
+        'owner committed: true',
+        'rows: 1',
+      ]);
+    });
     test('commit_recovery', () async {
       expect(await runExample(commit_recovery.main), <String>[
         'failed at: COMMIT',
