@@ -49,7 +49,8 @@ dust --version
 ```
 
 The unchanged `v0.2.1` binary still has its historical `dust upgrade` destination.
-Until that is updated in a future release, rerun the new installer to reinstall.
+Current source uses `dustcodegen/dust`, but existing binaries are not replaced.
+Until a future binary release includes this fix, rerun the new installer to reinstall.
 
 Dust packages have their own pub versions. When changing the CLI or packages,
 check the [compatibility guide](docs/usage/compatibility.md).

@@ -144,14 +144,29 @@ fn check_reports_available_without_download() {
 #[test]
 fn dry_run_verifies_without_replacing() {
     let temp = TempDir::new().unwrap();
-    let io = FakeUpgradeIo::new(&temp, b"archive".to_vec());
+    let mut io = FakeUpgradeIo::new(&temp, b"archive".to_vec());
+    io.text_by_url.insert(
+        "https://api.github.com/repos/dustcodegen/dust/releases/latest".to_owned(),
+        r#"{"tag_name":"v0.2.1"}"#.to_owned(),
+    );
     let request = request(UpgradeMode::DryRun, None, "0.1.2");
 
     let report = run_upgrade_with_io(&request, &io).unwrap();
 
     assert!(report.checksum_verified);
     assert!(!report.changed);
-    assert_eq!(io.downloads.borrow().len(), 2);
+    assert_eq!(report.target_tag, "v0.2.1");
+    assert_eq!(
+        *io.downloads.borrow(),
+        [
+            "https://github.com/dustcodegen/dust/releases/download/v0.2.1/SHA256SUMS.txt"
+                .to_owned(),
+            format!(
+                "https://github.com/dustcodegen/dust/releases/download/v0.2.1/{}",
+                current_release_asset().unwrap().asset_name
+            ),
+        ]
+    );
     assert_eq!(io.replacements.get(), 0);
 }
 
