@@ -156,6 +156,14 @@ final result = await database.connection.transaction((tx) async {
 });
 ```
 
+An `Ok` callback does not guarantee that SQLite can commit: a deferred
+constraint or another connection's read lock can make `COMMIT` fail. The
+driver rolls back any transaction still active before returning `Err`, keeping
+the original commit error after successful cleanup. If rollback also fails,
+the returned error identifies that cleanup failure; do not assume the connection
+is reusable. Writes are not automatically retried. See the runnable
+[commit recovery example](example/commit_recovery.dart).
+
 Nested transactions use SQLite savepoints:
 
 ```dart
