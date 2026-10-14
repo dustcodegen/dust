@@ -109,7 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Naming, brought in line with axum. All three are breaking, with no deprecated
 forwarders — the package is one release old and the names are wrong now rather
-than later. See [axum parity](https://github.com/y3l1n4ung/dust/blob/main/docs/design/server-axum-parity.md).
+than later. See [axum parity](https://github.com/dustcodegen/dust/blob/main/docs/design/server-axum-parity.md).
 
 ### Changed
 

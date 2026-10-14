@@ -127,7 +127,9 @@ static string literal`).
 The surface this document wants is largely the surface that ships. What follows
 is where it stops short.
 
-### Validation resolved per file (fixed, [#499](https://github.com/y3l1n4ung/dust/issues/499))
+Issue numbers below refer to the original repository, not the current tracker.
+
+### Validation resolved per file (fixed, #499)
 
 `validate.rs` used to return early when the library being validated declared no
 `@SqlxDatabase` class, and the row-column map was built from
@@ -177,7 +179,7 @@ checks that required columns are present. `sqlx::Describe` also carries
 `crates/dust_db_plugin`. So `final int quantity` against a `TEXT` column passes,
 and a nullable column decoded into a non-nullable field passes.
 
-### Placeholder scanning ignored SQL comments (fixed, [#500](https://github.com/y3l1n4ung/dust/issues/500))
+### Placeholder scanning ignored SQL comments (fixed, #500)
 
 `rewrite_sqlite_placeholders`
 ([`sql.rs`](../../crates/dust_db_plugin/src/plugin/sql.rs)) tracked single and
@@ -748,9 +750,9 @@ Inline queries take the executor per call and do not have this problem.
 ## Work, in order
 
 1. ~~**Resolve `@SqlxDatabase` and row classes per package.**~~ Done — validation
-   is on ([#499](https://github.com/y3l1n4ung/dust/issues/499)).
+   is on (original repository issue #499).
 2. ~~**Fix the placeholder scanner.**~~ Done — comment states and dollar-quoting
-   both ([#500](https://github.com/y3l1n4ung/dust/issues/500)).
+   both (original repository issue #500).
 3. **Read `nullable()` and `type_info()`**, shipping as warnings until the
    [type-mapping table](#open-questions) exists.
 4. ~~**Terminals return `Result`.**~~ Done — the generated terminals hand back

@@ -1,10 +1,10 @@
 name: dust_db_postgres
 description: PostgreSQL runtime for Dust Database. Executes build-time validated SQL and generated row mapping over package:postgres.
 version: 0.2.1
-homepage: https://github.com/y3l1n4ung/dust
-repository: https://github.com/y3l1n4ung/dust
-issue_tracker: https://github.com/y3l1n4ung/dust/issues
-documentation: https://github.com/y3l1n4ung/dust/tree/main/packages/dust_db_postgres#readme
+homepage: https://github.com/dustcodegen/dust
+repository: https://github.com/dustcodegen/dust
+issue_tracker: https://github.com/dustcodegen/dust/issues
+documentation: https://github.com/dustcodegen/dust/tree/main/packages/dust_db_postgres#readme
 topics:
   - codegen
   - database

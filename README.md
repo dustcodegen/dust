@@ -14,8 +14,9 @@ Versions are unchanged. The original `v0.2.1` source was rebuilt through
 with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
 Only manual Rust release CI is enabled, not Dart/Flutter publishing or the
 inherited general CI/Scorecard workflows. Original CI history and external
-quality integrations are not migrated. Historical documentation and package
-metadata may still reference the original repository.
+quality integrations are not migrated. Current documentation and package
+metadata use `dustcodegen/dust`; already-published pub.dev metadata stays unchanged
+until a future package release.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you
