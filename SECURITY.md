@@ -7,7 +7,7 @@ pull requests.
 
 Use GitHub private vulnerability reporting for this repository:
 
-https://github.com/y3l1n4ung/dust/security/advisories/new
+https://github.com/dustcodegen/dust/security/advisories/new
 
 Include as much of the following as you can:
 
