@@ -52,46 +52,50 @@ void main() {
     expect(users.single.name, 'Ada');
   });
 
-  test('a failing mapper reports a decode error rather than throwing',
-      () async {
-    final pool = _pool();
-    addTearDown(() async {
-      await pool.close();
-    });
-    final unsafe = Sqlite3UnsafeSql(pool);
-    expectOk(
-      await unsafe.execute(
-        r'INSERT INTO users (id, name) VALUES (?, ?)',
-        [1, 'Ada'],
-      ),
-    );
+  test(
+    'a failing mapper reports a decode error rather than throwing',
+    () async {
+      final pool = _pool();
+      addTearDown(() async {
+        await pool.close();
+      });
+      final unsafe = Sqlite3UnsafeSql(pool);
+      expectOk(
+        await unsafe.execute(
+          r'INSERT INTO users (id, name) VALUES (?, ?)',
+          [1, 'Ada'],
+        ),
+      );
 
-    final result = await unsafe.fetchAs<UserName>(
-      'SELECT id FROM users',
-      const <Object?>[],
-      UserName.fromRow,
-    );
+      final result = await unsafe.fetchAs<UserName>(
+        'SELECT id FROM users',
+        const <Object?>[],
+        UserName.fromRow,
+      );
 
-    expect(result.isErr, isTrue);
-  });
+      expect(result.isErr, isTrue);
+    },
+  );
 
-  test('an executor is not a database facade, so it cannot reach unsafe SQL',
-      () async {
-    final pool = _pool();
-    addTearDown(() async {
-      await pool.close();
-    });
+  test(
+    'an executor is not a database facade, so it cannot reach unsafe SQL',
+    () async {
+      final pool = _pool();
+      addTearDown(() async {
+        await pool.close();
+      });
 
-    // `unsafe` lives on DatabaseClient, and a driver is not one. This is the
-    // difference from the old `raw`, which sat on Executor: `db as Executor`
-    // always succeeded because every pool, connection and transaction
-    // implements it.
-    expect(pool, isA<Executor>());
-    expect(pool, isNot(isA<DatabaseClient>()));
+      // `unsafe` lives on DatabaseClient, and a driver is not one. This is the
+      // difference from the old `raw`, which sat on Executor: `db as Executor`
+      // always succeeded because every pool, connection and transaction
+      // implements it.
+      expect(pool, isA<Executor>());
+      expect(pool, isNot(isA<DatabaseClient>()));
 
-    final escaped = await pool.transaction<bool>((tx) async {
-      return Ok<bool, SqlxError>(tx is DatabaseClient);
-    });
-    expect(expectOk(escaped), isFalse);
-  });
+      final escaped = await pool.transaction<bool>((tx) async {
+        return Ok<bool, SqlxError>(tx is DatabaseClient);
+      });
+      expect(expectOk(escaped), isFalse);
+    },
+  );
 }

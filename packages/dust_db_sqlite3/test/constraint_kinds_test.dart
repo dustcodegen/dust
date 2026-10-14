@@ -72,23 +72,24 @@ INSERT INTO teams (id, name) VALUES (1, 'red');
     expect(error.kind, SqlxErrorKind.checkViolation);
   });
 
-  test('a deferred foreign key fails at commit as a foreign key violation',
-      () async {
-    final result = await db.transaction<Unit>(
-      (tx) async => (await tx.execute(
-        'INSERT INTO players (id, team_id, age) VALUES (?, ?, ?)',
-        const [1, 99, 20],
-      ))
-          .map((_) => unit),
-    );
+  test(
+    'a deferred foreign key fails at commit as a foreign key violation',
+    () async {
+      final result = await db.transaction<Unit>(
+        (tx) async => (await tx.execute(
+          'INSERT INTO players (id, team_id, age) VALUES (?, ?, ?)',
+          const [1, 99, 20],
+        )).map((_) => unit),
+      );
 
-    final error = switch (result) {
-      Ok() => fail('expected the commit to fail'),
-      Err(:final error) => error,
-    };
-    expect(error.category, SqlxErrorCategory.transaction);
-    expect(error.kind, SqlxErrorKind.foreignKeyViolation);
-  });
+      final error = switch (result) {
+        Ok() => fail('expected the commit to fail'),
+        Err(:final error) => error,
+      };
+      expect(error.category, SqlxErrorCategory.transaction);
+      expect(error.kind, SqlxErrorKind.foreignKeyViolation);
+    },
+  );
 
   test('a failure that breaks no constraint has no kind', () async {
     final error = await failing('SELECT * FROM missing', const []);

@@ -48,15 +48,21 @@ INSERT INTO users (id, name, active) VALUES (2, 'Grace', 0);
     });
 
     final users = await unsafeRows(
-        upgraded, 'SELECT id, name, active FROM users ORDER BY id', const []);
+      upgraded,
+      'SELECT id, name, active FROM users ORDER BY id',
+      const [],
+    );
     expect(users, hasLength(2));
     expect(users[0].read<String>('name'), 'Ada');
     expect(users[0].readBool('active'), isTrue);
     expect(users[1].read<String>('name'), 'Grace');
     expect(users[1].readBool('active'), isFalse);
 
-    final migrations = await unsafeRows(upgraded,
-        'SELECT name FROM __dust_schema_migrations ORDER BY name', const []);
+    final migrations = await unsafeRows(
+      upgraded,
+      'SELECT name FROM __dust_schema_migrations ORDER BY name',
+      const [],
+    );
     expect(migrations.map((row) => row.read<String>('name')), <String>[
       '0001_create.sql',
       '0002_upgrade.sql',
@@ -91,8 +97,11 @@ INSERT INTO users (id, name, active) VALUES (2, 'Grace', 0);
       await reopened.close();
     });
 
-    final migrations = await unsafeRows(reopened,
-        'SELECT name FROM __dust_schema_migrations ORDER BY name', const []);
+    final migrations = await unsafeRows(
+      reopened,
+      'SELECT name FROM __dust_schema_migrations ORDER BY name',
+      const [],
+    );
     expect(migrations.map((row) => row.read<String>('name')), <String>[
       '0001_create.sql',
     ]);
@@ -123,11 +132,17 @@ INSERT INTO users (id, name) VALUES (1, 'Ada');
     });
 
     final users = await unsafeRows(
-        pool, 'SELECT id, name FROM users ORDER BY id', const []);
+      pool,
+      'SELECT id, name FROM users ORDER BY id',
+      const [],
+    );
     expect(users.map((row) => row.read<String>('name')), <String>['Ada']);
 
-    final migrations = await unsafeRows(pool,
-        'SELECT name FROM __dust_schema_migrations ORDER BY name', const []);
+    final migrations = await unsafeRows(
+      pool,
+      'SELECT name FROM __dust_schema_migrations ORDER BY name',
+      const [],
+    );
     expect(migrations.map((row) => row.read<String>('name')), <String>[
       '0001_create_users.up.sql',
     ]);

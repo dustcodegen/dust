@@ -81,7 +81,7 @@ void main() {
         () => Sqlite3Driver.connect(
           const SqliteConnectOptions.memory(
             pragmas: <String, Object>{
-              'cache_size': <int>[1]
+              'cache_size': <int>[1],
             },
           ),
         ),

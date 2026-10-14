@@ -45,12 +45,13 @@ void main() {
     // Constant SQL, one placeholder, one bound value — the shape `describe`
     // accepts, and the reason no caller needs dynamic `IN (?, ?, ?)`.
     final rows = await unsafeRows(
-        pool,
-        r'SELECT name FROM items '
-        r'WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id',
-        [
-          const <int>[1, 3],
-        ]);
+      pool,
+      r'SELECT name FROM items '
+      r'WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id',
+      [
+        const <int>[1, 3],
+      ],
+    );
 
     expect(
       rows.map((row) => row.read<String>('name')),
@@ -71,9 +72,10 @@ void main() {
     );
 
     final rows = await unsafeRows(
-        pool,
-        r'SELECT name FROM items WHERE id IN (SELECT value FROM json_each(?))',
-        [const <int>[]]);
+      pool,
+      r'SELECT name FROM items WHERE id IN (SELECT value FROM json_each(?))',
+      [const <int>[]],
+    );
 
     expect(rows, isEmpty);
   });
@@ -96,8 +98,7 @@ void main() {
     final stored = (await unsafeRows(
       pool,
       r'SELECT length(payload) AS size, typeof(payload) AS kind FROM items',
-    ))
-        .single;
+    )).single;
 
     expect(stored.read<int>('size'), 3);
     expect(stored.read<String>('kind'), 'blob');

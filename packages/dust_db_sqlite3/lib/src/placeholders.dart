@@ -10,7 +10,7 @@ library;
 final class PlaceholderRewrite {
   /// Records a rewritten statement and the bind order it implies.
   PlaceholderRewrite(this.sql, this.parameterOrder)
-      : bindsInOrder = _isInOrder(parameterOrder);
+    : bindsInOrder = _isInOrder(parameterOrder);
 
   /// SQL with every `$n` placeholder replaced by `?`.
   final String sql;
