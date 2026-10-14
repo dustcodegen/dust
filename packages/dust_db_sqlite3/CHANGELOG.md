@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Failed transaction commits roll back any still-active native transaction,
+  preserving the commit error after successful cleanup and allowing reuse (#11).
+
 ### Changed
 
 - The declared minimum Dart SDK is now 3.10, matching the existing

@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 
 import '../../example/blobs.dart' as blobs;
+import '../../example/commit_recovery.dart' as commit_recovery;
 import '../../example/connect_options.dart' as connect_options;
 import '../../example/constraint_violations.dart' as constraint_violations;
 import '../../example/dates_and_times.dart' as dates_and_times;
@@ -167,6 +168,14 @@ void main() {
   });
 
   group('when it goes wrong', () {
+    test('commit_recovery', () async {
+      expect(await runExample(commit_recovery.main), <String>[
+        'failed at: COMMIT',
+        'children after rollback: 0',
+        'next transaction committed: true',
+      ]);
+    });
+
     test('error_handling', () async {
       expect(await runExample(error_handling.main), <String>[
         'category: query',

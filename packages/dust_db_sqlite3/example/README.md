@@ -70,6 +70,7 @@ the answer differs.
 | Question | File |
 | :--- | :--- |
 | What a failure looks like when nothing throws | [`error_handling.dart`](error_handling.dart) |
+| A callback succeeds but COMMIT fails | [`commit_recovery.dart`](commit_recovery.dart) |
 | Telling a duplicate apart from an outage | [`constraint_violations.dart`](constraint_violations.dart) |
 | Making SQLite enforce the references you declared | [`foreign_keys.dart`](foreign_keys.dart) |
 | SQL that validation never sees, and its price | [`unchecked_sql.dart`](unchecked_sql.dart) |

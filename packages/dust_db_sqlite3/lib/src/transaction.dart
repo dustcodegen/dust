@@ -53,7 +53,17 @@ final class _ConnectionState {
             'COMMIT',
             'SQLite transaction commit failed.',
           );
-          if (commit != null) return Err<T, SqlxError>(commit);
+          if (commit != null) {
+            // A failed COMMIT can leave uncommitted writes for the next caller.
+            final rollback = database.autocommit
+                ? null
+                : _control(
+                    database,
+                    'ROLLBACK',
+                    'SQLite rollback after failed commit failed.',
+                  );
+            return Err<T, SqlxError>(rollback ?? commit);
+          }
           return Ok<T, SqlxError>(value);
         },
         err: (error) async {
@@ -161,11 +171,11 @@ final class _SingleConnectionPool implements Transaction, Sqlite3Executor {
     this._connection,
     this._scope,
   ) : _driver = Sqlite3Driver._(
-          database,
-          ownsDatabase: false,
-          connection: _connection,
-          transactionScope: _scope,
-        );
+        database,
+        ownsDatabase: false,
+        connection: _connection,
+        transactionScope: _scope,
+      );
 
   final Sqlite3Driver _driver;
   final _ConnectionState _connection;
