@@ -1,5 +1,24 @@
 part of 'sqlite_pool.dart';
 
+/// Initializes an owned native handle using already-validated [options].
+///
+/// Package-internal so tests can force native failures without global hooks.
+/// Takes ownership, closing the handle when setup fails.
+Sqlite3Driver initializeSqlite3Connection(
+  sqlite.Database database,
+  SqliteConnectOptions options,
+  Map<String, String> migrations,
+) {
+  try {
+    _applyConnectOptions(database, options);
+    _applyMigrations(database, migrations);
+    return Sqlite3Driver._(database, ownsDatabase: true);
+  } catch (_) {
+    database.close();
+    rethrow;
+  }
+}
+
 sqlite.Database _openDatabase(SqliteConnectOptions options) {
   try {
     if (options.inMemory) return sqlite.sqlite3.openInMemory();
