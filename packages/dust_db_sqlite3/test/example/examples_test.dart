@@ -14,6 +14,8 @@ import '../../example/fetch_optional.dart' as fetch_optional;
 import '../../example/fetch_scalar.dart' as fetch_scalar;
 import '../../example/foreign_keys.dart' as foreign_keys;
 import '../../example/migrations.dart' as migrations;
+import '../../example/migration_integrity.dart' as migration_integrity;
+import '../../example/legacy_migration_baseline.dart' as legacy_baseline;
 import '../../example/nullable_columns.dart' as nullable_columns;
 import '../../example/open_a_file.dart' as open_a_file;
 import '../../example/open_in_memory.dart' as open_in_memory;
@@ -30,6 +32,20 @@ import 'capture.dart';
 
 void main() {
   group('connecting', () {
+    test('migration_integrity', () async {
+      expect(await runExample(migration_integrity.main), <String>[
+        'changed SQL rejected: true',
+        'missing SQL rejected: true',
+        'rows preserved: 1',
+      ]);
+    });
+    test('legacy_migration_baseline', () async {
+      expect(await runExample(legacy_baseline.main), <String>[
+        'history source: legacy-baseline',
+        'historical SQL verified: false',
+        'rows preserved: 1',
+      ]);
+    });
     test('open_in_memory', () async {
       expect(await runExample(open_in_memory.main), <String>['users: 1']);
     });

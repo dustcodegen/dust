@@ -7,11 +7,11 @@ part of 'sqlite_pool.dart';
 Sqlite3Driver initializeSqlite3Connection(
   sqlite.Database database,
   SqliteConnectOptions options,
-  Map<String, String> migrations,
+  Map<String, String>? migrations,
 ) {
   try {
     _applyConnectOptions(database, options);
-    _applyMigrations(database, migrations);
+    _applyMigrations(database, migrations, options.baselineLegacyMigrations);
     return Sqlite3Driver._(database, ownsDatabase: true);
   } catch (_) {
     database.close();

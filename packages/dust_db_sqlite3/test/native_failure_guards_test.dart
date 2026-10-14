@@ -61,7 +61,7 @@ void main() {
       () => initializeSqlite3Connection(
         native,
         const SqliteConnectOptions.memory(foreignKeys: true),
-        const {},
+        null,
       ),
       throwsA(
         isA<SqlxError>()
@@ -80,7 +80,7 @@ void main() {
       final db = initializeSqlite3Connection(
         native,
         const SqliteConnectOptions.memory(),
-        const {},
+        null,
       );
       final error = _error(await db.close());
       expect(error.category, SqlxErrorCategory.connection);

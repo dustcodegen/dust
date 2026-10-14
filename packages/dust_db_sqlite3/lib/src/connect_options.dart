@@ -48,6 +48,7 @@ final class SqliteConnectOptions {
     this.foreignKeys,
     this.journalMode,
     this.synchronous,
+    this.baselineLegacyMigrations = false,
     this.pragmas = const <String, Object>{},
   }) : path = null,
        inMemory = false;
@@ -61,6 +62,7 @@ final class SqliteConnectOptions {
     this.foreignKeys,
     this.journalMode,
     this.synchronous,
+    this.baselineLegacyMigrations = false,
     this.pragmas = const <String, Object>{},
   }) : inMemory = false;
 
@@ -71,6 +73,7 @@ final class SqliteConnectOptions {
     this.foreignKeys,
     this.journalMode,
     this.synchronous,
+    this.baselineLegacyMigrations = false,
     this.pragmas = const <String, Object>{},
   }) : createIfMissing = false,
        readOnly = true,
@@ -82,6 +85,7 @@ final class SqliteConnectOptions {
     this.foreignKeys,
     this.journalMode,
     this.synchronous,
+    this.baselineLegacyMigrations = false,
     this.pragmas = const <String, Object>{},
   }) : path = null,
        createIfMissing = true,
@@ -112,6 +116,12 @@ final class SqliteConnectOptions {
   /// SQLite disk sync behavior.
   final SqliteSynchronousMode? synchronous;
 
+  /// Trusts a reviewed bundle to baseline existing name-only migration history.
+  ///
+  /// A baseline detects future drift, not which SQL was originally applied.
+  /// Defaults to false; remove the opt-in after the one-time upgrade.
+  final bool baselineLegacyMigrations;
+
   /// Extra SQLite pragmas applied after the built-in options.
   final Map<String, Object> pragmas;
 
@@ -135,6 +145,7 @@ final class SqliteConnectOptions {
       foreignKeys: foreignKeys,
       journalMode: journalMode,
       synchronous: synchronous,
+      baselineLegacyMigrations: baselineLegacyMigrations,
       pragmas: pragmas,
     );
   }

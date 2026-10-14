@@ -80,10 +80,55 @@ reversible `.up.sql` / `.down.sql` pairs are supported. For reversible pairs,
 only `.up.sql` files run during normal startup; `.down.sql` files are never
 applied automatically.
 
-Applied names are stored in `__dust_schema_migrations`, so reopening the
-database applies only new files. Generated `@SqlxDatabase` openers embed the
+Applied names and SHA-256 checksums of exact UTF-8 SQL are stored in
+`__dust_schema_migrations`. Startup checks the entire applied history before
+running new files: editing, renaming or omitting an applied migration throws a
+`SqlxError` with category `migration` and its filename as `operation`. Whitespace
+and line endings count as changes. Add a new migration instead of editing one.
+Generated `@SqlxDatabase` openers embed the
 configured migration directory and create the same `Sqlite3Driver`
 automatically.
+
+Omit `migrations` (or pass `null`) for an unmanaged open, including read-only
+inspection. Passing `migrations: {}` explicitly manages an empty bundle and
+rejects existing applied history. Managed startup requires a writable connection
+and uses `BEGIN IMMEDIATE` before reading history; the configured `busyTimeout`
+controls waits for other writers. History upgrades, baselines and pending SQL
+commit or roll back together. Startup is still synchronous and can block while
+waiting or migrating.
+
+Migration files must leave transaction control to Dust. Native commit filtering
+rejects early commits and implicit writes after a migration's rollback; a boundary
+savepoint also detects a rollback followed by a replacement transaction. Automatic
+rollback preserves the original failure instead of reporting a false cleanup
+error. This guard does not sandbox trusted migration SQL or make `journal_mode =
+OFF` crash-safe. Keep migrations to schema/data SQL on the managed database.
+
+### Existing name-only history
+
+Old databases cannot prove which SQL was originally applied. Managed startup
+fails closed until you back up the database, recover the original deployed
+migration bundle and review it, then explicitly opt in to a one-time baseline:
+
+```dart
+final db = Sqlite3Driver.open(
+  'app.db',
+  migrations: reviewedMigrations,
+  options: const SqliteConnectOptions(baselineLegacyMigrations: true),
+);
+```
+
+The same option works with generated `AppDatabase.open(..., options: ...)`.
+Remove the opt-in after upgrading. Timestamps and data are preserved; old rows
+are marked `checksum_source = 'legacy-baseline'`, new rows `'applied'`. A baseline
+detects future drift; it does **not** verify historical SQL. It cannot bypass a
+missing file, an existing checksum mismatch or invalid applied metadata.
+
+These runtime checks complement Dust's Rust SQLx build-time validation, but
+Dust's history table is not SQLx's `_sqlx_migrations` and is not interchangeable.
+Checksums detect bundle drift, not malicious edits by someone able to rewrite
+the database. See [migration integrity](example/migration_integrity.dart) and
+[legacy baseline](example/legacy_migration_baseline.dart) for runnable examples.
 
 ## Connection Options
 
