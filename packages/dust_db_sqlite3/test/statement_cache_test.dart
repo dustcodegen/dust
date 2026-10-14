@@ -25,37 +25,41 @@ CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
     await db.close();
   });
 
-  test('the same statement run many times keeps its parameters straight',
-      () async {
-    for (var i = 1; i <= 50; i++) {
-      final inserted = await db.execute(
-        r'INSERT INTO items (id, name) VALUES ($1, $2)',
-        <Object?>[i, 'name$i'],
+  test(
+    'the same statement run many times keeps its parameters straight',
+    () async {
+      for (var i = 1; i <= 50; i++) {
+        final inserted = await db.execute(
+          r'INSERT INTO items (id, name) VALUES ($1, $2)',
+          <Object?>[i, 'name$i'],
+        );
+        expect(inserted.isOk, isTrue);
+      }
+
+      for (var i = 1; i <= 50; i++) {
+        final name = await db.fetchScalar<String>(
+          r'SELECT name FROM items WHERE id = $1',
+          <Object?>[i],
+        );
+        expect(name.unwrapOrElse((error) => throw error), 'name$i');
+      }
+    },
+  );
+
+  test(
+    'a held statement still sees rows written after it was prepared',
+    () async {
+      const select = 'SELECT count(*) FROM items';
+      expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 0);
+
+      await db.execute(
+        r'INSERT INTO items (name) VALUES ($1)',
+        const <Object?>['first'],
       );
-      expect(inserted.isOk, isTrue);
-    }
 
-    for (var i = 1; i <= 50; i++) {
-      final name = await db.fetchScalar<String>(
-        r'SELECT name FROM items WHERE id = $1',
-        <Object?>[i],
-      );
-      expect(name.unwrapOrElse((error) => throw error), 'name$i');
-    }
-  });
-
-  test('a held statement still sees rows written after it was prepared',
-      () async {
-    const select = 'SELECT count(*) FROM items';
-    expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 0);
-
-    await db.execute(
-      r'INSERT INTO items (name) VALUES ($1)',
-      const <Object?>['first'],
-    );
-
-    expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 1);
-  });
+      expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 1);
+    },
+  );
 
   test('a statement survives the schema changing under it', () async {
     // SQLite recompiles a prepared statement when the schema moves, and the
@@ -63,8 +67,9 @@ CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
     const select = 'SELECT count(*) FROM items';
     expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 0);
 
-    await Sqlite3UnsafeSql(db)
-        .execute('ALTER TABLE items ADD COLUMN note TEXT', const []);
+    await Sqlite3UnsafeSql(
+      db,
+    ).execute('ALTER TABLE items ADD COLUMN note TEXT', const []);
 
     expect((await db.fetchScalar<int>(select, const [])).unwrapOr(-1), 0);
   });
@@ -84,8 +89,7 @@ CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
         'CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL, '
         'note TEXT)',
         const [],
-      ))
-          .isOk,
+      )).isOk,
       isTrue,
     );
     await db.execute(
@@ -102,41 +106,48 @@ CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
     expect(note.unwrapOrElse((error) => throw error), 'and noted');
   });
 
-  test('a statement held for a table that goes away reports it as a value',
-      () async {
-    const count = 'SELECT count(*) FROM items';
-    expect((await db.fetchScalar<int>(count, const [])).unwrapOr(-1), 0);
+  test(
+    'a statement held for a table that goes away reports it as a value',
+    () async {
+      const count = 'SELECT count(*) FROM items';
+      expect((await db.fetchScalar<int>(count, const [])).unwrapOr(-1), 0);
 
-    expect(
-      (await Sqlite3UnsafeSql(db).execute('DROP TABLE items', const [])).isOk,
-      isTrue,
-    );
+      expect(
+        (await Sqlite3UnsafeSql(db).execute('DROP TABLE items', const [])).isOk,
+        isTrue,
+      );
 
-    final gone = await db.fetchScalar<int>(count, const []);
-    expect(gone.isErr, isTrue);
-  });
+      final gone = await db.fetchScalar<int>(count, const []);
+      expect(gone.isErr, isTrue);
+    },
+  );
 
-  test('a transaction runs the pool statements, and both stay usable',
-      () async {
-    const insert = r'INSERT INTO items (name) VALUES ($1)';
-    await db.execute(insert, const <Object?>['before']);
+  test(
+    'a transaction runs the pool statements, and both stay usable',
+    () async {
+      const insert = r'INSERT INTO items (name) VALUES ($1)';
+      await db.execute(insert, const <Object?>['before']);
 
-    final committed = await db.transaction<Unit>((tx) async {
-      final inner = await tx.execute(insert, const <Object?>['inside']);
-      return inner.map((_) => unit);
-    });
-    expect(committed.isOk, isTrue);
+      final committed = await db.transaction<Unit>((tx) async {
+        final inner = await tx.execute(insert, const <Object?>['inside']);
+        return inner.map((_) => unit);
+      });
+      expect(committed.isOk, isTrue);
 
-    await db.execute(insert, const <Object?>['after']);
+      await db.execute(insert, const <Object?>['after']);
 
-    final names = await db.fetchAll<String>(
-      'SELECT name FROM items ORDER BY id',
-      const [],
-      (row) => row.read<String>('name'),
-    );
-    expect(names.unwrapOrElse((error) => throw error),
-        <String>['before', 'inside', 'after']);
-  });
+      final names = await db.fetchAll<String>(
+        'SELECT name FROM items ORDER BY id',
+        const [],
+        (row) => row.read<String>('name'),
+      );
+      expect(names.unwrapOrElse((error) => throw error), <String>[
+        'before',
+        'inside',
+        'after',
+      ]);
+    },
+  );
 
   test('more distinct statements than the cache holds still all run', () async {
     // Past the capacity, so the least recently used are evicted and prepared
@@ -218,15 +229,17 @@ CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
     );
   });
 
-  test('closing releases the statements, and using one afterwards is a value',
-      () async {
-    await db.fetchScalar<int>('SELECT count(*) FROM items', const []);
-    expect((await db.close()).isOk, isTrue);
+  test(
+    'closing releases the statements, and using one afterwards is a value',
+    () async {
+      await db.fetchScalar<int>('SELECT count(*) FROM items', const []);
+      expect((await db.close()).isOk, isTrue);
 
-    final afterwards = await db.fetchScalar<int>(
-      'SELECT count(*) FROM items',
-      const [],
-    );
-    expect(afterwards.isErr, isTrue);
-  });
+      final afterwards = await db.fetchScalar<int>(
+        'SELECT count(*) FROM items',
+        const [],
+      );
+      expect(afterwards.isErr, isTrue);
+    },
+  );
 }

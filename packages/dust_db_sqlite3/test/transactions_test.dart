@@ -15,10 +15,11 @@ void main() {
 
     final result = await pool.transaction((tx) async {
       expectOk(
-          await queryExecute(r'INSERT INTO users (id, name) VALUES (?, ?)', [
-        1,
-        'Ada',
-      ]).execute(tx));
+        await queryExecute(r'INSERT INTO users (id, name) VALUES (?, ?)', [
+          1,
+          'Ada',
+        ]).execute(tx),
+      );
       throw StateError('boom');
     });
     expect(result, isA<Err<void, SqlxError>>());
@@ -38,8 +39,7 @@ void main() {
       final result = await pool.transaction((tx) async {
         expect(tx.driver, Driver.sqlite3);
         expect(
-          (tx as Sqlite3Executor)
-              .database
+          (tx as Sqlite3Executor).database
               .select('SELECT 1')
               .single
               .columnAt(0),
@@ -96,10 +96,11 @@ void main() {
 
     final result = await pool.transaction<Unit>((tx) async {
       expectOk(
-          await queryExecute(r'INSERT INTO users (id, name) VALUES (?, ?)', [
-        1,
-        'Ada',
-      ]).execute(tx));
+        await queryExecute(r'INSERT INTO users (id, name) VALUES (?, ?)', [
+          1,
+          'Ada',
+        ]).execute(tx),
+      );
       return Err<Unit, SqlxError>(SqlxError.driver('abort'));
     });
     expect(result, isA<Err<Unit, SqlxError>>());
@@ -207,8 +208,9 @@ void main() {
 
     final result = await pool.transaction<Unit>((tx) async {
       await _insertUser(tx, 1, 'Ada');
-      final manualRollback =
-          await Sqlite3UnsafeSql(pool).execute('ROLLBACK', const []);
+      final manualRollback = await Sqlite3UnsafeSql(
+        pool,
+      ).execute('ROLLBACK', const []);
       expect(manualRollback, isA<Ok<ExecResult, SqlxError>>());
       return const Ok<Unit, SqlxError>(unit);
     });
@@ -245,10 +247,12 @@ SqlitePool _userPool() {
 }
 
 Future<void> _insertUser(Executor db, int id, String name) async {
-  final result =
-      await db.execute(r'INSERT INTO users (id, name) VALUES (?, ?)', [
-    id,
-    name,
-  ]);
+  final result = await db.execute(
+    r'INSERT INTO users (id, name) VALUES (?, ?)',
+    [
+      id,
+      name,
+    ],
+  );
   expect(result, isA<Ok<ExecResult, SqlxError>>());
 }

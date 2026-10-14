@@ -40,8 +40,10 @@ Future<void> main() async {
 
     // `unwrapOr` for a default, `unwrapOrElse` when the fallback needs the
     // error, `map` to keep working inside the Result.
-    final count =
-        await db.fetchScalar<int>('SELECT count(*) FROM users', const []);
+    final count = await db.fetchScalar<int>(
+      'SELECT count(*) FROM users',
+      const [],
+    );
     print('users: ${count.unwrapOr(0)}');
 
     // Rethrowing is a choice, not the default. `SqlxError` implements

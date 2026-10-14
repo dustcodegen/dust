@@ -44,10 +44,12 @@ Future<void> main() async {
       const <Object?>[404],
       (row) => row.read<String>('name'),
     );
-    print('missing: ${missing.match(
-      ok: (value) => value,
-      err: (error) => error.category.name,
-    )}');
+    print(
+      'missing: ${missing.match(
+        ok: (value) => value,
+        err: (error) => error.category.name,
+      )}',
+    );
   } finally {
     await db.close();
   }

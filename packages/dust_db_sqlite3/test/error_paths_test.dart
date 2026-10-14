@@ -236,6 +236,7 @@ void main() {
 
 /// Runs an unchecked read, so the closed-database tests read the same way.
 Future<Result<List<Row>, SqlxError>> queryRawFetch(SqlitePool pool) {
-  return Sqlite3UnsafeSql(pool)
-      .fetch('SELECT id FROM items', const <Object?>[]);
+  return Sqlite3UnsafeSql(
+    pool,
+  ).fetch('SELECT id FROM items', const <Object?>[]);
 }

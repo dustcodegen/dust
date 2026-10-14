@@ -161,11 +161,11 @@ final class _SingleConnectionPool implements Transaction, Sqlite3Executor {
     this._connection,
     this._scope,
   ) : _driver = Sqlite3Driver._(
-          database,
-          ownsDatabase: false,
-          connection: _connection,
-          transactionScope: _scope,
-        );
+        database,
+        ownsDatabase: false,
+        connection: _connection,
+        transactionScope: _scope,
+      );
 
   final Sqlite3Driver _driver;
   final _ConnectionState _connection;

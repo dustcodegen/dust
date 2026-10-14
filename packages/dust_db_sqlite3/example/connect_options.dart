@@ -35,8 +35,10 @@ Future<void> main() async {
   );
 
   try {
-    final journal =
-        await db.fetchScalar<String>('PRAGMA journal_mode', const []);
+    final journal = await db.fetchScalar<String>(
+      'PRAGMA journal_mode',
+      const [],
+    );
     final keys = await db.fetchScalar<int>('PRAGMA foreign_keys', const []);
     print('journal: ${journal.unwrapOrElse((_) => '?')}');
     print('foreign keys: ${keys.unwrapOrElse((_) => -1)}');

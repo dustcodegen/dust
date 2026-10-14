@@ -155,8 +155,9 @@ void main() {
   });
 
   test('an unclosed dollar tag does not swallow the statement', () {
-    final rewrite =
-        rewritePlaceholders(r'SELECT $tag$ id FROM t WHERE id = $1');
+    final rewrite = rewritePlaceholders(
+      r'SELECT $tag$ id FROM t WHERE id = $1',
+    );
 
     expect(rewrite.sql, r'SELECT $tag$ id FROM t WHERE id = ?');
     expect(rewrite.parameterOrder, <int>[1]);
