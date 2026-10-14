@@ -35,6 +35,8 @@ the answer differs.
 | WAL, pragmas, busy timeout, foreign keys | [`connect_options.dart`](connect_options.dart) |
 | A connection that cannot write | [`read_only.dart`](read_only.dart) |
 | Changing the schema over time | [`migrations.dart`](migrations.dart) |
+| Rejecting changed or missing migration SQL | [`migration_integrity.dart`](migration_integrity.dart) |
+| Explicitly baselining old name-only history | [`legacy_migration_baseline.dart`](legacy_migration_baseline.dart) |
 
 ## Reading
 

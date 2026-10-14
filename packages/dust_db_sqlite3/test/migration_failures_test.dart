@@ -84,7 +84,7 @@ void main() {
                 'category',
                 SqlxErrorCategory.migration,
               )
-              .having((e) => e.operation, 'operation', 'BEGIN')
+              .having((e) => e.operation, 'operation', 'BEGIN IMMEDIATE')
               .having((e) => e.cause, 'cause', isA<sqlite.SqliteException>()),
         ),
       );
@@ -93,9 +93,9 @@ void main() {
   );
 
   test('migration table setup failure retains its native cause', () {
+    prepare('CREATE VIEW __dust_schema_migrations AS SELECT 1 AS name;');
     final error = openingError(
       'CREATE TABLE items (id INTEGER);',
-      pragmas: const {'query_only': true},
     );
     expect(error.operation, '__dust_schema_migrations');
     expect(error.message, 'SQLite migration table setup failed.');
@@ -158,14 +158,14 @@ INSERT INTO items VALUES (1);
     },
   );
 
-  test('failed migration cleanup reports ROLLBACK rather than hiding it', () {
+  test('an already ended migration retains its original SQL failure', () {
     final error = openingError('''
 CREATE TABLE items (id INTEGER);
 ROLLBACK;
 THIS IS NOT SQL;
 ''');
-    expect(error.operation, 'ROLLBACK');
-    expect(error.message, 'SQLite migration rollback failed.');
+    expect(error.operation, '0001.sql');
+    expect(error.message, 'SQLite migration `0001.sql` failed.');
     expectNoItems();
   });
 }

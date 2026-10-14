@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **dust_db_sqlite3**: verify exact migration checksums and missing history
+  before pending SQL, serialize managed startup, and require an explicit
+  reviewed baseline for old name-only history (#22).
+
 ## [v0.2.1] - 2026-09-28
 
 ### Migrating

@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Startup verifies exact SHA-256 migration checksums and missing applied files
+  before running pending SQL, with writer locking and atomic history upgrades
+  (#22). Name-only legacy history requires an explicit reviewed baseline.
+- Migration SQL cannot commit startup changes early; automatic rollback keeps
+  the original failure, while failed cleanup still reports its native cause.
 - SQLite transaction ownership now spans callback awaits, rejects unrelated
   driver work and parallel savepoints, and waits for started nested work.
   Failed cleanup blocks further queries until the connection is closed (#20).
@@ -16,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Omitted migrations leave startup unmanaged; an explicitly empty bundle still
+  verifies history and requires writable startup. Legacy baselines are marked
+  `legacy-baseline`, not historically verified; opt in once through
+  `SqliteConnectOptions(baselineLegacyMigrations: true)` after reviewing SQL.
 - The declared minimum Dart SDK is now 3.10, matching the existing
   `sqlite3 ^3.3.0` dependency instead of advertising an unresolvable Dart
   3.6-3.9 combination.

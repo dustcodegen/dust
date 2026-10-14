@@ -129,8 +129,10 @@ await database.connection.close();
 
 Dust reads migration files in the configured directory in sorted filename order.
 DB generation embeds the files that should run during normal startup. At
-runtime, SQLite records applied filenames in `__dust_schema_migrations` and
-runs only new files.
+runtime, SQLite records applied filenames and exact UTF-8 SQL SHA-256 checksums
+in `__dust_schema_migrations`. It rejects changed or missing applied files before
+running new SQL, complementing Rust SQLx's build-time checks. Dust's runtime
+history is separate from SQLx's `_sqlx_migrations` table.
 
 Simple forward migrations use plain `.sql` names:
 
@@ -183,6 +185,26 @@ Use one migration style per migration name.
 > [!IMPORTANT]
 > Do not edit or rename a migration after it ships. Existing installations have
 > already recorded its filename; add a new migration for every schema change.
+
+SQLite managed startup acquires a writer lock with `BEGIN IMMEDIATE`; use
+`busyTimeout` to control contention waits. The history upgrade and all new SQL
+are atomic. Omitted/null migrations mean unmanaged startup, while an explicit
+empty map still verifies history and requires write access.
+Leave transaction control to Dust: native commit filtering prevents migration
+SQL from committing startup early or committing implicit writes after rollback.
+A boundary savepoint also detects a rollback followed by a replacement transaction.
+This is not a sandbox for arbitrary SQL or a crash-safety guarantee for unsafe
+journal settings or attached databases.
+
+Old name-only SQLite history fails closed: back up the database and recover and
+review the deployed SQL before opening once with
+`SqliteConnectOptions(baselineLegacyMigrations: true)`. Generated database
+openers already forward these options. Remove this opt-in after upgrading.
+Baseline rows retain their timestamps and are labeled `legacy-baseline`, not
+historically verified; subsequent SQL is labeled `applied`. The opt-in cannot
+override missing migrations, changed checksums or corrupted applied metadata.
+See the [upgrade guide](../../packages/dust_db_sqlite3/README.md#existing-name-only-history)
+and [executable example](../../packages/dust_db_sqlite3/example/legacy_migration_baseline.dart).
 
 ## SQLite Connection Options
 

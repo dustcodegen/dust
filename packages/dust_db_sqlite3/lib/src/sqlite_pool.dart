@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:dust_dart/db.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
@@ -10,6 +11,7 @@ import 'placeholders.dart';
 part 'connect_options.dart';
 part 'errors.dart';
 part 'migrations.dart';
+part 'migration_history.dart';
 part 'operations.dart';
 part 'row.dart';
 part 'transaction.dart';
@@ -37,10 +39,13 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
        _connection = connection ?? _ConnectionState(),
        _transactionScope = transactionScope;
 
-  /// Opens a database at [path] and applies unapplied migrations in name order.
+  /// Opens [path], verifying and applying an explicitly supplied migration bundle.
+  ///
+  /// Omit [migrations] to open without migration management; an empty bundle
+  /// still verifies history and requires a writable connection.
   factory Sqlite3Driver.open(
     String path, {
-    Map<String, String> migrations = const <String, String>{},
+    Map<String, String>? migrations,
     SqliteConnectOptions? options,
   }) {
     return Sqlite3Driver.connect(
@@ -52,9 +57,9 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
   /// Opens a database from explicit SQLite connection [options].
   factory Sqlite3Driver.connect(
     SqliteConnectOptions options, {
-    Map<String, String> migrations = const <String, String>{},
+    Map<String, String>? migrations,
   }) {
-    options._validate(hasMigrations: migrations.isNotEmpty);
+    options._validate(hasMigrations: migrations != null);
     return initializeSqlite3Connection(
       _openDatabase(options),
       options,

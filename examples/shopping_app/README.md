@@ -17,6 +17,13 @@ instead of isolated model fixtures.
 | i18n | [`dust.yaml`](dust.yaml), [`assets/i18n/en/shop.arb`](assets/i18n/en/shop.arb), [`assets/i18n/my/shop.arb`](assets/i18n/my/shop.arb) |
 | Database | [`lib/core/db/shopping_cache_database.dart`](lib/core/db/shopping_cache_database.dart), [`migrations/0001_shopping_cache.sql`](migrations/0001_shopping_cache.sql) |
 
+SQLite startup verifies exact migration checksums before new SQL. Old name-only
+history requires a reviewed one-time `baselineLegacyMigrations: true` option;
+this labels a baseline, not verified historical SQL. The generated facade's
+[upgrade regression](test/sqlite_legacy_upgrade_test.dart) preserves saved data
+and exercises both the default refusal and explicit upgrade. See the
+[SQLite guide](../../packages/dust_db_sqlite3/README.md#existing-name-only-history).
+
 The app uses live FakeStore endpoints for core catalog/auth/cart data and local
 fake responses for showcase-only flows such as checkout quotes, order tracking,
 wishlist persistence, and support chat.

@@ -26,7 +26,7 @@ CREATE TABLE children (
       final db = initializeSqlite3Connection(
         native,
         const SqliteConnectOptions.memory(foreignKeys: true),
-        const {},
+        null,
       );
       addTearDown(() async => expectOk(await db.close()));
       final entered = Completer<void>();
@@ -65,7 +65,7 @@ CREATE TABLE children (
     final db = initializeSqlite3Connection(
       native,
       const SqliteConnectOptions.memory(),
-      const {},
+      null,
     );
     addTearDown(() async => expectOk(await db.close()));
     late Result<ExecResult, SqlxError> parentWrite;
@@ -95,7 +95,7 @@ CREATE TABLE children (
       final db = initializeSqlite3Connection(
         native,
         const SqliteConnectOptions.memory(),
-        const {},
+        null,
       );
       addTearDown(db.close);
       final result = await db.transaction<Unit>((tx) async {
