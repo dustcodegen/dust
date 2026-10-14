@@ -3,7 +3,7 @@ use std::env;
 use super::UpgradeError;
 
 /// GitHub repository that owns trusted Dust release artifacts.
-pub(crate) const RELEASE_REPOSITORY: &str = "y3l1n4ung/dust";
+pub(crate) const RELEASE_REPOSITORY: &str = "dustcodegen/dust";
 
 /// Release checksum manifest filename.
 pub(crate) const CHECKSUMS_FILE: &str = "SHA256SUMS.txt";

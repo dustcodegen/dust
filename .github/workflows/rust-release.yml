@@ -2,6 +2,11 @@ name: Rust release
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Build and publish the pinned original v0.2.1 release (otherwise check selected ref only)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,15 +31,28 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ inputs.publish && env.RELEASE_TAG || github.sha }}
           persist-credentials: false
-      - name: Verify exact original source and unchanged version
+      - name: Verify exact original release source
+        if: inputs.publish
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           test "$(git rev-parse 'HEAD^{tree}')" = "$ORIGINAL_TREE"
+      - name: Verify selected check-only source
+        if: ${{ !inputs.publish }}
+        env:
+          CHECK_COMMIT: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$CHECK_COMMIT"
+      - name: Verify unchanged version
+        run: |
           python3 -c 'import tomllib; assert tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"] == "0.2.1"'
+      - name: Test release and installer gates
+        if: ${{ !inputs.publish }}
+        run: |
+          python3 -m unittest discover -s scripts -p 'test_rust_release*.py'
+          python3 -m unittest discover -s scripts -p test_binary_installers.py
       - name: Install pinned Rust
         shell: bash
         run: rustup toolchain install "$RUST_VERSION" --profile minimal --component rustfmt --component clippy
@@ -46,6 +64,7 @@ jobs:
         run: cargo +${{ env.RUST_VERSION }} test --locked --workspace
 
   build-binaries:
+    if: inputs.publish
     name: ${{ matrix.asset }}
     needs: rust-checks
     runs-on: ${{ matrix.runner }}
@@ -115,6 +134,7 @@ jobs:
           retention-days: 7
 
   publish-release:
+    if: inputs.publish
     name: Publish verified Rust release
     needs: [rust-checks, build-binaries]
     runs-on: ubuntu-24.04
