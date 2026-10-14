@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dust_server/server.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:test/test.dart';
 
@@ -20,8 +21,11 @@ void main() {
     late HttpServer server;
     late String origin;
     late _Counter counter;
+    late http.Client client;
 
     setUp(() async {
+      // Keep routing assertions independent of the OS listen backlog.
+      client = IOClient(HttpClient()..maxConnectionsPerHost = 32);
       counter = _Counter();
       final app = Router()
         ..route(
@@ -46,12 +50,15 @@ void main() {
       origin = 'http://${server.address.host}:${server.port}';
     });
 
-    tearDown(() => server.close(force: true));
+    tearDown(() async {
+      client.close();
+      await server.close(force: true);
+    });
 
     test('serves 200 concurrent requests without crossing parameters',
         () async {
       final responses = await Future.wait([
-        for (var i = 0; i < 200; i++) http.get(Uri.parse('$origin/count/$i')),
+        for (var i = 0; i < 200; i++) client.get(Uri.parse('$origin/count/$i')),
       ]);
 
       for (var i = 0; i < responses.length; i++) {
@@ -63,7 +70,7 @@ void main() {
 
     test('keeps state readable from every concurrent request', () async {
       final responses = await Future.wait([
-        for (var i = 0; i < 50; i++) http.get(Uri.parse('$origin/count/$i')),
+        for (var i = 0; i < 50; i++) client.get(Uri.parse('$origin/count/$i')),
       ]);
 
       expect(responses.every((response) => response.statusCode == 200), isTrue);
