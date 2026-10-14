@@ -1,0 +1,154 @@
+name: Rust release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-release-v0.2.1
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v0.2.1
+  SOURCE_COMMIT: 6149bda33065f8754d93ec15726d064d7fe081ca
+  ORIGINAL_COMMIT: afa01c64dc716ccb92888bf0ff9b376e28e0b813
+  ORIGINAL_TREE: c095fac7cc1667749b35114cf871970e5c726043
+  RUST_VERSION: 1.98.1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-checks:
+    name: Rust release checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - name: Verify exact original source and unchanged version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$ORIGINAL_TREE"
+          python3 -c 'import tomllib; assert tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"] == "0.2.1"'
+      - name: Install pinned Rust
+        shell: bash
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal --component rustfmt --component clippy
+      - name: Format
+        run: cargo +${{ env.RUST_VERSION }} fmt --all -- --check
+      - name: Clippy
+        run: cargo +${{ env.RUST_VERSION }} clippy --locked --workspace --all-targets -- -D warnings
+      - name: Rust tests
+        run: cargo +${{ env.RUST_VERSION }} test --locked --workspace
+
+  build-binaries:
+    name: ${{ matrix.asset }}
+    needs: rust-checks
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            asset: dust-x86_64-unknown-linux-gnu.tar.gz
+            binary: dust
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            asset: dust-aarch64-unknown-linux-gnu.tar.gz
+            binary: dust
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            asset: dust-x86_64-apple-darwin.tar.gz
+            binary: dust
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            asset: dust-aarch64-apple-darwin.tar.gz
+            binary: dust
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            asset: dust-x86_64-pc-windows-msvc.zip
+            binary: dust.exe
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            asset: dust-aarch64-pc-windows-msvc.zip
+            binary: dust.exe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - name: Verify pinned source
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+      - name: Install pinned Rust
+        shell: bash
+        run: rustup toolchain install "$RUST_VERSION" --profile minimal --target ${{ matrix.target }}
+      - name: Build Rust binary
+        shell: bash
+        run: cargo +${{ env.RUST_VERSION }} build --locked --release --target ${{ matrix.target }} -p dust_cli --bin dust
+      - name: Native binary smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(target/${{ matrix.target }}/release/${{ matrix.binary }} --version)" = "dust 0.2.1"
+          target/${{ matrix.target }}/release/${{ matrix.binary }} --help
+      - name: Package Unix binary
+        if: matrix.binary == 'dust'
+        shell: bash
+        run: tar -czf ${{ matrix.asset }} -C target/${{ matrix.target }}/release dust
+      - name: Package Windows binary
+        if: matrix.binary == 'dust.exe'
+        shell: pwsh
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/dust.exe -DestinationPath ${{ matrix.asset }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  publish-release:
+    name: Publish verified Rust release
+    needs: [rust-checks, build-binaries]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test release integrity gate
+        run: python3 -m unittest discover -s scripts -p test_rust_release_assets.py
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Prepare and verify complete release checksums
+        run: |
+          python3 scripts/rust_release_assets.py dist --prepare
+          python3 scripts/rust_release_assets.py dist
+      - name: Publish only verified assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+          else
+            gh release create "$RELEASE_TAG" --draft --verify-tag --title "$RELEASE_TAG" \
+              --notes "Rust-only rebuild of existing $RELEASE_TAG; versions unchanged. Original source: $ORIGINAL_COMMIT. Exact source snapshot: $SOURCE_COMMIT. Compiler: Rust $RUST_VERSION. These are rebuilt assets with new SHA-256 checksums, not byte-for-byte copies of the inaccessible originals. CI: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber
+          gh release download "$RELEASE_TAG" --dir downloaded
+          python3 scripts/rust_release_assets.py downloaded
+          gh release edit "$RELEASE_TAG" --draft=false --latest
