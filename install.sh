@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${DUST_REPO:-y3l1n4ung/dust}"
+REPO="${DUST_REPO:-dustcodegen/dust}"
 VERSION="${DUST_VERSION:-latest}"
 INSTALL_DIR="${DUST_INSTALL_DIR:-$HOME/.local/bin}"
 INSTALL_BIN="$INSTALL_DIR/dust"
