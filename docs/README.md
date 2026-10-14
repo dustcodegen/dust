@@ -68,4 +68,4 @@ and contributor documentation.
 - [Plugin guide](./plugin-guide.md)
 - [Code of Conduct](../CODE_OF_CONDUCT.md)
 - [Security policy](../SECURITY.md)
-- [Roadmap and milestones](https://github.com/y3l1n4ung/dust/milestones)
+- [Roadmap and milestones](https://github.com/dustcodegen/dust/milestones)

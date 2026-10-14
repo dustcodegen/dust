@@ -3,7 +3,6 @@
 [![pub package](https://img.shields.io/pub/v/dust_server.svg)](https://pub.dev/packages/dust_server)
 [![pub points](https://img.shields.io/pub/points/dust_server)](https://pub.dev/packages/dust_server/score)
 [![downloads](https://img.shields.io/pub/dm/dust_server)](https://pub.dev/packages/dust_server)
-[![coverage](https://codecov.io/gh/y3l1n4ung/dust/graph/badge.svg?component=dust_server)](https://app.codecov.io/gh/y3l1n4ung/dust)
 
 Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 
@@ -63,7 +62,8 @@ real client, which is what keeps a directory that size from rotting.
 
 ## Tests
 
-100% line coverage, gated in CI.
+The historical coverage gate targets 100% line coverage. Dart coverage CI is
+disabled during the repository migration; only manual Rust release CI is enabled.
 
 ```bash
 dart test
