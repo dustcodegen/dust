@@ -43,7 +43,10 @@ the selected real `SQLITE_IOERR_*` extended code at a specific
 read/write/sync/truncate boundary. Partial-write cases write a real prefix
 before returning `SQLITE_IOERR_WRITE`. The parent checks native fault counts
 and the number of partial writes/bytes; a case cannot pass without injection.
-The shim requires a shared-memory-capable version-3 native VFS.
+The shim requires shared-memory-capable version-3 main-database file methods.
+Journal/WAL handles can use version-1 methods; each wrapper advertises no more
+than its native handle and the shim support, so unsupported callbacks are not
+exposed as available.
 
 The harness uses the native loader, not SQLite's disabled extension-loading
 feature, and needs no handwritten Dart bindings. It selects the shim explicitly

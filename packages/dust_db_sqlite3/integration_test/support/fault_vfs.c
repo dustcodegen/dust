@@ -8,6 +8,7 @@
 typedef struct {
   sqlite3_file file;
   sqlite3_file *native;
+  sqlite3_io_methods methods;
   int target;
 } FaultFile;
 
@@ -150,17 +151,22 @@ static int open_file(sqlite3_vfs *vfs, const char *name, sqlite3_file *p,
   f->native = (sqlite3_file *)((char *)p + sizeof(FaultFile));
   int rc = original->xOpen(original, name, f->native, flags, out_flags);
   if (rc != SQLITE_OK) return rc;
-  if (f->native->pMethods->iVersion < 3 ||
+  /* Journals/WAL may have version-1 methods; only main DBs need shared memory. */
+  if ((flags & SQLITE_OPEN_MAIN_DB) &&
+      (f->native->pMethods->iVersion < 3 ||
       f->native->pMethods->xShmMap == NULL ||
       f->native->pMethods->xShmLock == NULL ||
       f->native->pMethods->xShmBarrier == NULL ||
-      f->native->pMethods->xShmUnmap == NULL) {
+      f->native->pMethods->xShmUnmap == NULL)) {
     f->native->pMethods->xClose(f->native);
     return SQLITE_CANTOPEN;
   }
   f->target = flags & SQLITE_OPEN_MAIN_DB ? 1 :
       flags & SQLITE_OPEN_MAIN_JOURNAL ? 2 : flags & SQLITE_OPEN_WAL ? 3 : 0;
-  p->pMethods = &methods;
+  f->methods = methods;
+  f->methods.iVersion = f->native->pMethods->iVersion < 3 ?
+      f->native->pMethods->iVersion : 3;
+  p->pMethods = &f->methods;
   return SQLITE_OK;
 }
 
