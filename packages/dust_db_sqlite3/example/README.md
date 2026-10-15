@@ -10,7 +10,7 @@ dart run example/fetch_optional.dart
 ```
 
 Nothing to set up: SQLite is in the process, so every file here brings its own
-database and leaves nothing behind. The two that need a file on disk use a
+database and leaves nothing behind. Examples that need a file on disk use a
 temporary directory and delete it.
 
 ## The contract
@@ -32,6 +32,7 @@ the answer differs.
 | :--- | :--- |
 | The smallest database that works | [`open_in_memory.dart`](open_in_memory.dart) |
 | A database that outlives the process | [`open_a_file.dart`](open_a_file.dart) |
+| Opening, migrating and querying on a persistent worker | [`open_in_background.dart`](open_in_background.dart) |
 | WAL, pragmas, busy timeout, foreign keys | [`connect_options.dart`](connect_options.dart) |
 | A connection that cannot write | [`read_only.dart`](read_only.dart) |
 | Changing the schema over time | [`migrations.dart`](migrations.dart) |
@@ -74,6 +75,7 @@ the answer differs.
 | :--- | :--- |
 | What a failure looks like when nothing throws | [`error_handling.dart`](error_handling.dart) |
 | A callback succeeds but COMMIT fails | [`commit_recovery.dart`](commit_recovery.dart) |
+| Recovering from a worker COMMIT failure | [`background_commit_recovery.dart`](background_commit_recovery.dart) |
 | Telling a duplicate apart from an outage | [`constraint_violations.dart`](constraint_violations.dart) |
 | Making SQLite enforce the references you declared | [`foreign_keys.dart`](foreign_keys.dart) |
 | SQL that validation never sees, and its price | [`unchecked_sql.dart`](unchecked_sql.dart) |

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in `Sqlite3WorkerDriver.open` / `connect` owns one native connection in a
+  persistent isolate for opening, migrations, queries, transactions and close
+  (#24). Row mappers and callbacks stay on the caller; existing generated DAOs
+  accept the executor. Synchronous opening is unchanged. Worker failures settle
+  pending work without automatic replay; generated background facades remain a
+  separate follow-up.
+
 ### Fixed
 
 - Startup verifies exact SHA-256 migration checksums and missing applied files

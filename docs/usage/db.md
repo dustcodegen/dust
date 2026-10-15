@@ -19,6 +19,16 @@ dart pub add dust_dart dust_db_sqlite3
 The SQLite package uses native libraries through Dart FFI and is intended for
 native Dart and Flutter targets, not web.
 
+Execution is opt-in per connection. Existing `Sqlite3Driver` and generated
+`AppDatabase.open` remain synchronous. For native opening, migration checks,
+SQL and close on a persistent isolate, use
+`await Sqlite3WorkerDriver.open(path, migrations: reviewedMigrations)` and pass
+the returned executor to your generated DAO. Row mapping and callbacks stay on
+the caller; runtime SQL without a DAO remains unchecked. See the
+[background connection guide](../../packages/dust_db_sqlite3/README.md#optional-background-connection)
+for usage, ownership, failure recovery and limits. Generated
+`AppDatabase.openBackground` is not available yet.
+
 ## Quick Start
 
 Create a simple migration at `migrations/0001_create_users.sql`:

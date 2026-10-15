@@ -172,3 +172,23 @@ Result<T, SqlxError> _mapRow<T>(String sql, Row row, RowMapper<T> mapper) {
     );
   }
 }
+
+// Native and worker scalars must retain the same coercion and error semantics.
+Result<T, SqlxError> _scalarRow<T>(String sql, Sqlite3Row row) {
+  try {
+    if (null is T) {
+      return Ok<T, SqlxError>(row.readIndexNullable<Object?>(0) as T);
+    }
+    return Ok<T, SqlxError>(row.readIndex<T>(0));
+  } on SqlxError catch (error) {
+    return Err<T, SqlxError>(error);
+  } catch (error) {
+    return Err<T, SqlxError>(
+      _sqliteDecodeError(
+        'SQLite scalar decode failed.',
+        cause: error,
+        operation: sql,
+      ),
+    );
+  }
+}

@@ -94,8 +94,9 @@ inspection. Passing `migrations: {}` explicitly manages an empty bundle and
 rejects existing applied history. Managed startup requires a writable connection
 and uses `BEGIN IMMEDIATE` before reading history; the configured `busyTimeout`
 controls waits for other writers. History upgrades, baselines and pending SQL
-commit or roll back together. Startup is still synchronous and can block while
-waiting or migrating.
+commit or roll back together. `Sqlite3Driver` startup is synchronous and can
+block while waiting or migrating. Use the opt-in worker below when that work
+must leave the caller isolate.
 
 Migration files must leave transaction control to Dust. Native commit filtering
 rejects early commits and implicit writes after a migration's rollback; a boundary
@@ -165,6 +166,83 @@ final db = Sqlite3Driver.connect(
 
 Supported options include create-if-missing, read-only open mode, busy timeout,
 foreign keys, journal mode, synchronous mode, and custom pragmas.
+
+## Optional Background Connection
+
+Choose execution per connection: `Sqlite3Driver` remains synchronous;
+`Sqlite3WorkerDriver` owns one native connection in one persistent isolate.
+Await opening before using it: options, migration checks and pending SQL have
+finished when the future resolves.
+
+```dart
+final db = await Sqlite3WorkerDriver.open(
+  'app.db',
+  migrations: reviewedMigrations,
+  options: const SqliteConnectOptions(
+    foreignKeys: true,
+    busyTimeout: Duration(seconds: 5),
+  ),
+);
+try {
+  final result = await db.fetchAll(
+    'SELECT id, name FROM users ORDER BY id LIMIT 50',
+    [],
+    (row) => (row.read<int>('id'), row.read<String>('name')),
+  );
+  final users = result.unwrap();
+  print(users);
+} finally {
+  (await db.close()).unwrap();
+}
+```
+
+`await Sqlite3WorkerDriver.connect(options, migrations: ...)` also supports
+memory and read-only connections. Omitted versus empty migration bundles and
+the explicit legacy baseline policy are identical to the synchronous driver.
+Startup failures reject the future with `SqlxError`; query and close failures
+return `Err`. Worker-originated errors keep category, driver, operation and
+constraint kind; their native `cause` is diagnostic text, not a native object.
+
+Opening, migrations, native statements and native close run on the worker.
+Row mappers, transaction callbacks, parameter-list JSON encoding and application
+code still run on the caller. Results are materialized and copied across
+isolates: use bounded queries/pagination rather than fetching an entire large
+table. This adds isolate startup, message-copy and memory overhead; it is not a
+connection pool and does not make SQLite support concurrent writers.
+
+All five `Executor` terminals work directly, through runtime query helpers,
+or with existing generated DAOs:
+
+```dart
+final users = UserDao(db);
+final result = await db.transaction((tx) async {
+  return UserDao(tx).createUser('ada@example.com', 'Ada');
+});
+```
+
+DAO SQL is still checked by Dust/Rust SQLx at generation time; direct runtime
+SQL remains unchecked. No DAO is required to use `fetchOne`, `fetchOptional`,
+`fetchAll`, `fetchScalar` or `execute`. Generated `AppDatabase.open` remains
+synchronous; generated `openBackground` is a separate follow-up. Supply the
+same reviewed migration bundle yourself when opening a worker today.
+
+Transaction ownership and nested-savepoint rules below also apply to workers.
+Unrelated work during a transaction fails immediately; there is no application
+work queue or automatic retry. `close()` is rejected while a transaction owns
+the connection. Once accepted, close rejects new work, lets already-sent normal
+statements finish and returns the same future on repeated calls.
+The worker exposes no native `database` handle or synchronous unsafe-SQL API.
+
+If a worker exits or its transport fails, pending operations settle with a
+connection error and the connection cannot be reused. Close it and reopen;
+reconcile uncertain writes before retrying. Dust never replays them. A worker
+exit does not prove that a write was rolled back. There is no public
+cancel/restart API or deadline for a hung native call; `busyTimeout` only limits
+SQLite lock waits. This remains native-only Dart/Flutter FFI, not web support.
+
+Run [background opening](example/open_in_background.dart) and
+[background commit recovery](example/background_commit_recovery.dart), or see
+the [Flutter generated-DAO proof](../../examples/shopping_app/test/sqlite_worker_dao_test.dart).
 
 ## Generated Database Code
 
