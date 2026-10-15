@@ -23,8 +23,9 @@ regressions complement those checks rather than replacing them.
 | At migration COMMIT, after history is recorded but before commit executes | Migration SQL and checksum history roll back together. |
 | After managed opening returns | Migrated schema/data and exact checksum history remain. |
 
-Every case checks `PRAGMA integrity_check`, exact data and SHA-256 migration
-history, a subsequent successful transaction, and repeated managed startup.
+Every case checks `PRAGMA integrity_check`, exact rows (including every byte of
+each committed 256 KiB BLOB, not just its length) and SHA-256 migration history,
+a subsequent successful transaction, and repeated managed startup.
 Interrupted migrations can be applied from the original, unchanged bundle.
 The test also forces pending pages out of SQLite's cache and verifies journal
 bytes (and main-file growth in DELETE mode) before terminating the child.
@@ -48,9 +49,10 @@ dart run coverage:format_coverage --lcov --in=coverage \
 python3 ../../scripts/check_lcov_floor.py coverage/lcov.info 100
 ```
 
-The recorded local platform is macOS; Windows/Linux branches are not device or
-platform validation until the same tests are run there. The test requires a
-native Dart compiler and the project's configured SQLite native assets.
+Recorded local execution covers macOS and the isolated
+[Linux arm64 gate](db-linux-validation.md). Windows execution remains pending;
+neither host proves physical-device or hardware power-loss behavior. The test
+requires a native Dart compiler and the project's configured SQLite native assets.
 
 ## Application recovery
 
