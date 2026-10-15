@@ -55,3 +55,12 @@ WHERE item = $2 AND on_hand >= $1
 ''')
   Future<Result<ExecResult, SqlxError>> reserve(int quantity, String item);
 }
+
+/// A non-DAO query checked by Dust/Rust SQLx against the same migrations.
+extension StockTotals on Executor {
+  /// Total stock, including an empty inventory.
+  Future<Result<int, SqlxError>> totalStock() => queryScalar<int>(
+        'SELECT COALESCE(SUM(on_hand), 0) FROM stock',
+        const [],
+      ).fetchOne(this);
+}

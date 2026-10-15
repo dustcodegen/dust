@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Database**: explicitly opt into generated static `openBackground` for
+  SQLite facades, using embedded migrations and an asynchronous worker-safe
+  unsafe-SQL adapter. Existing synchronous-only output stays unchanged (#25).
+
 - **dust_db_sqlite3**: opt-in `Sqlite3WorkerDriver` for opening, migrations,
   SQL and close on a persistent isolate, keeping existing synchronous APIs
   unchanged (#24).

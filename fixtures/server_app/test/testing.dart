@@ -20,12 +20,12 @@ final class TestApp {
   ///
   /// One directory per test, deleted afterwards, so nothing is shared between
   /// them and nothing survives the run.
-  static Future<TestApp> start() async {
+  static Future<TestApp> start({bool background = false}) async {
     final directory = Directory.systemTemp.createTempSync('server_app_test_');
-    final database = AppDatabase.open(
-      '${directory.path}/app.db',
-      options: appOptions,
-    );
+    final path = '${directory.path}/app.db';
+    final database = background
+        ? await AppDatabase.openBackground(path, options: appOptions)
+        : AppDatabase.open(path, options: appOptions);
     // The same composition the entry point uses. A test that built its own
     // router would pass while `bin/server.dart` was broken.
     final server = await serve(
@@ -87,7 +87,7 @@ final class TestApp {
   /// Signs in and returns the token, or throws with the status if it failed.
   Future<String> signIn(String email, String password) async {
     final response = await (client.post('/auth/tokens')
-            ..json({'email': email, 'password': password}))
+          ..json({'email': email, 'password': password}))
         .send();
     if (response.statusCode != 201) {
       throw StateError(

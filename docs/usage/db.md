@@ -24,10 +24,11 @@ Execution is opt-in per connection. Existing `Sqlite3Driver` and generated
 SQL and close on a persistent isolate, use
 `await Sqlite3WorkerDriver.open(path, migrations: reviewedMigrations)` and pass
 the returned executor to your generated DAO. Row mapping and callbacks stay on
-the caller; runtime SQL without a DAO remains unchecked. See the
+the caller; direct executor SQL remains unchecked. Static `queryAs`,
+`queryScalar` and `queryExecute` calls can still be validated without a DAO. See the
 [background connection guide](../../packages/dust_db_sqlite3/README.md#optional-background-connection)
-for usage, ownership, failure recovery and limits. Generated
-`AppDatabase.openBackground` is not available yet.
+for usage, ownership, failure recovery and limits. Generated async opening is
+an explicit [opt-in](#generated-background-opening-unreleased).
 
 ## Quick Start
 
@@ -134,6 +135,83 @@ await database.connection.close();
 > Keep row models and database roots in separate libraries. `dust build` owns
 > normal derives such as `FromRow`; `dust db build` owns `@SqlxDatabase`,
 > `@SqlxDao`, and `@Query` output.
+
+## Generated Background Opening (Unreleased)
+
+This source-tree feature needs a CLI built from this change and the matching
+unreleased SQLite runtime. It is not available in the published 0.2.1 artifacts;
+versions have not been bumped. Existing synchronous-only declarations generate
+the same output as before. See [compatibility](compatibility.md#unreleased-background-opening).
+
+Add a static forwarding method to your SQLite database declaration:
+
+```dart
+@SqlxDatabase(type: SqlxDatabaseType.sqlite, migrations: './migrations')
+abstract class AppDatabase implements DatabaseClient {
+  factory AppDatabase.open(
+    String path, {SqliteConnectOptions? options}
+  ) = _$AppDatabase.open;
+
+  static Future<AppDatabase> openBackground(
+    String path, {SqliteConnectOptions? options}
+  ) => _$AppDatabase.openBackground(path, options: options);
+
+  @override
+  Connection get connection;
+}
+```
+
+Dart constructors cannot be async. This static method explicitly opts the
+SQLite facade into generating a worker opener; an instance method or a
+PostgreSQL declaration does not. Run both generation modes:
+
+```bash
+dust build
+dust db build
+dust check --db
+```
+
+Choose the connection mode when opening:
+
+```dart
+final app = await AppDatabase.openBackground(
+  'app.db',
+  options: const SqliteConnectOptions(
+    foreignKeys: true,
+    busyTimeout: Duration(seconds: 5),
+  ),
+);
+try {
+  final users = UserDao(app.connection);
+  final result = await users.findById(42);
+  final count = await queryScalar<int>(
+    'SELECT COUNT(*) FROM users', [],
+  ).fetchOne(app.connection); // No DAO required.
+  print((result, count));
+} finally {
+  (await app.close()).unwrap();
+}
+```
+
+Both openers embed exactly the same migration bundle. The future resolves only
+after worker setup and migration verification/application finish; no app-side
+migration file I/O is required. `migrate()` remains a no-op after SQLite startup.
+The checksum and reviewed legacy-baseline policies are unchanged. A generated
+facade always manages its embedded bundle, including an empty one; for unmanaged
+or read-only inspection, open a runtime driver without migrations instead.
+
+`connection`, `executor`, `pool`, transactions and close retain their contracts.
+The background connection is not a `Sqlite3Executor` and has no native handle:
+do not cast it for `.database`. `unsafe.fetch`, `fetchAs` and `execute` remain
+asynchronous, use a worker-safe adapter, and enforce transaction ownership.
+Unchecked SQL still needs an explicit mapper and is not SQLx-validated. Inside a
+transaction use its `tx`, never the root facade or root `unsafe` adapter.
+
+Row mapping and callbacks stay on the caller. Results are materialized and copied;
+bound query results, await nested transactions, and reconcile uncertain writes
+after a worker failure rather than replaying them. This is not a pool or a web
+implementation. See the [Flutter regression](../../examples/shopping_app/test/sqlite_background_facade_test.dart)
+and the [runnable server example](../../fixtures/server_app/example/background_database.dart).
 
 ## Migrations
 

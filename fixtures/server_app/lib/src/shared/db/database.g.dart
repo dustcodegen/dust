@@ -14,7 +14,7 @@
 part of 'database.dart';
 
 final class _$AppDatabase implements AppDatabase {
-  _$AppDatabase._(this._driver);
+  _$AppDatabase._(this._driver, this._unsafe);
 
   factory _$AppDatabase.open(
     String path, {
@@ -25,10 +25,23 @@ final class _$AppDatabase implements AppDatabase {
       migrations: _$appDatabaseMigrations,
       options: options,
     );
-    return _$AppDatabase._(driver);
+    return _$AppDatabase._(driver, Sqlite3UnsafeSql(driver));
   }
 
-  final Sqlite3Driver _driver;
+  static Future<AppDatabase> openBackground(
+    String path, {
+    SqliteConnectOptions? options,
+  }) async {
+    final driver = await Sqlite3WorkerDriver.open(
+      path,
+      migrations: _$appDatabaseMigrations,
+      options: options,
+    );
+    return _$AppDatabase._(driver, Sqlite3WorkerUnsafeSql(driver));
+  }
+
+  final Pool _driver;
+  final UnsafeSql _unsafe;
 
   @override
   Connection get connection => _driver;
@@ -37,7 +50,7 @@ final class _$AppDatabase implements AppDatabase {
   Future<Result<Unit, SqlxError>> migrate() => Future<Result<Unit, SqlxError>>.value(const Ok(unit));
 
   @override
-  UnsafeSql get unsafe => Sqlite3UnsafeSql(_driver);
+  UnsafeSql get unsafe => _unsafe;
 
   Pool get pool => _driver;
 }

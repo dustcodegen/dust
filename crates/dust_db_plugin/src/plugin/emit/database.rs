@@ -4,7 +4,9 @@ use dust_dart_emit::render_template;
 use dust_ir::DartFileIr;
 use serde::Serialize;
 
-use crate::plugin::{migrations::applied_migration_files, model::DatabaseClass};
+use crate::plugin::{
+    dialect::BackgroundDialect, migrations::applied_migration_files, model::DatabaseClass,
+};
 
 use super::shared::{escape_dart_string, lower_first};
 
@@ -23,11 +25,7 @@ struct DatabaseContext<'a> {
     factory_parameter: &'a str,
     /// Dart type carrying per-connection settings.
     options_type: &'a str,
-    /// Concrete driver type the facade holds.
-    ///
-    /// The facade keeps the driver rather than a `Connection` so that
-    /// `unsafe` needs no cast, and so that a handler holding an executor has no
-    /// route to it.
+    /// Concrete driver, or Pool when an explicit matching unsafe adapter is kept.
     driver_type: &'a str,
     /// Dart expression producing the unchecked SQL escape hatch.
     unsafe_expr: &'a str,
@@ -35,6 +33,12 @@ struct DatabaseContext<'a> {
     migrate_expr: &'a str,
     /// Rendered migrations constant.
     migrations: String,
+    /// Whether this SQLite declaration explicitly requests async opening.
+    background: Option<BackgroundDialect>,
+    /// Shared migration bundle used by both openers.
+    migrations_name: &'a str,
+    /// Native unchecked adapter used by the synchronous opener.
+    unsafe_type: &'a str,
 }
 
 /// Template context for generated migration map constants.
@@ -51,9 +55,14 @@ pub(super) fn render_database_class(library: &DartFileIr, db: &DatabaseClass<'_>
     let class_name = &db.class.name;
     let generated_name = format!("_${class_name}");
     let migrations_name = format!("_${}Migrations", lower_first(class_name));
-    // Everything dialect-specific comes from one place, so adding a database
-    // is a new `Dialect` rather than another arm here.
     let dialect = db.driver.dialect();
+    let background = db
+        .class
+        .methods
+        .iter()
+        .any(|method| method.is_static && method.name == "openBackground")
+        .then_some(dialect.background)
+        .flatten();
     let open_expr = format!(
         "{}.{}(\n      {},\n      migrations: {migrations_name},\n      options: options,\n    )",
         dialect.runtime_type,
@@ -77,10 +86,21 @@ pub(super) fn render_database_class(library: &DartFileIr, db: &DatabaseClass<'_>
             factory: dialect.factory,
             factory_parameter: dialect.factory_parameter,
             options_type: dialect.options_type,
-            driver_type: dialect.runtime_type,
-            unsafe_expr: &unsafe_expr,
+            driver_type: if background.is_some() {
+                "Pool"
+            } else {
+                dialect.runtime_type
+            },
+            unsafe_expr: if background.is_some() {
+                "_unsafe"
+            } else {
+                &unsafe_expr
+            },
             migrate_expr: dialect.migrate_expr,
             migrations,
+            background,
+            migrations_name: &migrations_name,
+            unsafe_type: dialect.unsafe_type,
         },
     )
 }

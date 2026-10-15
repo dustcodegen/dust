@@ -14,6 +14,13 @@ abstract class AppDatabase implements DatabaseClient {
   factory AppDatabase.open(String path, {SqliteConnectOptions? options}) =
       _$AppDatabase.open;
 
+  /// Opens and migrates on a persistent worker, without a native-handle export.
+  static Future<AppDatabase> openBackground(
+    String path, {
+    SqliteConnectOptions? options,
+  }) =>
+      _$AppDatabase.openBackground(path, options: options);
+
   /// The open connection.
   @override
   Connection get connection;

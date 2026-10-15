@@ -8,12 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `Sqlite3WorkerUnsafeSql` keeps generated background facades' unchecked SQL
+  asynchronous and ownership-checked without exposing a native handle (#25).
+
 - Opt-in `Sqlite3WorkerDriver.open` / `connect` owns one native connection in a
   persistent isolate for opening, migrations, queries, transactions and close
   (#24). Row mappers and callbacks stay on the caller; existing generated DAOs
   accept the executor. Synchronous opening is unchanged. Worker failures settle
-  pending work without automatic replay; generated background facades remain a
-  separate follow-up.
+  pending work without automatic replay. Generated background facades opt in
+  through a static `openBackground` forwarder (#25).
 
 ### Fixed
 

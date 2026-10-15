@@ -11,12 +11,12 @@ void main() {
     final directory = await Directory.systemTemp.createTemp('dust-worker-dao-');
     addTearDown(() => directory.delete(recursive: true));
     final path = '${directory.path}/app.db';
-    final migrations = {
-      for (final file in Directory('migrations').listSync().whereType<File>())
-        file.uri.pathSegments.last: file.readAsStringSync(),
-    };
-    final db = await Sqlite3WorkerDriver.open(path, migrations: migrations);
+    final app = await ShoppingCacheDatabase.openBackground(path);
+    final db = app.connection;
     try {
+      expect(db, isA<Sqlite3WorkerDriver>());
+      expect(db, isNot(isA<Sqlite3Executor>()));
+      (await app.migrate()).unwrap();
       final result = await db.transaction<int>((tx) async {
         final dao = ShoppingCacheDao(tx);
         (await dao.saveProductRow(
@@ -61,14 +61,16 @@ void main() {
       expect(rollback.isErr, isTrue);
       expect((await dao.listWishlist()).unwrap(), hasLength(1));
     } finally {
-      (await db.close()).unwrap();
+      (await app.close()).unwrap();
     }
-    final reopened =
-        await Sqlite3WorkerDriver.open(path, migrations: migrations);
+    final reopened = await ShoppingCacheDatabase.openBackground(path);
     try {
       expect(
-          (await ShoppingCacheDao(reopened).countCachedProducts()).unwrap(), 1);
-      expect((await ShoppingCacheDao(reopened).listWishlist()).unwrap(),
+          (await ShoppingCacheDao(reopened.connection).countCachedProducts())
+              .unwrap(),
+          1);
+      expect(
+          (await ShoppingCacheDao(reopened.connection).listWishlist()).unwrap(),
           hasLength(1));
     } finally {
       (await reopened.close()).unwrap();

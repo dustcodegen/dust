@@ -18,6 +18,20 @@ by the workspace source.
 3.6 or newer. `dust_db_sqlite3` requires Dart 3.10 or Flutter 3.38 or newer,
 matching the minimum SDK of its `sqlite3 ^3.3.0` dependency.
 
+## Unreleased Background Opening
+
+Generated SQLite `AppDatabase.openBackground` is a source-tree feature, not part
+of the published 0.2.1 release. Opting in requires a CLI built from the change
+and the matching `dust_db_sqlite3` source containing `Sqlite3WorkerDriver` and
+`Sqlite3WorkerUnsafeSql`. Numeric version checks cannot distinguish these
+unreleased APIs while versions are intentionally unchanged. Do not combine
+opt-in generated code with the published 0.2.1 SQLite runtime or assume the
+current release binaries generate the new opener. Ordinary synchronous-only
+database declarations keep their existing generated output.
+
+No versions or compatibility ranges are changed in this work. A coordinated
+version/compatibility update is a required gate before publishing this feature.
+
 ## Dust CLI 0.2.1
 
 | Dust CLI | `dust_dart` | `dust_flutter` | `dust_db_sqlite3` | `dust_db_postgres` | `dust_server` |
