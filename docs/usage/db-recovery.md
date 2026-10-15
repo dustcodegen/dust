@@ -32,8 +32,8 @@ bytes (and main-file growth in DELETE mode) before terminating the child.
 There are 24 combinations. Each uses a separate test-owned database and a
 compiled native Dart child. The parent waits for an atomic readiness marker,
 then sends SIGKILL on Unix (process termination on Windows), without normal
-close or rollback. Parent readiness and exit waits are bounded. Migration instrumentation
-uses existing package-internal startup seams and native update/commit hooks;
+close or rollback. Parent readiness and exit waits are bounded. Migration
+instrumentation uses existing package-internal startup seams and native update/commit hooks;
 normal application SQL and acknowledged opening use public drivers. No
 production fault-injection hooks are added.
 
@@ -95,13 +95,71 @@ Keep the database and its WAL/SHM files together. Do not manually delete journal
 files or copy only a live database file as a backup. Use a supported SQLite
 backup/snapshot procedure. Migrations must leave transaction control to Dust.
 
+## Controlled database-full recovery
+
+The source runtime also handles SQLite automatically ending a managed
+transaction after a native statement error. SQLite documents that errors such
+as `SQLITE_FULL` can cause automatic rollback; the driver checks native
+autocommit state rather than assuming every failed statement ends a transaction.
+See [SQLite transaction errors](https://www.sqlite.org/lang_transaction.html).
+
+When that happens, Dust retains the original statement error until the outer
+callback finishes. Later reads, writes and nested transaction callbacks through
+`tx` are rejected with that error; returning `Ok` cannot report success or
+commit later writes outside the transaction. Throwing after the failure does
+not hide the original error. Dust avoids rolling back nonexistent transactions
+or savepoints, then clears the temporary error so the connection can be reused.
+Actual cleanup failures still require closing and reopening. Errors that leave
+the native transaction active keep their existing commit/rollback behavior.
+
+The [transaction tests](../../packages/dust_db_sqlite3/test/disk_full_transaction_test.dart)
+and [migration tests](../../packages/dust_db_sqlite3/test/disk_full_migration_test.dart)
+cover 40 page-limit cases: sync/worker and DELETE/WAL, standalone statements,
+returned/ignored/thrown transaction failures, nested savepoints, `RETURNING`,
+attempted writes after failure, and managed migration startup. They verify
+native `SQLITE_FULL` (code 13, diagnostic text on workers), exact original
+data/history/timestamps, absence of partial schema and `integrity_check`.
+The migration fault occurs in a later pending file, after an earlier pending
+file's SQL and history insert have succeeded; both must roll back together.
+Restoring test capacity permits an explicit retry; repeated startup verifies
+migrations are applied only once. These fixes are unreleased source changes.
+
+The tests use a small `PRAGMA max_page_count` on temporary, test-owned databases,
+then attempt one bounded 256 KiB BLOB. This generates a real SQLite error without
+filling the host disk. It limits database page growth, not the available storage
+for WAL/journals or other files. See
+[SQLite's page-limit pragma](https://www.sqlite.org/pragma.html#pragma_max_page_count).
+
+Run the [safe demonstration](../../packages/dust_db_sqlite3/example/disk_full_recovery.dart)
+from `packages/dust_db_sqlite3`:
+
+```sh
+dart run example/disk_full_recovery.dart
+dart run example/disk_full_recovery.dart --background
+dart test test/disk_full_transaction_test.dart test/disk_full_migration_test.dart \
+  test/disk_full_example_test.dart
+```
+
+Both modes print:
+
+```text
+page limit: write failed, rows: 0
+capacity restored: rows: 1
+```
+
+The example owns and removes its temporary database. Only that artificial cap
+is restored; it is not a production strategy for removing quotas. A real app
+must address its storage failure and reconcile uncertain writes before choosing
+to retry. Dust never retries automatically. The example demonstrates runtime
+recovery, not Rust SQLx build-time validation of its `example/` SQL.
+
 ## Still outstanding
 
-Controlled `SQLITE_FULL` recovery is tracked separately in
+Controlled page-limit recovery is tracked in
 [#33](https://github.com/dustcodegen/dust/issues/33) under epic
 [#19](https://github.com/dustcodegen/dust/issues/19). Host-filesystem ENOSPC,
 hardware power loss, storage corruption, Flutter device responsiveness,
 long-running contention and production-load validation are not established by
 these tests. Journal modes OFF/MEMORY and other synchronous modes are outside
-this crash matrix. This change adds tests/documentation, not automatic retries,
-a pool, backup APIs or a claim that all failures are recoverable.
+this recovery matrix. No automatic retries, pool or backup API is added, and
+these checks do not establish that all storage failures are recoverable.

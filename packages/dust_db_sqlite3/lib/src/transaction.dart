@@ -11,6 +11,7 @@ final class _ConnectionState {
   var _nextSavepointId = 0;
   var transactionActive = false;
   SqlxError? recoveryError;
+  SqlxError? abortedTransactionError;
 
   SqlxError _failedCleanup(SqlxError error) {
     recoveryError ??= _sqliteTransactionError(
@@ -63,6 +64,8 @@ final class _ConnectionState {
     transactionActive = true;
     try {
       final result = await tx._invoke(fn);
+      final aborted = abortedTransactionError;
+      if (aborted != null) return Err<T, SqlxError>(aborted);
       return await result.match<Future<Result<T, SqlxError>>>(
         ok: (value) async {
           final recovery = recoveryError;
@@ -100,6 +103,8 @@ final class _ConnectionState {
         },
       );
     } catch (error) {
+      final aborted = abortedTransactionError;
+      if (aborted != null) return Err<T, SqlxError>(aborted);
       final rollback = _rollbackRoot(
         database,
         'SQLite transaction rollback failed.',
@@ -115,6 +120,7 @@ final class _ConnectionState {
     } finally {
       tx._deactivate();
       transactionActive = false;
+      abortedTransactionError = null;
     }
   }
 
@@ -133,6 +139,8 @@ final class _ConnectionState {
     final tx = _SingleConnectionPool(database, this);
     try {
       final result = await tx._invoke(fn);
+      final aborted = abortedTransactionError;
+      if (aborted != null) return Err<T, SqlxError>(aborted);
       return await result.match<Future<Result<T, SqlxError>>>(
         ok: (value) async {
           final release = _executeControl(
@@ -152,6 +160,8 @@ final class _ConnectionState {
         },
       );
     } catch (error) {
+      final aborted = abortedTransactionError;
+      if (aborted != null) return Err<T, SqlxError>(aborted);
       final rollback = _rollbackSavepoint(database, name);
       if (rollback != null) return Err<T, SqlxError>(rollback);
       return Err<T, SqlxError>(

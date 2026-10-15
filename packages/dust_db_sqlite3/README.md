@@ -251,9 +251,14 @@ exit does not prove that a write was rolled back. There is no public
 cancel/restart API or deadline for a hung native call; `busyTimeout` only limits
 SQLite lock waits. This remains native-only Dart/Flutter FFI, not web support.
 
-The [crash/reopen recovery guide](../../docs/usage/db-recovery.md) describes the
-24 local process-kill regressions for sync/worker connections, transaction and
-migration atomicity, and the remaining disk-full/device/power-loss boundaries.
+The [recovery guide](../../docs/usage/db-recovery.md) describes 24 process-kill
+and 40 controlled `SQLITE_FULL` cases for sync/worker connections. If SQLite
+automatically rolls back after a native statement error, the original error
+blocks further work through `tx` until its outer callback ends, then permits
+connection reuse. Real cleanup failures still require reopening. Run
+[disk-full recovery](example/disk_full_recovery.dart) for a safe temporary-database
+demonstration. Actual filesystem exhaustion, devices and power loss remain
+separate validation boundaries; this runtime fix is unreleased.
 
 Run [background opening](example/open_in_background.dart) and
 [background commit recovery](example/background_commit_recovery.dart), or see

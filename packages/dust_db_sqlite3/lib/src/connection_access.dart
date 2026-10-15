@@ -44,6 +44,8 @@ extension _Sqlite3ConnectionAccess on Sqlite3Driver {
         operation: 'checkTransactionOwner',
       );
     }
-    return closing ? null : _connection.recoveryError;
+    return closing
+        ? null
+        : _connection.recoveryError ?? _connection.abortedTransactionError;
   }
 }
