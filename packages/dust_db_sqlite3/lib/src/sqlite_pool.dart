@@ -222,7 +222,7 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
     String sql,
     List<Object?> parameters,
   ) {
-    return _guardSqlite(
+    return _guardStatement(
       sql,
       'SQLite query failed.',
       () => _selectUnchecked(sql, parameters),
@@ -250,7 +250,7 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
     String sql,
     List<Object?> parameters,
   ) {
-    return _guardSqlite(
+    return _guardStatement(
       sql,
       'SQLite execute failed.',
       () => _executeUnchecked(sql, parameters),

@@ -88,6 +88,22 @@ String _encodeJsonListBind(List<Object?> values) {
 }
 
 extension _Sqlite3DriverOperations on Sqlite3Driver {
+  Result<T, SqlxError> _guardStatement<T>(
+    String sql,
+    String message,
+    T Function() body,
+  ) {
+    final result = _guardSqlite(sql, message, body);
+    if (result case Err(:final error)
+        when _connection.transactionActive &&
+            error.cause is sqlite.SqliteException &&
+            _database.autocommit) {
+      // SQLite can roll back on FULL/IOERR; later tx writes must not autocommit.
+      _connection.abortedTransactionError ??= error;
+    }
+    return result;
+  }
+
   /// Runs [sql] and returns the driver's own result set.
   ///
   /// Rows are wrapped by the caller rather than here, so a terminal reading one
