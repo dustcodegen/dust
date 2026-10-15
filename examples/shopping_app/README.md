@@ -35,6 +35,17 @@ tests, not device frame-time or crash-recovery evidence. The background facade
 requires the matching unreleased CLI/runtime source; see the
 [opt-in guide](../../docs/usage/db.md#generated-background-opening-unreleased).
 
+The app uses sqlite3's bundled native assets (`source: sqlite3`), not a desktop
+system-library override. Android does not provide `libsqlite3.so` for this app;
+the package's hook downloads and SHA-256-verifies the target native binary on
+the first build, then reuses its verified cache. Keep that native asset with
+the app. Initial offline builds need a prepared cache or the sqlite3 package's
+documented custom-source configuration; `pub get --offline` alone does not
+guarantee an uncached native build is offline. Check the actual loaded
+`sqlite_version()` and `sqlite_source_id()` for patch provenance, not merely the
+Dart binding version. The repository root's system-library setup is for its
+host/workspace tests and is not this app's mobile packaging configuration.
+
 The app uses live FakeStore endpoints for core catalog/auth/cart data and local
 fake responses for showcase-only flows such as checkout quotes, order tracking,
 wishlist persistence, and support chat.
