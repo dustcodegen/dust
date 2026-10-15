@@ -5,7 +5,8 @@ This is the injected native I/O phase of SQLite epic
 [#38](https://github.com/dustcodegen/dust/issues/38). It complements
 [process crashes and page-limit FULL](db-recovery.md) and
 [WAL contention/checkpoints](db-wal.md). It is not hardware power-loss or actual
-filesystem ENOSPC evidence; bounded-volume ENOSPC remains a separate gate.
+filesystem ENOSPC evidence; run the separate
+[bounded-volume ENOSPC gate](db-filesystem-full.md) for that evidence.
 
 ## Run the required native integration gate locally
 
