@@ -38,7 +38,7 @@ if [[ "$SCOPE" == rust ]]; then
   exit 0
 fi
 
-python3 -m unittest discover -s scripts -p test_sqlite_sdk_consumer.py
+python3 -m unittest discover -s scripts -p 'test_sqlite*.py'
 ./scripts/dart/test.sh
 ./scripts/flutter/test.sh
 

@@ -82,6 +82,11 @@ scripts/lint.sh --scope rust
 scripts/test.sh --scope packages
 ```
 
+The Dart formatter prepares `fixtures/sqlite_sdk_consumer` with `dart pub get`
+before formatting it: this independent consumer needs its own language metadata.
+An initial run needs Pub access or a populated cache. Example-only and Rust-only
+formatting do not resolve the consumer.
+
 ### Package Version Rule
 
 `packages/` contains publishable Dart and Flutter runtime packages. If a PR

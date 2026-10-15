@@ -26,6 +26,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 for target in "${TARGETS[@]}"; do
+  # The independent consumer needs its own language metadata before formatting.
+  if [[ "$target" == fixtures/sqlite_sdk_consumer ]]; then
+    (cd "$target" && dart pub get)
+  fi
   echo "==> Dart format: $target"
   if [[ "$CHECK_MODE" == true ]]; then
     (
