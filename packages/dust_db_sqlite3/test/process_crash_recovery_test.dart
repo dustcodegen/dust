@@ -6,6 +6,7 @@ import 'package:dust_dart/db.dart';
 import 'package:dust_db_sqlite3/dust_db_sqlite3.dart';
 import 'package:test/test.dart';
 
+import '../integration_test/support/native_process.dart';
 import 'support/crash_process.dart';
 import 'support/crash_schema.dart';
 import 'support/expect_ok.dart';
@@ -16,18 +17,9 @@ void main() {
   setUpAll(() async {
     binaries = Directory.systemTemp.createTempSync('dust-crash-child-');
     addTearDown(() => binaries.deleteSync(recursive: true));
-    executable = '${binaries.path}/child${Platform.isWindows ? '.exe' : ''}';
-    final compiled = await Process.run(Platform.resolvedExecutable, [
-      'compile',
-      'exe',
+    executable = await buildNativeChild(
+      binaries,
       'test/support/crash_child.dart',
-      '-o',
-      executable,
-    ]);
-    expect(
-      compiled.exitCode,
-      0,
-      reason: '${compiled.stdout}\n${compiled.stderr}',
     );
   });
 

@@ -30,7 +30,8 @@ The test also forces pending pages out of SQLite's cache and verifies journal
 bytes (and main-file growth in DELETE mode) before terminating the child.
 
 There are 24 combinations. Each uses a separate test-owned database and a
-compiled native Dart child. The parent waits for an atomic readiness marker,
+native Dart CLI bundle built with `dart build cli`, including its code-asset
+metadata. The parent waits for an atomic readiness marker,
 then sends SIGKILL on Unix (process termination on Windows), without normal
 close or rollback. Parent readiness and exit waits are bounded. Migration
 instrumentation uses existing package-internal startup seams and native update/commit hooks;

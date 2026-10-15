@@ -45,8 +45,9 @@ SQLite version/source ID. The image is never resized to consume the host disk.
 
 The matrix has **22 failure cases**, plus a mount/verified-detach smoke test.
 Thirteen portable safety checks cover wrong/missing identities, filesystem and
-capacity bounds. Each failure case owns a fresh image and a compiled native
-Dart child. The parent waits for explicit atomic readiness/failure markers,
+capacity bounds. Each failure case owns a fresh image and a native Dart CLI
+child built with its code-asset metadata through the shared bounded builder.
+The parent waits for explicit atomic readiness/failure markers,
 fills/restores the image and releases the child through stdin. No sleep guesses
 when SQL has reached a boundary. Child and native-tool waits are bounded.
 

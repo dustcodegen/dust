@@ -28,6 +28,11 @@ registration reached it. Missing prerequisites or unsupported hosts fail the
 explicit gate; tests never silently skip. Windows, Android and iOS native
 storage-fault harnesses are not certified by a macOS run.
 
+The shim needs the full public SQLite C API, including `sqlite3_vfs_find`.
+Minimized bundled libraries may hide that symbol. Use a full-API engine for
+this fault gate and record its provenance separately from bundled-consumer
+checks; loading a second SQLite library does not register a VFS in the first.
+
 ## What is exercised
 
 | Boundary | Matrix |
@@ -36,7 +41,11 @@ storage-fault harnesses are not certified by a macOS run.
 | WAL checkpoint | Database write/sync or WAL truncation; foreground/worker; one-shot/persistent; whole/partial database writes. 16 cases. |
 | Database read | DELETE/WAL, foreground/worker, one-shot/persistent. 8 cases. |
 
-Each of 132 cases runs in its own compiled native Dart child. The test-only C
+Each of 132 cases runs in its own native Dart CLI bundle, built through
+`dart build cli` so code-asset metadata is retained on Linux as well as macOS.
+The shared bounded builder keeps its replaceable output below a separate
+subdirectory, preserving the sibling VFS shim until all children finish.
+The test-only C
 VFS delegates normal I/O, locks and shared memory to SQLite's default native
 VFS, conservatively advertises no atomic-write device capabilities, then returns
 the selected real `SQLITE_IOERR_*` extended code at a specific
