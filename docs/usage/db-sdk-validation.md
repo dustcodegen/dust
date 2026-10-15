@@ -24,8 +24,9 @@ python3 scripts/sqlite_sdk_consumer.py \
 The legacy `bash scripts/test_sqlite_min_sdk.sh` entrypoint delegates to the
 same gate using the Dart executable on PATH. Verify the reported version.
 Requirements are Python 3.10+, native Dart, build-hook prerequisites/network
-access, and Puro only for the optional Flutter run. This runner was validated on
-macOS arm64; it is not a Windows/Linux or mobile build certification.
+access, and Puro only for the optional Flutter run. The recorded SDK matrix is
+macOS arm64; the separate [Linux arm64 gate](db-linux-validation.md) reuses the
+standalone consumer. Neither is Windows or mobile build certification.
 
 Each invocation creates a fresh owned temporary staging root and retains its
 path, numbered command logs, resolved dependencies/locks and `proof.json` for
@@ -109,4 +110,5 @@ features are unreleased despite unchanged numeric package versions.
 Full local `scripts/lint.sh`, `scripts/test.sh` and unfiltered **100% executable
 SQLite runtime library line coverage** remain required. The SDK matrix does
 not replace native I/O/ENOSPC, physical-device, iOS/Android lifecycle or local
-Linux/Windows gates. No Actions run or version bump is required.
+[Linux](db-linux-validation.md)/Windows gates. No Actions run or version bump
+is required.
