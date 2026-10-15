@@ -155,6 +155,11 @@ recovery, not Rust SQLx build-time validation of its `example/` SQL.
 
 ## Still outstanding
 
+Deterministic [WAL contention/checkpoint regressions](db-wal.md) cover held
+readers/writers, snapshot conflicts and progress after release in sync/worker
+combinations. They do not establish long-running load or the rare upstream
+WAL-reset race; verify the loaded native engine on every supported target.
+
 Controlled page-limit recovery is tracked in
 [#33](https://github.com/dustcodegen/dust/issues/33) under epic
 [#19](https://github.com/dustcodegen/dust/issues/19). Host-filesystem ENOSPC,

@@ -34,6 +34,7 @@ the answer differs.
 | A database that outlives the process | [`open_a_file.dart`](open_a_file.dart) |
 | Opening, migrating and querying on a persistent worker | [`open_in_background.dart`](open_in_background.dart) |
 | WAL, pragmas, busy timeout, foreign keys | [`connect_options.dart`](connect_options.dart) |
+| A held reader blocks WAL truncation; inspect checkpoint status | [`wal_checkpoint.dart`](wal_checkpoint.dart) |
 | A connection that cannot write | [`read_only.dart`](read_only.dart) |
 | Changing the schema over time | [`migrations.dart`](migrations.dart) |
 | Rejecting changed or missing migration SQL | [`migration_integrity.dart`](migration_integrity.dart) |

@@ -36,6 +36,8 @@ No handwritten executor extension or DAO declaration is required.
 
 See [crash/reopen recovery](db-recovery.md) for local transaction/migration
 recovery evidence and application handling of uncertain writes.
+See [WAL contention and checkpoints](db-wal.md) for snapshot conflicts,
+checkpoint status, foreground/worker usage and native-engine verification.
 
 ## Quick Start
 
