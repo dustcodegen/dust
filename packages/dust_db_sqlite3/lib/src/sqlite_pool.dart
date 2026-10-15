@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' show sha256;
@@ -19,6 +20,12 @@ part 'transaction_scope.dart';
 part 'connection_access.dart';
 part 'statement_cache.dart';
 part 'unsafe_sql.dart';
+part 'worker_driver.dart';
+part 'worker_operations.dart';
+part 'worker_protocol.dart';
+part 'worker_server.dart';
+part 'worker_transport.dart';
+part 'worker_transaction.dart';
 
 /// SQLite-backed executor with access to the underlying native database.
 abstract interface class Sqlite3Executor implements Executor {
@@ -165,23 +172,7 @@ final class Sqlite3Driver implements Pool, Sqlite3Executor {
             _sqliteTooManyRows(expected: 1, actual: result.length, query: sql),
           );
         }
-        final row = _firstRow(result);
-        try {
-          if (null is T) {
-            return Ok<T, SqlxError>(row.readIndexNullable<Object?>(0) as T);
-          }
-          return Ok<T, SqlxError>(row.readIndex<T>(0));
-        } on SqlxError catch (error) {
-          return Err<T, SqlxError>(error);
-        } catch (error) {
-          return Err<T, SqlxError>(
-            _sqliteDecodeError(
-              'SQLite scalar decode failed.',
-              cause: error,
-              operation: sql,
-            ),
-          );
-        }
+        return _scalarRow<T>(sql, _firstRow(result));
       },
       err: (error) => Err<T, SqlxError>(error),
     );

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **dust_db_sqlite3**: opt-in `Sqlite3WorkerDriver` for opening, migrations,
+  SQL and close on a persistent isolate, keeping existing synchronous APIs
+  unchanged (#24).
+
 ### Fixed
 
 - **dust_db_sqlite3**: verify exact migration checksums and missing history
