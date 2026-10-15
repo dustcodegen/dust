@@ -237,7 +237,7 @@ class _AppDrawer extends StatelessWidget {
                   confirmText: context.tr('shop_logout', defaultText: 'Logout'),
                   isDangerous: true,
                 );
-                if (confirmed == true && context.mounted) {
+                if ((confirmed ?? false) && context.mounted) {
                   context.readAuthViewModel().logout();
                   Navigator.pop(context);
                 }

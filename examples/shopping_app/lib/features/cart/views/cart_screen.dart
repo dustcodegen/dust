@@ -82,7 +82,7 @@ class _CartScreenState extends State<CartScreen> {
                         context.tr('shop_cancel', defaultText: 'Cancel'),
                     isDangerous: true,
                   );
-                  if (confirmed == true && context.mounted) {
+                  if ((confirmed ?? false) && context.mounted) {
                     context.readCartViewModel().clearCart();
                   }
                 },

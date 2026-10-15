@@ -108,7 +108,7 @@ class _AuthenticatedProfile extends StatelessWidget {
               cancelText: context.tr('shop_cancel', defaultText: 'Cancel'),
               isDangerous: true,
             );
-            if (confirmed == true && context.mounted) {
+            if ((confirmed ?? false) && context.mounted) {
               context.readAuthViewModel().logout();
               AppSnackbar.info(
                 context,
