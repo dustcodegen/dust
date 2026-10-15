@@ -251,6 +251,12 @@ exit does not prove that a write was rolled back. There is no public
 cancel/restart API or deadline for a hung native call; `busyTimeout` only limits
 SQLite lock waits. This remains native-only Dart/Flutter FFI, not web support.
 
+See [WAL contention and checkpoints](../../docs/usage/db-wal.md) for snapshot
+conflicts, checkpoint result rows and native-engine safety requirements. Run
+[the checkpoint example](example/wal_checkpoint.dart) in foreground or worker
+mode. A successful checkpoint query can still report incomplete progress;
+inspect its status row before assuming the WAL was reset or truncated.
+
 The [recovery guide](../../docs/usage/db-recovery.md) describes 24 process-kill
 and 40 controlled `SQLITE_FULL` cases for sync/worker connections. If SQLite
 automatically rolls back after a native statement error, the original error
