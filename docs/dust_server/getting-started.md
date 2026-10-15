@@ -83,3 +83,27 @@ rule. To send a JSON string specifically, wrap it — `['Hello']` or
 Every example runs the same way. The
 [index](../../packages/dust_server/example/README.md) lists all 51 by the
 question each one answers.
+
+## Generated SQLite Background Opening (Unreleased)
+
+The native server fixture also opts its database declaration into
+`await AppDatabase.openBackground(path, options: appOptions)`. Opening,
+embedded migration verification/application and SQL run on one persistent
+worker; DAOs and static non-DAO SQLx query helpers keep the same executor API.
+Normal `AppDatabase.open` remains synchronous.
+
+```bash
+cd fixtures/server_app
+dart run example/background_database.dart
+dart test test/background_database_test.dart
+```
+
+The [example](../../fixtures/server_app/example/background_database.dart) uses
+the generated facade, a transaction, a checked DAO, a checked non-DAO total and
+async unsafe SQL. Its output is asserted exactly, and the regression serves the
+real application's HTTP checkout flow over loopback with the worker connection.
+This is not a live-service load test or device/crash evidence. Worker ownership
+still fails fast for unrelated work during a transaction; this feature adds no
+queue, retry policy or pool. See the
+[opt-in and compatibility guide](../usage/db.md#generated-background-opening-unreleased).
+Use matching unreleased CLI/runtime sources, not published 0.2.1 artifacts.

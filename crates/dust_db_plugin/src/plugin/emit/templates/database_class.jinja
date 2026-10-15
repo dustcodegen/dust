@@ -1,15 +1,28 @@
 final class {{ generated_name }} implements {{ class_name }} {
-  {{ generated_name }}._(this._driver);
+  {{ generated_name }}._(this._driver{% if background %}, this._unsafe{% endif %});
 
   factory {{ generated_name }}.{{ factory }}(
     {{ factory_parameter }}, {
     {{ options_type }}? options,
   }) {
     final driver = {{ open_expr }};
-    return {{ generated_name }}._(driver);
-  }
+    return {{ generated_name }}._(driver{% if background %}, {{ unsafe_type }}(driver){% endif %});
+  }{% if background %}
 
-  final {{ driver_type }} _driver;
+  static Future<{{ class_name }}> openBackground(
+    String path, {
+    {{ options_type }}? options,
+  }) async {
+    final driver = await {{ background.runtime_type }}.open(
+      path,
+      migrations: {{ migrations_name }},
+      options: options,
+    );
+    return {{ generated_name }}._(driver, {{ background.unsafe_type }}(driver));
+  }{% endif %}
+
+  final {{ driver_type }} _driver;{% if background %}
+  final UnsafeSql _unsafe;{% endif %}
 
   @override
   Connection get connection => _driver;

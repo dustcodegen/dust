@@ -4,6 +4,9 @@ mod helpers;
 #[path = "db_outputs/database.rs"]
 mod database;
 
+#[path = "db_outputs/background.rs"]
+mod background;
+
 #[path = "db_outputs/offline.rs"]
 mod offline;
 

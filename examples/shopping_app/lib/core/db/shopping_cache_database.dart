@@ -19,6 +19,13 @@ abstract class ShoppingCacheDatabase implements DatabaseClient {
     SqliteConnectOptions? options,
   }) = _$ShoppingCacheDatabase.open;
 
+  /// Opens and migrates on a persistent native worker; row mapping stays here.
+  static Future<ShoppingCacheDatabase> openBackground(
+    String path, {
+    SqliteConnectOptions? options,
+  }) =>
+      _$ShoppingCacheDatabase.openBackground(path, options: options);
+
   /// Open database connection.
   @override
   Connection get connection;

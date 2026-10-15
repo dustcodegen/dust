@@ -190,3 +190,6 @@ const EXPECTED_POSTGRES_DATABASE: &str = r#"final class _$AppDatabase implements
 }
 
 const Map<String, String> _$appDatabaseMigrations = <String, String>{};"#;
+
+#[path = "background.rs"]
+mod background;

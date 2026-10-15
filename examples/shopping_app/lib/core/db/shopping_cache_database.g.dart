@@ -14,7 +14,7 @@
 part of 'shopping_cache_database.dart';
 
 final class _$ShoppingCacheDatabase implements ShoppingCacheDatabase {
-  _$ShoppingCacheDatabase._(this._driver);
+  _$ShoppingCacheDatabase._(this._driver, this._unsafe);
 
   factory _$ShoppingCacheDatabase.open(
     String path, {
@@ -25,10 +25,23 @@ final class _$ShoppingCacheDatabase implements ShoppingCacheDatabase {
       migrations: _$shoppingCacheDatabaseMigrations,
       options: options,
     );
-    return _$ShoppingCacheDatabase._(driver);
+    return _$ShoppingCacheDatabase._(driver, Sqlite3UnsafeSql(driver));
   }
 
-  final Sqlite3Driver _driver;
+  static Future<ShoppingCacheDatabase> openBackground(
+    String path, {
+    SqliteConnectOptions? options,
+  }) async {
+    final driver = await Sqlite3WorkerDriver.open(
+      path,
+      migrations: _$shoppingCacheDatabaseMigrations,
+      options: options,
+    );
+    return _$ShoppingCacheDatabase._(driver, Sqlite3WorkerUnsafeSql(driver));
+  }
+
+  final Pool _driver;
+  final UnsafeSql _unsafe;
 
   @override
   Connection get connection => _driver;
@@ -37,7 +50,7 @@ final class _$ShoppingCacheDatabase implements ShoppingCacheDatabase {
   Future<Result<Unit, SqlxError>> migrate() => Future<Result<Unit, SqlxError>>.value(const Ok(unit));
 
   @override
-  UnsafeSql get unsafe => Sqlite3UnsafeSql(_driver);
+  UnsafeSql get unsafe => _unsafe;
 
   Pool get pool => _driver;
 }

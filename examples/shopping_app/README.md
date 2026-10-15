@@ -25,11 +25,15 @@ and exercises both the default refusal and explicit upgrade. See the
 [SQLite guide](../../packages/dust_db_sqlite3/README.md#existing-name-only-history).
 
 The [worker DAO regression](test/sqlite_worker_dao_test.dart) opens an opt-in
-`Sqlite3WorkerDriver`, passes it to the existing generated `ShoppingCacheDao`,
-and checks row/JSON/date mapping, commit, rollback and persistence after reopen.
-It supplies migration files explicitly; the app's generated facade and normal
-startup remain synchronous. This is a native Flutter test, not device frame-time
-or crash-recovery evidence.
+`ShoppingCacheDatabase.openBackground`, passes its connection to the existing
+generated `ShoppingCacheDao`, and checks row/JSON/date mapping, commit, rollback
+and persistence after reopen. The facade embeds its migrations. The
+[background facade regression](test/sqlite_background_facade_test.dart) also
+checks non-DAO terminals, async unsafe SQL, options, drift refusal and legacy
+baselining. Normal app startup remains synchronous. These are native Flutter
+tests, not device frame-time or crash-recovery evidence. The background facade
+requires the matching unreleased CLI/runtime source; see the
+[opt-in guide](../../docs/usage/db.md#generated-background-opening-unreleased).
 
 The app uses live FakeStore endpoints for core catalog/auth/cart data and local
 fake responses for showcase-only flows such as checkout quotes, order tracking,

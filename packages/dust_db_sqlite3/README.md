@@ -223,8 +223,13 @@ final result = await db.transaction((tx) async {
 DAO SQL is still checked by Dust/Rust SQLx at generation time; direct runtime
 SQL remains unchecked. No DAO is required to use `fetchOne`, `fetchOptional`,
 `fetchAll`, `fetchScalar` or `execute`. Generated `AppDatabase.open` remains
-synchronous; generated `openBackground` is a separate follow-up. Supply the
-same reviewed migration bundle yourself when opening a worker today.
+synchronous. For generated `openBackground`, add the explicit static forwarding
+method shown in the [generated background guide](../../docs/usage/db.md#generated-background-opening-unreleased).
+It uses the facade's embedded migrations and a worker-safe asynchronous
+`unsafe` adapter, with no native-handle casts. This is an **unreleased** API:
+use a CLI built from this change and the matching source runtime, not the
+published 0.2.1 artifacts. Without a generated facade, supply the same reviewed
+migration bundle yourself when opening a worker.
 
 Transaction ownership and nested-savepoint rules below also apply to workers.
 Unrelated work during a transaction fails immediately; there is no application

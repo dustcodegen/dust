@@ -26,6 +26,7 @@ part 'worker_protocol.dart';
 part 'worker_server.dart';
 part 'worker_transport.dart';
 part 'worker_transaction.dart';
+part 'worker_unsafe_sql.dart';
 
 /// SQLite-backed executor with access to the underlying native database.
 abstract interface class Sqlite3Executor implements Executor {
