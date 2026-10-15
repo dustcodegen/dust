@@ -46,6 +46,11 @@ guarantee an uncached native build is offline. Check the actual loaded
 Dart binding version. The repository root's system-library setup is for its
 host/workspace tests and is not this app's mobile packaging configuration.
 
+The separate [Flutter lifecycle probe](../../docs/usage/db-flutter-validation.md)
+uses a test-only entrypoint, real OS background/resume and a second process to
+check worker opening, direct db/tx calls, reopen and migration history. Run it
+explicitly on a designated device; normal widget tests are not device evidence.
+
 The app uses live FakeStore endpoints for core catalog/auth/cart data and local
 fake responses for showcase-only flows such as checkout quotes, order tracking,
 wishlist persistence, and support chat.
