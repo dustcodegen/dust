@@ -121,14 +121,18 @@ void main() {
   });
 
   test('doubled quotes escape rather than close', () async {
-    expect(
-      await names(
-        'SELECT \'it\'\'s \$9\' AS a, "od""d \$9" AS b, name '
-        r'FROM users WHERE id = $1',
-        [3],
-      ),
-      <String>['Kay'],
+    pool.database.config.doubleQuotedStringLiterals = false;
+    final rows = await unsafeRows(
+      pool,
+      r'WITH quoted("od""d $9") AS (VALUES ($1)) '
+      'SELECT \'it\'\'s \$9\' AS a, "od""d \$9" AS b, name '
+      r'FROM users CROSS JOIN quoted WHERE id = $2',
+      ['bound value', 3],
     );
+    expect(rows, hasLength(1));
+    expect(rows.single.read<String>('a'), r"it's $9");
+    expect(rows.single.read<String>('b'), 'bound value');
+    expect(rows.single.read<String>('name'), 'Kay');
   });
 
   test('native ? placeholders still work untouched', () async {
