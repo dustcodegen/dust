@@ -32,6 +32,8 @@ The shim needs the full public SQLite C API, including `sqlite3_vfs_find`.
 Minimized bundled libraries may hide that symbol. Use a full-API engine for
 this fault gate and record its provenance separately from bundled-consumer
 checks; loading a second SQLite library does not register a VFS in the first.
+The [local Linux gate](db-linux-validation.md) runs portable tests on both the
+default bundle and a pinned full-API build, with fault injection on the latter.
 
 ## What is exercised
 
