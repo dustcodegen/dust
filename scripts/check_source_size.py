@@ -53,6 +53,7 @@ SOURCE_GLOBS = (
     ("examples", "*/integration_test/**/*.dart"),
     ("examples", "*/test_driver/**/*.dart"),
     ("fixtures", "*/lib/**/*.dart"),
+    ("fixtures", "*/bin/**/*.dart"),
     ("fixtures", "*/test/**/*.dart"),
     ("scripts", "**/*.py"),
     ("scripts", "**/*.sh"),
@@ -204,7 +205,8 @@ class CheckSourceSizeTests(unittest.TestCase):
             self._workspace(
                 root, "examples/demo/test_driver/probe.dart", LINE_LIMIT + 1
             )
-            self.assertEqual(len(check(root)), 8)
+            self._workspace(root, "fixtures/demo/bin/probe.dart", LINE_LIMIT + 1)
+            self.assertEqual(len(check(root)), 9)
 
     def test_inline_test_module_counts(self) -> None:
         BASELINE.clear()

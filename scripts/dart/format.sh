@@ -10,6 +10,8 @@ TARGETS=()
 while IFS= read -r package; do
   TARGETS+=("$package")
 done < <("$ROOT_DIR/scripts/workspace_packages.sh" dart)
+# Independent Pub resolution is intentional; keep this consumer outside workspace.
+TARGETS+=("fixtures/sqlite_sdk_consumer")
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

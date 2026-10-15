@@ -105,8 +105,8 @@ matches sqlite3 3.5.2's SHA-256 table; Gradle's stripped library matches the APK
 entry. This proves the recorded bundled target, not every consumer resolution.
 Full local lint/test gates and 529 combined SQLite tests passed, with unfiltered
 963/963 executable runtime library lines covered. Existing environment-dependent
-suite skips were not expanded. Floor formatting is not a minimum-SDK execution
-result; supported-SDK consumers remain a separate #19 gate.
+suite skips were not expanded. Floor formatting alone is not a minimum-SDK
+execution result; see the separate [SDK consumer gate](db-sdk-validation.md).
 
 Probe development dependencies are Flutter SDK test tooling, `path_provider`
 for durable test storage and an explicit reference to the already-resolved
@@ -135,8 +135,8 @@ device prerequisites.
 An emulator's frame/RSS measurements are diagnostic, not physical Android
 performance proof. Process relaunch is not hardware power loss. Tests do not
 certify all OS suspension policies, low-memory kills, long-running workloads or
-storage devices. Windows, supported SDK consumers and physical-device results
-remain explicit #19 gates until run and recorded.
+storage devices. Windows and physical-device results remain explicit #19 gates
+until run and recorded; SDK consumer execution is documented separately above.
 
 For application usage, follow [background opening](db.md#generated-background-opening-unreleased)
 and the SQLx-backed checked query/DAO guide. The probe's runtime SQL is test

@@ -15,8 +15,10 @@ or query builder.
 
 ## Installation
 
-This package requires Dart 3.10 or Flutter 3.38 or newer. Other Dust runtime
-packages keep their existing Dart 3.6 floor.
+This package requires stable Dart 3.10 or newer. Flutter 3.38.1 provides that
+stable SDK; Flutter 3.38.0 bundles an older Dart prerelease rejected by Pub.
+See the [SDK consumer validation guide](../../docs/usage/db-sdk-validation.md).
+Other Dust runtime packages keep their existing Dart 3.6 floor.
 
 Add the Database annotations and SQLite runtime:
 
