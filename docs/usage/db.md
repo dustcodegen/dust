@@ -34,6 +34,9 @@ For ordinary functions with an explicit executor, all five terminals, and the
 online/offline validation boundary, see [SQLite query parity](db-query-parity.md).
 No handwritten executor extension or DAO declaration is required.
 
+See [crash/reopen recovery](db-recovery.md) for local transaction/migration
+recovery evidence and application handling of uncertain writes.
+
 ## Quick Start
 
 Create a simple migration at `migrations/0001_create_users.sql`:

@@ -251,6 +251,10 @@ exit does not prove that a write was rolled back. There is no public
 cancel/restart API or deadline for a hung native call; `busyTimeout` only limits
 SQLite lock waits. This remains native-only Dart/Flutter FFI, not web support.
 
+The [crash/reopen recovery guide](../../docs/usage/db-recovery.md) describes the
+24 local process-kill regressions for sync/worker connections, transaction and
+migration atomicity, and the remaining disk-full/device/power-loss boundaries.
+
 Run [background opening](example/open_in_background.dart) and
 [background commit recovery](example/background_commit_recovery.dart), or see
 the [Flutter generated-DAO proof](../../examples/shopping_app/test/sqlite_worker_dao_test.dart).
