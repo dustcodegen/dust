@@ -32,6 +32,12 @@ impl DriverContext {
         let registry = registry_for_selection(selection);
         let supported_annotations: SupportedAnnotations =
             registry.all_supported_annotations().into_iter().collect();
+        let supported_annotations = match selection {
+            RegistrySelection::All => supported_annotations,
+            RegistrySelection::ValidatingPlugin { .. } => {
+                supported_annotations.with_unannotated_libraries()
+            }
+        };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
         let catalog = build_symbol_catalog(&registry);
 

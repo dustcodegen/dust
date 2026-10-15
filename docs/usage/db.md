@@ -30,6 +30,10 @@ the caller; direct executor SQL remains unchecked. Static `queryAs`,
 for usage, ownership, failure recovery and limits. Generated async opening is
 an explicit [opt-in](#generated-background-opening-unreleased).
 
+For ordinary functions with an explicit executor, all five terminals, and the
+online/offline validation boundary, see [SQLite query parity](db-query-parity.md).
+No handwritten executor extension or DAO declaration is required.
+
 ## Quick Start
 
 Create a simple migration at `migrations/0001_create_users.sql`:

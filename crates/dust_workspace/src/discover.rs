@@ -38,6 +38,8 @@ pub(crate) const DUST_RUNTIME_PACKAGES: &[(&str, &str)] = &[
 pub struct SupportedAnnotations {
     /// Supported annotation short names.
     names: HashSet<Box<str>>,
+    /// Validating commands also need expressions in annotation-free libraries.
+    include_unannotated_libraries: bool,
 }
 
 impl SupportedAnnotations {
@@ -54,6 +56,14 @@ impl SupportedAnnotations {
     pub fn contains(&self, name: &str) -> bool {
         self.names.contains(name)
     }
+
+    /// Includes Dust-aware libraries without annotations for parser-led validation.
+    ///
+    /// Normal generation stays annotation-only unless explicitly opted in.
+    pub fn with_unannotated_libraries(mut self) -> Self {
+        self.include_unannotated_libraries = true;
+        self
+    }
 }
 
 impl<S> FromIterator<S> for SupportedAnnotations
@@ -66,6 +76,7 @@ where
                 .into_iter()
                 .map(|name| name.into().into_boxed_str())
                 .collect(),
+            include_unannotated_libraries: false,
         }
     }
 }
@@ -83,7 +94,7 @@ pub struct LibraryDiscovery {
 ///
 /// The scan is deterministic and only keeps source files that:
 /// - are not already generated primary output files
-/// - use a supported Dust annotation
+/// - use a supported Dust annotation, unless unannotated validation is enabled
 /// - import Dust directly or through local Dart import/export chains
 pub fn discover_libraries(
     root: &Path,
@@ -127,7 +138,9 @@ pub fn discover_libraries_with_usage(
     for source_path in candidates
         .iter()
         .filter(|candidate| {
-            candidate.has_supported_annotation && dust_aware.contains(candidate.path.as_path())
+            (candidate.has_supported_annotation
+                || supported_annotations.include_unannotated_libraries)
+                && dust_aware.contains(candidate.path.as_path())
         })
         .map(|candidate| candidate.path.clone())
     {

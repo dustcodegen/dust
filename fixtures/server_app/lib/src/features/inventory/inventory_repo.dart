@@ -22,6 +22,18 @@ abstract final class InventoryRepo {
   @Query(r'SELECT item, on_hand FROM stock ORDER BY item')
   Future<Result<List<Stock>, SqlxError>> allStock();
 
+  /// Requires exactly one matching row; zero or multiple rows are errors.
+  @Query(r'SELECT item, on_hand FROM stock WHERE on_hand >= $1')
+  Future<Result<Stock, SqlxError>> onlyStock(int minimum);
+
+  /// First matching row in item order, or null when no row matches.
+  @Query(r'SELECT item, on_hand FROM stock WHERE on_hand >= $1 ORDER BY item')
+  Future<Result<Stock?, SqlxError>> optionalStock(int minimum);
+
+  /// Total stock, including an empty inventory.
+  @Query('SELECT COALESCE(SUM(on_hand), 0) FROM stock')
+  Future<Result<int, SqlxError>> totalStock();
+
   /// What is left of each of [items].
   ///
   /// An `IN` list needs no dynamic SQL. The list is one bound value, the driver

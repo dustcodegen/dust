@@ -37,6 +37,32 @@ final class _$InventoryRepo implements InventoryRepo {
   }
 
   @override
+  Future<Result<Stock, SqlxError>> onlyStock(int minimum) {
+    return _db.fetchOne<Stock>(
+      r'''SELECT item, on_hand FROM stock WHERE on_hand >= $1''',
+      [minimum],
+      const $StockRowDeserializer().deserialize,
+    );
+  }
+
+  @override
+  Future<Result<Stock?, SqlxError>> optionalStock(int minimum) {
+    return _db.fetchOptional<Stock>(
+      r'''SELECT item, on_hand FROM stock WHERE on_hand >= $1 ORDER BY item''',
+      [minimum],
+      const $StockRowDeserializer().deserialize,
+    );
+  }
+
+  @override
+  Future<Result<int, SqlxError>> totalStock() {
+    return _db.fetchScalar<int>(
+      r'''SELECT COALESCE(SUM(on_hand), 0) FROM stock''',
+      [],
+    );
+  }
+
+  @override
   Future<Result<List<Stock>, SqlxError>> stockForItems(List<String> items) {
     return _db.fetchAll<Stock>(
       r'''

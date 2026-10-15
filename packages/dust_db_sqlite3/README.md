@@ -231,6 +231,12 @@ use a CLI built from this change and the matching source runtime, not the
 published 0.2.1 artifacts. Without a generated facade, supply the same reviewed
 migration bundle yourself when opening a worker.
 
+Prefer ordinary functions taking `Executor db` when no DAO is needed; no
+handwritten executor extension is required. The
+[query parity guide](../../docs/usage/db-query-parity.md) shows all terminals,
+checked source discovery, exact cardinality rules and online/offline limits,
+with runnable server and Flutter regressions.
+
 Transaction ownership and nested-savepoint rules below also apply to workers.
 Unrelated work during a transaction fails immediately; there is no application
 work queue or automatic retry. `close()` is rejected while a transaction owns

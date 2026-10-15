@@ -15,3 +15,6 @@ mod pipeline;
 
 #[path = "db_outputs/validation.rs"]
 mod validation;
+
+#[path = "db_outputs/query_parity.rs"]
+mod query_parity;

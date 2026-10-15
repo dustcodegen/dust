@@ -170,14 +170,16 @@ emitted from serde markers belonging to a plugin that was not running, replacing
 a full build's output with a bare header. Emission acts on those markers only
 when every registered plugin executes.
 
-### Describe results are read for column names only (verified)
+### Type/nullability diagnostics: current boundary
 
-`validate_described_columns`
-([`validate/sqlx.rs`](../../crates/dust_db_plugin/src/plugin/validate/sqlx.rs))
-checks that required columns are present. `sqlx::Describe` also carries
-`nullable(i)` and `column.type_info()`; neither appears anywhere in
-`crates/dust_db_plugin`. So `final int quantity` against a `TEXT` column passes,
-and a nullable column decoded into a non-nullable field passes.
+Online describe checks required column names and emits type/nullability
+warnings through
+[`validate/describe.rs`](../../crates/dust_db_plugin/src/plugin/validate/describe.rs).
+These warnings are deliberately permissive and are not hard type-safety errors.
+The offline cache retains returned column names, but not their SQL type or
+nullability metadata, so it checks row-column requirements without replaying
+those warnings. See [query parity](../usage/db-query-parity.md) for the current
+runtime contract, regressions and explicit limits.
 
 ### Placeholder scanning ignored SQL comments (fixed, #500)
 

@@ -18,26 +18,16 @@ pub(crate) fn emit_or_write_library(
     if let Some(Some(previous_hash)) = previous_output_hash {
         let emitted =
             emit_library_with_plan(lowered_library, processing.registry, plan.clone(), None);
-        let emitted = if emitted.source.is_empty() && !emitted.changed {
-            // Some plugin modes intentionally preserve existing output without
-            // contributing source, for example normal builds over DB-only files.
-            let previous = read_previous_output(&library.output_path, processing.write_output)?;
-            emit_library_with_plan(
-                lowered_library,
-                processing.registry,
-                plan,
-                previous.as_deref(),
-            )
-        } else {
-            emitted
+        // No-op plugin modes must not turn inactive auxiliary outputs into a
+        // primary hash change; use ordinary persistence to preserve them.
+        if !emitted.source.is_empty() || emitted.changed {
+            return persist_with_previous_hash(
+                library.output_path.clone(),
+                emitted.with_output_hash(&library.output_path),
+                previous_hash,
+                processing.write_output,
+            );
         }
-        .with_output_hash(&library.output_path);
-        return persist_with_previous_hash(
-            library.output_path.clone(),
-            emitted,
-            previous_hash,
-            processing.write_output,
-        );
     }
 
     let previous = read_previous_output(&library.output_path, processing.write_output)?;

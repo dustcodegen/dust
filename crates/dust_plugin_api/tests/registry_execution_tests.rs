@@ -187,7 +187,7 @@ fn symbols_only_registration_claims_without_executing() {
     assert_eq!(registry.claimed_trait_symbols()[0].0, "dust_dart::Debug");
     assert_eq!(registry.claimed_config_symbols()[0].0, "dust_dart::SerDe");
     assert!(registry.all_supported_annotations().is_empty());
-    assert!(registry.all_partless_configs().is_empty());
+    assert_eq!(registry.all_partless_configs(), vec!["dust_dart::SerDe"]);
     assert!(registry.build_symbol_plan(&file).reserved().is_empty());
     assert!(registry.validate_library(&file).is_empty());
     assert!(

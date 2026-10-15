@@ -151,13 +151,24 @@ impl PluginRegistry {
         names
     }
 
-    /// Returns all config symbols that do not require a generated part directive.
+    /// Returns partless config metadata, including symbols-only registrations.
     pub fn all_partless_configs(&self) -> Vec<&'static str> {
         let mut symbols: Vec<_> = self
             .plugins
             .iter()
-            .filter(|plugin| plugin.executes)
-            .flat_map(|plugin| plugin.plugin.partless_configs().iter().copied())
+            .flat_map(|plugin| {
+                plugin
+                    .plugin
+                    .partless_configs()
+                    .iter()
+                    .copied()
+                    .filter(|symbol| {
+                        plugin
+                            .config_symbols
+                            .iter()
+                            .any(|claimed| claimed.0 == *symbol)
+                    })
+            })
             .collect();
         symbols.sort_unstable();
         symbols.dedup();

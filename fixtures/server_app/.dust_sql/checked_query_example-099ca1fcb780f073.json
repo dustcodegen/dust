@@ -1,0 +1,76 @@
+{
+  "version": 3,
+  "entries": [
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "17c0d1503bd139b4",
+      "sql": "SELECT COALESCE(SUM(on_hand), 0) FROM stock",
+      "user_parameter_count": 0,
+      "expanded_parameter_count": 0,
+      "fetch_mode": "one",
+      "row_type": null,
+      "columns": [
+        "COALESCE(SUM(on_hand), 0)"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "20f75968e80f6469",
+      "sql": "INSERT INTO stock (item, on_hand) VALUES ($1, $2)",
+      "user_parameter_count": 2,
+      "expanded_parameter_count": 2,
+      "fetch_mode": "execute",
+      "row_type": null,
+      "columns": []
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "8eb282ef66102ef5",
+      "sql": "SELECT item, on_hand FROM stock WHERE on_hand >= $1",
+      "user_parameter_count": 1,
+      "expanded_parameter_count": 1,
+      "fetch_mode": "one",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "a0639c41a35c8941",
+      "sql": "SELECT item, on_hand FROM stock WHERE on_hand >= $1 ORDER BY item",
+      "user_parameter_count": 1,
+      "expanded_parameter_count": 1,
+      "fetch_mode": "optional",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "a2e11a0a150c3ce1",
+      "sql": "SELECT item, on_hand FROM stock ORDER BY item",
+      "user_parameter_count": 0,
+      "expanded_parameter_count": 0,
+      "fetch_mode": "all",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    }
+  ]
+}
