@@ -59,6 +59,48 @@ not injected binding messages. Keep the device unlocked during the test. A
 missing handshake, target, native library or prerequisite fails the invoked
 gate; nothing silently skips.
 
+## iOS simulator: unsigned build, then drive
+
+Use a dedicated, fully booted simulator and a clean worktree or staged copy of
+the shopping example, including `ios/`. Never replace an unrelated installation
+of `com.example.shoppingApp`. The simulator supports debug mode, not profile
+performance evidence. The recorded run used the independent SDK consumer's
+source-package overrides and sqlite3 3.5.2 pin; production locks were untouched.
+
+Build explicitly without signing, then drive the prebuilt application. This
+avoids the normal signed-build path's provisioning/device-registration flags;
+no Apple Developer profile or physical device registration is needed.
+From `examples/shopping_app`, after resolving packages with the selected SDK:
+
+```sh
+(
+set -euo pipefail
+unset DUST_SQLITE_ANDROID_SERIAL
+export DUST_SQLITE_IOS_SIMULATOR=your-simulator-udid
+export DUST_SQLITE_PROBE_RUN="local-ios-$(date +%Y%m%d%H%M%S)"
+for phase in write verify; do
+  export DUST_SQLITE_PROBE_PHASE="$phase"
+  flutter build ios --no-pub --simulator --debug --no-codesign \
+    --target=integration_test/sqlite_lifecycle_test.dart \
+    --dart-define="DUST_SQLITE_PROBE_RUN=$DUST_SQLITE_PROBE_RUN" \
+    --dart-define="DUST_SQLITE_PROBE_PHASE=$phase"
+  flutter drive --no-pub --debug --no-dds --keep-app-running \
+    -d "$DUST_SQLITE_IOS_SIMULATOR" \
+    --use-application-binary=build/ios/iphonesimulator/Runner.app \
+    --driver=test_driver/sqlite_lifecycle.dart \
+    --target=integration_test/sqlite_lifecycle_test.dart
+done
+)
+```
+
+For the write phase, wait for the driver's background prompt, select only the
+designated simulator, press Home and return to the same probe within 60 seconds.
+The test requires actual OS `paused` and `resumed` events. Do not inject binding
+messages. The verify build must use the same run ID and a new process, preserving
+application-support data through installation. Keep `--keep-app-running` in
+both phases. Do not manually define `FLUTTER_VERSION`: current Flutter reserves
+that value and supplies it itself.
+
 ## What the probe checks
 
 - A foreground connection holds a real writer lock before generated worker
@@ -116,6 +158,36 @@ unchanged. The example's existing Kotlin/plugin DSL remains selected without
 upgrading its build-tool versions; current Flutter still warns about their
 future support window.
 
+### iOS simulator
+
+On 2026-10-15, two final fresh-ID write/verify pairs passed on a dedicated
+arm64 iPhone simulator, iOS 27.0 (24A434), Flutter 3.47.7 / Dart 3.13.5, in
+**debug** mode. Both required different write/verify process IDs, 128 exact
+committed rows, bounded 32-row caller mapping, unchanged migration history,
+integrity after reopen, ten close/reopen cycles per phase, real OS pause/resume
+and zero workers after close. Each native-lock handshake observed three UI
+frames before release. No lifecycle notification was synthesized.
+
+Both loaded SQLite 3.53.4 with the same source ID recorded for Android above.
+The embedded universal simulator `sqlite3.framework/sqlite3` SHA-256 was
+`2363466c1bb9d272aa18a24f0d97be46bcf781cd01032a107bb4607b20a20358`
+in both final builds. The framework had an ad-hoc signature and no TeamIdentifier;
+no Apple Developer signing profile or device registration was created. Execution
+was arm64; a universal file does not prove its x64 slice ran.
+
+The current SDK migrated native project metadata only in owned staging,
+including its iOS 15 deployment floor; production files/locks were unchanged.
+Strict analysis used the original repository rules, not Flutter's automatically
+added exclusions, and all 80 shopping tests passed. The dedicated simulator was
+shut down after verification; unrelated running simulators were left alone.
+
+Initial setup needed a first-boot migration restart, and an earlier cold-setup
+attempt failed the unchanged five-second status-RPC deadline. That failure is
+retained, not counted as a pass. The two final runs used the fully booted target
+with unchanged probe code, deadlines and assertions. Debug frame/RSS samples
+are diagnostic, not physical-device/profile performance or a universal cold-start
+guarantee. Physical iOS/Android and Windows evidence remain pending under #19.
+
 ## Artifacts and limits
 
 The host driver writes `build/sqlite-<run>-write.json` and
@@ -125,7 +197,7 @@ run; do not commit machine paths or private device metadata. Inspect the
 reported native engine and confirm a fixed WAL-reset release or vendor patch;
 the Dart binding version alone is insufficient.
 
-On iOS, use a designated signed test installation and its explicit device ID.
+For physical iOS, use a designated signed test installation and its explicit device ID.
 Without the Android serial environment variable, the driver prompts for manual
 Home/return transitions and applies the same observed-event deadlines. A
 simulator/debug run is functional evidence only; physical-device/profile
