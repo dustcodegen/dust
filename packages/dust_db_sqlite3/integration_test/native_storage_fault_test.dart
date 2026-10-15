@@ -23,7 +23,6 @@ void main() {
             : Platform.isMacOS
             ? 'dylib'
             : 'so'}';
-    child = '${binaries.path}/child${Platform.isWindows ? '.exe' : ''}';
     final built = await nativeProcess('clang', [
       '-std=c11',
       '-Wall',
@@ -37,17 +36,9 @@ void main() {
       extension,
     ]);
     expect(built.exitCode, 0, reason: '${built.stdout}\n${built.stderr}');
-    final compiled = await nativeProcess(Platform.resolvedExecutable, [
-      'compile',
-      'exe',
+    child = await buildNativeChild(
+      binaries,
       'integration_test/support/native_fault_child.dart',
-      '-o',
-      child,
-    ]);
-    expect(
-      compiled.exitCode,
-      0,
-      reason: '${compiled.stdout}\n${compiled.stderr}',
     );
   });
 

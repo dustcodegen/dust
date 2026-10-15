@@ -15,18 +15,9 @@ void main() {
     }
     binaries = Directory.systemTemp.createTempSync('dust-filesystem-child-');
     addTearDown(() => binaries.deleteSync(recursive: true));
-    child = '${binaries.path}/child';
-    final compiled = await nativeProcess(Platform.resolvedExecutable, [
-      'compile',
-      'exe',
+    child = await buildNativeChild(
+      binaries,
       'integration_test/support/filesystem_child.dart',
-      '-o',
-      child,
-    ]);
-    expect(
-      compiled.exitCode,
-      0,
-      reason: '${compiled.stdout}\n${compiled.stderr}',
     );
   });
   test('bounded volume acquisition and verified detach', () async {
