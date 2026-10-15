@@ -31,6 +31,55 @@ class Broken {
 }
 
 #[test]
+fn explains_syntax_errors_without_claiming_the_dart_source_is_invalid() {
+    for source in [
+        "class const User(final String name);",
+        "class User<T>(final T value);",
+        "class User { const new create(); }",
+        "class Broken { final String name }",
+    ] {
+        let result = parse(313, source);
+        let syntax_errors = result
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.message == "tree-sitter reported a Dart syntax error")
+            .collect::<Vec<_>>();
+        assert!(
+            !syntax_errors.is_empty(),
+            "{source}: {:?}",
+            result.diagnostics
+        );
+        assert_eq!(
+            syntax_errors[0].notes,
+            vec![
+                "Check this file with `dart analyze`. Valid Dart may use syntax not supported by Dust's bundled parser.",
+                "Primary constructors and named concise `new` constructors are not supported yet. Use traditional in-body constructors with the class name and explicit fields.",
+            ]
+        );
+        assert!(syntax_errors[0].has_labels());
+        assert!(
+            syntax_errors
+                .iter()
+                .skip(1)
+                .all(|diagnostic| diagnostic.notes.is_empty())
+        );
+    }
+}
+
+#[test]
+fn does_not_add_unsupported_syntax_guidance_to_supported_source() {
+    let result = parse(
+        314,
+        r#"class User {
+  const User(this.name);
+  final String name;
+}
+"#,
+    );
+    assert_eq!(result.diagnostics, Vec::new());
+}
+
+#[test]
 fn reports_invalid_parameter_modifiers_for_dart_3_13_normal_params() {
     let result = parse(
         310,

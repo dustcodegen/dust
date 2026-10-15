@@ -8,6 +8,14 @@ use crate::syntax::text_range;
 pub(crate) fn extract_diagnostics(tree: &Tree, source: &SourceText) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     collect_error_diagnostics(tree.root_node(), source, &mut diagnostics);
+    if let Some(first) = diagnostics.first_mut() {
+        first.notes.push(
+            "Check this file with `dart analyze`. Valid Dart may use syntax not supported by Dust's bundled parser.".to_owned(),
+        );
+        first.notes.push(
+            "Primary constructors and named concise `new` constructors are not supported yet. Use traditional in-body constructors with the class name and explicit fields.".to_owned(),
+        );
+    }
     diagnostics
 }
 
