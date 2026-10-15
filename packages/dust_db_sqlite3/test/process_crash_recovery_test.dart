@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:dust_dart/db.dart';
@@ -104,18 +105,18 @@ void main() {
             expect(
               expectOk(
                 await db.fetchAll(
-                  'SELECT id, name, length(payload) AS size FROM items ORDER BY id',
+                  'SELECT id, name, payload FROM items ORDER BY id',
                   [],
                   (row) => [
                     row.read<int>('id'),
                     row.read<String>('name'),
-                    row.readNullable<int>('size'),
+                    row.readNullable<Uint8List>('payload'),
                   ],
                 ),
               ),
               [
                 [1, committed ? 'changed' : 'baseline 🍜', null],
-                if (committed) [upgraded ? 4 : 2, 'pending', 262144],
+                if (committed) [upgraded ? 4 : 2, 'pending', Uint8List(262144)],
               ],
             );
             expect(
