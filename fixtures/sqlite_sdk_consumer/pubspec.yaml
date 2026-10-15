@@ -1,0 +1,15 @@
+name: sqlite_sdk_consumer
+description: Independent SQLite SDK and native bundle regression consumer.
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  args: ^2.7.0
+  dust_dart: ^0.2.1
+  dust_db_sqlite3: ^0.2.1
+
+dev_dependencies:
+  test: ^1.26.0
+  very_good_analysis: ^10.3.0

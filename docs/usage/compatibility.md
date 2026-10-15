@@ -18,6 +18,11 @@ by the workspace source.
 3.6 or newer. `dust_db_sqlite3` requires Dart 3.10 or Flutter 3.38 or newer,
 matching the minimum SDK of its `sqlite3 ^3.3.0` dependency.
 
+The floor is **stable** Dart 3.10.0: Flutter 3.38.0 ships a Dart prerelease
+below that constraint. Flutter 3.38.1 supplies stable Dart 3.10.0. See the
+[independent SDK/native consumer gate](db-sdk-validation.md) for exact versions,
+isolated lint-tool resolution and packaging checks; no SDK constraints change.
+
 ## Unreleased Background Opening
 
 Generated SQLite `AppDatabase.openBackground` is a source-tree feature, not part
