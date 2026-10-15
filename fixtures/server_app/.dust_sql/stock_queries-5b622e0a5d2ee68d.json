@@ -1,0 +1,91 @@
+{
+  "version": 3,
+  "entries": [
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "17c0d1503bd139b4",
+      "sql": "SELECT COALESCE(SUM(on_hand), 0) FROM stock",
+      "user_parameter_count": 0,
+      "expanded_parameter_count": 0,
+      "fetch_mode": "one",
+      "row_type": null,
+      "columns": [
+        "COALESCE(SUM(on_hand), 0)"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "3c3771a8c21c8d7c",
+      "sql": "\nSELECT item, on_hand FROM stock\nWHERE item IN (SELECT value FROM json_each($1))\nORDER BY item\n",
+      "user_parameter_count": 1,
+      "expanded_parameter_count": 1,
+      "fetch_mode": "all",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "8eb282ef66102ef5",
+      "sql": "SELECT item, on_hand FROM stock WHERE on_hand >= $1",
+      "user_parameter_count": 1,
+      "expanded_parameter_count": 1,
+      "fetch_mode": "one",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "a0639c41a35c8941",
+      "sql": "SELECT item, on_hand FROM stock WHERE on_hand >= $1 ORDER BY item",
+      "user_parameter_count": 1,
+      "expanded_parameter_count": 1,
+      "fetch_mode": "optional",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "a2e11a0a150c3ce1",
+      "sql": "SELECT item, on_hand FROM stock ORDER BY item",
+      "user_parameter_count": 0,
+      "expanded_parameter_count": 0,
+      "fetch_mode": "all",
+      "row_type": "Stock",
+      "columns": [
+        "item",
+        "on_hand"
+      ]
+    },
+    {
+      "driver": "sqlite3",
+      "migrations": "./migrations",
+      "schema_hash": "e12cf916db18ef76",
+      "sql_hash": "b4373a4e878a8d48",
+      "sql": "\nINSERT INTO stock (item, on_hand) VALUES ($1, $2)\nON CONFLICT (item) DO UPDATE SET on_hand = on_hand + $2\n",
+      "user_parameter_count": 2,
+      "expanded_parameter_count": 3,
+      "fetch_mode": "execute",
+      "row_type": null,
+      "columns": []
+    }
+  ]
+}

@@ -8,6 +8,7 @@ struct FakePlugin {
     name: &'static str,
     traits: &'static [&'static str],
     configs: &'static [&'static str],
+    partless: &'static [&'static str],
 }
 
 impl DustPlugin for FakePlugin {
@@ -21,6 +22,10 @@ impl DustPlugin for FakePlugin {
 
     fn claimed_configs(&self) -> &'static [&'static str] {
         self.configs
+    }
+
+    fn partless_configs(&self) -> &'static [&'static str] {
+        self.partless
     }
 
     fn validate(&self, _library: &DartFileIr) -> Vec<Diagnostic> {
@@ -44,6 +49,7 @@ fn registry_rejects_duplicate_trait_ownership() {
             name: "plugin_a",
             traits: &["dust_dart::ToString"],
             configs: &[],
+            partless: &[],
         }))
         .unwrap();
 
@@ -52,6 +58,7 @@ fn registry_rejects_duplicate_trait_ownership() {
             name: "plugin_b",
             traits: &["dust_dart::ToString"],
             configs: &[],
+            partless: &[],
         }))
         .unwrap_err();
 
@@ -70,6 +77,7 @@ fn registry_rejects_duplicate_config_ownership() {
             name: "plugin_a",
             traits: &[],
             configs: &["dust_dart::SerDe"],
+            partless: &[],
         }))
         .unwrap();
 
@@ -78,6 +86,7 @@ fn registry_rejects_duplicate_config_ownership() {
             name: "plugin_b",
             traits: &[],
             configs: &["dust_dart::SerDe"],
+            partless: &[],
         }))
         .unwrap_err();
 
@@ -96,6 +105,7 @@ fn plugin_names_follow_registration_order() {
             name: "derive",
             traits: &[],
             configs: &[],
+            partless: &[],
         }))
         .unwrap();
     registry
@@ -103,6 +113,7 @@ fn plugin_names_follow_registration_order() {
             name: "serde",
             traits: &[],
             configs: &[],
+            partless: &[],
         }))
         .unwrap();
 
@@ -117,6 +128,7 @@ fn symbols_only_registration_preserves_active_ownership() {
             name: "database",
             traits: &[],
             configs: &["dust_dart::Query"],
+            partless: &[],
         }))
         .unwrap();
     registry
@@ -124,6 +136,7 @@ fn symbols_only_registration_preserves_active_ownership() {
             name: "http",
             traits: &[],
             configs: &["dust_dart::Query", "dust_dart::HttpClient"],
+            partless: &["dust_dart::Query", "dust_dart::HttpClient"],
         }))
         .unwrap();
 
@@ -134,5 +147,9 @@ fn symbols_only_registration_preserves_active_ownership() {
             .map(|symbol| symbol.0)
             .collect::<Vec<_>>(),
         vec!["dust_dart::Query", "dust_dart::HttpClient"]
+    );
+    assert_eq!(
+        registry.all_partless_configs(),
+        vec!["dust_dart::HttpClient"]
     );
 }
