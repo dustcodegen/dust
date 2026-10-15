@@ -153,6 +153,7 @@ CREATE TABLE items (parent_id INTEGER REFERENCES parents(id) DEFERRABLE INITIALL
 INSERT INTO items VALUES (1);
 ''', foreignKeys: true);
       expect(error.message, 'SQLite migration failed.');
+      expect(error.operation, 'COMMIT');
       expect((error.cause! as sqlite.SqliteException).extendedResultCode, 787);
       expectNoItems();
     },

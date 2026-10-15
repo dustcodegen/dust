@@ -89,6 +89,12 @@ Generated `@SqlxDatabase` openers embed the
 configured migration directory and create the same `Sqlite3Driver`
 automatically.
 
+Migration control failures retain their native cause and report the boundary
+in `SqlxError.operation`, such as `COMMIT`. See the
+[COMMIT failure example](example/migration_commit_failure.dart) and
+[native storage-fault validation](../../docs/usage/db-native-storage.md) for
+recovery boundaries and required additional local integration checks.
+
 Omit `migrations` (or pass `null`) for an unmanaged open, including read-only
 inspection. Passing `migrations: {}` explicitly manages an empty bundle and
 rejects existing applied history. Managed startup requires a writable connection

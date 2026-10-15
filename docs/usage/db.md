@@ -38,6 +38,8 @@ See [crash/reopen recovery](db-recovery.md) for local transaction/migration
 recovery evidence and application handling of uncertain writes.
 See [WAL contention and checkpoints](db-wal.md) for snapshot conflicts,
 checkpoint status, foreground/worker usage and native-engine verification.
+See [native storage-fault validation](db-native-storage.md) for I/O boundaries,
+the extra local integration gate and migration COMMIT diagnostics.
 
 ## Quick Start
 

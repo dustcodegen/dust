@@ -10,6 +10,7 @@ crate and package source, their tests, the example and fixture projects, and
 the scripts in this directory. Tests are included because a 2,000-line test
 file is as hard to read as a 2,000-line module; splitting one by what it covers
 costs nothing and makes a failure easier to place.
+Native C integration-test fixtures count too.
 
 Generated Dart is the exception, recognised by the `.g.dart` suffix or by the
 header the emitter writes. It is the emitter's output rather than something a
@@ -44,6 +45,8 @@ SOURCE_GLOBS = (
     ("crates", "*/benches/**/*.rs"),
     ("packages", "*/lib/**/*.dart"),
     ("packages", "*/test/**/*.dart"),
+    ("packages", "*/integration_test/**/*.dart"),
+    ("packages", "*/integration_test/**/*.c"),
     ("packages", "*/example/**/*.dart"),
     ("examples", "*/lib/**/*.dart"),
     ("examples", "*/test/**/*.dart"),
@@ -187,7 +190,13 @@ class CheckSourceSizeTests(unittest.TestCase):
             self._workspace(root, "packages/demo/test/big_test.dart", LINE_LIMIT + 1)
             self._workspace(root, "crates/demo/src/feature/tests.rs", LINE_LIMIT + 1)
             self._workspace(root, "examples/demo/lib/big.dart", LINE_LIMIT + 1)
-            self.assertEqual(len(check(root)), 4)
+            self._workspace(
+                root, "packages/demo/integration_test/big_test.dart", LINE_LIMIT + 1
+            )
+            self._workspace(
+                root, "packages/demo/integration_test/support/fault.c", LINE_LIMIT + 1
+            )
+            self.assertEqual(len(check(root)), 6)
 
     def test_inline_test_module_counts(self) -> None:
         BASELINE.clear()

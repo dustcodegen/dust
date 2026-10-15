@@ -38,6 +38,7 @@ the answer differs.
 | A connection that cannot write | [`read_only.dart`](read_only.dart) |
 | Changing the schema over time | [`migrations.dart`](migrations.dart) |
 | Rejecting changed or missing migration SQL | [`migration_integrity.dart`](migration_integrity.dart) |
+| Diagnosing a migration COMMIT failure and reconciling data | [`migration_commit_failure.dart`](migration_commit_failure.dart) |
 | Explicitly baselining old name-only history | [`legacy_migration_baseline.dart`](legacy_migration_baseline.dart) |
 
 ## Reading
