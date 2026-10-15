@@ -269,8 +269,10 @@ automatically rolls back after a native statement error, the original error
 blocks further work through `tx` until its outer callback ends, then permits
 connection reuse. Real cleanup failures still require reopening. Run
 [disk-full recovery](example/disk_full_recovery.dart) for a safe temporary-database
-demonstration. Actual filesystem exhaustion, devices and power loss remain
-separate validation boundaries; this runtime fix is unreleased.
+demonstration. A separate [bounded-volume ENOSPC gate](../../docs/usage/db-filesystem-full.md)
+tests actual filesystem exhaustion on a disposable macOS image. Devices, other
+filesystems and power loss remain separate validation boundaries; these source
+changes are unreleased.
 
 Run [background opening](example/open_in_background.dart) and
 [background commit recovery](example/background_commit_recovery.dart), or see

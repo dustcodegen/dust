@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dust_dart/db.dart';
 
 import 'native_fault_fixture.dart';
+import 'storage_assertions.dart';
 
 const updateSql =
     "UPDATE items SET name = 'pending', payload = zeroblob(131072) WHERE id = 1";
@@ -122,7 +123,7 @@ Future<void> main(List<String> args) async {
                 )).unwrap() ==
                 'committed',
           );
-          await fixture.expectIntegrity(db);
+          await expectStorageIntegrity(db);
         } finally {
           fixture.disable();
           (await db.close()).unwrap();
@@ -170,8 +171,8 @@ Future<void> main(List<String> args) async {
           [],
         ).execute(db)).unwrap();
       }
-      await fixture.expectBaseline(db);
-      await fixture.expectReusable(db);
+      await expectStorageBaseline(db, fixture.history);
+      await expectStorageReusable(db);
       if (stage == 'migration') {
         (await db.close()).unwrap();
         final migrated = await fixture.open(migrations: pendingMigrations);
@@ -186,7 +187,7 @@ Future<void> main(List<String> args) async {
                 )).unwrap() ==
                 1,
           );
-          await fixture.expectIntegrity(migrated);
+          await expectStorageIntegrity(migrated);
           appliedHistory = await readHistory(migrated);
         } finally {
           (await migrated.close()).unwrap();

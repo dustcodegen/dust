@@ -160,6 +160,11 @@ injected native read/write/sync/truncate failures, including partial writes.
 Its explicit integration command is required in addition to the default suite;
 it does not replace actual filesystem ENOSPC or hardware validation.
 
+The separate [bounded-volume ENOSPC gate](db-filesystem-full.md) exercises real
+OS capacity failures on a disposable 32 MiB HFS+ image. It records OS/native
+errors and verifies data/history, recovery and safe detach. That host/filesystem
+evidence does not certify physical-device storage or other filesystems.
+
 Deterministic [WAL contention/checkpoint regressions](db-wal.md) cover held
 readers/writers, snapshot conflicts and progress after release in sync/worker
 combinations. They do not establish long-running load or the rare upstream
@@ -167,7 +172,7 @@ WAL-reset race; verify the loaded native engine on every supported target.
 
 Controlled page-limit recovery is tracked in
 [#33](https://github.com/dustcodegen/dust/issues/33) under epic
-[#19](https://github.com/dustcodegen/dust/issues/19). Host-filesystem ENOSPC,
+[#19](https://github.com/dustcodegen/dust/issues/19). Other filesystems,
 hardware power loss, storage corruption, Flutter device responsiveness,
 long-running contention and production-load validation are not established by
 these tests. Journal modes OFF/MEMORY and other synchronous modes are outside

@@ -40,6 +40,8 @@ See [WAL contention and checkpoints](db-wal.md) for snapshot conflicts,
 checkpoint status, foreground/worker usage and native-engine verification.
 See [native storage-fault validation](db-native-storage.md) for I/O boundaries,
 the extra local integration gate and migration COMMIT diagnostics.
+See [actual filesystem ENOSPC recovery](db-filesystem-full.md) for the separate
+bounded-volume gate and its host/filesystem limitations.
 
 ## Quick Start
 
