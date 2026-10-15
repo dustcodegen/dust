@@ -155,6 +155,11 @@ recovery, not Rust SQLx build-time validation of its `example/` SQL.
 
 ## Still outstanding
 
+[Native storage-fault validation](db-native-storage.md) separately exercises
+injected native read/write/sync/truncate failures, including partial writes.
+Its explicit integration command is required in addition to the default suite;
+it does not replace actual filesystem ENOSPC or hardware validation.
+
 Deterministic [WAL contention/checkpoint regressions](db-wal.md) cover held
 readers/writers, snapshot conflicts and progress after release in sync/worker
 combinations. They do not establish long-running load or the rare upstream

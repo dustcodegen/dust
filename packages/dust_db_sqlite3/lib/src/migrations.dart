@@ -26,10 +26,11 @@ void _applyMigrations(
   }
   final originalFilter = database.commitFilter;
   var completing = false;
+  var operation = 'SAVEPOINT _dust_migration_boundary';
   // Reject both early COMMIT and implicit writes after a migration's ROLLBACK.
   database.commitFilter = () => completing && (originalFilter?.call() ?? true);
   try {
-    database.execute('SAVEPOINT _dust_migration_boundary');
+    database.execute(operation);
     _ensureMigrationTable(database);
     final applied = _appliedMigrations(database);
     final checksums = {
@@ -43,11 +44,13 @@ void _applyMigrations(
       _recordMigration(database, migration.key, checksums[migration.key]!);
     }
     // A migration's ROLLBACK + BEGIN must not replace the owned transaction.
-    database.execute('RELEASE SAVEPOINT _dust_migration_boundary');
+    operation = 'RELEASE SAVEPOINT _dust_migration_boundary';
+    database.execute(operation);
     completing = true;
-    database.execute('COMMIT');
+    operation = 'COMMIT';
+    database.execute(operation);
   } catch (error) {
-    final migrationError = _asMigrationError(error);
+    final migrationError = _asMigrationError(error, operation);
     try {
       if (!database.autocommit) database.execute('ROLLBACK');
     } catch (rollbackError) {
@@ -141,10 +144,11 @@ void _recordMigration(sqlite.Database database, String name, String checksum) {
   }
 }
 
-SqlxError _asMigrationError(Object error) {
+SqlxError _asMigrationError(Object error, String operation) {
   if (error is SqlxError) return error;
   return _sqliteMigrationError(
     'SQLite migration failed.',
     cause: error,
+    operation: operation,
   );
 }
