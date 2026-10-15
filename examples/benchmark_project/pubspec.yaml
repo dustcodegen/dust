@@ -19,4 +19,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Generated HTTP tests import package:test directly.
+  test: ^1.25.15
   very_good_analysis: ^10.3.0

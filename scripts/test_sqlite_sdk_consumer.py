@@ -25,6 +25,25 @@ def proof() -> list[dict[str, object]]:
 class ConsumerTests(unittest.TestCase):
     """Do not require an SDK, network or native compiler."""
 
+    def test_core_examples_can_resolve_without_sqlite_or_a_parent_workspace(self) -> None:
+        for relative, packages in (
+            ("examples/product_showcase", ("dust_dart",)),
+            ("examples/benchmark_project", ("dust_dart", "dust_flutter")),
+        ):
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as name:
+                output = Path(name)
+                target = stage_consumer(ROOT, output, relative, "7.0.0", packages=packages)
+                self.assertEqual((target / "pubspec.yaml").read_bytes(),
+                                 (ROOT / relative / "pubspec.yaml").read_bytes())
+                overrides = json.loads((target / "pubspec_overrides.yaml").read_text())
+                self.assertIn("resolution", overrides)
+                self.assertIsNone(overrides["resolution"])
+                self.assertEqual(set(overrides["dependency_overrides"]),
+                                 {*packages, "very_good_analysis"})
+                if relative.endswith("benchmark_project"):
+                    self.assertTrue((target / "tool/generate.dart").is_file())
+                    self.assertFalse((target / "lib/generated_models").exists())
+
     def test_cannot_attribute_different_compilers_to_one_sdk_run(self) -> None:
         validate_sdk_pair("Dart SDK version: 3.10.0 (stable)", {"dartSdkVersion": "3.10.0"})
         for value in ({}, {"dartSdkVersion": 3}, {"dartSdkVersion": ""},
