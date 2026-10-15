@@ -112,7 +112,7 @@ class _CartItemCard extends StatelessWidget {
                       ),
                       isDangerous: true,
                     );
-                    if (confirmed == true && context.mounted) {
+                    if ((confirmed ?? false) && context.mounted) {
                       context
                           .readCartViewModel()
                           .removeFromCart(item.product.id);
