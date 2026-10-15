@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:dust_server/router.dart';
 import 'package:test/test.dart';
 import '../../example/several_isolates.dart' as several_isolates;
 import '../../example/isolate_failure.dart' as isolate_failure;
@@ -17,16 +19,37 @@ import 'support.dart';
 void main() {
   group('graceful_shutdown', () {
     test('a request already accepted finishes after close begins', () async {
-      // The whole point. A process that exits on the signal drops these, and
-      // they are the slow ones — the ones most likely to be mid-write.
-      final app = await ExampleApp.start(graceful_shutdown.buildApp());
-
+      final responseReady = Completer<void>();
+      final release = Completer<void>();
+      // Hold the real response so handler and drain timers cannot race.
+      Handler holdResponse(Handler next) => (request) async {
+            final response = await next(request);
+            responseReady.complete();
+            await release.future;
+            return response;
+          };
+      final app = await example(
+        graceful_shutdown.buildApp()..layer(holdResponse),
+      );
       final slow = app.get('/slow');
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      final settled = await app.stop();
-
-      expect(settled, isTrue);
-      expect((await slow).statusCode, 200);
+      try {
+        await responseReady.future;
+        expect(app.inFlight, 1);
+        var closed = false;
+        final closing = app.stop().then((settled) {
+          closed = true;
+          return settled;
+        });
+        await Future<void>(() {});
+        expect(closed, isFalse);
+        release.complete();
+        expect(await closing, isTrue);
+        final response = await slow;
+        expect(response.statusCode, 200);
+        expect(jsonDecode(response.body), {'ok': true});
+      } finally {
+        if (!release.isCompleted) release.complete();
+      }
     });
 
     test('close reports whether everything finished', () async {
