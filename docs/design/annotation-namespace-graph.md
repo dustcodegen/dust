@@ -80,6 +80,12 @@ These are tests of retained parser surfaces, not a claim to full Dart metadata
 extraction. Missing mixin/extension member facts and the unapproved #92 design
 remain separate limitations; this change does not bypass that design boundary.
 
+The legacy pre-parser candidate scan advances across qualifier whitespace, line
+comments and nested block comments ([#120](https://github.com/dustcodegen/dust/issues/120)).
+It neither strips source text nor assigns ownership. This fixes candidate loss
+before parsing, not import/alias reachability, resolved-graph discovery or cache
+dependencies; those remain #114 integration gates.
+
 ## Evidence and remaining gates
 
 The Rust regression suite parses the real client and server declaring libraries,
