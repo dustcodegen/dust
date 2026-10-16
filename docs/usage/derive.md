@@ -49,6 +49,11 @@ Generate the part file from your package root:
 dust build
 ```
 
+For a library that fails validation, Dust leaves its last successful generated
+output and cache entry unchanged. Fix the diagnostic and run `dust build` again;
+deleting the cache or editing generated files is not required. Other valid
+libraries in the same build can still update normally.
+
 You can now use the generated members normally:
 
 ```dart
