@@ -41,13 +41,20 @@ The local [SDK gate](sdk-validation.md) stages fresh independent consumers:
   HTTP client tests serialize requests and decode responses without a network
   call. Real in-memory SQLite tests execute generated row queries against `db`
   and `tx` in both sync and worker modes, including transaction rollback.
+  Checked application-library functions and generated DAO queries exercise all
+  five terminals against the same private primary row model and migrations.
+  The SDK gate runs online SQLx validation and an offline metadata check before
+  analysis and execution; it ignores any host `DUST_DATABASE_URL`.
 - `fixtures/primary_flutter_consumer`: primary route widgets with typed path/query
   fields and super keys; primary state and ViewModel declarations; generated
   route parsing and a scope-driven widget rebuild after a state update.
 
-The SQLite statements in this consumer are unchecked runtime SQL. Generated
-`FromRow` mapping is exercised, but these tests do not prove build-time SQL
-validation. Checked statements still use Dust's sqlx-backed [DB mode](db.md).
+Statements in `test/sqlite_runtime_test.dart` remain unchecked runtime SQL.
+The separate `lib/checked_queries.dart` functions and `lib/database.dart` DAO
+are validated through Dust's sqlx-backed [DB mode](db.md). This checks static
+SQL, bind shapes and required row columns, not every possible SQL type or
+runtime value; the [online/offline limits](db-query-parity.md#what-rust-sqlx-checks)
+still apply.
 
 Imported primary row classes use the shared parsed workspace facts during DAO
 validation and emission, not a source-line guess at the class header. Keep the

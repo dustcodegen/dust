@@ -219,11 +219,22 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
     env = {**os.environ, "PATH": str(dart.parent) + os.pathsep + os.environ.get("PATH", "")}
     sdk = flutter or [str(dart)]
     no_pub = ["--no-pub"] if flutter else []
+    env.pop("DUST_DATABASE_URL", None)
     run([*sdk, "pub", "get"], app, env=env)
     shutil.copy2(ROOT / relative / "analysis_options.yaml", app / "analysis_options.yaml")
     run([*sdk, "pub", "deps", "--json"], app, env=env)
     run([str(dust), "build", "--clean", "--root", str(app)], env=env)
     run([str(dust), "check", "--root", str(app)], env=env)
+    if not flutter:
+        for arguments in (("db", "build"), ("check", "--db"), ("check", "--db", "--offline")):
+            run([str(dust), *arguments, "--root", str(app)], env=env)
+        for name in ("checked_queries", "database"):
+            entries = [entry for path in (app / ".dust_sql").glob(f"{name}-*.json")
+                       for entry in json.loads(path.read_text(encoding="utf-8"))["entries"]]
+            if (sorted(entry["fetch_mode"] for entry in entries) !=
+                    ["all", "execute", "one", "one", "optional"]
+                    or any(entry["driver"] != "sqlite3" for entry in entries)):
+                raise ValueError(f"Missing checked primary query metadata: {name}")
     hashes = generated_hashes(app)
     if flutter:
         required.add("lib/counter.g.dart")
@@ -231,7 +242,7 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
             "routes", "paths", "navigation", "metadata", "runtime"))
     else:
         required.update(("lib/models.g.dart", "lib/private_models.g.dart",
-                         "lib/language_models.g.dart", "lib/api.g.dart"))
+                         "lib/language_models.g.dart", "lib/api.g.dart", "lib/database.g.dart"))
     if not required.issubset(hashes):
         raise ValueError(f"Missing fresh primary outputs: {required - hashes.keys()}")
     run([str(dart), "format", "--output=none", "--set-exit-if-changed", *sources], app, env=env)

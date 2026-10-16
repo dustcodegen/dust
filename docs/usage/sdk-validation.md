@@ -67,10 +67,14 @@ the repository lock running on every SDK.
    derive, JSON, copyWith, validation, HTTP, row mapping and Flutter route/state
    behavior exercised by those examples; they are not every package or feature.
 6. On the latest Dart SDK, stage `fixtures/primary_sdk_consumer` independently,
-   remove any copied generated output, and run fresh Dust build/check. Require
-   all four model/client `.g.dart` files, check handwritten formatting, analyze
-   with fatal infos, and execute its derive, JSON, validation, enum, HTTP,
-   private row mapping, sync/worker SQLite and nullable/nested copy tests.
+   remove any copied generated output, and run fresh Dust build/check plus
+   online DB build/check and an offline DB check. Require all five
+   model/client/database `.g.dart` files and complete SQLite metadata for all
+   five terminals in both direct-query and DAO libraries. The probe removes
+   host `DUST_DATABASE_URL` from its subprocess environment, so validation uses
+   an owned in-memory schema. Check handwritten formatting, analyze with fatal
+   infos, and execute derive, JSON, validation, enum, HTTP, private row mapping,
+   checked direct/DAO queries, sync/worker SQLite and nullable/nested copy tests.
    Repeat with `fixtures/primary_flutter_consumer` on latest Flutter, requiring
    the generated state and route files and running route, state and widget
    tests. Both fixtures require Dart 3.13; neither raises the runtime SDK floor.
