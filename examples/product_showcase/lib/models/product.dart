@@ -5,9 +5,16 @@ import 'price.dart';
 
 part 'product.g.dart';
 
+abstract mixin class _ProductLabel {
+  String get sku;
+  String get title;
+
+  String get displayLabel => '$sku: $title';
+}
+
 /// Product model for the product showcase example.
 @Derive([ToString(), Eq(), CopyWith()])
-class Product with _$Product {
+class Product with _ProductLabel, _$Product {
   /// Creates a [Product].
   const Product({
     required this.sku,
@@ -19,9 +26,11 @@ class Product with _$Product {
   });
 
   /// SKU.
+  @override
   final String sku;
 
   /// Title.
+  @override
   final String title;
 
   /// Price.

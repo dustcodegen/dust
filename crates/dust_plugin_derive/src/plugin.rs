@@ -17,7 +17,7 @@ pub fn register_plugin() -> DerivePlugin {
 }
 
 /// Trait symbols claimed by the derive plugin.
-const CLAIMED_TRAITS: &[&str] = &[
+pub(crate) const CLAIMED_TRAITS: &[&str] = &[
     TO_STRING_SYMBOL,
     DEBUG_SYMBOL,
     EQ_SYMBOL,
