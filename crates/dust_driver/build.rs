@@ -26,6 +26,11 @@ const CODEGEN_FINGERPRINT_ROOTS: &[&str] = &[
     "crates/dust_route_plugin/src",
     "crates/dust_state_plugin/src",
     "crates/dust_workspace/src",
+    "vendor/tree-sitter-dart/Cargo.toml",
+    "vendor/tree-sitter-dart/UPSTREAM.json",
+    "vendor/tree-sitter-dart/bindings/rust",
+    "vendor/tree-sitter-dart/grammar.js",
+    "vendor/tree-sitter-dart/src",
 ];
 
 /// Generates the codegen fingerprint manifest consumed by the build cache.
@@ -56,9 +61,15 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// Recursively collects source and template files for fingerprinting.
+/// Collects an explicit file or recursively walks a source directory.
 fn collect_fingerprint_files(root: &Path, files: &mut Vec<PathBuf>) -> io::Result<()> {
     println!("cargo:rerun-if-changed={}", root.display());
+    if root.is_file() {
+        if is_fingerprint_file(root) {
+            files.push(root.to_path_buf());
+        }
+        return Ok(());
+    }
     let entries = fs::read_dir(root)?;
     for entry in entries {
         let entry = entry?;
