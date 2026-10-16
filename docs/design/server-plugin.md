@@ -4,8 +4,8 @@ Status: proposal, with the runtime built. This document describes a Dust feature
 for generating Dart HTTP server wiring from annotated controller classes, with
 runtime route composition.
 
-`packages/dust_server` exists, is published, and is held at 100% line coverage
-by a gate in CI. That includes `test/generated/`, which hand-writes what the
+`packages/dust_server` exists, is published, and has a local 100% line-coverage
+gate. That includes `test/generated/`, which hand-writes what the
 plugin will emit for the [Worked Example](#worked-example) below, and the
 examples in `example/`, which exercise every extractor, layer, and response path
 the plugin will emit against.
@@ -66,7 +66,7 @@ The existing HTTP client sets the precedent. It is Dio-specific but ships as
 | :--- | :--- |
 | `packages/dust_server` | Annotations, `FromRequestParts`, `Router`, `Rejection`, `IntoResponse`, `Layer`, `MountedRoute`, the shipped layers, and `serve`. |
 | `crates/dust_server_plugin` | `DustPlugin` implementation. |
-| `crates/dust_ir/src/server.rs` | `ServerIr`, matching the existing `http.rs`, `route.rs`, `db.rs` split. |
+| `crates/dust_ir/src/server.rs` | Planned shared server normalization, matching the existing `http.rs`, `route.rs`, `db.rs` split; introduce reviewed types when emission consumes them, not as unused phase-0 placeholders. |
 
 `dust_server` depends on `dust_dart`, `shelf`, `mime`, and `meta`. Routing is
 its own, so `shelf_router` is not a dependency.
@@ -82,8 +82,19 @@ one import.
 
 ## Engine Prerequisites
 
-None blocking. Every phase below builds against today's parser, resolver, and
-IR.
+The phase-0 ownership spike found a resolver prerequisite
+([#84](https://github.com/dustcodegen/dust/issues/84), under
+[#82](https://github.com/dustcodegen/dust/issues/82)). The current catalog
+retains only one configuration per short name. Registering both client and
+server `GET` loses one canonical owner; even distinct import prefixes currently
+resolve both methods to the last registered owner. Four regression tests
+reproduce these two failures in both registration orders.
+
+Do not enable the default server registry until namespace-safe resolution is
+implemented and validated. Existing tests intentionally retain short-name alias
+compatibility, so import visibility and re-export behavior need a reviewed
+policy rather than another registration-order heuristic. That expansion into
+resolver work is awaiting approval; the spike changes no parser or IR contract.
 
 ### Cleared: class interfaces in IR
 
@@ -1174,7 +1185,7 @@ Phase 6.
 
 | Phase | Scope | Exit criteria |
 | :--- | :--- | :--- |
-| 0 | Symbol-ownership spike. Package and crate skeletons, `dust_ir/src/server.rs`, registry entry. No parser, resolver, or IR work. | Server and client plugins coexist; discovery finds both. |
+| 0 | Symbol-ownership spike; resolve the namespace prerequisite in #84 before enabling crate/driver/registry integration. Shared IR is deferred until consumed by emission. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing existing client output. |
 | 1 | `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Path syntax rewrite and the missing-path-key diagnostic. | Todo controller serves GET and POST. |
 | 2 | `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
 | 3 | Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
@@ -1206,8 +1217,9 @@ Per the [Plugin Guide](../plugin-guide.md):
 3. Export `register_plugin()`.
 4. Register it in `crates/dust_driver/src/build/support/registry.rs`.
 
-Templates and modules under the plugin's `src/` tree are fingerprinted
-automatically.
+Add the plugin's `src/` directory to `CODEGEN_FINGERPRINT_ROOTS` in
+`crates/dust_driver/build.rs`. Once registered there, its modules and templates
+are included recursively; a new plugin directory is not discovered automatically.
 
 ## Open Questions
 
