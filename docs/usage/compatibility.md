@@ -30,6 +30,13 @@ Supported handwritten syntax and generated Dart can work on a newer SDK even
 when new language syntax is not supported by Dust. A language-version gate
 records when Dart introduced a feature; it is not a parser-support guarantee.
 
+In this source checkout, version gates inspect syntax facts, not words in
+comments or string contents. For example, a regex containing `[.,]` is not a
+dot shorthand, and documentation or a supported `...?items` spread is not a
+Dart 3.8 null-aware element. Actual interpolation code is still checked:
+`'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic fix is
+unreleased and does not enable otherwise unsupported code generation.
+
 Class-header primary-constructor support is in development under
 [#76](https://github.com/dustcodegen/dust/issues/76). This branch exercises typed
 declaring parameters through generated Dart and Flutter consumers; it is not

@@ -1,13 +1,14 @@
 use crate::syntax::text_range;
 use dust_dart_syntax::{DartLanguageFeature, DartLanguageVersion};
 use dust_diagnostics::{Diagnostic, SourceLabel};
-use dust_parser_dart::{ParameterKind, ParsedClassKind, ParsedDartFileSurface, ParsedTypeKind};
+use dust_parser_dart::{ParameterKind, ParsedDartFileSurface};
 use dust_text::{SourceText, TextRange};
 use tree_sitter::Node;
 
 /// Locating where an unsupported language feature appears in a source file.
 mod occurrences;
-use self::occurrences::*;
+pub(crate) use self::occurrences::{FeatureOccurrence, record_syntax_occurrence};
+use self::occurrences::{find_private_named_parameter, push_range_occurrence};
 
 /// Extracts diagnostics for Dart syntax that requires a newer language version.
 pub(crate) fn extract_language_version_diagnostics(
@@ -15,6 +16,7 @@ pub(crate) fn extract_language_version_diagnostics(
     library: &ParsedDartFileSurface,
     source: &SourceText,
     version: DartLanguageVersion,
+    mut occurrences: Vec<FeatureOccurrence>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let primary_ranges = primary_constructor_ranges(root);
@@ -24,7 +26,16 @@ pub(crate) fn extract_language_version_diagnostics(
         version,
         &primary_ranges,
     ));
-    let mut occurrences = feature_occurrences(library, source.as_str());
+    push_range_occurrence(
+        &mut occurrences,
+        DartLanguageFeature::ExtensionTypes,
+        library.extension_types.first().map(|item| item.span),
+    );
+    push_range_occurrence(
+        &mut occurrences,
+        DartLanguageFeature::PrivateNamedParameters,
+        find_private_named_parameter(library),
+    );
     push_range_occurrence(
         &mut occurrences,
         DartLanguageFeature::PrimaryConstructors,

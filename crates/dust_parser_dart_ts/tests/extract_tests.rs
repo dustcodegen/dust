@@ -20,6 +20,8 @@ mod directive_namespaces;
 mod fields;
 #[path = "extract_tests/generic_headers.rs"]
 mod generic_headers;
+#[path = "extract_tests/language_occurrences.rs"]
+mod language_occurrences;
 #[path = "extract_tests/library_surface.rs"]
 mod library_surface;
 #[path = "extract_tests/methods.rs"]
