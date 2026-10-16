@@ -74,7 +74,7 @@ fn collect_calls(
     // so a query inside one keeps the name of the function containing it rather
     // than reporting an anonymous closure.
     let enclosing = match node.kind() {
-        "class_declaration" => &Enclosing {
+        "class_declaration" | "class_definition" => &Enclosing {
             class: declaration_name(node, source),
             function: None,
         },

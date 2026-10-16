@@ -3,6 +3,11 @@
 use dust_parser_dart::{ParseBackend, ParseOptions, ParsedDartFileSurface};
 use dust_text::{FileId, SourceText};
 
+/// Complete translation scans, including diagnostics and source spans.
+mod i18n;
+/// Complete query facts, including context and unsafe SQL markers.
+mod queries;
+
 /// Exercises the real backend, including its declaration fast path and diagnostics.
 fn parse(text: &str) -> ParsedDartFileSurface {
     let source = SourceText::new(FileId::new(0), text);
