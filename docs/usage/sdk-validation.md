@@ -67,8 +67,10 @@ the repository lock running on every SDK.
    derive, JSON, copyWith, validation, HTTP, row mapping and Flutter route/state
    behavior exercised by those examples; they are not every package or feature.
 6. On the latest Dart SDK, independently analyze valid primary-constructor and
-   named concise `new` samples. Dust build/check must reject both with parser
-   errors, exit 1 and no generated output. SDK acceptance is not Dust support.
+   named concise `new` samples. Dust build/check must reject both with the
+   feature-specific `Dust does not support ... yet` error, exit 1 and no generated
+   output. SDK acceptance is not Dust support; a generic parse error or unrelated
+   failure cannot satisfy this negative probe.
 
 Lint-tool selection is 7.0.0 on the core floor, 10.1.0 on Dart 3.10/3.11 and
 10.3.0 on 3.12+. The staged floor options omit only the already-disabled

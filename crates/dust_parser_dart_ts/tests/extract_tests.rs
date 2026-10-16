@@ -22,3 +22,5 @@ mod library_surface;
 mod methods;
 #[path = "extract_tests/support.rs"]
 mod support;
+#[path = "extract_tests/unsupported_syntax.rs"]
+mod unsupported_syntax;

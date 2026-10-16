@@ -16,10 +16,10 @@ fn classes(source: &SourceText) -> Vec<ParsedClassSurface> {
         "{}",
         tree.root_node().to_sexp()
     );
-    let expected_kind = if env!("CARGO_PKG_NAME") == "dust_listed_parser_parity" {
-        "class_definition"
-    } else {
+    let expected_kind = if env!("CARGO_PKG_NAME") == "dust_legacy_parser_parity" {
         "class_declaration"
+    } else {
+        "class_definition"
     };
     let mut cursor = tree.root_node().walk();
     let class = tree

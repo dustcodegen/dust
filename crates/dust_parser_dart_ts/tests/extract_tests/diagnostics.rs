@@ -33,10 +33,8 @@ class Broken {
 #[test]
 fn explains_syntax_errors_without_claiming_the_dart_source_is_invalid() {
     for source in [
-        "class const User(final String name);",
-        "class User<T>(final T value);",
-        "class User { const new create(); }",
         "class Broken { final String name }",
+        "void broken() { final value = ; }",
     ] {
         let result = parse(313, source);
         let syntax_errors = result

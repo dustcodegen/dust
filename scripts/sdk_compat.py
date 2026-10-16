@@ -237,7 +237,8 @@ def check_unsupported(run, dust: Path, dart: Path, output: Path) -> list[str]:
         run([str(dart), "analyze", "--fatal-infos", "lib/probe.dart"], app)
         for command in ("build", "check"):
             result = run([str(dust), command, "--root", str(app)], expected=1)
-            if "syntax error" not in result.stderr or (app / "lib/probe.g.dart").exists():
+            feature = "primary constructors" if name == "primary" else "concise constructors"
+            if f"Dust does not support {feature} yet" not in result.stderr or (app / "lib/probe.g.dart").exists():
                 raise ValueError(f"{name}: missing parser failure or unexpected generated output")
     return list(sources)
 

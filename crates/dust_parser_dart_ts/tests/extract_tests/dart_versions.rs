@@ -127,7 +127,7 @@ fn preserves_super_parameter_and_extension_type_surfaces() {
 }
 
 #[test]
-fn reports_diagnostics_for_grammar_blocked_future_syntax() {
+fn reports_diagnostics_for_generation_blocked_future_syntax() {
     let fixtures = [
         DartVersionFixture {
             label: "Dart 3.10 dot shorthands",
@@ -148,7 +148,7 @@ fn reports_diagnostics_for_grammar_blocked_future_syntax() {
 
         assert!(
             result.has_errors(),
-            "{} language={} path={} should stay diagnostic-gated until tree-sitter Dart supports it",
+            "{} language={} path={} should stay diagnostic-gated until Dust generation supports it",
             fixture.label,
             fixture.language_version,
             fixture.path
@@ -157,7 +157,15 @@ fn reports_diagnostics_for_grammar_blocked_future_syntax() {
             result
                 .diagnostics
                 .iter()
-                .any(|diagnostic| diagnostic.message.contains("Dart syntax error"))
+                .any(|diagnostic| diagnostic.message
+                    == format!(
+                        "Dust does not support {} yet",
+                        if index == 0 {
+                            "dot shorthands"
+                        } else {
+                            "primary constructors"
+                        }
+                    ))
         );
     }
 }

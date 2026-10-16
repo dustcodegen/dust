@@ -1,5 +1,5 @@
 [package]
-name = "dust_listed_parser_parity"
+name = "dust_legacy_parser_parity"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.85"
@@ -17,4 +17,4 @@ dust_text = { path = "../../dust_text" }
 dust_diagnostics = { path = "../../dust_diagnostics" }
 dust_parser_dart = { path = "../../dust_parser_dart" }
 tree-sitter = "=0.25.10"
-tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }
+tree-sitter-dart = "=0.1.0"

@@ -1,10 +1,12 @@
 # Pinned listed-upstream Dart grammar
 
-Prepared binding for migration [#68](https://github.com/dustcodegen/dust/issues/68),
-stage [#69](https://github.com/dustcodegen/dust/issues/69). It is **not the active
-Dust parser**. The existing packaged grammar remains in use until extraction
-parity is established in [#70](https://github.com/dustcodegen/dust/issues/70).
-Accepting primary constructors here does not make them supported by Dust.
+Active source-checkout binding for migration
+[#68](https://github.com/dustcodegen/dust/issues/68), prepared in
+[#69](https://github.com/dustcodegen/dust/issues/69) and adopted under
+[#70](https://github.com/dustcodegen/dust/issues/70). The standalone parity
+harness retains the packaged grammar in a separate binary. Accepting primary
+constructors here does not make them supported by Dust's generators, and this
+source change does not update already released binaries.
 
 ## Origin and changes
 
@@ -31,7 +33,7 @@ The active local Cargo manifest and Rust binding adapt the upstream's old
 Tree-sitter 0.22 interface to `tree-sitter-language::LanguageFn`. Tests use
 exactly Tree-sitter 0.25.10, the runtime Dust already uses. The crate retains
 upstream's `0.0.1` metadata version, is non-publishable, and is excluded from
-the root workspace and production dependency graph in this stage.
+the root workspace, but is now a production path dependency.
 
 The local build script preserves upstream C compiler settings and compiles
 the checked-in C sources. Its only refactoring is sharing the two source-file

@@ -1906,9 +1906,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-dart"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bba6bf8675e6fe92ba6da371a5497ee5df2a04d2c503e3599c8ad771f6f1faec"
+version = "0.0.1"
 dependencies = [
  "cc",
  "tree-sitter-language",

@@ -33,12 +33,13 @@ class ListedGrammarTests(unittest.TestCase):
         """Write the synthetic provenance document under the owned temp root."""
         (root / "UPSTREAM.json").write_text(json.dumps(value), encoding="utf-8")
 
-    def test_checked_in_sources_match_and_active_parser_stays_unchanged(self) -> None:
+    def test_active_parser_is_pinned_and_legacy_harness_is_separate(self) -> None:
         self.assertEqual(check(ROOT / "vendor/tree-sitter-dart"), [])
         manifest = (ROOT / "crates/dust_parser_dart_ts/Cargo.toml").read_text()
-        self.assertIn('tree-sitter-dart = "0.1.0"', manifest)
+        self.assertIn('tree-sitter-dart = { path = "../../vendor/tree-sitter-dart" }', manifest)
         harness = (ROOT / "crates/dust_parser_dart_ts/parity/Cargo.toml").read_text()
-        self.assertIn('tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }', harness)
+        self.assertIn('tree-sitter-dart = "=0.1.0"', harness)
+        self.assertIn('name = "dust_legacy_parser_parity"', harness)
 
     def test_parser_parity_requires_all_complete_matching_records(self) -> None:
         output = "\n".join(
