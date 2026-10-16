@@ -1,0 +1,5 @@
+# Preserve the exact upstream bytes even with core.autocrlf enabled.
+src/** -text
+upstream/** -text
+grammar.js -text
+LICENSE -text

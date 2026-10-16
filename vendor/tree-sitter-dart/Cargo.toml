@@ -1,0 +1,22 @@
+[package]
+name = "tree-sitter-dart"
+description = "Pinned listed-upstream Dart grammar; Dust binding migration"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/UserNobody14/tree-sitter-dart"
+publish = false
+build = "bindings/rust/build.rs"
+
+[lib]
+path = "bindings/rust/lib.rs"
+
+[dependencies]
+tree-sitter-language = "0.1"
+
+[build-dependencies]
+cc = "1.2"
+
+[dev-dependencies]
+tree-sitter = "=0.25.10"

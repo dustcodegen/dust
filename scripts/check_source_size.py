@@ -40,6 +40,9 @@ BASELINE: dict[str, int] = {}
 # Every hand-written source file, wherever it lives. Only generated Dart is
 # excluded, by the `.g.dart` suffix.
 SOURCE_GLOBS = (
+    ("vendor", "*/bindings/rust/**/*.rs"),
+    ("vendor", "*/tests/**/*.rs"),
+    ("vendor", "*/src/scanner.c"),
     ("crates", "*/src/**/*.rs"),
     ("crates", "*/tests/**/*.rs"),
     ("crates", "*/benches/**/*.rs"),
@@ -206,7 +209,10 @@ class CheckSourceSizeTests(unittest.TestCase):
                 root, "examples/demo/test_driver/probe.dart", LINE_LIMIT + 1
             )
             self._workspace(root, "fixtures/demo/bin/probe.dart", LINE_LIMIT + 1)
-            self.assertEqual(len(check(root)), 9)
+            self._workspace(root, "vendor/demo/bindings/rust/lib.rs", LINE_LIMIT + 1)
+            self._workspace(root, "vendor/demo/tests/grammar.rs", LINE_LIMIT + 1)
+            self._workspace(root, "vendor/demo/src/scanner.c", LINE_LIMIT + 1)
+            self.assertEqual(len(check(root)), 12)
 
     def test_inline_test_module_counts(self) -> None:
         BASELINE.clear()
