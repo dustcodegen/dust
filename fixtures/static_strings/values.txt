@@ -1,0 +1,86 @@
+unicode-uri	0061 002e 0064 0061 0072 0074
+'\u0061.dart'
+---
+hex	0000 000a 00ff
+'\x00\x0a\xFF'
+---
+unicode-widths	0000 0001 0012 0123 1234 1234 ffff dbff dfff
+'\u{0}\u{1}\u{12}\u{123}\u{1234}\u{01234}\u{00ffff}\u{10FFFF}'
+---
+surrogates	 d834 dd1e
+'\uD834\uDD1E'
+---
+brace-surrogates	d834 dd1e
+'\u{D834}\u{DD1E}'
+---
+mixed-surrogates	d834 dd1e
+'\uD834\u{DD1E}'
+---
+unicode-literal	0063 0061 0066 00e9 0020 d83d de80
+'café 🚀'
+---
+identity-escapes	006b 0030 0061 007a 00e9
+'\k\0\a\z\é'
+---
+controls	000a 000d 0009 0008 000c 000b
+'\n\r\t\b\f\v'
+---
+escaped-quotes	0027 0022 005c 0024
+'\'\"\\\$'
+---
+encoded-specials	0024 0074 0061 0062 006c 0065 005c 0027
+'\u0024table\x5c\u0027'
+---
+raw	005c 0075 0030 0030 0036 0031 0024 0031
+r'\u0061$1'
+---
+raw-trailing-backslash	0061 005c
+r'a\'
+---
+empty	
+''
+---
+triple-empty	
+""""""
+---
+triple-quotes	0022 0022 0061 0027 0027 0062
+'''""a''b'''
+---
+triple-lf	0061 000a 0062
+'''a
+b'''
+---
+triple-first-line	0061 000a 0062
+''' 	
+a
+b'''
+---
+triple-escaped-first-line	0061
+'''\ \ \	\
+a'''
+---
+raw-triple-first-line	0061
+r''' 	
+a'''
+---
+raw-triple-backslash	0061
+r'''\
+a'''
+---
+raw-escaped-first-line	0061
+r'''\ \ \	\
+a'''
+---
+triple-escaped-lf	0061 000a 0062	0061 000d 000a 0062	0061 000d 0062
+'''a\
+b'''
+---
+escaped-not-physical-lf	000a 000a 0061
+'''\n
+a'''
+---
+whitespace-no-lf	0020 0009
+''' 	'''
+---
+sql	0053 0045 004c 0045 0043 0054 0020 0031
+'\u0053ELECT \x31'

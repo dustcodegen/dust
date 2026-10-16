@@ -1,0 +1,3 @@
+# End-of-line spaces/tabs are the literal data these compiler probes verify.
+*.txt text eol=lf
+values.txt whitespace=-blank-at-eol

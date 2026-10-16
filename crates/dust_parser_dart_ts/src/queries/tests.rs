@@ -45,7 +45,7 @@ fn extracts_multiline_sql() {
 
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].function, ParsedQueryFunction::Execute);
-    assert_eq!(calls[0].sql, "\nDELETE FROM users\nWHERE id = $1\n");
+    assert_eq!(calls[0].sql, "DELETE FROM users\nWHERE id = $1\n");
     assert_eq!(calls[0].parameter_count, 1);
     assert_eq!(calls[0].fetch_method.as_deref(), Some("execute"));
 }

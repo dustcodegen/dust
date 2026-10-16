@@ -80,10 +80,9 @@ fn annotation_value(
             "unary_expression" => signed_number_kind(node)
                 .map(ParsedAnnotationValueRootKind::Number)
                 .unwrap_or(ParsedAnnotationValueRootKind::Expression),
-            "string_literal" => ParsedAnnotationValueRootKind::String(
-                parse_static_dart_string_literal(&value_source)
-                    .unwrap_or_else(|| value_source.clone()),
-            ),
+            "string_literal" => parse_static_dart_string_literal(&value_source)
+                .map(ParsedAnnotationValueRootKind::String)
+                .unwrap_or(ParsedAnnotationValueRootKind::Expression),
             "list_literal" => ParsedAnnotationValueRootKind::List(collection_values(node, source)),
             "set_or_map_literal" => set_or_map_kind(node, source),
             "record_literal" => ParsedAnnotationValueRootKind::Record(record_values(node, source)),

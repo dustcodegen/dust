@@ -58,9 +58,9 @@ change is intended by adding these facts.
 
 ## Remaining work
 
-- Verify URI semantic decoding before reading graph inputs; the shared static
-  literal decoder's Unicode-escape mismatch is tracked separately in
-  [#107](https://github.com/dustcodegen/dust/issues/107).
+- Use the [verified shared static literal contract](static-dart-literals.md)
+  when reading graph inputs ([#107](https://github.com/dustcodegen/dust/issues/107));
+  never use the shallow delimiter-stripper for semantic URI identity.
 - Associate canonical symbols with actual declaration origins, construct the
   import/export/part graph, and use one binding policy at every annotation site.
 - Validate conditional equivalence, foreign/hidden/ambiguous/missing outcomes,

@@ -5,8 +5,9 @@ use crate::{
     StateConfigIr,
 };
 use dust_dart_syntax::{
-    normalized_args, parse_bool_literal, parse_string_list, parse_string_literal, parse_string_map,
-    parse_type_list, parse_type_name, split_top_level_items, split_top_level_once,
+    normalized_args, parse_bool_literal, parse_static_dart_string_literal, parse_string_list,
+    parse_string_map, parse_type_list, parse_type_name, split_top_level_items,
+    split_top_level_once,
 };
 
 /// The normalized config forms a plugin reads instead of raw annotation values.
@@ -114,10 +115,11 @@ impl ConfigApplicationIr {
 
     /// Returns one top-level positional string literal by index.
     pub fn positional_string(&self, index: usize) -> Option<String> {
-        if let Some(AnnotationValueIr::String(value)) = self.positional_argument_value(index) {
-            return Some(value.clone());
+        match self.positional_argument_value(index) {
+            Some(AnnotationValueIr::String(value)) => Some(value.clone()),
+            Some(_) => None,
+            None => parse_static_dart_string_literal(self.positional_argument_source(index)?),
         }
-        parse_string_literal(self.positional_argument_source(index)?)
     }
 
     /// Returns one top-level positional string map literal by index.
@@ -154,10 +156,11 @@ impl ConfigApplicationIr {
 
     /// Returns one top-level named string literal.
     pub fn named_string(&self, name: &str) -> Option<String> {
-        if let Some(AnnotationValueIr::String(value)) = self.named_argument_value(name) {
-            return Some(value.clone());
+        match self.named_argument_value(name) {
+            Some(AnnotationValueIr::String(value)) => Some(value.clone()),
+            Some(_) => None,
+            None => parse_static_dart_string_literal(self.named_argument_source(name)?),
         }
-        parse_string_literal(self.named_argument_source(name)?)
     }
 
     /// Returns one top-level named list of string literals.

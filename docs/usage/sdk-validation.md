@@ -66,6 +66,10 @@ the repository lock running on every SDK.
 5. Analyze with fatal infos and run the complete consumer suites. These cover
    derive, JSON, copyWith, validation, HTTP, row mapping and Flutter route/state
    behavior exercised by those examples; they are not every package or feature.
+   Also evaluate the [shared static-literal corpus](../design/static-dart-literals.md)
+   on both standalone Dart endpoints with LF, CRLF and CR files, and verify real
+   Unicode/hex-escaped imports. Probe tests use owned staging and are removed
+   after success or failure; baseline generated hashes stay separate.
 6. On the latest Dart SDK, stage `fixtures/primary_sdk_consumer` independently,
    remove any copied generated output, and run fresh Dust build/check plus
    online DB build/check and an offline DB check. Require all seven

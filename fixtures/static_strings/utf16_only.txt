@@ -1,0 +1,5 @@
+unpaired-high	d800
+'\uD800'
+---
+unpaired-low	dfff
+'\u{DFFF}'
