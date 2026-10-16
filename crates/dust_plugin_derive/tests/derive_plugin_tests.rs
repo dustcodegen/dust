@@ -9,6 +9,9 @@ mod registration;
 #[path = "derive_plugin_tests/validation.rs"]
 mod validation;
 
+#[path = "derive_plugin_tests/mixin_classes.rs"]
+mod mixin_classes;
+
 #[path = "derive_plugin_tests/copywith.rs"]
 mod copywith;
 
