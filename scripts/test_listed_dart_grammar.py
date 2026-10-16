@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from check_listed_dart_grammar import FILES, ROOT, check
-from check_listed_class_parity import CASES, MARKER, compare, records
+from check_listed_parser_parity import CASES, CLASS_CASES, MARKER, compare, records
 
 
 class ListedGrammarTests(unittest.TestCase):
@@ -40,14 +40,20 @@ class ListedGrammarTests(unittest.TestCase):
         harness = (ROOT / "crates/dust_parser_dart_ts/parity/Cargo.toml").read_text()
         self.assertIn('tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }', harness)
 
-    def test_class_parity_requires_all_complete_matching_records(self) -> None:
-        output = "\n".join(f"test prefix {MARKER}{name}:[ParsedClassSurface {{ name: User }}]" for name in sorted(CASES))
+    def test_parser_parity_requires_all_complete_matching_records(self) -> None:
+        output = "\n".join(
+            f"test prefix {MARKER}{name}:" +
+            ("[ParsedClassSurface { name: User }]" if name in CLASS_CASES else "ParsedDartFileSurface { name: User }")
+            for name in sorted(CASES)
+        )
         self.assertEqual(set(records(output)), CASES)
         compare(output, output)
         with self.assertRaisesRegex(ValueError, "differs"):
             compare(output, output.replace("User", "Other", 1))
         for invalid in ("", output.split("\n", 1)[1], output + "\n" + output,
                         output.replace("[ParsedClassSurface { name: User }]", "[]", 1),
+                        output.replace("ParsedDartFileSurface { name: User }", "[]", 1),
+                        output.replace("ParsedDartFileSurface { name: User }", "[ParsedClassSurface { name: User }]", 1),
                         output + f"\n{MARKER}unknown:invalid", output + f"\n{MARKER}broken"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 records(invalid)

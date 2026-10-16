@@ -25,6 +25,10 @@ mod syntax;
 /// Type extraction.
 mod types;
 
+/// Complete library-fact contracts for the staged grammar migration.
+#[cfg(test)]
+mod parity_tests;
+
 use dust_diagnostics::Diagnostic;
 use dust_parser_dart::{ParseBackend, ParseOptions, ParseResult, ParsedDartFileSurface};
 use dust_text::SourceText;

@@ -40,7 +40,7 @@ fn assert_parity(case: &str, text: &str, count: usize) {
     let source = SourceText::new(FileId::new(0), text);
     let classes = classes(&source);
     assert_eq!(classes.len(), count);
-    println!("DUST_CLASS_PARITY:{case}:{classes:?}");
+    println!("DUST_PARSER_PARITY:{case}:{classes:?}");
 }
 
 #[test]

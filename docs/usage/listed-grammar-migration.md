@@ -37,17 +37,24 @@ binary gains primary-constructor support from this work.
 The first #70 slice adapts backend-private traditional class/member extraction:
 class node names, sibling metadata and bodies, field identifiers/initializers,
 factory names/targets and operator names. The production grammar stays unchanged.
-The same seven contracts execute with each grammar in separate native binaries
-and compare complete parser facts, including byte spans, with no rewritten
-snapshots. They cover nested nullable types/defaults, named/super parameters,
+The next slice adds mixin member/metadata extraction, top-level variable names
+and initializer facts, and preservation of generic/named extension-type names.
+Fifteen contracts execute with each grammar in separate native binaries and
+compare complete parser facts, including byte spans, with no rewritten snapshots.
+Seven cover classes, nested nullable types/defaults, named/super parameters,
 modifiers/inheritance, annotated members/parameters, factories and adjacent
-method/operator bodies.
+method/operator bodies. Eight cover named/unnamed libraries, URI/named parts,
+conditional imports/exports, combinators, annotated/enhanced enums, mixins,
+extensions/representations, variables, functions and typedefs. Comments and
+Unicode source spans must survive too. This preserves existing facts; it does
+not redesign or expand the public parser surface.
 
-Run `python3 scripts/check_listed_class_parity.py` locally. The
+Run `python3 scripts/check_listed_parser_parity.py` locally. The
 [isolated harness notes](../../crates/dust_parser_dart_ts/parity/README.md)
 explain why both native grammars must not share a test executable. These scoped
-contracts do not prove whole-backend or new-syntax compatibility; #70 and #68
-stay open until all remaining extraction and generated-consumer gates pass.
+contracts do not prove every declaration form, query/i18n parity, whole-backend
+adoption or new-syntax compatibility; #70 and #68 stay open until all remaining
+extraction and generated-consumer gates pass.
 
 ## Stages under #68
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare complete class facts in separately linked grammar test binaries."""
+"""Compare complete parser facts in separately linked grammar test binaries."""
 
 from __future__ import annotations
 
@@ -7,8 +7,10 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CASES = {"traditional", "modifiers", "metadata", "methods", "factories", "parameters", "operators"}
-MARKER = "DUST_CLASS_PARITY:"
+CLASS_CASES = {"traditional", "modifiers", "metadata", "methods", "factories", "parameters", "operators"}
+CASES = CLASS_CASES | {"directives", "conditional-directives", "uri-part", "unnamed-library",
+                       "enums", "declarations", "variables", "functions"}
+MARKER = "DUST_PARSER_PARITY:"
 
 
 def records(output: str) -> dict[str, str]:
@@ -18,11 +20,12 @@ def records(output: str) -> dict[str, str]:
         if MARKER not in line:
             continue
         name, separator, facts = line.partition(MARKER)[2].partition(":")
-        if not separator or name not in CASES or name in found or not facts.startswith("[ParsedClassSurface {"):
-            raise ValueError(f"Invalid class parity record: {name!r}")
+        prefix = "[ParsedClassSurface {" if name in CLASS_CASES else "ParsedDartFileSurface {"
+        if not separator or name not in CASES or name in found or not facts.startswith(prefix):
+            raise ValueError(f"Invalid parser parity record: {name!r}")
         found[name] = facts
     if set(found) != CASES:
-        raise ValueError(f"Missing class parity cases: {sorted(CASES - found.keys())}")
+        raise ValueError(f"Missing parser parity cases: {sorted(CASES - found.keys())}")
     return found
 
 
@@ -31,12 +34,12 @@ def compare(existing: str, listed: str) -> None:
     baseline, candidate = records(existing), records(listed)
     different = sorted(name for name in CASES if baseline[name] != candidate[name])
     if different:
-        raise ValueError(f"Listed class extraction differs: {', '.join(different)}")
+        raise ValueError(f"Listed parser extraction differs: {', '.join(different)}")
 
 
 def main() -> None:
     """Build each grammar alone; duplicate native exports cannot alias the test."""
-    output = ROOT / ".dart_tool/listed-class-parity"
+    output = ROOT / ".dart_tool/listed-parser-parity"
     output.mkdir(parents=True, exist_ok=True)
     logs = []
     for name, selector in (
@@ -44,17 +47,17 @@ def main() -> None:
         ("listed", ["--manifest-path", "crates/dust_parser_dart_ts/parity/Cargo.toml"]),
     ):
         result = subprocess.run(
-            ["cargo", "test", *selector, "--locked", "--lib", "classes::parity_tests", "--",
+            ["cargo", "test", *selector, "--locked", "--lib", "parity_tests", "--",
              "--nocapture", "--test-threads=1"],
             cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900,
         )
         log = output / f"{name}.log"
         log.write_text(result.stdout, encoding="utf-8")
         if result.returncode:
-            raise RuntimeError(f"{name} class contracts failed; see {log}")
+            raise RuntimeError(f"{name} parser contracts failed; see {log}")
         logs.append(result.stdout)
     compare(*logs)
-    print(f"Listed class parity: {len(CASES)} exact contracts; evidence: {output}")
+    print(f"Listed parser parity: {len(CASES)} exact contracts; evidence: {output}")
 
 
 if __name__ == "__main__":

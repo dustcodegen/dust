@@ -3,14 +3,12 @@ use dust_text::SourceText;
 use tree_sitter::Node;
 
 use crate::{
-    annotations::{extract_annotation, extract_member_annotations},
-    syntax::{
-        find_first_descendant_text, first_non_annotation_named_child, has_direct_child_kind,
-        node_text, text_range,
-    },
+    annotations::extract_annotation,
+    syntax::{find_first_descendant_text, has_direct_child_kind, node_text, text_range},
 };
 
 use super::{
+    annotated_members,
     constructors::{extract_constructor, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
     methods::extract_method,
@@ -50,52 +48,25 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     }
 
     if let Some(body) = node.child_by_field_name("body") {
-        let mut pending_annotations = Vec::new();
-        let mut body_cursor = body.walk();
-        for member in body
-            .children(&mut body_cursor)
-            .filter(|child| child.is_named())
-        {
-            if member.kind() == "annotation" {
-                pending_annotations.push(extract_annotation(member, source));
-                continue;
-            }
-            let declaration = match member.kind() {
-                "class_member" => first_non_annotation_named_child(member),
-                "declaration" | "method_signature" => Some(member),
-                _ => None,
-            };
-            if let Some(declaration) = declaration {
-                let member_annotations = if member.kind() == "class_member" {
-                    extract_member_annotations(member, source)
-                } else {
-                    std::mem::take(&mut pending_annotations)
-                };
-                match classify_class_member(declaration) {
-                    Some(ClassMemberShape::Constructor(signature)) => {
-                        constructors.push(extract_constructor(
-                            signature,
-                            &member_annotations,
-                            source,
-                        ));
-                    }
-                    Some(ClassMemberShape::Field(identifier_list)) => {
-                        fields.extend(extract_fields_from_identifier_list(
-                            declaration,
-                            identifier_list,
-                            &member_annotations,
-                            source,
-                        ));
-                    }
-                    Some(ClassMemberShape::Method) => {
-                        if let Some(method) =
-                            extract_method(declaration, &member_annotations, source)
-                        {
-                            methods.push(method);
-                        }
-                    }
-                    None => {}
+        for (declaration, member_annotations) in annotated_members(body, source) {
+            match classify_class_member(declaration) {
+                Some(ClassMemberShape::Constructor(signature)) => {
+                    constructors.push(extract_constructor(signature, &member_annotations, source));
                 }
+                Some(ClassMemberShape::Field(identifier_list)) => {
+                    fields.extend(extract_fields_from_identifier_list(
+                        declaration,
+                        identifier_list,
+                        &member_annotations,
+                        source,
+                    ));
+                }
+                Some(ClassMemberShape::Method) => {
+                    if let Some(method) = extract_method(declaration, &member_annotations, source) {
+                        methods.push(method);
+                    }
+                }
+                None => {}
             }
         }
     }
