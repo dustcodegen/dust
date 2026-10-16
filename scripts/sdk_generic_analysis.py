@@ -6,11 +6,12 @@ from pathlib import Path
 
 
 def check_generic_analysis(run, dart: Path, app: Path, options: Path,
-                           library: str, env: dict[str, str]) -> None:
+                           library: str, env: dict[str, str], *,
+                           stems: tuple[str, ...] = ("generic_models", "generic_imported")) -> None:
     """Restore every staged byte even on failure; never touch source checkout files."""
     config = app / "analysis_options.yaml"
     targets = [app / library / f"{name}{suffix}.dart"
-               for name in ("generic_models", "generic_imported") for suffix in ("", ".g")]
+               for name in stems for suffix in ("", ".g")]
     originals = {path: path.read_bytes() for path in [config, *targets[1::2]]}
     analysis = options.read_text(encoding="utf-8")
     analysis = analysis.replace('    - "**/*.g.dart"\n', "")

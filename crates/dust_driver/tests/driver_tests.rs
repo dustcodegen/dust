@@ -48,6 +48,9 @@ mod cache_errors;
 #[path = "driver_tests/generic_copy_outputs.rs"]
 mod generic_copy_outputs;
 
+#[path = "driver_tests/generic_name_outputs.rs"]
+mod generic_name_outputs;
+
 #[path = "driver_tests/build_validation.rs"]
 mod build_validation;
 

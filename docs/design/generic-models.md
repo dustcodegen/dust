@@ -6,8 +6,9 @@ and parser migration [#68](https://github.com/dustcodegen/dust/issues/68).
 
 Grammar acceptance is not generator support. The draft now generates typed
 `CopyWith` helpers for the scoped traditional and primary consumers below.
-Core-name collisions, validation helpers and integration capability checks
-remain unfinished. Do not use this draft as production guidance.
+Scoped core-name/local collisions are covered, but generated-member collisions,
+validation helpers and integration capability checks remain unfinished.
+Do not use this draft as production guidance.
 
 ## Approved decision
 
@@ -216,10 +217,25 @@ generic callbacks, dependent/recursive bounds, result-binder collisions,
 same-library nested helpers and typed imported replacements. Imported nested
 helpers stay private; they are not a cross-library chaining API. Compiler-negative
 checks reject wrong replacement/result types and imported helper access.
-Capability checks and generic validation helpers remain unfinished under #93.
-The emitter must also avoid shadowing its
-own core-type references when source binders use names such as `String`; the IR
-distinction is not by itself a rendering solution. Neither design approval nor
+Core references for copy/equality/debug now use private library aliases only
+where source binders or members shadow `String`, `Object`, `bool`, `int`,
+`identical` or `pragma`. Names are allocated against library declarations,
+class binders, fields and methods. Receiver/operand locals avoid class binders;
+qualified runtime-type access avoids a binder named `runtimeType`. Opaque
+function/record source and handwritten mixin arguments are not renamed.
+Whole-output traditional/primary contracts and isolated real SDK consumers
+cover these cases, including empty models, private generic collection helpers
+and nullable nested getters. The SDK probe records intentional name-style
+infos from these unusual binders, but rejects warnings, errors and every
+unrelated lint; it does not add suppressions.
+
+Parameters matching generated member names (`copyWith`, `toString`, `hashCode`)
+still conflict with declarations in the generated mixin. This was reproduced
+with real generation/kernel compilation and is tracked in
+[#103](https://github.com/dustcodegen/dust/issues/103). Safely renaming a generated
+binder may need additional structured substitution facts, not rewriting opaque
+source. Capability checks and generic validation helpers also remain unfinished
+under #93. Neither design approval nor
 the scoped copy tests establish general generic model support.
 
 Explicit generic function-type classification is covered by

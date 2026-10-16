@@ -162,7 +162,9 @@ Copies stay shallow. Same-library nested helpers retain their type arguments;
 imported models support typed replacement, not private chained helpers.
 
 Traditional and primary-constructor consumers exercise these cases locally.
-This is not published support: core-name collisions, generic validation helpers
+This is not published support. Core-name/local collision cases have scoped
+tests, but names matching generated members such as `copyWith` still need
+[#103](https://github.com/dustcodegen/dust/issues/103). Generic validation helpers
 and other plugin capabilities remain under the [generic model design](../design/generic-models.md).
 
 ### Explicit Generic Callbacks

@@ -57,11 +57,14 @@ class PrimarySdkTests(unittest.TestCase):
             with patch.dict(os.environ, {"DUST_DATABASE_URL": "sqlite:/must-not-open"}), \
                     patch("sdk_codegen_fixtures.stage_consumer", side_effect=stale_copy), \
                     patch("sdk_compat.check_generic_types", return_value=["checked"]) as negatives, \
-                    patch("sdk_compat.check_generic_analysis") as strict:
+                    patch("sdk_compat.check_generic_analysis") as strict, \
+                    patch("sdk_compat.check_generic_names") as names:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
             negatives.assert_called_once()
             strict.assert_called_once()
+            names.assert_called_once()
+            self.assertEqual(names.call_args.kwargs, {"primary": True})
             self.assertEqual(negatives.call_args.args[1:5],
                              (Path("/sdk/bin/dart"), app, output / "primary-generic-negative",
                               "primary_sdk_consumer"))

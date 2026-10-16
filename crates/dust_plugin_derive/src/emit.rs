@@ -3,6 +3,7 @@ use dust_plugin_api::{PluginContribution, SymbolPlan};
 
 use crate::features::{
     clone_copy_with::{emit_copy_with, plan_copy_with},
+    core_names::plan_core_names,
     debug::emit_debug_mixin,
     eq_hash::{emit_eq, emit_hash_code, plan_equality},
     validate::{emit_flutter_form_helpers, emit_validate},
@@ -12,8 +13,12 @@ use crate::features::{
 pub(crate) fn emit_library(library: &DartFileIr, plan: &SymbolPlan) -> PluginContribution {
     let mut contribution = PluginContribution::default();
     let equality = plan_equality(library);
-    let copy_with_plan = plan_copy_with(library);
+    let core = plan_core_names(library);
+    let copy_with_plan = plan_copy_with(library, &core);
     let emit_form_helpers = emit_flutter_form_helpers(plan);
+    contribution
+        .shared_helpers
+        .extend(core.declarations.iter().cloned());
     contribution
         .shared_helpers
         .extend(equality.declarations().iter().cloned());
@@ -23,13 +28,14 @@ pub(crate) fn emit_library(library: &DartFileIr, plan: &SymbolPlan) -> PluginCon
     let mut copy_with_credit_pending = true;
 
     for class in &library.classes {
-        if let Some(debug_mixin) = emit_debug_mixin(class) {
+        let core = core.names_for(class);
+        if let Some(debug_mixin) = emit_debug_mixin(class, core) {
             contribution.push_mixin_member(&class.name, debug_mixin);
         }
-        if let Some(eq) = emit_eq(class, &equality) {
+        if let Some(eq) = emit_eq(class, &equality, core) {
             contribution.push_mixin_member(&class.name, eq);
         }
-        if let Some(hash_code) = emit_hash_code(class, &equality) {
+        if let Some(hash_code) = emit_hash_code(class, &equality, core) {
             contribution.push_mixin_member(&class.name, hash_code);
         }
         if let Some(copy_with) = emit_copy_with(class, &copy_with_plan, copy_with_credit_pending) {

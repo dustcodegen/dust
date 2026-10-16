@@ -29,8 +29,9 @@ pub(super) fn render_copy_with_getter(
     let docs = render_getter_docs(class, plan);
     let class_type = render_class_type(class);
     let arguments = class_helper_arguments(class, &class_type);
+    let pragma = names.core.get("pragma");
     format!(
-        "{docs}\n@pragma('vm:prefer-inline')\n{}<{}> get copyWith => {}<{}>(this as {}, ({}) => {});",
+        "{docs}\n@{pragma}('vm:prefer-inline')\n{}<{}> get copyWith => {}<{}>(this as {}, ({}) => {});",
         names.interface_name,
         arguments,
         names.impl_name,
@@ -49,7 +50,7 @@ pub(super) fn render_copy_with_support(
     plan: &CopyWithPlan,
     include_credit: bool,
 ) -> String {
-    let interface_params = render_interface_params(class);
+    let interface_params = render_interface_params(class, names);
     let interface_getters = render_nested_interface_getters(class, names, plan);
     let impl_params = render_impl_params(class, names);
     let return_call = render_then_return(constructor_call, &names.then_name);
@@ -57,6 +58,7 @@ pub(super) fn render_copy_with_support(
     let parameters = helper_parameters(class, names);
     let arguments = class_helper_arguments(class, &names.result_type);
     let class_type = render_class_type(class);
+    let pragma = names.core.get("pragma");
     let (self_parameter, self_field) =
         if class.fields.is_empty() && !class.type_parameters.is_empty() {
             (format!("{class_type} _"), String::new())
@@ -73,7 +75,7 @@ pub(super) fn render_copy_with_support(
     };
 
     format!(
-        "{credit}/// @nodoc\nabstract class {}<{}> {{\n  {} call({});{}\n}}\n\n/// @nodoc\nfinal class {}<{}> implements {}<{}> {{\n  const {}({}, this.{});\n\n{self_field}  final {} Function({}) {};\n\n  @override\n  @pragma('vm:prefer-inline')\n  {} call({}) {{\n{}\n  }}{}\n}}",
+        "{credit}/// @nodoc\nabstract class {}<{}> {{\n  {} call({});{}\n}}\n\n/// @nodoc\nfinal class {}<{}> implements {}<{}> {{\n  const {}({}, this.{});\n\n{self_field}  final {} Function({}) {};\n\n  @override\n  @{pragma}('vm:prefer-inline')\n  {} call({}) {{\n{}\n  }}{}\n}}",
         names.interface_name,
         parameters,
         names.result_type,
@@ -97,11 +99,11 @@ pub(super) fn render_copy_with_support(
 }
 
 /// Renders the public call parameters for the copyWith interface.
-fn render_interface_params(class: &ClassIr) -> String {
+fn render_interface_params(class: &ClassIr, names: &CopyWithNames) -> String {
     render_call_params(class, |field| {
         format!(
             "{} {}",
-            copy_with_interface_param_type(&field.ty),
+            copy_with_interface_param_type(&field.ty, &names.core),
             named_argument_name(&field.name)
         )
     })
@@ -122,7 +124,7 @@ fn render_impl_params(class: &ClassIr, names: &CopyWithNames) -> String {
         };
         format!(
             "{} {} = {}",
-            copy_with_impl_param_type(),
+            copy_with_impl_param_type(&names.core),
             named_argument_name(&field.name),
             default
         )

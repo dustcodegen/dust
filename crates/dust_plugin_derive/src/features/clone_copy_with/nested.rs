@@ -35,6 +35,7 @@ pub(super) fn render_nested_impl_getters(
     plan: &CopyWithPlan,
 ) -> String {
     let mut out = String::new();
+    let pragma = names.core.get("pragma");
     for field in &class.fields {
         let Some(target) = nested_target(field, class, names, plan) else {
             continue;
@@ -46,7 +47,7 @@ pub(super) fn render_nested_impl_getters(
                 .map(String::as_str)
                 .unwrap_or(field.name.as_str());
             write!(out,
-                "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {}? get {} {{\n    final {} = {}.{};\n    if ({} == null) {{\n      return null;\n    }}\n\n    return {}(\n      {},\n      ({}) => call({}: {}),\n    );\n  }}",
+                "\n\n  @override\n  @{pragma}('vm:prefer-inline')\n  {}? get {} {{\n    final {} = {}.{};\n    if ({} == null) {{\n      return null;\n    }}\n\n    return {}(\n      {},\n      ({}) => call({}: {}),\n    );\n  }}",
                 target.interface_type, named_argument_name(&field.name),
                 value_name, names.self_name, field.name, value_name,
                 target.impl_type, value_name, names.callback_value_name,
@@ -54,7 +55,7 @@ pub(super) fn render_nested_impl_getters(
                 .expect("writing to String cannot fail");
         } else {
             write!(out,
-                "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {} get {} {{\n    return {}(\n      {}.{},\n      ({}) => call({}: {}),\n    );\n  }}",
+                "\n\n  @override\n  @{pragma}('vm:prefer-inline')\n  {} get {} {{\n    return {}(\n      {}.{},\n      ({}) => call({}: {}),\n    );\n  }}",
                 target.interface_type, named_argument_name(&field.name), target.impl_type,
                 names.self_name, field.name, names.callback_value_name,
                 named_argument_name(&field.name), names.callback_value_name)

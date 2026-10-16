@@ -5,8 +5,9 @@ use dust_ir::DartFileIr;
 
 use crate::features::{
     COPY_WITH_SYMBOL,
+    core_names::CoreNamePlan,
     eq_hash::has_trait,
-    names::{NameAllocator, library_declaration_names, lower_first},
+    names::{NameAllocator, class_helper_stem, library_declaration_names, library_reference_names},
     writer::find_clone_constructor,
 };
 
@@ -17,16 +18,9 @@ use super::{
 };
 
 /// Plans copyWith support names and shared helpers for the whole library.
-pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
+pub(crate) fn plan_copy_with(library: &DartFileIr, core: &CoreNamePlan) -> CopyWithPlan {
     let declarations = library_declaration_names(library);
-    let mut allocator = NameAllocator::new(
-        declarations.iter().map(String::as_str).chain(
-            library
-                .classes
-                .iter()
-                .flat_map(|class| class.type_parameters.iter().map(|p| p.name.source.as_str())),
-        ),
-    );
+    let mut allocator = NameAllocator::new(library_reference_names(library));
     let mut by_class = BTreeMap::new();
     let mut samples_by_class = BTreeMap::new();
     let mut shared_helpers = Vec::new();
@@ -98,7 +92,7 @@ pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
         {
             let name = allocator.allocate(format!("_{}CopyWithUnset", class.name));
             let value_name =
-                allocator.allocate(format!("_{}CopyWithUnset", lower_first(&class.name)));
+                allocator.allocate(format!("_{}CopyWithUnset", class_helper_stem(class)));
             shared_helpers.push(render_sentinel_helper(&name, &value_name));
             Some(CopyWithSentinel { value_name })
         } else {
@@ -107,6 +101,7 @@ pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
         by_class.insert(
             class.name.clone(),
             CopyWithNames {
+                core: core.names_for(class).clone(),
                 interface_name,
                 impl_name,
                 result_type,

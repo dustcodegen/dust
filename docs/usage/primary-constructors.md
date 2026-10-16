@@ -85,9 +85,10 @@ Remaining gaps in this draft:
   now has scoped executable typed-copy checks for traditional and primary
   classes using `with _$Box<T>`. These cover bounds, nullable arguments,
   nested helpers, equality/debug output and typed imported replacements.
-  The [approved design](../design/generic-models.md) still requires core-name
-  collision handling, generic validation helpers and integration capability
-  checks. Passing the copy cases does not establish all generic derives.
+  Core-name/local collisions have separate traditional/primary executable
+  probes. The [approved design](../design/generic-models.md) still requires
+  generated-member collisions (#103), generic validation helpers and integration
+  capability checks. Passing the copy cases does not establish all generic derives.
 
 For these cases, a successful `dust build` does not establish that the generated
 Dart compiles. Do not use the draft feature as production-readiness evidence.

@@ -1,0 +1,74 @@
+import 'package:dust_dart/derive.dart';
+
+part 'generic_names.g.dart';
+
+/// Names valid in Dart that generated implementation details must not capture.
+@Derive([CopyWith(), ToString(), Eq()])
+class CoreNames<String, Object, bool, int, identical, pragma, self, other, runtimeType>
+    with _$CoreNames<String, Object, bool, int, identical, pragma, self, other, runtimeType> {
+  /// Creates collision values.
+  const CoreNames(this.text, this.object, this.flag, this.number, this.identity,
+      this.metadata, this.receiver, this.peer, this.runtime, this.callback);
+
+  /// A class binder, not core String.
+  final String text;
+  /// A class binder, not core Object.
+  final Object object;
+  /// A class binder, not core bool.
+  final bool flag;
+  /// A class binder, not core int.
+  final int number;
+  /// A binder with a core function's name.
+  final identical identity;
+  /// A binder with a core annotation's name.
+  final pragma metadata;
+  /// A binder with the usual generated receiver name.
+  final self receiver;
+  /// A binder with the usual equality operand name.
+  final other peer;
+  /// A binder must not replace the inherited runtime type getter.
+  final runtimeType runtime;
+  /// Function-local binders and class binders keep their source identity.
+  final String Function<T>(String, T) callback;
+}
+
+/// Empty paths still need core return types and equality identity.
+@Derive([CopyWith(), ToString(), Eq()])
+class EmptyNames<String, Object, bool, int, identical, pragma>
+    with _$EmptyNames<String, Object, bool, int, identical, pragma> {
+  /// Creates an empty collision model.
+  const EmptyNames();
+}
+
+/// A user binder must not capture the deep-equality helper.
+@Derive([CopyWith(), Eq()])
+class _CollectionNames<_collectionNamesValuesEquality>
+    with _$_CollectionNames<_collectionNamesValuesEquality> {
+  /// Creates a collection.
+  const _CollectionNames(this.values);
+  /// Values of the chosen type.
+  final List<_collectionNamesValuesEquality> values;
+}
+
+/// Nested getters use the protected core annotation in both nullable paths.
+@Derive([CopyWith()])
+class NestedNames<pragma> with _$NestedNames<pragma> {
+  /// Creates nested values.
+  const NestedNames(this.child, this.optional);
+  /// Required nested model.
+  final EmptyNames<pragma, pragma, pragma, pragma, pragma, pragma> child;
+  /// Optional nested model.
+  final EmptyNames<pragma, pragma, pragma, pragma, pragma, pragma>? optional;
+}
+
+/// Exercises private helper names without exposing private type parameters.
+void verifyCollectionNames() {
+  final original = _CollectionNames<int>([1, 2]);
+  final equal = _CollectionNames<int>([1, 2]);
+  if (original != equal || original.hashCode != equal.hashCode ||
+      original.copyWith() != equal ||
+      !identical(original.copyWith(values: null).values, original.values) ||
+      original.copyWith(values: [3]).values.single != 3) {
+    throw StateError('A class parameter captured a deep equality helper');
+  }
+}

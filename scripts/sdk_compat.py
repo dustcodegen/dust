@@ -18,6 +18,7 @@ from sqlite_sdk_consumer import ROOT, compatible_lints, validate_sdk_pair
 from sdk_codegen_fixtures import generated_files, generated_hashes, stage_example
 from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
+from sdk_generic_names import check_generic_names
 
 
 def stable_dart_version(output: str) -> str:
@@ -129,8 +130,10 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                "lib/models", env)
         negatives = check_generic_types(run, dart, app, output / role / "generic-negative",
                                         "product_showcase/models", env)
+        names = check_generic_names(run, dust, dart, app, output / role / "generic-names",
+                                    output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
-                     "generated": hashes, "genericNegative": negatives})
+                     "generated": hashes, "genericNegative": negatives, "genericNames": names})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
@@ -167,6 +170,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
         "dustSha256": hashlib.sha256(dust.read_bytes()).hexdigest(),
         "rows": rows, "primary": primary, "unsupported": negatives,
+        "primaryGenericNames": json.loads((output / "primary-generic-names/results.json").read_text()),
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
@@ -216,6 +220,8 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
         check_generic_analysis(run, dart, app, output / "primary/analysis_options.yaml", "lib", env)
         check_generic_types(run, dart, app, output / "primary-generic-negative",
                             "primary_sdk_consumer", env)
+        check_generic_names(run, dust, dart, app, output / "primary-generic-names",
+                            output / "primary/analysis_options.yaml", "primary_sdk_consumer", env, primary=True)
     return hashes
 
 

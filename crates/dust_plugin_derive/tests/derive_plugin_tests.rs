@@ -15,6 +15,9 @@ mod mixin_classes;
 #[path = "derive_plugin_tests/copywith.rs"]
 mod copywith;
 
+#[path = "derive_plugin_tests/generic_names.rs"]
+mod generic_names;
+
 #[path = "derive_plugin_tests/validate_support.rs"]
 mod validate_support;
 

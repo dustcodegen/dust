@@ -22,6 +22,7 @@ use dust_ir::{ClassIr, FieldIr, TypeIr};
 
 use crate::features::{
     COPY_WITH_SYMBOL,
+    core_names::CoreNames,
     eq_hash::has_trait,
     writer::{build_constructor_call_multiline, find_clone_constructor},
 };
@@ -55,6 +56,8 @@ impl CopyWithPlan {
 
 /// Collision-safe generated names for one class's copyWith support.
 struct CopyWithNames {
+    /// Core references protected against this class's lexical names.
+    core: CoreNames,
     /// Collision-safe result binder for this helper declaration.
     result_type: String,
     /// Number of source class binders expected at nested use sites.
@@ -126,6 +129,7 @@ pub(crate) fn emit_copy_with(
                         .as_ref()
                         .map(|sentinel| sentinel.value_name.as_str()),
                     names.accepts_null_helper.as_deref(),
+                    &names.core,
                 )),
             )
         })
