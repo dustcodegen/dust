@@ -12,19 +12,25 @@ class-node kind, so the wrong grammar cannot pass unnoticed.
 Run from the repository root:
 
 ```sh
-python3 scripts/check_listed_class_parity.py
+python3 scripts/check_listed_parser_parity.py
 ```
 
-The gate executes the same seven traditional-class contracts with each grammar,
+The gate executes the same fifteen contracts with each grammar,
 requires every nonempty case, and compares complete `Debug` representations of
 the parser-owned facts, including annotation/type values, member ordering and
-byte spans. It stores both outputs in `.dart_tool/listed-class-parity/`.
+byte spans. It stores both outputs in `.dart_tool/listed-parser-parity/`.
 No golden output is rewritten. Negative Python tests reject missing, duplicate,
 empty and changed records. Root local Rust test/lint scripts include this gate
 and compile/lint the candidate backend separately.
 
-This first slice of [#70](https://github.com/dustcodegen/dust/issues/70) is not
-whole-backend adoption. Directives, non-class declarations, enums, queries,
-i18n and complete generated-consumer parity still need migration gates before
-changing the production dependency. Primary and concise constructors remain
+Seven contracts cover traditional classes/members; eight compare complete
+library surfaces for directives, enums, mixins, extensions/representations,
+variables, functions and typedefs. Assertions require nonempty extraction of
+the targeted category before facts are emitted. Samples are parser-fact
+fixtures, not standalone app examples; real app analysis remains the SDK gate.
+
+These slices of [#70](https://github.com/dustcodegen/dust/issues/70) are not
+whole-backend adoption. Further declaration forms, queries, i18n and complete
+candidate generated-consumer parity remain gates before changing the production
+dependency. Primary and concise constructors remain
 unsupported by Dust. No version bump, release or remote CI is involved.

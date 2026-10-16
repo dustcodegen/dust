@@ -4,6 +4,8 @@ mod class_decl;
 mod constructors;
 /// Field extraction shared by classes and mixins.
 pub(crate) mod fields;
+/// Shared metadata attachment for wrapped and flat class bodies.
+mod members;
 /// Method and parameter extraction shared by classes and top-level functions.
 pub(crate) mod methods;
 /// Source-text helpers for parameter parsing.
@@ -12,6 +14,8 @@ mod parse_text;
 /// Cross-grammar contracts for the staged extraction migration.
 #[cfg(test)]
 mod parity_tests;
+
+pub(crate) use members::annotated_members;
 
 use dust_parser_dart::ParsedClassSurface;
 use dust_text::SourceText;

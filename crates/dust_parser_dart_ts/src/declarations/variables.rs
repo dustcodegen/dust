@@ -19,12 +19,12 @@ pub(super) fn extract_initialized_variables(
     {
         let name = initialized
             .child_by_field_name("name")
+            .or_else(|| direct_named_child(initialized, "identifier"))
             .map(|name| node_text(name, source))
             .unwrap_or_default();
-        let initializer_source = initialized
-            .child_by_field_name("value")
-            .map(|value| node_text(value, source));
-        let initializer_span = initialized.child_by_field_name("value").map(text_range);
+        let value = initializer_node(initialized);
+        let initializer_source = value.map(|value| node_text(value, source));
+        let initializer_span = value.map(text_range);
         variables.push(ParsedTopLevelVariableSurface {
             name,
             type_source: type_source.clone(),
@@ -55,12 +55,12 @@ pub(super) fn extract_static_final_variables(
     {
         let name = declaration
             .child_by_field_name("name")
+            .or_else(|| direct_named_child(declaration, "identifier"))
             .map(|name| node_text(name, source))
             .unwrap_or_default();
-        let initializer_source = declaration
-            .child_by_field_name("value")
-            .map(|value| node_text(value, source));
-        let initializer_span = declaration.child_by_field_name("value").map(text_range);
+        let value = initializer_node(declaration);
+        let initializer_source = value.map(|value| node_text(value, source));
+        let initializer_span = value.map(text_range);
         variables.push(ParsedTopLevelVariableSurface {
             name,
             type_source: type_source.clone(),
@@ -72,6 +72,18 @@ pub(super) fn extract_static_final_variables(
         });
     }
     variables
+}
+
+/// Preserves the existing first-expression-node fact when the grammar omits fields.
+fn initializer_node(node: Node<'_>) -> Option<Node<'_>> {
+    node.child_by_field_name("value").or_else(|| {
+        let equals = direct_child(node, "=")?;
+        let mut cursor = node.walk();
+        node.named_children(&mut cursor).find(|child| {
+            child.start_byte() >= equals.end_byte()
+                && !matches!(child.kind(), "comment" | "documentation_comment")
+        })
+    })
 }
 
 /// Extracts external top-level variables that have no initializer node.

@@ -6,8 +6,8 @@ use dust_text::SourceText;
 use tree_sitter::Node;
 
 use crate::{
-    annotations::{extract_annotation, extract_member_annotations},
-    classes::{fields::extract_fields, methods::extract_method_params},
+    annotations::extract_annotation,
+    classes::{annotated_members, fields::extract_fields, methods::extract_method_params},
     syntax::{
         direct_named_child, find_first_descendant, has_descendant_kind, node_text, text_range,
     },
@@ -176,21 +176,20 @@ pub(crate) fn has_extractable_top_level_declarations(root: Node<'_>) -> bool {
 fn extract_mixin(node: Node<'_>, source: &SourceText) -> ParsedMixinSurface {
     let name = node
         .child_by_field_name("name")
+        .or_else(|| direct_named_child(node, "identifier"))
         .map(|name| node_text(name, source))
         .unwrap_or_default();
 
     let mut fields = Vec::new();
-    if let Some(body) = node.child_by_field_name("body") {
-        let mut cursor = body.walk();
-        for member in body
-            .children(&mut cursor)
-            .filter(|child| child.is_named() && child.kind() == "class_member")
-        {
-            let member_annotations = extract_member_annotations(member, source);
-            if let Some(declaration) = direct_named_child(member, "declaration") {
-                if has_descendant_kind(declaration, "initialized_identifier_list") {
-                    fields.extend(extract_fields(declaration, &member_annotations, source));
-                }
+    if let Some(body) = node
+        .child_by_field_name("body")
+        .or_else(|| direct_named_child(node, "class_body"))
+    {
+        for (declaration, member_annotations) in annotated_members(body, source) {
+            if declaration.kind() == "declaration"
+                && has_descendant_kind(declaration, "initialized_identifier_list")
+            {
+                fields.extend(extract_fields(declaration, &member_annotations, source));
             }
         }
     }
