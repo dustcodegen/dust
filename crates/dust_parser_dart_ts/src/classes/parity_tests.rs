@@ -168,6 +168,9 @@ class Bits {
   int get value => 1;
   set value(int next) {}
   void nested() { void local() {} }
+  void commented() /* signature gap */ { print('commented'); }
+  void lineCommented() // signature gap
+    => print('line');
   void after() => print('last');
 }
 "#,

@@ -88,8 +88,13 @@ fn callable_signature(node: Node<'_>) -> Node<'_> {
 fn method_body_node<'tree>(node: Node<'tree>, signature: Node<'tree>) -> Option<Node<'tree>> {
     direct_named_child(node, "function_body")
         .or_else(|| {
-            node.next_named_sibling()
-                .filter(|next| next.kind() == "function_body")
+            let mut next = node.next_named_sibling();
+            while next
+                .is_some_and(|node| matches!(node.kind(), "comment" | "documentation_comment"))
+            {
+                next = next.and_then(|node| node.next_named_sibling());
+            }
+            next.filter(|node| node.kind() == "function_body")
         })
         .or_else(|| {
             signature
