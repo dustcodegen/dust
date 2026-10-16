@@ -84,7 +84,8 @@ Two concrete failures remain in this draft:
 - [Generic class copy generation (#93)](https://github.com/dustcodegen/dust/issues/93)
   can leak an unresolved `T` into generated helpers. This also fails for an
   equivalent traditional class, so it is not a primary-only regression.
-  Class type-parameter/bound facts and the generic emission strategy need review.
+  Class type-parameter/bound facts and the generic emission strategy need review;
+  see the [generic model proposal](../design/generic-models.md).
 
 For these cases, a successful `dust build` does not establish that the generated
 Dart compiles. Do not use the draft feature as production-readiness evidence.
