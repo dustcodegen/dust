@@ -12,6 +12,9 @@ mod compatibility;
 #[path = "cli_tests/diagnostics.rs"]
 mod diagnostics;
 
+#[path = "cli_tests/language_gates.rs"]
+mod language_gates;
+
 #[path = "cli_tests/helpers.rs"]
 mod helpers;
 

@@ -2,12 +2,17 @@ use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_text::SourceText;
 use tree_sitter::{Node, Tree};
 
+use crate::language_gates::{FeatureOccurrence, record_syntax_occurrence};
 use crate::syntax::{direct_named_child, node_text, text_range};
 
 /// Extracts syntax diagnostics reported by tree-sitter.
-pub(crate) fn extract_diagnostics(tree: &Tree, source: &SourceText) -> Vec<Diagnostic> {
+pub(crate) fn extract_diagnostics(
+    tree: &Tree,
+    source: &SourceText,
+    occurrences: &mut Vec<FeatureOccurrence>,
+) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-    collect_error_diagnostics(tree.root_node(), source, &mut diagnostics);
+    collect_error_diagnostics(tree.root_node(), source, &mut diagnostics, occurrences);
     if let Some(first) = diagnostics
         .iter_mut()
         .find(|diagnostic| diagnostic.message == "tree-sitter reported a Dart syntax error")
@@ -27,7 +32,9 @@ fn collect_error_diagnostics(
     node: Node<'_>,
     source: &SourceText,
     diagnostics: &mut Vec<Diagnostic>,
+    occurrences: &mut Vec<FeatureOccurrence>,
 ) {
+    record_syntax_occurrence(node, source, occurrences);
     if let Some(feature) = unsupported_feature(node, source) {
         let guidance = if feature == "dot shorthands" {
             "Use an explicit type name instead of a dot shorthand."
@@ -51,7 +58,7 @@ fn collect_error_diagnostics(
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        collect_error_diagnostics(child, source, diagnostics);
+        collect_error_diagnostics(child, source, diagnostics, occurrences);
     }
 }
 
@@ -74,7 +81,7 @@ fn unsupported_feature(node: Node<'_>, source: &SourceText) -> Option<&'static s
 }
 
 /// The grammar can parse `Type<T>.method` as nested relational expressions.
-fn is_generic_receiver_member(node: Node<'_>, source: &SourceText) -> bool {
+pub(crate) fn is_generic_receiver_member(node: Node<'_>, source: &SourceText) -> bool {
     let Some(close) = node.prev_named_sibling() else {
         return false;
     };
