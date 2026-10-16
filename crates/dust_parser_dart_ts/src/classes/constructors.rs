@@ -65,7 +65,8 @@ pub(super) fn extract_constructor(
 pub(super) fn is_constructor_signature_kind(kind: &str) -> bool {
     matches!(
         kind,
-        "constant_constructor_signature"
+        "primary_constructor"
+            | "constant_constructor_signature"
             | "constructor_signature"
             | "factory_constructor_signature"
             | "redirecting_factory_constructor_signature"
@@ -74,6 +75,12 @@ pub(super) fn is_constructor_signature_kind(kind: &str) -> bool {
 
 /// Extracts the named-constructor suffix from a constructor signature.
 fn constructor_name(signature: Node<'_>, source: &SourceText) -> Option<String> {
+    if signature.kind() == "primary_constructor" {
+        return signature
+            .child_by_field_name("name")
+            .filter(|name| name.kind() == "identifier")
+            .map(|name| node_text(name, source));
+    }
     let boundary = direct_named_child(signature, "formal_parameter_list")?.start_byte();
     let mut cursor = signature.walk();
     let mut identifiers = signature.children(&mut cursor).filter(|child| {

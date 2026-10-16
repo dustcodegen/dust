@@ -61,12 +61,6 @@ pub(super) fn feature_occurrences(
         DartLanguageFeature::PrivateNamedParameters,
         find_private_named_parameter(library),
     );
-    push_source_occurrence(
-        &mut occurrences,
-        source,
-        DartLanguageFeature::PrimaryConstructors,
-        find_primary_constructor(source),
-    );
 
     occurrences
 }
@@ -210,33 +204,6 @@ pub(super) fn find_private_named_parameter(library: &ParsedDartFileSurface) -> O
                 .find(|param| param.kind == ParameterKind::Named && param.name.starts_with('_'))
                 .map(|param| param.span)
         })
-}
-
-/// Finds primary constructor syntax in source text.
-pub(super) fn find_primary_constructor(source: &str) -> Option<usize> {
-    let mut rest = source;
-    let mut base = 0;
-    while let Some(local_index) = rest.find("class ") {
-        let class_index = base + local_index;
-        let after_class = &source[class_index + "class ".len()..];
-        let name_len = after_class
-            .chars()
-            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
-            .map(char::len_utf8)
-            .sum::<usize>();
-        if name_len == 0 {
-            base = class_index + "class ".len();
-            rest = &source[base..];
-            continue;
-        }
-        let after_name = after_class[name_len..].trim_start();
-        if after_name.starts_with('(') {
-            return Some(class_index);
-        }
-        base = class_index + "class ".len();
-        rest = &source[base..];
-    }
-    None
 }
 
 /// Finds the first occurrence among a small set of source needles.

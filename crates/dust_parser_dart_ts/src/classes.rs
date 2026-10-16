@@ -10,6 +10,8 @@ mod members;
 pub(crate) mod methods;
 /// Source-text helpers for parameter parsing.
 mod parse_text;
+/// Fields declared by primary-constructor parameters.
+mod primary;
 
 /// Cross-grammar contracts for the staged extraction migration.
 #[cfg(test)]

@@ -30,15 +30,17 @@ Supported handwritten syntax and generated Dart can work on a newer SDK even
 when new language syntax is not supported by Dust. A language-version gate
 records when Dart introduced a feature; it is not a parser-support guarantee.
 
-Class-header primary constructors and named concise `new` constructors are not
-supported yet in libraries processed by Dust. Keep traditional constructors
-inside the class body, with the class name and explicitly declared fields.
+Class-header primary-constructor support is in development under
+[#76](https://github.com/dustcodegen/dust/issues/76). This branch exercises typed
+declaring parameters through generated Dart and Flutter consumers; it is not
+complete or released. See the [development usage and limits](primary-constructors.md).
+For released binaries, keep traditional in-body constructors and explicit fields.
 This does not require changing constructor calls in your application.
 
 The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
 This source checkout uses the pinned listed upstream after extraction parity;
-released binaries are not changed by updating the source. Primary/concise
-constructors and dot shorthands now get explicit unsupported-generation errors,
+released binaries are not changed by updating the source. Named concise
+constructors and dot shorthands still get explicit unsupported-generation errors,
 even though the new grammar parses them. Grammar acceptance is not codegen support.
 
 When syntax cannot be parsed, `dust build` and `dust check` fail with a nonzero

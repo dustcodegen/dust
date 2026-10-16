@@ -1,0 +1,17 @@
+name: primary_flutter_consumer
+description: Independent latest-Flutter primary constructor generation consumer.
+publish_to: none
+
+environment:
+  sdk: ">=3.13.0 <4.0.0"
+
+dependencies:
+  dust_dart: ^0.2.1
+  dust_flutter: ^0.2.1
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^10.3.0

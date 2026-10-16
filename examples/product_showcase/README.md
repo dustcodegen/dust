@@ -19,6 +19,10 @@ one small package without Flutter app code around it.
 The generated files are committed so the package can be inspected without
 running Dust first.
 
+`Product` also uses an unannotated mixin-class helper for `displayLabel`.
+The helper coexists with the generated mixin; its computed getter still reads
+the updated fields after `copyWith`, without changing generated output.
+
 ## Run It
 
 From this package:

@@ -1,5 +1,6 @@
 use std::{borrow::Cow, fmt::Write};
 
+use dust_dart_emit::named_argument_name;
 use dust_ir::{ClassIr, ConstructorIr, ParamKind};
 
 /// Finds a constructor that can initialize every field.
@@ -36,7 +37,7 @@ pub(crate) fn build_constructor_call_multiline(
         match param.kind {
             ParamKind::Positional => render_constructor_arg(&mut out, value),
             ParamKind::Named => {
-                write!(&mut out, "  {}: ", param.name).ok()?;
+                write!(&mut out, "  {}: ", named_argument_name(&param.name)).ok()?;
                 render_arg_value(&mut out, value, "      ");
                 out.push(',');
                 out.push('\n');

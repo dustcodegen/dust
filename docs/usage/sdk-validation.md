@@ -66,8 +66,16 @@ the repository lock running on every SDK.
 5. Analyze with fatal infos and run the complete consumer suites. These cover
    derive, JSON, copyWith, validation, HTTP, row mapping and Flutter route/state
    behavior exercised by those examples; they are not every package or feature.
-6. On the latest Dart SDK, independently analyze valid primary-constructor and
-   named concise `new` samples. Dust build/check must reject both with the
+6. On the latest Dart SDK, stage `fixtures/primary_sdk_consumer` independently,
+   remove any copied generated output, and run fresh Dust build/check. Require
+   all four model/client `.g.dart` files, check handwritten formatting, analyze
+   with fatal infos, and execute its derive, JSON, validation, enum, HTTP,
+   private row mapping, sync/worker SQLite and nullable/nested copy tests.
+   Repeat with `fixtures/primary_flutter_consumer` on latest Flutter, requiring
+   the generated state and route files and running route, state and widget
+   tests. Both fixtures require Dart 3.13; neither raises the runtime SDK floor.
+7. Independently analyze a valid named concise `new` sample. Dust build/check
+   must still reject it with the
    feature-specific `Dust does not support ... yet` error, exit 1 and no generated
    output. SDK acceptance is not Dust support; a generic parse error or unrelated
    failure cannot satisfy this negative probe.
@@ -88,8 +96,9 @@ or upgraded, and SDK pins are not overridden.
 
 Each run retains an owned temporary evidence directory with numbered logs,
 refreshed release metadata, independently resolved locks and `proof.json`.
-The proof is written only after all four SDK/consumer rows and both negative
-samples pass. It records source commit/dirty state, CLI hash, exact SDK versions
+The proof is written only after all four SDK/consumer rows, the positive primary
+consumers and the concise negative sample pass. It records source commit/dirty
+state, CLI hash, exact SDK versions
 and generated output hashes. A failed run retains diagnostics, not a pass proof.
 Keep the source commit clean when collecting final review evidence.
 
@@ -106,7 +115,8 @@ analysis, with no new skips:
 | Latest stable Dart | 3.13.5 | Showcase: 49 passed, one existing skip | 27 |
 | Latest stable Flutter | 3.47.7 / Dart 3.13.5 | Benchmark: 23 passed | 76 |
 
-Generated hashes matched across both ends for each consumer. Both unsupported
+Generated hashes matched across both ends for each consumer. In that recorded
+pre-primary-support run, both unsupported
 syntax samples passed latest Dart analysis; all four Dust build/check commands
 then failed with parser errors and no generated output, as required. The shared
 SQLite staging helper also passed its existing Dart 3.10.0 and 3.13.5 consumer

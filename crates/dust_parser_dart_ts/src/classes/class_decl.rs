@@ -12,6 +12,7 @@ use super::{
     constructors::{extract_constructor, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
     methods::extract_method,
+    primary::extract_declaring_fields,
 };
 
 /// Extracts a Dust class surface from one tree-sitter class declaration.
@@ -39,6 +40,11 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     let mut fields = Vec::new();
     let mut constructors = Vec::new();
     let mut methods = Vec::new();
+    if let Some(primary) = node.child_by_field_name("primary_constructor") {
+        let constructor = extract_constructor(primary, &[], source);
+        fields.extend(extract_declaring_fields(primary, &constructor.params));
+        constructors.push(constructor);
+    }
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
@@ -50,6 +56,11 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     if let Some(body) = node.child_by_field_name("body") {
         for (declaration, member_annotations) in annotated_members(body, source) {
             match classify_class_member(declaration) {
+                Some(ClassMemberShape::PrimaryBody) => {
+                    if let Some(constructor) = constructors.first_mut() {
+                        constructor.annotations.extend(member_annotations);
+                    }
+                }
                 Some(ClassMemberShape::Constructor(signature)) => {
                     constructors.push(extract_constructor(signature, &member_annotations, source));
                 }
@@ -87,6 +98,8 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
 
 /// Shape of one class member declaration.
 enum ClassMemberShape<'tree> {
+    /// Metadata on the in-body part belongs to the header constructor.
+    PrimaryBody,
     /// Constructor signature node.
     Constructor(Node<'tree>),
     /// Initialized identifier list for fields.
@@ -97,6 +110,9 @@ enum ClassMemberShape<'tree> {
 
 /// Classifies a class member into a shape Dust extracts.
 fn classify_class_member<'tree>(node: Node<'tree>) -> Option<ClassMemberShape<'tree>> {
+    if node.kind() == "primary_constructor_body_signature" {
+        return Some(ClassMemberShape::PrimaryBody);
+    }
     if is_constructor_signature_kind(node.kind()) {
         return Some(ClassMemberShape::Constructor(node));
     }

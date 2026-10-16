@@ -2,10 +2,14 @@
 mod render;
 /// Shared copyWith type and value expression helpers.
 mod support;
+/// CopyWith constructor and public argument validation.
+mod validation;
+
+pub(crate) use validation::validate_copy_with;
 
 use std::{borrow::Cow, collections::BTreeMap};
 
-use dust_diagnostics::Diagnostic;
+use dust_dart_emit::named_argument_name;
 use dust_ir::{ClassIr, DartFileIr, FieldIr, TypeIr};
 
 use crate::features::{
@@ -96,8 +100,12 @@ pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
 
         let interface_name = allocator.allocate(format!("_${}CopyWith", class.name));
         let impl_name = allocator.allocate(format!("_${}CopyWithImpl", class.name));
-        let mut local_allocator =
-            NameAllocator::new(class.fields.iter().map(|field| field.name.as_str()));
+        let mut local_allocator = NameAllocator::new(
+            class
+                .fields
+                .iter()
+                .flat_map(|field| [field.name.as_str(), named_argument_name(&field.name)]),
+        );
         let self_name = local_allocator.allocate("_self");
         let then_name = local_allocator.allocate("_then");
         let callback_value_name = local_allocator.allocate("value");
@@ -117,7 +125,7 @@ pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
             samples_by_class.insert(
                 class.name.clone(),
                 CopyWithSample {
-                    field_name: field.name.clone(),
+                    field_name: named_argument_name(&field.name).to_owned(),
                     nested_value: sample_value(&field.ty, ValueSampleKind::Nested),
                 },
             );
@@ -194,29 +202,6 @@ pub(crate) fn emit_copy_with(
         mixin_member: render_copy_with_getter(class, names, plan),
         support_type: render_copy_with_support(class, names, &call, plan, include_credit),
     })
-}
-
-/// Validates that a class can instantiate a copyWith replacement object.
-pub(crate) fn validate_copy_with(class: &ClassIr) -> Vec<Diagnostic> {
-    if !has_trait(class, COPY_WITH_SYMBOL) {
-        return Vec::new();
-    }
-
-    if class.is_abstract {
-        return vec![Diagnostic::error(format!(
-            "`CopyWith` cannot target abstract class `{}` because Dust cannot instantiate it",
-            class.name
-        ))];
-    }
-
-    if find_clone_constructor(class).is_some() {
-        Vec::new()
-    } else {
-        vec![Diagnostic::error(format!(
-            "`CopyWith` requires a constructor that accepts every field on class `{}`",
-            class.name
-        ))]
-    }
 }
 
 /// Picks a non-nullable replacement field for generated Dartdoc samples.

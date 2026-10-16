@@ -1,4 +1,6 @@
-use dust_dart_emit::{DART_DYNAMIC, DART_OBJECT_NULLABLE, OBJECT_NULLABLE_TYPES};
+use dust_dart_emit::{
+    DART_DYNAMIC, DART_OBJECT_NULLABLE, OBJECT_NULLABLE_TYPES, named_argument_name,
+};
 use dust_ir::TypeIr;
 
 /// Renders the public call parameter type for the copyWith interface.
@@ -26,16 +28,17 @@ pub(super) fn copy_with_value_expr(
     sentinel_name: Option<&str>,
 ) -> String {
     let self_field = format!("{self_name}.{field_name}");
+    let argument = named_argument_name(field_name);
     if needs_copy_with_sentinel(ty) {
         let sentinel = sentinel_name.expect("sentinel field requires sentinel name");
-        let replacement = replacement_expr(field_name, ty);
+        let replacement = replacement_expr(argument, ty);
         return format!(
-            "identical({field_name}, {sentinel})\n    ? {self_field}\n    : {replacement}"
+            "identical({argument}, {sentinel})\n    ? {self_field}\n    : {replacement}"
         );
     }
 
-    let replacement = replacement_expr(field_name, ty);
-    format!("{field_name} == null ? {self_field} : {replacement}")
+    let replacement = replacement_expr(argument, ty);
+    format!("{argument} == null ? {self_field} : {replacement}")
 }
 
 /// Returns true when omitted and explicit null need a sentinel.

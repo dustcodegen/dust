@@ -51,7 +51,7 @@ fn explains_syntax_errors_without_claiming_the_dart_source_is_invalid() {
             syntax_errors[0].notes,
             vec![
                 "Check this file with `dart analyze`. Valid Dart may use syntax not supported by Dust's bundled parser.",
-                "Primary constructors and named concise `new` constructors are not supported yet. Use traditional in-body constructors with the class name and explicit fields.",
+                "Named concise `new` constructors are not supported yet. Use an in-body constructor with the class name.",
             ]
         );
         assert!(syntax_errors[0].has_labels());
