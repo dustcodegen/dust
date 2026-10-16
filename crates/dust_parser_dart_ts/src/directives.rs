@@ -1,4 +1,4 @@
-use dust_parser_dart::ParsedDirective;
+use dust_parser_dart::{ParsedCombinatorKind, ParsedDirective, ParsedVisibilityCombinator};
 use dust_text::SourceText;
 use tree_sitter::Node;
 
@@ -9,6 +9,10 @@ use crate::{
         unquote,
     },
 };
+
+/// Ordered, source-preserving directive inputs.
+mod namespace;
+use namespace::{extract_combinators, extract_namespace, extract_uri_literal};
 
 /// Extracts Dart library directives from the root node.
 pub(crate) fn extract_directives(root: Node<'_>, source: &SourceText) -> Vec<ParsedDirective> {
@@ -26,8 +30,10 @@ pub(crate) fn extract_directives(root: Node<'_>, source: &SourceText) -> Vec<Par
             "import_or_export" => {
                 if let Some(import) = direct_named_child(child, "library_import") {
                     let import_specification = direct_named_child(import, "import_specification");
-                    let (show, hide) = import_combinators(import, source);
+                    let combinators = extract_combinators(import, source);
+                    let (show, hide) = legacy_import_combinators(&combinators);
                     directives.push(ParsedDirective::Import {
+                        namespace: extract_namespace(import, source, combinators),
                         uri: find_first_descendant_text(import, source, &["uri", "string_literal"])
                             .map(unquote)
                             .unwrap_or_default(),
@@ -46,6 +52,11 @@ pub(crate) fn extract_directives(root: Node<'_>, source: &SourceText) -> Vec<Par
                     });
                 } else if let Some(export) = direct_named_child(child, "library_export") {
                     directives.push(ParsedDirective::Export {
+                        namespace: extract_namespace(
+                            export,
+                            source,
+                            extract_combinators(export, source),
+                        ),
                         uri: find_first_descendant_text(export, source, &["uri", "string_literal"])
                             .map(unquote)
                             .unwrap_or_default(),
@@ -54,12 +65,14 @@ pub(crate) fn extract_directives(root: Node<'_>, source: &SourceText) -> Vec<Par
                 }
             }
             "part_directive" => directives.push(ParsedDirective::Part {
+                uri_literal: extract_uri_literal(child, source),
                 uri: find_first_descendant_text(child, source, &["uri", "string_literal"])
                     .map(unquote)
                     .unwrap_or_default(),
                 span: text_range(child),
             }),
             "part_of_directive" => directives.push(ParsedDirective::PartOf {
+                uri_literal: extract_uri_literal(child, source),
                 library_name: direct_named_child(child, "dotted_identifier_list")
                     .map(|name| node_text(name, source))
                     .filter(|name| !name.is_empty()),
@@ -74,54 +87,18 @@ pub(crate) fn extract_directives(root: Node<'_>, source: &SourceText) -> Vec<Par
     directives
 }
 
-/// Extracts `show` and `hide` import combinators.
-fn import_combinators(import: Node<'_>, source: &SourceText) -> (Vec<String>, Vec<String>) {
+/// Keeps the legacy flattened lists without redefining their compatibility contract.
+fn legacy_import_combinators(
+    combinators: &[ParsedVisibilityCombinator],
+) -> (Vec<String>, Vec<String>) {
     let mut show = Vec::new();
     let mut hide = Vec::new();
-    collect_import_combinators(import, source, &mut show, &mut hide);
-
+    for combinator in combinators {
+        let target = match combinator.kind {
+            ParsedCombinatorKind::Show => &mut show,
+            ParsedCombinatorKind::Hide => &mut hide,
+        };
+        target.extend(combinator.names.iter().cloned());
+    }
     (show, hide)
-}
-
-/// Recursively collects import combinator nodes.
-fn collect_import_combinators(
-    node: Node<'_>,
-    source: &SourceText,
-    show: &mut Vec<String>,
-    hide: &mut Vec<String>,
-) {
-    if node.is_named() && node.kind() == "combinator" {
-        collect_import_combinator(node, source, show, hide);
-        return;
-    }
-
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor).filter(|child| child.is_named()) {
-        collect_import_combinators(child, source, show, hide);
-    }
-}
-
-/// Adds one import combinator's identifiers to the correct output list.
-fn collect_import_combinator(
-    combinator: Node<'_>,
-    source: &SourceText,
-    show: &mut Vec<String>,
-    hide: &mut Vec<String>,
-) {
-    let combinator_source = node_text(combinator, source);
-    let target = if combinator_source.trim_start().starts_with("show") {
-        show
-    } else if combinator_source.trim_start().starts_with("hide") {
-        hide
-    } else {
-        return;
-    };
-
-    let mut cursor = combinator.walk();
-    target.extend(
-        combinator
-            .children(&mut cursor)
-            .filter(|node| node.is_named() && node.kind() == "identifier")
-            .map(|identifier| node_text(identifier, source)),
-    );
 }

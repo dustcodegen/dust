@@ -8,10 +8,13 @@ mod directives;
 mod inheritance;
 /// Lowering for class members.
 mod members;
+/// Source-preserving namespace directive lowering.
+mod namespaces;
 mod tests_declarations;
 mod tests_directives;
 mod tests_generics;
 mod tests_inheritance;
+mod tests_namespaces;
 mod tests_type_signatures;
 
 use std::collections::HashMap;

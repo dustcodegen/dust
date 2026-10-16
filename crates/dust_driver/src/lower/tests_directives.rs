@@ -47,6 +47,7 @@ fn lowers_parser_directives_into_dart_file_ir() {
                 span: TextRange::new(37_u32, 57_u32),
             },
             ParsedDirective::Import {
+                namespace: None,
                 uri: "package:app/src/user.dart".to_owned(),
                 prefix: Some("user".to_owned()),
                 show: vec!["User".to_owned(), "UserId".to_owned()],
@@ -55,14 +56,17 @@ fn lowers_parser_directives_into_dart_file_ir() {
                 span: TextRange::new(58_u32, 106_u32),
             },
             ParsedDirective::Export {
+                namespace: None,
                 uri: "src/public.dart".to_owned(),
                 span: TextRange::new(107_u32, 132_u32),
             },
             ParsedDirective::Part {
+                uri_literal: None,
                 uri: "user.g.dart".to_owned(),
                 span: TextRange::new(133_u32, 152_u32),
             },
             ParsedDirective::PartOf {
+                uri_literal: None,
                 library_name: Some("models.user".to_owned()),
                 uri: None,
                 span: TextRange::new(153_u32, 173_u32),

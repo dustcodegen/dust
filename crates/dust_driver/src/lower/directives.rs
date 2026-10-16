@@ -1,5 +1,6 @@
 //! Lowering for library, import, export and part directives.
 
+use super::namespaces::{lower_namespace, lower_uri_literal};
 use super::*;
 
 /// Collects import URIs for backwards-compatible plugin input.
@@ -56,6 +57,7 @@ pub(super) fn lower_import_directives(
         .iter()
         .filter_map(|directive| match directive {
             ParsedDirective::Import {
+                namespace,
                 uri,
                 prefix,
                 show,
@@ -63,6 +65,9 @@ pub(super) fn lower_import_directives(
                 is_deferred,
                 span,
             } => Some(ImportIr {
+                namespace: namespace
+                    .as_ref()
+                    .map(|namespace| lower_namespace(file_id, namespace)),
                 uri: uri.clone(),
                 prefix: prefix.clone(),
                 show: show.clone(),
@@ -83,7 +88,14 @@ pub(super) fn lower_export_directives(
     directives
         .iter()
         .filter_map(|directive| match directive {
-            ParsedDirective::Export { uri, span } => Some(ExportIr {
+            ParsedDirective::Export {
+                namespace,
+                uri,
+                span,
+            } => Some(ExportIr {
+                namespace: namespace
+                    .as_ref()
+                    .map(|namespace| lower_namespace(file_id, namespace)),
                 uri: uri.clone(),
                 span: SpanIr::new(file_id, *span),
             }),
@@ -100,7 +112,14 @@ pub(super) fn lower_part_directives(
     directives
         .iter()
         .filter_map(|directive| match directive {
-            ParsedDirective::Part { uri, span } => Some(PartIr {
+            ParsedDirective::Part {
+                uri_literal,
+                uri,
+                span,
+            } => Some(PartIr {
+                uri_literal: uri_literal
+                    .as_ref()
+                    .map(|literal| lower_uri_literal(file_id, literal)),
                 uri: uri.clone(),
                 span: SpanIr::new(file_id, *span),
             }),
@@ -116,10 +135,14 @@ pub(super) fn lower_part_of_directive(
 ) -> Option<PartOfIr> {
     directives.iter().find_map(|directive| match directive {
         ParsedDirective::PartOf {
+            uri_literal,
             library_name,
             uri,
             span,
         } => Some(PartOfIr {
+            uri_literal: uri_literal
+                .as_ref()
+                .map(|literal| lower_uri_literal(file_id, literal)),
             library_name: library_name
                 .as_deref()
                 .map(|name| lower_name_ir(file_id, name, *span)),

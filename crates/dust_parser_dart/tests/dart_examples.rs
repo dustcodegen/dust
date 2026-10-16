@@ -13,6 +13,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
         span: TextRange::new(0_u32, 180_u32),
         directives: vec![
             ParsedDirective::Import {
+                namespace: None,
                 uri: "dart:convert".to_owned(),
                 prefix: None,
                 show: Vec::new(),
@@ -21,6 +22,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                 span: TextRange::new(0_u32, 22_u32),
             },
             ParsedDirective::Part {
+                uri_literal: None,
                 uri: "user.g.dart".to_owned(),
                 span: TextRange::new(23_u32, 42_u32),
             },

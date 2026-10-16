@@ -14,6 +14,8 @@ mod dart_versions;
 mod declarations;
 #[path = "extract_tests/diagnostics.rs"]
 mod diagnostics;
+#[path = "extract_tests/directive_namespaces.rs"]
+mod directive_namespaces;
 #[path = "extract_tests/fields.rs"]
 mod fields;
 #[path = "extract_tests/generic_headers.rs"]

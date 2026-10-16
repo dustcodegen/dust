@@ -28,11 +28,12 @@ pub use result::ParseResult;
 pub use surface::{
     ParameterKind, ParsedAnnotation, ParsedAnnotationArgument, ParsedAnnotationArguments,
     ParsedAnnotationNamedArgument, ParsedAnnotationNumberKind, ParsedAnnotationValue,
-    ParsedAnnotationValueRootKind, ParsedClassKind, ParsedClassSurface,
-    ParsedConstructorParamSurface, ParsedConstructorSurface, ParsedDartFileSurface,
-    ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface, ParsedExtensionSurface,
-    ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
-    ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface,
-    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypedefSurface,
+    ParsedAnnotationValueRootKind, ParsedClassKind, ParsedClassSurface, ParsedCombinatorKind,
+    ParsedConditionalUri, ParsedConstructorParamSurface, ParsedConstructorSurface,
+    ParsedDartFileSurface, ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface,
+    ParsedExtensionSurface, ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
+    ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface, ParsedNamespaceDirective,
+    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypedefSurface, ParsedUriLiteral,
+    ParsedVisibilityCombinator,
 };
 pub use type_surface::{ParsedTypeKind, ParsedTypeSurface};

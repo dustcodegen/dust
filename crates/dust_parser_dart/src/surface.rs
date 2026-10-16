@@ -6,11 +6,14 @@ use crate::{ParsedQueryCallSurface, ParsedTypeSurface};
 mod annotations;
 /// Surface types for top-level and member declarations.
 mod declarations;
+/// Source-preserving namespace directive facts.
+mod directives;
 /// Generic class-header facts.
 mod generics;
 /// Surface types for fields, constructors and parameters.
 mod members;
 
+pub use self::directives::*;
 pub use self::generics::ParsedTypeParamSurface;
 pub use self::{annotations::*, declarations::*, members::*};
 
@@ -74,6 +77,8 @@ pub enum ParsedDirective {
     },
     /// An `import` directive.
     Import {
+        /// Ordered source facts when extractable; synthetic inputs may omit them.
+        namespace: Option<ParsedNamespaceDirective>,
         /// The imported URI text without quotes.
         uri: String,
         /// The optional import prefix after `as`.
@@ -89,6 +94,8 @@ pub enum ParsedDirective {
     },
     /// An `export` directive.
     Export {
+        /// Ordered source facts when extractable; synthetic inputs may omit them.
+        namespace: Option<ParsedNamespaceDirective>,
         /// The exported URI text without quotes.
         uri: String,
         /// The source span of the full directive.
@@ -96,6 +103,8 @@ pub enum ParsedDirective {
     },
     /// A `part` directive.
     Part {
+        /// Exact URI literal when supplied by the source parser.
+        uri_literal: Option<ParsedUriLiteral>,
         /// The part URI text without quotes.
         uri: String,
         /// The source span of the full directive.
@@ -103,6 +112,8 @@ pub enum ParsedDirective {
     },
     /// A `part of` directive.
     PartOf {
+        /// Exact URI literal for URI-form `part of`, if supplied.
+        uri_literal: Option<ParsedUriLiteral>,
         /// The declared library name, if written as an identifier.
         library_name: Option<String>,
         /// The declared library URI, if written as a string.
