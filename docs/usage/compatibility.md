@@ -23,6 +23,29 @@ below that constraint. Flutter 3.38.1 supplies stable Dart 3.10.0. See the
 [independent SDK/native consumer gate](db-sdk-validation.md) for exact versions,
 isolated lint-tool resolution and packaging checks; no SDK constraints change.
 
+## SDK versions versus source syntax
+
+A newer Dart or Flutter SDK does not update Dust's bundled Tree-sitter grammar.
+Supported handwritten syntax and generated Dart can work on a newer SDK even
+when new language syntax is not supported by Dust. A language-version gate
+records when Dart introduced a feature; it is not a parser-support guarantee.
+
+Class-header primary constructors and named concise `new` constructors are not
+supported yet in libraries processed by Dust. Keep traditional constructors
+inside the class body, with the class name and explicitly declared fields.
+This does not require changing constructor calls in your application.
+
+When syntax cannot be parsed, `dust build` and `dust check` fail with a nonzero
+exit code, source context and guidance to run `dart analyze`. If Dart accepts
+the file, Dust's grammar may be the limitation; upgrading only the SDK will not
+fix it. The guidance appears once per file, not on every parser error. Ordinary
+malformed Dart still fails; the diagnostic does not claim it is valid.
+
+A rejected library does not create or replace its generated output during a
+normal build/check. Preserved output is stale, not evidence of successful
+generation: fix the input and rerun both commands. Explicit `--clean` removes
+generated files before building and does not promise to preserve them.
+
 ## Unreleased Background Opening
 
 Generated SQLite `AppDatabase.openBackground` is a source-tree feature, not part

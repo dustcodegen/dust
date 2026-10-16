@@ -1,6 +1,6 @@
 use dust_cli::run_cli;
 
-use super::helpers::{DustImport, make_workspace, write_dust_file};
+use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};
 
 #[test]
 fn cli_build_renders_warning_details() {
@@ -73,4 +73,52 @@ fn cli_build_renders_error_notes() {
     assert!(run.stderr.contains(
         "Use a codec object such as `const UnixEpochDateTimeCodec()` or `unixEpochDateTimeCodec`."
     ));
+}
+
+#[test]
+fn unsupported_syntax_fails_build_and_check_without_replacing_output() {
+    for declaration in [
+        "class const User(final String name) with _$User;",
+        "class User with _$User { const new create(this.name); final String name; }",
+    ] {
+        for existing in [false, true] {
+            let workspace = make_workspace();
+            write_file(
+                &workspace.path().join("pubspec.yaml"),
+                "name: dust_test\nenvironment:\n  sdk: '>=3.13.0 <4.0.0'\n",
+            );
+            let input = workspace.path().join("lib/user.dart");
+            let output = workspace.path().join("lib/user.g.dart");
+            if existing {
+                write_dust_file(
+                    &input,
+                    &[DustImport::Derive],
+                    "part 'user.g.dart';\n@Derive([ToString()])\nclass User with _$User { const User(this.name); final String name; }\n",
+                );
+                let run = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+                assert_eq!(run.exit_code, 0, "{}", run.stderr);
+            }
+            let previous = std::fs::read(&output).ok();
+            assert_eq!(previous.is_some(), existing);
+            write_dust_file(
+                &input,
+                &[DustImport::Derive],
+                &format!("part 'user.g.dart';\n@Derive([ToString()])\n{declaration}\n"),
+            );
+            for command in ["build", "check"] {
+                let run = run_cli([command, "--root", workspace.path().to_str().unwrap()]);
+                assert_eq!(run.exit_code, 1, "{command}: {}", run.stdout);
+                assert!(run.stdout.is_empty());
+                assert!(
+                    run.stderr
+                        .contains("tree-sitter reported a Dart syntax error")
+                );
+                assert!(run.stderr.contains("Check this file with `dart analyze`."));
+                assert!(run.stderr.contains("Dust's bundled parser"));
+                assert!(run.stderr.contains("Use traditional in-body constructors"));
+                assert!(run.stderr.contains(input.to_str().unwrap()));
+                assert_eq!(std::fs::read(&output).ok(), previous);
+            }
+        }
+    }
 }
