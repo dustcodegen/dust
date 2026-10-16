@@ -16,22 +16,27 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def stage_consumer(
-    root: Path, output: Path, relative: str, lint_version: str = "10.3.0"
+    root: Path, output: Path, relative: str, lint_version: str = "10.3.0",
+    *, packages: tuple[str, ...] | None = None,
 ) -> Path:
     """Copy consumer source without its lock, workspace or cached resolution."""
     target = output / relative
     target.mkdir(parents=True)
     source = root / relative
     for name in (
-        "bin", "lib", "test", "assets", "migrations", "integration_test", "test_driver"
+        "bin", "lib", "test", "tool", "assets", "migrations", "integration_test", "test_driver"
     ):
         if (source / name).is_dir():
-            shutil.copytree(source / name, target / name)
+            # The benchmark recreates its bounded corpus, not local perf leftovers.
+            ignore = (shutil.ignore_patterns("generated_models")
+                      if relative == "examples/benchmark_project" and name == "lib" else None)
+            shutil.copytree(source / name, target / name, ignore=ignore)
     for name in ("pubspec.yaml", "analysis_options.yaml"):
         shutil.copy2(source / name, target / name)
-    packages = ("dust_dart", "dust_db_sqlite3")
-    if relative.startswith("examples/"):
-        packages += ("dust_flutter",)
+    if packages is None:
+        packages = ("dust_dart", "dust_db_sqlite3")
+        if relative.startswith("examples/"):
+            packages += ("dust_flutter",)
     (output / "packages").mkdir(exist_ok=True)
     for package in packages:
         link = output / "packages" / package
@@ -40,11 +45,12 @@ def stage_consumer(
     overrides: dict[str, object] = {
         package: {"path": str(root / "packages" / package)} for package in packages
     }
-    overrides["sqlite3"] = "3.5.2"
+    if "dust_db_sqlite3" in packages:
+        overrides["sqlite3"] = "3.5.2"
     # Only lint tooling varies with the SDK, never production constraints.
     overrides["very_good_analysis"] = lint_version
     (target / "pubspec_overrides.yaml").write_text(
-        json.dumps({"dependency_overrides": overrides}, indent=2) + "\n",
+        json.dumps({"dependency_overrides": overrides, "resolution": None}, indent=2) + "\n",
         encoding="utf-8",
     )
     return target

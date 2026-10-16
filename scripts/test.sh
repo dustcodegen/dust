@@ -39,6 +39,7 @@ if [[ "$SCOPE" == rust ]]; then
 fi
 
 python3 -m unittest discover -s scripts -p 'test_sqlite*.py'
+python3 -m unittest discover -s scripts -p 'test_sdk*.py'
 ./scripts/dart/test.sh
 ./scripts/flutter/test.sh
 

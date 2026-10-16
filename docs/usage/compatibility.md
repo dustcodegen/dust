@@ -121,3 +121,10 @@ constraints, runtime behavior, or generated-code compatibility, bump that
 package's `pubspec.yaml` version and update its `CHANGELOG.md` in the same PR.
 If generated code needs the new package API, update
 `compatibility/dust-cli-packages.json` too.
+
+## Local SDK regression gate
+
+Use the [minimum/latest Dart and Flutter consumer gate](sdk-validation.md) to
+check fresh generation, strict analysis, execution and rejection of unsupported
+syntax without changing versions, SDK defaults or remote CI. SQLite's higher
+SDK floor and native/device validation remain separate gates.
