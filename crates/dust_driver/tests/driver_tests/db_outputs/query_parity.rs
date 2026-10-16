@@ -11,6 +11,9 @@ mod source;
 #[path = "query_parity/mode_switch.rs"]
 mod mode_switch;
 
+#[path = "query_parity/static_strings.rs"]
+mod static_strings;
+
 #[test]
 fn db_mode_validates_a_query_only_library_without_annotations() {
     let workspace = make_workspace();

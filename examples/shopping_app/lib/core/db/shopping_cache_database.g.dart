@@ -68,8 +68,7 @@ final class _$ShoppingCacheDao implements ShoppingCacheDao {
   @override
   Future<Result<CachedProductRow?, SqlxError>> findCachedProduct(int id) {
     return _db.fetchOptional<CachedProductRow>(
-      r'''
-SELECT id, title, price, description, category, image,
+      r'''SELECT id, title, price, description, category, image,
        rating_rate, rating_count, payload, source
 FROM product_cache
 WHERE id = $1
@@ -82,8 +81,7 @@ WHERE id = $1
   @override
   Future<Result<List<CachedProductRow>, SqlxError>> listCachedProducts() {
     return _db.fetchAll<CachedProductRow>(
-      r'''
-SELECT id, title, price, description, category, image,
+      r'''SELECT id, title, price, description, category, image,
        rating_rate, rating_count, payload, source
 FROM product_cache
 ORDER BY title
@@ -104,8 +102,7 @@ ORDER BY title
   @override
   Future<Result<ExecResult, SqlxError>> saveProductRow(int id, String title, double price, String description, String category, String image, double ratingRate, int ratingCount, String payload, String source) {
     return _db.execute(
-      r'''
-INSERT OR REPLACE INTO product_cache (
+      r'''INSERT OR REPLACE INTO product_cache (
   id, title, price, description, category, image,
   rating_rate, rating_count, payload, source
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -117,8 +114,7 @@ INSERT OR REPLACE INTO product_cache (
   @override
   Future<Result<ExecResult, SqlxError>> saveWishlist(int productId, String title, String savedAt) {
     return _db.execute(
-      r'''
-INSERT OR REPLACE INTO wishlist_cache (product_id, title, saved_at)
+      r'''INSERT OR REPLACE INTO wishlist_cache (product_id, title, saved_at)
 VALUES ($1, $2, $3)
 ''',
       [productId, title, savedAt],
@@ -128,8 +124,7 @@ VALUES ($1, $2, $3)
   @override
   Future<Result<List<CachedWishlistRow>, SqlxError>> listWishlist() {
     return _db.fetchAll<CachedWishlistRow>(
-      r'''
-SELECT product_id, title, saved_at
+      r'''SELECT product_id, title, saved_at
 FROM wishlist_cache
 ORDER BY saved_at DESC
 ''',

@@ -19,6 +19,7 @@ from sdk_codegen_fixtures import generated_files, generated_hashes, stage_exampl
 from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import check_generic_names
+from sdk_static_strings import check_static_strings
 
 
 def stable_dart_version(output: str) -> str:
@@ -132,8 +133,10 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                         "product_showcase/models", env)
         names = check_generic_names(run, dust, dart, app, output / role / "generic-names",
                                     output / role / "dart/analysis_options.yaml", "product_showcase", env)
+        strings = check_static_strings(run, dart, app, output / role / "static-strings", env)
         rows.append({"role": role, "target": "dart", "version": version,
-                     "generated": hashes, "genericNegative": negatives, "genericNames": names})
+                     "generated": hashes, "genericNegative": negatives, "genericNames": names,
+                     "staticStrings": strings})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
