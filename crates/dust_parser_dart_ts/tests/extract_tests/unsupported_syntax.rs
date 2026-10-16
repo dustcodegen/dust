@@ -72,22 +72,26 @@ fn reports_exact_features_and_spans_for_new_constructor_shapes() {
 
 #[test]
 fn dot_shorthands_have_specific_actionable_guidance() {
-    let source = "enum Status { ready } final status = .ready;";
-    let result = parse(310, source);
-    let diagnostic = result
-        .diagnostics
-        .iter()
-        .find(|diagnostic| diagnostic.message == "Dust does not support dot shorthands yet")
-        .unwrap();
-    let label = &diagnostic.labels[0];
-    assert_eq!(
-        &source[label.range.start().to_usize()..label.range.end().to_usize()],
-        ".ready"
-    );
-    assert_eq!(
-        diagnostic.notes[1],
-        "Use an explicit type name instead of a dot shorthand."
-    );
+    for source in [
+        "enum Status { ready } final status = .ready;",
+        "enum Status { ready } Status current() => .ready;",
+    ] {
+        let result = parse(310, source);
+        let diagnostic = result
+            .diagnostics
+            .iter()
+            .find(|diagnostic| diagnostic.message == "Dust does not support dot shorthands yet")
+            .unwrap();
+        let label = &diagnostic.labels[0];
+        assert_eq!(
+            &source[label.range.start().to_usize()..label.range.end().to_usize()],
+            ".ready"
+        );
+        assert_eq!(
+            diagnostic.notes[1],
+            "Use an explicit type name instead of a dot shorthand."
+        );
+    }
 }
 
 #[test]
