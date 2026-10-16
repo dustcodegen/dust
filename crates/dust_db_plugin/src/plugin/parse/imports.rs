@@ -1,19 +1,41 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
 
 use dust_ir::DartFileIr;
+use dust_plugin_api::WorkspaceAnalysis;
+
+use crate::plugin::analysis::package_row_declarations;
 
 /// Returns row class names discovered through source library imports.
-pub(crate) fn imported_row_names(library: &DartFileIr) -> HashSet<String> {
+pub(crate) fn imported_row_names(
+    library: &DartFileIr,
+    analysis: &WorkspaceAnalysis,
+) -> HashSet<String> {
+    let mut rows_by_path: HashMap<PathBuf, Vec<String>> = HashMap::new();
+    for (name, row) in package_row_declarations(analysis, &library.package_name) {
+        let path = Path::new(&library.package_root).join(&row.source_path);
+        rows_by_path
+            .entry(normalize_path(&path))
+            .or_default()
+            .push(name);
+    }
     library
         .imports
         .iter()
         .filter_map(|uri| resolve_import_path(library, uri))
-        .filter_map(|path| fs::read_to_string(path).ok())
-        .flat_map(|source| row_names_from_source(&source))
+        .filter_map(|path| {
+            if let Some(names) = rows_by_path.get(&normalize_path(&path)) {
+                return Some(names.clone());
+            }
+            // shortcut: legacy scanning covers standalone callers; remove when they supply facts.
+            fs::read_to_string(path)
+                .ok()
+                .map(|source| row_names_from_source(&source))
+        })
+        .flatten()
         .collect()
 }
 
@@ -156,7 +178,7 @@ mod tests {
             query_calls: Vec::new(),
         };
 
-        let names = imported_row_names(&library);
+        let names = imported_row_names(&library, &WorkspaceAnalysis::default());
         assert!(names.contains("UserRow"));
         assert!(names.contains("TeamRow"));
         assert_eq!(names.len(), 2);

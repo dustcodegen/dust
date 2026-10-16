@@ -159,9 +159,13 @@ impl DustPlugin for DbPlugin {
     fn generate(
         &self,
         library: &DartFileIr,
-        _context: &PluginContext<'_>,
+        context: &PluginContext<'_>,
     ) -> Vec<PluginContribution> {
-        vec![emit_db_library(library, self.options)]
+        vec![emit_db_library(
+            library,
+            self.options,
+            context.symbol_plan.workspace_analysis(),
+        )]
     }
 }
 

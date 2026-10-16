@@ -49,6 +49,19 @@ The SQLite statements in this consumer are unchecked runtime SQL. Generated
 `FromRow` mapping is exercised, but these tests do not prove build-time SQL
 validation. Checked statements still use Dust's sqlx-backed [DB mode](db.md).
 
+Imported primary row classes use the shared parsed workspace facts during DAO
+validation and emission, not a source-line guess at the class header. Keep the
+row model in its normal-derive library and import it from the DAO library:
+
+```dart
+import 'package:dust_dart/db.dart';
+
+part 'account_row.g.dart';
+
+@Derive([FromRow()])
+class const AccountRow(final String name, final String? note);
+```
+
 These are scoped tests, not proof of every primary-constructor form. Inferred
 declaring-parameter types, generic/inherited field combinations and full
 acceptance checks still need complete validation.
