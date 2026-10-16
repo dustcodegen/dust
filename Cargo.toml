@@ -22,6 +22,7 @@ members = [
     "crates/dust_db_plugin",
 ]
 resolver = "2"
+exclude = ["vendor/tree-sitter-dart"]
 
 [workspace.package]
 version = "0.2.1"

@@ -35,6 +35,10 @@ supported yet in libraries processed by Dust. Keep traditional constructors
 inside the class body, with the class name and explicitly declared fields.
 This does not require changing constructor calls in your application.
 
+The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
+Preparing its Rust binding does not switch the active parser or enable new
+syntax; extraction and generated-code parity must be verified first.
+
 When syntax cannot be parsed, `dust build` and `dust check` fail with a nonzero
 exit code, source context and guidance to run `dart analyze`. If Dart accepts
 the file, Dust's grammar may be the limitation; upgrading only the SDK will not

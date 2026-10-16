@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/UserNobody14/tree-sitter-dart",
+  "revision": "3f0c7a8309d89927e7cc6bef39569c815fddb2e5",
+  "abi": 15,
+  "files": {
+    "LICENSE": "d270cb3a4985d75033bd77d875ccebff1d66e32788a3f727891e28d76132dd46",
+    "grammar.js": "b87834b9b3c6f073002270231b37bd52d08587cbf00bbe6192df2fe315932375",
+    "src/parser.c": "cca7aee98b5d316c4c9cf2ce7f75ca2de570261e4e793d9f4d42d0de637d493c",
+    "src/scanner.c": "07a7b7818b175e9460523e705dd88d20f7b5141bac95c593d4426e6d52284996",
+    "src/node-types.json": "9e351626d3a185b95ccdf58fb9e94967e8e97075ff62295269ba4208f51c7600",
+    "src/tree_sitter/alloc.h": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea",
+    "src/tree_sitter/array.h": "31e60a1bff6f715afacce03b5b70efe42b58371b4f9595dd4af52a577ff9608c",
+    "src/tree_sitter/parser.h": "180b893c8734778fd32f372dfbc27bd6ad1cd2221f26150b31256ff6716320d2",
+    "upstream/Cargo.toml": "e407da5242cddc47236be492ccfc5a3b8a9371e0f79c67e21bc87503dcb60c80",
+    "upstream/package.json": "69a5d569fb407994ea99fdeb5d1e8b40532e9719b7a5c543079bc2cbbb5751ac",
+    "upstream/build.rs": "89b9bc02110f7cf999295855a4bcf1a397e16a75d959f9b541e4bd92d8a24f08",
+    "upstream/lib.rs": "a203e9a7eaa6fa52a3cfcd96df33994d05c2988e40b50eb7cd2c246a646fa203"
+  }
+}

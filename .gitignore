@@ -1,6 +1,7 @@
 # Rust
 target/
 Cargo.lock
+!vendor/tree-sitter-dart/Cargo.lock
 
 # Dart & Flutter
 .dart_tool/
