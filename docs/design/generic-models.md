@@ -48,8 +48,9 @@ Dust's existing instance-member contract.
 
 ## Preserve structured facts
 
-The listed grammar already exposes class `type_parameters` and
-`type_parameter` / `type_bound` nodes. Extraction currently discards them.
+The listed grammar exposes class `type_parameters` and
+`type_parameter` / `type_bound` nodes. The initial implementation discarded them;
+the draft now retains these facts through class IR.
 
 Required facts:
 
@@ -205,8 +206,10 @@ platform execution or overall primary-constructor support. The user approved
 this design; parser facts now survive resolution and class IR/lowering with
 ordered bounds, mixin arguments and original spans. Scoped lowering distinguishes
 class binders from builtin types, including nested types and constructor/member
-signatures. Typed emission, mixin validation, capability checks and real generated
-consumers remain unfinished under #93. The emitter must also avoid shadowing its
+signatures. Shared mixin declarations now render the owning parameters/bounds,
+and invalid generated-mixin applications produce source-located diagnostics.
+Typed derive helpers, capability checks and real generated generic consumers
+remain unfinished under #93. The emitter must also avoid shadowing its
 own core-type references when source binders use names such as `String`; the IR
 distinction is not by itself a rendering solution. Neither design approval nor
 the fact/lowering stages establish generic model support.
@@ -219,3 +222,11 @@ their local binders without rewriting source. The generated non-generic callback
 example exercises omission, replacement and null clearing; it is not generic
 class acceptance. Shorthand callback formals and their effective-type facts
 remain separately pending in #92.
+
+The generic-mixin driver regression exposed a cache-persistence defect, fixed
+separately in [#101 / PR #102](https://github.com/dustcodegen/dust/pull/102) and
+applied to this draft. Rejected mixin arguments preserve the affected library's
+previous generated output and cache entry in build/check, for traditional and
+primary headers and both fail-fast modes. Other valid libraries can still update;
+this is not a workspace-wide atomic build. Assembly and diagnostic tests are not
+substitutes for the remaining typed derive acceptance.

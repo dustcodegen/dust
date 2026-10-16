@@ -6,6 +6,8 @@
 mod arguments;
 /// Dart runtime type and symbol names.
 mod dart_names;
+/// Generic declaration and use-site rendering.
+mod generics;
 /// Dart literal escaping.
 mod literals;
 /// Serde rename rules.
@@ -25,6 +27,7 @@ pub use dart_names::{
 };
 
 pub use arguments::named_argument_name;
+pub use generics::{render_type_arguments, render_type_parameters};
 pub use literals::{dart_string_literal, escape_dart_string};
 
 pub use source::{

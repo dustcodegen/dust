@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
+use dust_dart_emit::render_type_parameters;
 use dust_diagnostics::Diagnostic;
-use dust_ir::DartFileIr;
+use dust_ir::{ClassIr, DartFileIr};
 use dust_plugin_api::{AuxiliaryOutputContribution, GENERATED_HEADER, PluginRegistry, SymbolPlan};
 
 use crate::{format::format_generated_source, merge::MergedSections, writer::DartWriter};
@@ -65,6 +66,7 @@ pub fn emit_library_with_plan(
         .iter()
         .any(|contribution| !contribution.is_empty());
     let merged = MergedSections::from_contributions(contributions);
+    diagnostics.extend(crate::generics::validate_generic_mixins(library, &merged));
     let (source, changed) = if suppress_primary_output {
         (String::new(), previous_output.is_some())
     } else if should_emit_primary(
@@ -208,7 +210,7 @@ fn assemble_source(library: &DartFileIr, plan: &SymbolPlan, merged: &MergedSecti
         let interfaces = merged.interfaces_for_class(&class.name);
         if !members.is_empty() || !interfaces.is_empty() {
             writer.blank_line();
-            render_mixin_block(&mut writer, &class.name, interfaces, members);
+            render_mixin_block(&mut writer, class, interfaces, members);
         }
     }
 
@@ -251,11 +253,15 @@ fn format_auxiliary_output(output: AuxiliaryOutputContribution) -> AuxiliaryEmit
 /// Renders the generated mixin block for one source class.
 fn render_mixin_block(
     writer: &mut DartWriter,
-    class_name: &str,
+    class: &ClassIr,
     interfaces: &[String],
     members: &[String],
 ) {
-    let mixin_name = format!("_${class_name}");
+    let mixin_name = format!(
+        "_${}{}",
+        class.name,
+        render_type_parameters(&class.type_parameters)
+    );
     let mut block = String::with_capacity(
         mixin_name.len() + members.iter().map(String::len).sum::<usize>() + 16,
     );

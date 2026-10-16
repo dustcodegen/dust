@@ -85,8 +85,9 @@ Two concrete failures remain in this draft:
   can leak an unresolved `T` into generated helpers. This also fails for an
   equivalent traditional class, so it is not a primary-only regression.
   The [generic model design](../design/generic-models.md) is approved. Ordered
-  type-parameter/bound and mixin facts now survive into class IR; typed emission
-  and executable generated consumers are still unfinished.
+  type-parameter/bound and mixin facts survive into class IR; shared mixin
+  declarations and argument diagnostics are implemented in the draft. Typed
+  derive helpers and executable generated generic consumers remain unfinished.
 
 For these cases, a successful `dust build` does not establish that the generated
 Dart compiles. Do not use the draft feature as production-readiness evidence.
