@@ -136,7 +136,7 @@ fn looks_like_record_type(source: &str) -> bool {
 /// Returns whether the source looks like a Dart function type.
 fn looks_like_function_type(source: &str) -> bool {
     find_top_level_char(source, |index, ch| {
-        if ch != 'F' || index == 0 {
+        if ch != 'F' {
             return false;
         }
 
@@ -147,7 +147,10 @@ fn looks_like_function_type(source: &str) -> bool {
 
         let prev = source[..index].chars().next_back().unwrap_or_default();
         let after = stripped.trim_start();
-        prev.is_whitespace() && after.starts_with('(')
+        (index == 0 || prev.is_whitespace())
+            && (after.starts_with('(')
+                || (after.starts_with('<')
+                    && find_top_level_char(after, |_, ch| ch == '(').is_some()))
     })
     .is_some()
 }

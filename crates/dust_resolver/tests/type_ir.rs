@@ -1,6 +1,6 @@
 //! Integration tests for resolver-owned Dart type lowering.
 
-use dust_ir::BuiltinType;
+use dust_ir::{BuiltinType, TypeIr};
 use dust_parser_dart::ParsedTypeSurface;
 use dust_resolver::lower_type_ir;
 use dust_text::TextRange;
@@ -35,6 +35,23 @@ fn keeps_function_and_record_types_structured() {
     assert!(function.value.is_nullable());
     assert!(record.value.is_record());
     assert!(record.value.is_nullable());
+}
+
+#[test]
+fn preserves_explicit_generic_function_types_from_parsed_and_raw_inputs() {
+    let source = "String Function<String extends Object>(String)?";
+    let span = TextRange::new(41_u32, 41 + source.len() as u32);
+    let parsed = ParsedTypeSurface::parse(source, span).unwrap();
+    let expected = TypeIr::function("String Function<String extends Object>(String)").nullable();
+    for outcome in [
+        lower_type_ir(Some(&parsed), Some("ignored")),
+        lower_type_ir(None, Some(source)),
+    ] {
+        assert_eq!(outcome.value, expected);
+        assert_eq!(outcome.diagnostics, []);
+    }
+    assert_eq!(parsed.source, source);
+    assert_eq!(parsed.span, span);
 }
 
 #[test]
