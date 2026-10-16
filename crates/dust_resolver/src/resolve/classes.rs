@@ -6,7 +6,7 @@ use super::*;
 pub(super) fn resolve_class(
     file_id: FileId,
     class: &ParsedClassSurface,
-    catalog: &SymbolCatalog,
+    context: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> ResolvedClass {
     let mut traits = Vec::new();
@@ -15,7 +15,7 @@ pub(super) fn resolve_class(
     resolve_declaration_annotations(
         file_id,
         &class.annotations,
-        catalog,
+        context,
         diagnostics,
         &mut traits,
         &mut configs,
@@ -24,19 +24,19 @@ pub(super) fn resolve_class(
     let mut fields: Vec<crate::ResolvedField> = class
         .fields
         .iter()
-        .map(|field| resolve_field(file_id, field, catalog, diagnostics))
+        .map(|field| resolve_field(file_id, field, context, diagnostics))
         .collect();
 
     let mut methods: Vec<crate::ResolvedMethod> = class
         .methods
         .iter()
-        .map(|method| resolve_method(file_id, method, catalog, diagnostics))
+        .map(|method| resolve_method(file_id, method, context, diagnostics))
         .collect();
 
     let mut constructors: Vec<crate::ResolvedConstructor> = class
         .constructors
         .iter()
-        .map(|constructor| resolve_constructor(file_id, constructor, catalog, diagnostics))
+        .map(|constructor| resolve_constructor(file_id, constructor, context, diagnostics))
         .collect();
 
     let serde = normalize_class_serde(&class.name, &configs, diagnostics);

@@ -144,6 +144,13 @@ impl SymbolCatalog {
             .map(String::as_str)
     }
 
+    /// Alias eligibility is narrower than a canonical owner's combined roles.
+    pub(crate) fn alias_has_trait(&self, name: &str, id: &str) -> bool {
+        self.by_name
+            .get(name)
+            .is_some_and(|candidates| candidates.trait_ids.contains(id))
+    }
+
     /// Retains a role and adds its surface alias without discarding other owners.
     fn register(
         &mut self,
