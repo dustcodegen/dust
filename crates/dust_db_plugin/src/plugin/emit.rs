@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use dust_ir::DartFileIr;
-use dust_plugin_api::PluginContribution;
+use dust_plugin_api::{PluginContribution, WorkspaceAnalysis};
 
 use super::{
     DbPluginOptions,
@@ -25,6 +25,7 @@ use self::{
 pub(crate) fn emit_db_library(
     library: &DartFileIr,
     options: DbPluginOptions,
+    analysis: &WorkspaceAnalysis,
 ) -> PluginContribution {
     let mut contribution = PluginContribution::default();
     let mut sections = Vec::new();
@@ -48,7 +49,7 @@ pub(crate) fn emit_db_library(
         for db in databases {
             sections.push(render_database_class(library, &db));
         }
-        let imported_rows = imported_row_names(library);
+        let imported_rows = imported_row_names(library, analysis);
         let row_names = rows
             .iter()
             .map(|row| row.class.name.as_str())

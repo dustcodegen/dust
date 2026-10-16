@@ -125,7 +125,7 @@ fn validate_databases(
         }
     }
 
-    dao::validate_daos(library, &row_classes(library), diagnostics);
+    dao::validate_daos(library, &row_classes(library), analysis, diagnostics);
     let queries = query_specs(library);
     for query in &queries {
         query::validate_query_shape(query, diagnostics);
