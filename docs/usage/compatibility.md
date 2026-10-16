@@ -36,8 +36,10 @@ inside the class body, with the class name and explicitly declared fields.
 This does not require changing constructor calls in your application.
 
 The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
-Preparing its Rust binding does not switch the active parser or enable new
-syntax; extraction and generated-code parity must be verified first.
+This source checkout uses the pinned listed upstream after extraction parity;
+released binaries are not changed by updating the source. Primary/concise
+constructors and dot shorthands now get explicit unsupported-generation errors,
+even though the new grammar parses them. Grammar acceptance is not codegen support.
 
 When syntax cannot be parsed, `dust build` and `dust check` fail with a nonzero
 exit code, source context and guidance to run `dart analyze`. If Dart accepts

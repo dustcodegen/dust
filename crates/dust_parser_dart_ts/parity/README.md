@@ -1,7 +1,7 @@
 # Listed grammar extraction contracts
 
 This non-publishable, standalone test manifest compiles the real backend source
-with the pinned listed grammar instead of the production grammar. It does not
+with the legacy packaged grammar instead of the active listed grammar. It does not
 select a parser in the CLI or add a feature to Dust's public API.
 
 Both native grammars export `tree_sitter_dart` and scanner symbols. Linking them
@@ -22,7 +22,8 @@ the parser-owned facts, including annotation/type values, member ordering and
 byte spans. It stores both outputs in `.dart_tool/listed-parser-parity/`.
 No golden output is rewritten. Negative Python tests reject missing, duplicate,
 empty and changed records. Root local Rust test/lint scripts include this gate
-and compile/lint the candidate backend separately.
+and compile/lint the legacy backend separately. The workspace backend and CLI
+use the pinned listed grammar; the harness uses registry `tree-sitter-dart 0.1.0`.
 
 Seven contracts cover traditional classes/members; eight compare complete
 library surfaces for directives, enums, mixins, extensions/representations,
@@ -34,8 +35,9 @@ fallbacks, placeholders, dynamic opt-outs, warning labels/spans and actual
 shopping-app source parts. Samples are parser-fact
 fixtures, not standalone app examples; real app analysis remains the SDK gate.
 
-These slices of [#70](https://github.com/dustcodegen/dust/issues/70) are not
-whole-workspace adoption. Further source forms and complete
-candidate generated-consumer parity remain gates before changing the production
-dependency. Primary and concise constructors remain
-unsupported by Dust. No version bump, release or remote CI is involved.
+These scoped contracts do not prove every Dart source form. Adoption under
+[#70](https://github.com/dustcodegen/dust/issues/70) also requires full workspace
+checks and freshly generated minimum/latest SDK consumers; exact generated
+hashes must match the pre-adoption baseline. Primary/concise constructors and
+dot shorthands remain explicitly rejected until their generated consumers are
+implemented. No version bump, release or remote CI is involved.

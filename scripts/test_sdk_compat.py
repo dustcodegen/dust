@@ -111,23 +111,25 @@ class SdkCompatibilityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             require_deterministic_generation(rows)
 
-    def test_negative_probe_requires_sdk_analysis_and_parser_failure(self) -> None:
+    def test_negative_probe_requires_sdk_analysis_and_explicit_rejection(self) -> None:
         with tempfile.TemporaryDirectory() as name:
             calls = []
 
             def run(command, cwd=ROOT, expected=0):
                 calls.append(command)
-                return subprocess.CompletedProcess(command, expected, "", "syntax error" if expected else "")
+                message = "Dust does not support primary constructors yet; Dust does not support concise constructors yet"
+                return subprocess.CompletedProcess(command, expected, "", message if expected else "")
 
             self.assertEqual(check_unsupported(run, Path("dust"), Path("dart"), Path(name)),
                              ["primary", "named-concise"])
             self.assertEqual(sum("analyze" in call for call in calls), 2)
             self.assertEqual(sum("build" in call or "check" in call for call in calls), 4)
-        with tempfile.TemporaryDirectory() as name:
-            def bad(command, cwd=ROOT, expected=0):
-                return subprocess.CompletedProcess(command, expected, "", "unrelated failure")
-            with self.assertRaises(ValueError):
-                check_unsupported(bad, Path("dust"), Path("dart"), Path(name))
+        for message in ("unrelated failure", "syntax error", "Dust does not support dot shorthands yet"):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as name:
+                def bad(command, cwd=ROOT, expected=0):
+                    return subprocess.CompletedProcess(command, expected, "", message)
+                with self.assertRaises(ValueError):
+                    check_unsupported(bad, Path("dust"), Path("dart"), Path(name))
 
     def test_negative_probe_rejects_generated_files_and_analyzer_failures(self) -> None:
         with tempfile.TemporaryDirectory() as name:
@@ -136,7 +138,8 @@ class SdkCompatibilityTests(unittest.TestCase):
             def emits(command, cwd=ROOT, expected=0):
                 if expected:
                     (root / "unsupported/lib/probe.g.dart").write_text("unexpected")
-                return subprocess.CompletedProcess(command, expected, "", "syntax error")
+                message = "Dust does not support primary constructors yet; Dust does not support concise constructors yet"
+                return subprocess.CompletedProcess(command, expected, "", message)
 
             with self.assertRaises(ValueError):
                 check_unsupported(emits, Path("dust"), Path("dart"), root)

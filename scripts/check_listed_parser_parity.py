@@ -46,8 +46,8 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=True)
     logs = []
     for name, selector in (
-        ("existing", ["-p", "dust_parser_dart_ts"]),
-        ("listed", ["--manifest-path", "crates/dust_parser_dart_ts/parity/Cargo.toml"]),
+        ("existing", ["--manifest-path", "crates/dust_parser_dart_ts/parity/Cargo.toml"]),
+        ("listed", ["-p", "dust_parser_dart_ts"]),
     ):
         result = subprocess.run(
             ["cargo", "test", *selector, "--locked", "--lib", "--",
