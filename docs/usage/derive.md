@@ -132,8 +132,41 @@ chained helper:
 final moved = profile.copyWith.address(city: 'London');
 ```
 
+### Explicit Generic Callbacks
+
+A non-generic model can contain a callback with its own type parameters:
+
+```dart
+@Derive([CopyWith()])
+class CallbackModel with _$CallbackModel {
+  const CallbackModel({required this.transform, this.optionalTransform});
+
+  final T Function<T>(T) transform;
+  final T Function<T>(T)? optionalTransform;
+}
+```
+
+Write the full function type on the field. The callback's `T` belongs to its
+function signature; it does not make `CallbackModel` a generic class.
+
+```dart
+T identity<T>(T value) => value;
+
+final model = CallbackModel(transform: identity, optionalTransform: identity);
+final copied = model.copyWith();
+final int result = copied.transform<int>(42);
+final cleared = model.copyWith(optionalTransform: null);
+```
+
+Omission retains the callback. Passing `null` clears a nullable callback, while
+the required callback keeps the existing non-nullable null-as-omission behavior.
+This example does not establish generic class generation (#93) or shorthand
+primary callback-formal support (#92).
+
 ## Examples
 
 - [Product showcase models](../../examples/product_showcase/lib/models)
 - [Generated derive tests](../../examples/product_showcase/test/generated_derive_models_test.dart)
 - [Generated copyWith tests](../../examples/product_showcase/test/generated_copywith_test.dart)
+- [Explicit callback model](../../examples/product_showcase/lib/models/callback_model.dart)
+- [Callback copy tests](../../examples/product_showcase/test/models/callback_model_test.dart)

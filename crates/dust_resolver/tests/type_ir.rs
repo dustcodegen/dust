@@ -91,6 +91,23 @@ fn keeps_function_and_record_types_structured() {
 }
 
 #[test]
+fn preserves_explicit_generic_function_types_from_parsed_and_raw_inputs() {
+    let source = "String Function<String extends Object>(String)?";
+    let span = TextRange::new(41_u32, 41 + source.len() as u32);
+    let parsed = ParsedTypeSurface::parse(source, span).unwrap();
+    let expected = TypeIr::function("String Function<String extends Object>(String)").nullable();
+    for outcome in [
+        lower_type_ir(Some(&parsed), Some("ignored")),
+        lower_type_ir(None, Some(source)),
+    ] {
+        assert_eq!(outcome.value, expected);
+        assert_eq!(outcome.diagnostics, []);
+    }
+    assert_eq!(parsed.source, source);
+    assert_eq!(parsed.span, span);
+}
+
+#[test]
 fn lowers_parser_owned_type_surface_before_raw_source_fallback() {
     let parsed =
         ParsedTypeSurface::parse("Map<String, List<int?>>", TextRange::new(0_u32, 23_u32)).unwrap();

@@ -150,3 +150,15 @@ fn non_generic_classes_keep_builtin_types_and_empty_parameter_lists() {
         TypeIr::string()
     );
 }
+
+#[test]
+fn primary_callback_types_preserve_function_local_binders() {
+    let file = lower(
+        "class const Box<String>(final String Function<String>(String) transform) with _$Box<String>;",
+    );
+    let class = &file.classes[0];
+    let expected = TypeIr::function("String Function<String>(String)");
+    assert_eq!(class.fields[0].ty, expected);
+    assert_eq!(class.constructors[0].params[0].ty, expected);
+    assert_eq!(class.type_parameters[0].name.source, "String");
+}

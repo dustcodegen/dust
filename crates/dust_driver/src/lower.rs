@@ -12,6 +12,7 @@ mod tests_declarations;
 mod tests_directives;
 mod tests_generics;
 mod tests_inheritance;
+mod tests_type_signatures;
 
 use std::collections::HashMap;
 

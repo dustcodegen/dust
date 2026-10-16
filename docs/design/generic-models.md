@@ -211,8 +211,11 @@ own core-type references when source binders use names such as `String`; the IR
 distinction is not by itself a rendering solution. Neither design approval nor
 the fact/lowering stages establish generic model support.
 
-Explicit generic function-type classification is tracked separately in
-[#99](https://github.com/dustcodegen/dust/issues/99). Unlike shorthand callback
-formals in #92, these signatures already spell `Function<T>(...)`; the shared
-type parser currently misclassifies them. Scoped lowering does not repair or
-rewrite that source.
+Explicit generic function-type classification is covered by
+[#99](https://github.com/dustcodegen/dust/issues/99) /
+[PR #100](https://github.com/dustcodegen/dust/pull/100), also applied to this draft.
+Parser/resolver/driver regressions preserve `Function<T>(...)` signatures and
+their local binders without rewriting source. The generated non-generic callback
+example exercises omission, replacement and null clearing; it is not generic
+class acceptance. Shorthand callback formals and their effective-type facts
+remain separately pending in #92.
