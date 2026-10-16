@@ -17,6 +17,8 @@ struct RegisteredPlugin {
     trait_symbols: Vec<SymbolId>,
     /// Config symbols claimed by the plugin.
     config_symbols: Vec<SymbolId>,
+    /// Validated declaration origins captured with this registration's claims.
+    annotation_origins: Vec<crate::AnnotationOrigin>,
     /// Surface annotation names supported by the plugin.
     supported_annotations: &'static [&'static str],
 }
@@ -64,7 +66,8 @@ impl PluginRegistry {
         skip_owned_symbols: bool,
     ) -> Result<(), Diagnostic> {
         let plugin_name = plugin.plugin_name();
-        self.validate_annotation_origins(plugin.as_ref(), skip_owned_symbols)?;
+        let annotation_origins =
+            self.validate_annotation_origins(plugin.as_ref(), skip_owned_symbols)?;
         let mut trait_symbols = Vec::new();
         let mut config_symbols = Vec::new();
         let supported_annotations = if executes {
@@ -114,6 +117,7 @@ impl PluginRegistry {
             executes,
             trait_symbols,
             config_symbols,
+            annotation_origins,
             supported_annotations,
         });
         Ok(())

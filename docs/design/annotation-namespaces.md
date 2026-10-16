@@ -133,6 +133,12 @@ Both roles of `Validate` continue to share one actual declaration. The intrinsic
 `Derive` grouping origin is available separately, without inventing a plugin
 trait/config claim or changing compatibility lookup.
 
+The registry snapshots the exact validated origins alongside the effective
+claims. It does not call the provider again during later registrations or
+catalog construction, so a changing provider cannot silently replace accepted
+provenance. A permanent regression first reproduced that drift before this
+snapshot was added.
+
 This distinction is essential for the legacy `dust_dart::Query` ID: normal mode
 owns the HTTP parameter annotation in `src/http/http_client_annotations.dart`,
 while focused DB mode owns the distinct SQL method annotation in

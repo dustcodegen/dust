@@ -9,20 +9,7 @@ impl PluginRegistry {
         let mut origins = self
             .plugins
             .iter()
-            .flat_map(|entry| {
-                entry
-                    .plugin
-                    .annotation_origins()
-                    .iter()
-                    .copied()
-                    .filter(|origin| {
-                        entry
-                            .trait_symbols
-                            .iter()
-                            .chain(&entry.config_symbols)
-                            .any(|symbol| symbol.0 == origin.symbol)
-                    })
-            })
+            .flat_map(|entry| entry.annotation_origins.iter().copied())
             .collect::<Vec<_>>();
         origins.sort_unstable();
         origins.dedup();
@@ -34,12 +21,13 @@ impl PluginRegistry {
         &self,
         plugin: &dyn DustPlugin,
         fallback: bool,
-    ) -> Result<(), Diagnostic> {
+    ) -> Result<Vec<AnnotationOrigin>, Diagnostic> {
         let mut known: BTreeMap<_, _> = self
             .annotation_origins()
             .into_iter()
             .map(|origin| (origin.symbol, origin))
             .collect();
+        let mut validated = Vec::new();
         for origin in plugin.annotation_origins() {
             let owns_trait = plugin.claimed_traits().contains(&origin.symbol);
             let owns_config = plugin.claimed_configs().contains(&origin.symbol);
@@ -70,7 +58,10 @@ impl PluginRegistry {
                     )));
                 }
             }
+            validated.push(*origin);
         }
-        Ok(())
+        validated.sort_unstable();
+        validated.dedup();
+        Ok(validated)
     }
 }
