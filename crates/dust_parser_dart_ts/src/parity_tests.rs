@@ -52,6 +52,15 @@ export 'base.dart' if (dart.library.html) 'web.dart' show Public;
 }
 
 #[test]
+fn source_preserving_namespace_directives() {
+    let library = parse(include_str!(
+        "../../../fixtures/namespace_directives/mixed.dart.snapshot"
+    ));
+    assert_eq!(library.directives.len(), 5);
+    contract("namespace-directives", library);
+}
+
+#[test]
 fn uri_part_of() {
     let library = parse("part of 'parent.dart';");
     assert_eq!(library.directives.len(), 1);

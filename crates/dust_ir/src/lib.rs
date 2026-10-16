@@ -26,6 +26,8 @@ mod library;
 mod lowering;
 /// Method declarations.
 mod method;
+/// Ordered, source-preserving directive namespace inputs.
+mod namespace;
 /// Query function metadata.
 mod query_call;
 /// Route configuration.
@@ -63,6 +65,9 @@ pub use http::{
 pub use library::{DartFileIr, SpanIr};
 pub use lowering::LoweringOutcome;
 pub use method::{MethodIr, MethodParamIr};
+pub use namespace::{
+    CombinatorKindIr, ConditionalUriIr, NamespaceDirectiveIr, VisibilityCombinatorIr,
+};
 pub use query_call::{QueryCallIr, QueryFunctionIr};
 pub use route::{RouteConfigIr, RouterConfigIr};
 pub use serde::{

@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLASS_CASES = {"traditional", "modifiers", "metadata", "methods", "factories", "parameters", "operators"}
 I18N_CASES = {"i18n-static", "i18n-runtime", "i18n-hardcoded", "i18n-ignored", "i18n-shopping"}
 CASES = CLASS_CASES | {"directives", "conditional-directives", "uri-part", "unnamed-library",
+                       "namespace-directives",
                        "enums", "declarations", "variables", "functions",
                        "query-terminals", "query-context", "query-unsafe", "query-dynamic"} | I18N_CASES
 MARKER = "DUST_PARSER_PARITY:"

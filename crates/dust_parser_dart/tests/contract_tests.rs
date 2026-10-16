@@ -17,6 +17,7 @@ impl ParseBackend for FakeBackend {
             library: ParsedDartFileSurface {
                 span: TextRange::new(0_u32, 32_u32),
                 directives: vec![ParsedDirective::Part {
+                    uri_literal: None,
                     uri: "user.g.dart".to_owned(),
                     span: TextRange::new(0_u32, 19_u32),
                 }],
@@ -136,6 +137,7 @@ fn parse_file_dispatches_through_injected_backend() {
 #[test]
 fn directive_span_accessor_returns_stored_span() {
     let directive = ParsedDirective::Import {
+        namespace: None,
         uri: "dart:convert".to_owned(),
         prefix: None,
         show: Vec::new(),

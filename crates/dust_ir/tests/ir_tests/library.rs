@@ -98,6 +98,7 @@ fn dart_file_ir_preserves_directive_surfaces() {
         span: span(0, 20),
     });
     file.import_directives.push(ImportIr {
+        namespace: None,
         uri: "package:dust_dart/dust_dart.dart".to_owned(),
         prefix: Some("dust".to_owned()),
         show: vec!["Derive".to_owned()],
@@ -106,14 +107,17 @@ fn dart_file_ir_preserves_directive_surfaces() {
         span: span(21, 67),
     });
     file.export_directives.push(ExportIr {
+        namespace: None,
         uri: "src/user_api.dart".to_owned(),
         span: span(68, 95),
     });
     file.part_directives.push(PartIr {
+        uri_literal: None,
         uri: "user.g.dart".to_owned(),
         span: span(96, 115),
     });
     file.part_of = Some(PartOfIr {
+        uri_literal: None,
         library_name: Some(library_name),
         uri: None,
         span: span(116, 137),
@@ -163,6 +167,7 @@ fn annotation_ir_preserves_prefix_and_structured_values() {
         span: span(3, 33),
     };
     let import = ImportIr {
+        namespace: None,
         uri: "package:dust_dart/dust_dart.dart".to_owned(),
         prefix: Some("dust".to_owned()),
         show: Vec::new(),

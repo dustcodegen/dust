@@ -12,6 +12,7 @@ pub(super) fn diagnostic_messages(diagnostics: &[dust_diagnostics::Diagnostic]) 
 pub(super) fn add_import(library: &mut DartFileIr, uri: &str, show: &[&str], hide: &[&str]) {
     library.imports.push(uri.to_owned());
     library.import_directives.push(ImportIr {
+        namespace: None,
         uri: uri.to_owned(),
         prefix: None,
         show: show.iter().map(|name| (*name).to_owned()).collect(),

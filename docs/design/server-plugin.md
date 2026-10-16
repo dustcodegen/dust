@@ -82,8 +82,17 @@ one import.
 
 ## Engine Prerequisites
 
-None blocking. Every phase below builds against today's parser, resolver, and
-IR.
+Namespace ownership [#84](https://github.com/dustcodegen/dust/issues/84) blocks
+phase 0. The [approved policy](https://github.com/dustcodegen/dust/pull/97)
+requires actual import/declaration identity, not registration-order or prefix
+guesses. Catalog retention [#105](https://github.com/dustcodegen/dust/pull/105)
+and [directive namespace facts](directive-namespace-facts.md) are separate
+prerequisites, not the full binding fix. Do not enable the default server
+registry until graph/all-site binding and all acceptance gates pass.
+
+Runtime-contract alignment is separately tracked in
+[#87](https://github.com/dustcodegen/dust/pull/87); the generator must follow
+that reviewed runtime contract as well.
 
 ### Cleared: class interfaces in IR
 
