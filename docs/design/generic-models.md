@@ -1,6 +1,6 @@
 # Generic model generation
 
-Status: **proposal, not implemented or approved**. Tracks [#93](https://github.com/dustcodegen/dust/issues/93)
+Status: **approved design; implementation in progress**. Tracks [#93](https://github.com/dustcodegen/dust/issues/93)
 under primary-constructor work [#76](https://github.com/dustcodegen/dust/issues/76)
 and parser migration [#68](https://github.com/dustcodegen/dust/issues/68).
 
@@ -8,9 +8,9 @@ Grammar acceptance is not generator support. Current traditional and primary
 generic `CopyWith` models can generate undeclared `T` references even when
 `dust build` succeeds. Do not use this proposal as production guidance.
 
-## Decision requested
+## Approved decision
 
-Approve structured class type-parameter/bound facts and applied-mixin facts,
+Retain structured class type-parameter/bound facts and applied-mixin facts,
 then generate parameterized mixins and helpers. A generic model explicitly
 passes its type arguments to its generated mixin:
 
@@ -51,7 +51,7 @@ Dust's existing instance-member contract.
 The listed grammar already exposes class `type_parameters` and
 `type_parameter` / `type_bound` nodes. Extraction currently discards them.
 
-Proposed facts, with names subject to implementation review:
+Required facts:
 
 - Parsed class parameters in declaration order: name, name span, whole span and
   optional bound as an existing structured `ParsedTypeSurface`. Retain the
@@ -152,7 +152,7 @@ Current code pointers: `dust_parser_dart/src/surface.rs`,
 `dust_plugin_derive/src/features/clone_copy_with*` (all under `crates/`).
 Copy constructor targets also come from derive's `features/writer.rs`.
 
-## Staged acceptance, after approval
+## Staged acceptance
 
 1. Add the structured facts and exact lowering contracts. Cover traditional
    and primary headers, multiple/recursive/dependent bounds, shadowed names,
@@ -201,5 +201,8 @@ These were **handwritten prototypes**, not Dust-generated output or permanent
 regressions. They prove the proposed language shapes are viable and rule out
 specific alternatives. They do not prove parser extraction, nested generic
 copy generation, source preservation, every nullability shape, Flutter/native
-platform execution or overall primary-constructor support. Production
-implementation remains blocked on the design decision above.
+platform execution or overall primary-constructor support. The user approved
+this design; implementation has started with ordered parser facts and their
+preservation through resolution. Class IR/lowering, typed emission, capability
+checks and real generated consumers remain unfinished under #93. Neither the
+design approval nor this initial fact stage establishes generic model support.

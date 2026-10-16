@@ -52,6 +52,8 @@ pub(super) fn resolve_class(
             ParsedClassKind::MixinClass => ClassKindIr::MixinClass,
         },
         name: class.name.clone(),
+        type_parameters: class.type_parameters.clone(),
+        mixins: class.mixins.clone(),
         is_abstract: class.is_abstract,
         is_interface: class.is_interface,
         superclass_name: class.superclass_name.clone(),

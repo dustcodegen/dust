@@ -33,6 +33,6 @@ pub use surface::{
     ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface, ParsedExtensionSurface,
     ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
     ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface,
-    ParsedTopLevelVariableSurface, ParsedTypedefSurface,
+    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypedefSurface,
 };
 pub use type_surface::{ParsedTypeKind, ParsedTypeSurface};

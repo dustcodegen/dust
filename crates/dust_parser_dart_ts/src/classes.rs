@@ -4,6 +4,8 @@ mod class_decl;
 mod constructors;
 /// Field extraction shared by classes and mixins.
 pub(crate) mod fields;
+/// Generic class-header parameter and mixin applications.
+mod generics;
 /// Shared metadata attachment for wrapped and flat class bodies.
 mod members;
 /// Method and parameter extraction shared by classes and top-level functions.

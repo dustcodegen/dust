@@ -179,6 +179,8 @@ fn lowers_explicit_required_method_parameter_state() {
         directives: Vec::new(),
         part_uri: None,
         classes: vec![ResolvedClass {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "Api".to_owned(),
             is_abstract: true,

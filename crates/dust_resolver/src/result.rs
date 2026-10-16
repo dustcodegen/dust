@@ -6,7 +6,7 @@ use dust_ir::{
 use dust_parser_dart::{
     ParsedConstructorSurface, ParsedDirective, ParsedExtensionSurface, ParsedExtensionTypeSurface,
     ParsedFunctionSurface, ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface,
-    ParsedTopLevelVariableSurface, ParsedTypeSurface, ParsedTypedefSurface,
+    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypeSurface, ParsedTypedefSurface,
 };
 
 /// One resolved field plus its field-level Dust configuration.
@@ -101,6 +101,10 @@ pub struct ResolvedClass {
     pub kind: ClassKindIr,
     /// The class name.
     pub name: String,
+    /// Parser-owned type parameters and their original bound/source spans.
+    pub type_parameters: Vec<ParsedTypeParamSurface>,
+    /// Written mixin applications, including arguments and original spans.
+    pub mixins: Vec<ParsedTypeSurface>,
     /// Whether the declaration is marked `abstract`.
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.
