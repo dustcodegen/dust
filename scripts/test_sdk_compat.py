@@ -7,10 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from sqlite_sdk_consumer import stage_consumer
-
 from sdk_compat import (
-    ROOT, check_primary, check_unsupported, core_floor, core_lints, generated_hashes,
+    ROOT, check_unsupported, core_floor, core_lints, generated_hashes,
     latest_flutter_version, require_deterministic_generation, require_version,
     run_command, stable_dart_version,
     stage_example,
@@ -158,107 +156,6 @@ class SdkCompatibilityTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 check_unsupported(analyzer_fails, Path("dust"), Path("dart"), Path(name))
             self.assertFalse(any("build" in call or "check" in call for call in calls))
-
-    def test_primary_probe_requires_fresh_generation_and_strict_execution(self) -> None:
-        with tempfile.TemporaryDirectory() as name:
-            output = Path(name)
-            app = output / "primary/fixtures/primary_sdk_consumer"
-            calls = []
-
-            def run(command, cwd=ROOT, env=None):
-                calls.append((command, cwd, env))
-                if "build" in command:
-                    self.assertFalse(list(app.rglob("*.g.dart")))
-                    (app / "lib/models.g.dart").write_text("fresh")
-                    (app / "lib/private_models.g.dart").write_text("fresh")
-                    (app / "lib/language_models.g.dart").write_text("fresh")
-                    (app / "lib/api.g.dart").write_text("fresh")
-                return subprocess.CompletedProcess(command, 0, "", "")
-
-            def stale_copy(*args, **kwargs):
-                staged = stage_consumer(*args, **kwargs)
-                (staged / "lib/models.g.dart").write_text("stale copied output")
-                return staged
-
-            with patch("sdk_compat.stage_consumer", side_effect=stale_copy):
-                generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
-            self.assertEqual(set(generated), {"lib/models.g.dart", "lib/private_models.g.dart",
-                                              "lib/language_models.g.dart", "lib/api.g.dart"})
-            self.assertEqual([call[0][1] for call in calls],
-                             ["pub", "pub", "build", "check", "format", "analyze", "test"])
-            self.assertEqual(calls[-2][0], ["/sdk/bin/dart", "analyze", "--fatal-infos"])
-            self.assertEqual(calls[-3][0][4:], ["lib/api.dart", "lib/language_models.dart",
-                "lib/models.dart", "lib/private_models.dart", "test/api_test.dart",
-                "test/language_models_test.dart", "test/models_test.dart",
-                "test/private_models_test.dart", "test/sqlite_runtime_test.dart"])
-            self.assertEqual(calls[-1][0], ["/sdk/bin/dart", "test", "--reporter=expanded"])
-            self.assertEqual(calls[-1][1], app)
-            self.assertTrue(all(call[2]["PATH"].startswith("/sdk/bin") for call in calls))
-            overrides = json.loads((app / "pubspec_overrides.yaml").read_text())
-            self.assertEqual(overrides["dependency_overrides"]["dust_db_sqlite3"],
-                             {"path": str(ROOT / "packages/dust_db_sqlite3")})
-
-    def test_primary_probe_rejects_missing_output_and_execution_failure(self) -> None:
-        for output_name in (None, "other.g.dart"):
-            with self.subTest(output=output_name), tempfile.TemporaryDirectory() as name:
-                calls = []
-
-                def run(command, cwd=ROOT, env=None):
-                    calls.append(command)
-                    if "build" in command and output_name:
-                        app = Path(name) / "primary/fixtures/primary_sdk_consumer"
-                        (app / "lib" / output_name).write_text("wrong output")
-                    return subprocess.CompletedProcess(command, 0, "", "")
-
-                with self.assertRaises(ValueError):
-                    check_primary(run, Path("dust"), Path("dart"), Path(name))
-                self.assertFalse(any("test" in call for call in calls))
-        for failure in ("build", "check", "format", "analyze", "test"):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as name:
-                def run(command, cwd=ROOT, env=None):
-                    if failure in command:
-                        raise RuntimeError("failed execution")
-                    if "build" in command:
-                        app = Path(name) / "primary/fixtures/primary_sdk_consumer"
-                        (app / "lib/models.g.dart").write_text("fresh")
-                        (app / "lib/private_models.g.dart").write_text("fresh")
-                        (app / "lib/language_models.g.dart").write_text("fresh")
-                        (app / "lib/api.g.dart").write_text("fresh")
-                    return subprocess.CompletedProcess(command, 0, "", "")
-
-                with self.assertRaises(RuntimeError):
-                    check_primary(run, Path("dust"), Path("dart"), Path(name))
-
-    def test_primary_flutter_probe_requires_route_output_and_uses_flutter(self) -> None:
-        for complete in (False, True):
-            with self.subTest(complete=complete), tempfile.TemporaryDirectory() as name:
-                output = Path(name)
-                app = output / "primary-flutter/fixtures/primary_flutter_consumer"
-                calls = []
-                flutter = ["puro", "-e", "latest", "flutter"]
-
-                def run(command, cwd=ROOT, env=None):
-                    calls.append(command)
-                    if "build" in command:
-                        (app / "lib/counter.g.dart").write_text("fresh state")
-                        if complete:
-                            (app / "lib/route").mkdir()
-                            for part in ("routes", "paths", "navigation", "metadata", "runtime"):
-                                (app / f"lib/route/{part}.g.dart").write_text("fresh route")
-                    return subprocess.CompletedProcess(command, 0, "", "")
-
-                if not complete:
-                    with self.assertRaises(ValueError):
-                        check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
-                    self.assertFalse(any("analyze" in call or "test" in call for call in calls))
-                    continue
-                generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
-                self.assertEqual(len(generated), 6)
-                self.assertEqual(calls[-2], [*flutter, "analyze", "--no-pub", "--fatal-infos"])
-                self.assertEqual(calls[-1], [*flutter, "test", "--no-pub", "--reporter=expanded"])
-                self.assertEqual((app / "analysis_options.yaml").read_bytes(),
-                                 (ROOT / "fixtures/primary_flutter_consumer/analysis_options.yaml").read_bytes())
-
 
 if __name__ == "__main__":
     unittest.main()

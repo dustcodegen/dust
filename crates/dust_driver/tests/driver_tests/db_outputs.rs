@@ -18,3 +18,6 @@ mod validation;
 
 #[path = "db_outputs/query_parity.rs"]
 mod query_parity;
+
+#[path = "db_outputs/primary_queries.rs"]
+mod primary_queries;
