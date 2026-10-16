@@ -1,0 +1,20 @@
+[package]
+name = "dust_listed_parser_parity"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace]
+
+# Compile the real backend and its contracts, not a copy or a second extractor.
+[lib]
+path = "../src/lib.rs"
+
+[dependencies]
+dust_dart_syntax = { path = "../../dust_dart_syntax" }
+dust_text = { path = "../../dust_text" }
+dust_diagnostics = { path = "../../dust_diagnostics" }
+dust_parser_dart = { path = "../../dust_parser_dart" }
+tree-sitter = "=0.25.10"
+tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }

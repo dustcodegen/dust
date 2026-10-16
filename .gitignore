@@ -2,6 +2,7 @@
 target/
 Cargo.lock
 !vendor/tree-sitter-dart/Cargo.lock
+!crates/dust_parser_dart_ts/parity/Cargo.lock
 
 # Dart & Flutter
 .dart_tool/

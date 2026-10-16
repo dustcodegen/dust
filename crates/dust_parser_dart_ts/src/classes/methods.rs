@@ -28,7 +28,13 @@ pub(super) fn extract_method(
 
     let name_node = callable_signature
         .child_by_field_name("name")
-        .or_else(|| callable_signature.child_by_field_name("operator"))?;
+        .or_else(|| callable_signature.child_by_field_name("operator"))
+        .or_else(|| {
+            let mut cursor = callable_signature.walk();
+            callable_signature
+                .children(&mut cursor)
+                .find(|child| matches!(child.kind(), "binary_operator" | "~" | "[]" | "[]="))
+        })?;
     let name = node_text(name_node, source);
 
     let is_static =
@@ -80,11 +86,17 @@ fn callable_signature(node: Node<'_>) -> Node<'_> {
 
 /// Finds the method body attached to a declaration or signature wrapper.
 fn method_body_node<'tree>(node: Node<'tree>, signature: Node<'tree>) -> Option<Node<'tree>> {
-    direct_named_child(node, "function_body").or_else(|| {
-        signature
-            .parent()
-            .and_then(|parent| direct_named_child(parent, "function_body"))
-    })
+    direct_named_child(node, "function_body")
+        .or_else(|| {
+            node.next_named_sibling()
+                .filter(|next| next.kind() == "function_body")
+        })
+        .or_else(|| {
+            signature
+                .parent()
+                .filter(|parent| parent.kind() == "class_member")
+                .and_then(|parent| direct_named_child(parent, "function_body"))
+        })
 }
 
 /// Finds the `operator` keyword that separates return type from operator name.

@@ -2,7 +2,9 @@ use dust_parser_dart::{ParsedAnnotation, ParsedFieldSurface};
 use dust_text::SourceText;
 use tree_sitter::Node;
 
-use crate::syntax::{find_first_descendant, node_text, text_range};
+use crate::syntax::{
+    direct_named_child, find_first_descendant, has_direct_child_kind, node_text, text_range,
+};
 use crate::types::extract_type_before;
 
 /// Extracts fields from a declaration node that contains an identifier list.
@@ -36,6 +38,7 @@ pub(crate) fn extract_fields_from_identifier_list(
     {
         let name = initialized
             .child_by_field_name("name")
+            .or_else(|| direct_named_child(initialized, "identifier"))
             .map(|name| node_text(name, source))
             .unwrap_or_default();
         fields.push(ParsedFieldSurface {
@@ -43,7 +46,7 @@ pub(crate) fn extract_fields_from_identifier_list(
             annotations: annotations.to_vec(),
             type_source: type_source.clone(),
             parsed_type: parsed_type.clone(),
-            has_default: initialized.child_by_field_name("value").is_some(),
+            has_default: has_direct_child_kind(initialized, "="),
             span: text_range(initialized),
         });
     }
