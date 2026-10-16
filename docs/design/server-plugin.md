@@ -84,16 +84,17 @@ Serving entrypoints also import `dart:io` for `InternetAddress`; shelf's
 ## Engine Prerequisites
 
 Namespace-safe annotation resolution is a phase-0 prerequisite tracked in
-[#84](https://github.com/dustcodegen/dust/issues/84). Registering client and
-server verbs with the same short name currently loses one canonical owner;
-distinct import prefixes do not prevent misrouting. The regression spike in
-[#85](https://github.com/dustcodegen/dust/pull/85) is intentionally red, not a
-fix. Do not enable the default server registry until the ownership and legacy
-alias compatibility contracts are resolved.
+[#84](https://github.com/dustcodegen/dust/issues/84). The catalog foundation in
+[#104](https://github.com/dustcodegen/dust/issues/104) retains both canonical
+client/server owners, but does not bind Dart import prefixes or prevent all
+annotation misrouting. The original regression spike
+[#85](https://github.com/dustcodegen/dust/pull/85) is not the full fix.
+Do not enable the default server registry until graph binding, legacy
+compatibility and all ownership acceptance checks pass.
 
-The [annotation namespace proposal](annotation-namespaces.md) spells out the
-canonical ownership, visibility, re-export and legacy-fallback decisions for
-review. It is not an implemented resolver fix.
+The [approved annotation namespace policy](annotation-namespaces.md) spells out
+canonical ownership, visibility, re-export and legacy fallback. Implementation
+beyond the catalog foundation remains unfinished.
 
 ### Cleared: class interfaces in IR
 
@@ -1222,9 +1223,10 @@ recursively; a new plugin directory is not discovered automatically.
 
 ## Open Questions
 
-The namespace-binding and legacy alias compatibility policy in #84 remains
-blocking for phase 0. The runtime decisions below are settled, but do not prove
-that the generator or its engine prerequisites are complete.
+The approved namespace-binding and legacy alias policy in #84 still needs
+implementation beyond the catalog foundation and remains blocking for phase 0.
+The runtime decisions below are settled, but do not prove that the generator or
+its engine prerequisites are complete.
 
 ## Deferred
 

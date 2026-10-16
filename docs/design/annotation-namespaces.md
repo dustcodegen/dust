@@ -1,17 +1,21 @@
 # Annotation namespace ownership
 
-Status: **proposal, not approved or implemented**. Prerequisite
+Status: **approved policy; implementation in progress**. Prerequisite
 [#84](https://github.com/dustcodegen/dust/issues/84) for server phase 0
 ([#82](https://github.com/dustcodegen/dust/issues/82)) under
 [#81](https://github.com/dustcodegen/dust/issues/81).
 
-The four regressions in [#85](https://github.com/dustcodegen/dust/pull/85)
-remain intentionally red. Do not enable the server plugin in the default
-registry or claim server codegen works on the strength of this document.
+The catalog foundation in [#104](https://github.com/dustcodegen/dust/issues/104)
+retains canonical owners and adds unique-only context-free lookup. The two
+canonical-retention regressions from [#85](https://github.com/dustcodegen/dust/pull/85)
+are covered by permanent passing tests in that implementation. Import-prefix
+binding, the graph and the other #84 acceptance gates remain unfinished.
+Do not enable the server plugin in the default registry or claim server codegen
+works on the strength of this document or the catalog layer alone.
 
-## Decision requested
+## Approved decision
 
-Approve canonical symbol retention and one library-scoped annotation-binding
+Implement canonical symbol retention and one library-scoped annotation-binding
 policy shared by every resolver/lowering path. Retain unique-name legacy
 compatibility only when provenance is unavailable and no known namespace
 decision contradicts it. Never use registration order to choose an owner.
@@ -31,9 +35,10 @@ can re-export a Dust annotation without changing its owner.
 
 No handwritten annotation API, SDK floor, version, dependency or workflow
 change is proposed. The internal catalog, directive facts, resolver context
-and plugin ownership metadata need review before implementation.
+and plugin ownership metadata follow this approved contract. Any further
+handwritten API or target-selection design change needs separate approval.
 
-## Current evidence
+## Original evidence
 
 - `SymbolCatalog` stores one trait/config slot per short name. Registering
   another `GET` overwrites that slot; canonical lookup cannot recover the
@@ -75,6 +80,37 @@ an owner must not erase the other role.
 Context-free short lookup returns a symbol only when its owner is unique for
 the requested role. Multiple owners require an explicit binding or a
 diagnostic, not an arbitrary `Option` result interpreted as a foreign marker.
+
+### Implemented catalog layer
+
+Canonical identity/role storage is separate from role-specific short-name
+candidate sets. Registration preserves distinct owners and deduplicates repeat
+routes to the same owner. Short aliases keep their registered role eligibility;
+adding a config role through a different alias does not silently grant that role
+to every existing alias. For one unique eligible owner, short lookup retains
+trait-first behavior and canonical lookup retains config-first behavior.
+
+The internal registration return value now describes a prior registration of
+the **same canonical role**, including through another alias. A different owner
+is never a replacement. Existing in-repo registration callers ignore that return
+value; handwritten Dart APIs are unchanged.
+
+`SymbolCatalog::candidate_ids` exposes deterministic, unique canonical IDs for
+the forthcoming binding/diagnostic layer. For example:
+
+```rust
+let mut catalog = dust_resolver::SymbolCatalog::new();
+catalog.register_config("GET", "dust_dart::GET");
+catalog.register_config("GET", "dust_server::GET");
+assert!(catalog.resolve_config("GET").is_none());
+assert!(catalog.resolve_qualified_config("dust_dart::GET").is_some());
+assert_eq!(catalog.candidate_ids("GET").collect::<Vec<_>>(),
+           ["dust_dart::GET", "dust_server::GET"]);
+```
+
+`None` from a compatibility lookup is not a diagnostic or proof that an
+annotation is foreign. Production binding must still distinguish the outcomes
+below and report ambiguity; that integration is not implemented by #104.
 
 ## Structured namespace facts
 
@@ -132,9 +168,9 @@ needed. The driver must supply a real library binding context. Existing
 unique-alias tests stay valid in that adapter, while new production-context
 tests prove that a known foreign class is not hijacked.
 
-This is an intentional tightening relative to blindly treating every foreign
-same-name declaration as Dust. That behavior change is part of the approval
-request, not an accidental consequence of replacing the map.
+This is an approved intentional tightening relative to blindly treating every
+foreign same-name declaration as Dust, not an accidental consequence of
+replacing the map. It still requires the production binding implementation.
 
 ## Conditions and deferred imports
 
@@ -162,7 +198,7 @@ Bind before feature normalization. In particular, a server `GET` must never
 reach the Dio-client normalizer, even if both plugins register the same short
 name. Discovery and partless top-level handlers need the same ownership facts.
 
-## Acceptance after approval
+## Implementation acceptance
 
 1. Canonical catalog tests retain both `GET` owners and both `Validate` roles
    in either registration order; all #85 regressions pass.
@@ -200,6 +236,8 @@ runtime annotations or generated output:
 
 The reflection tests use `dart:mirrors` only in the temporary VM experiment.
 They do not add a dependency to Dust or establish Flutter/web behavior.
-No production parser/resolver implementation or permanent regression changed.
-The full Dust suite, coverage and SDK compatibility matrix were not rerun for
-this documentation-only proposal.
+Those experiments did not change production code or permanent regressions.
+The catalog implementation now adds real Rust regressions; its local suite,
+coverage and SDK evidence are recorded in its implementation PR. They do not
+establish the remaining graph/all-site binding, failure preservation or full
+server codegen acceptance.
