@@ -88,7 +88,7 @@ pub(crate) struct BuildOutcome {
 }
 
 impl BuildOutcome {
-    /// Builds a failed outcome that should invalidate the library cache entry.
+    /// Builds a failed outcome that cannot replace the last successful cache entry.
     pub(crate) fn failed(
         library: &SourceLibrary,
         diagnostics: Vec<Diagnostic>,

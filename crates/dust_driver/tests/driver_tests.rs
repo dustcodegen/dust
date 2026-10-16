@@ -42,6 +42,9 @@ mod output_policy;
 #[path = "driver_tests/build_behavior.rs"]
 mod build_behavior;
 
+#[path = "driver_tests/cache_errors.rs"]
+mod cache_errors;
+
 #[path = "driver_tests/build_validation.rs"]
 mod build_validation;
 
