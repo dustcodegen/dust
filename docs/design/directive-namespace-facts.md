@@ -7,8 +7,9 @@ for [#84](https://github.com/dustcodegen/dust/issues/84).
 
 This layer is based on the listed-grammar/primary stack in draft
 [#98](https://github.com/dustcodegen/dust/pull/98). Catalog retention
-[#105](https://github.com/dustcodegen/dust/pull/105) is a separate layer;
-the graph implementation must integrate both. Do not enable the default
+[#105](https://github.com/dustcodegen/dust/pull/105) originated as a separate layer;
+the [declaration-origin stage](annotation-namespaces.md#implemented-declaration-origin-metadata)
+integrates it with these facts and the decoder. Do not enable the default
 server registry or count this as completed server codegen.
 
 ## Contract

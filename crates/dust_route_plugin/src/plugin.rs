@@ -1,6 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_plugin_api::{DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder};
+use dust_plugin_api::{
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+};
 
 /// Collects route, router, and guard facts across the workspace.
 mod analysis;
@@ -55,6 +57,28 @@ impl DustPlugin for RoutePlugin {
 
     fn claimed_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[
+                AnnotationOrigin::new(
+                    "dust_flutter::AppRouter",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "AppRouter",
+                ),
+                AnnotationOrigin::new(
+                    "dust_flutter::AppRoute",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "AppRoute",
+                ),
+                AnnotationOrigin::new(
+                    "dust_flutter::GeneratedRoute",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "GeneratedRoute",
+                ),
+            ]
+        }
     }
 
     fn partless_configs(&self) -> &'static [&'static str] {

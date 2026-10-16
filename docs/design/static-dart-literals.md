@@ -31,9 +31,13 @@ Consumers use semantic values without overwriting source. Parser annotation
 arguments retain exact spelling and byte spans. Unsupported values remain
 expressions, not strings containing the source text. IR string accessors respect
 structured non-string facts; raw-only compatibility calls use this same static
-decoder. Checked direct and positional/named DAO SQL paths therefore validate
+decoder. Checked direct and positional DAO SQL paths therefore validate
 the same SQL online and offline. The i18n scanner decodes keys, defaults and
 placeholder names through the same helper.
+
+The public Dart SQL annotation is `@Query(sqlLiteral)` (positional). Named `sql`
+fixtures exercise low-level raw/structured IR compatibility; they do not prove
+a compilable `@Query(sql: ...)` Dart API or add that constructor form.
 
 The separately documented `parse_string_literal` helper remains a shallow
 delimiter-stripper, unchanged. It is not suitable for SQL or URI identity.

@@ -1,0 +1,5 @@
+dust_dart::Dao	package:dust_dart/src/db/annotations.dart	Dao
+dust_dart::Database	package:dust_dart/src/db/annotations.dart	Database
+dust_dart::Query	package:dust_dart/src/db/annotations.dart	Query
+dust_dart::SqlxDao	package:dust_dart/src/db/annotations.dart	SqlxDao
+dust_dart::SqlxDatabase	package:dust_dart/src/db/annotations.dart	SqlxDatabase
