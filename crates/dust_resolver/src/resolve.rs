@@ -60,7 +60,7 @@ pub fn resolve_library_with_partless_configs(
     catalog: &SymbolCatalog,
     partless_config_symbols: &[&str],
 ) -> ResolveResult {
-    resolve_with_context(
+    resolve_library_with_bindings(
         file_id,
         source_path,
         output_path,
@@ -86,7 +86,7 @@ pub fn resolve_library_in_namespace(
     namespace: NamespaceScope<'_>,
     partless_config_symbols: &[&str],
 ) -> ResolveResult {
-    resolve_with_context(
+    resolve_library_with_bindings(
         file_id,
         source_path,
         output_path,
@@ -100,7 +100,7 @@ pub fn resolve_library_in_namespace(
 }
 
 /// Compatibility and production-context paths share feature resolution.
-fn resolve_with_context(
+pub fn resolve_library_with_bindings(
     file_id: FileId,
     source_path: &str,
     output_path: &str,

@@ -7,8 +7,12 @@ use super::*;
 pub(super) fn lower_unresolved_field(
     file_id: dust_text::FileId,
     field: &ParsedFieldSurface,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> FieldIr {
+    for annotation in &field.annotations {
+        let _ = bindings.annotation_ir(file_id, annotation, diagnostics);
+    }
     let ty = lower_type(field.parsed_type.as_ref(), field.type_source.as_deref());
     diagnostics.extend(ty.diagnostics);
 
@@ -26,11 +30,13 @@ pub(super) fn lower_unresolved_field(
 pub(super) fn lower_unresolved_method_params(
     file_id: dust_text::FileId,
     params: &[ParsedMethodParamSurface],
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MethodParamIr> {
     params
         .iter()
         .map(|param| {
+            let resolved = bindings.parameter(file_id, param, diagnostics);
             let ty = lower_type(param.parsed_type.as_ref(), param.type_source.as_deref());
             diagnostics.extend(ty.diagnostics);
 
@@ -42,8 +48,8 @@ pub(super) fn lower_unresolved_method_params(
                 is_required: param.is_required,
                 has_default: param.has_default,
                 default_value_source: param.default_value_source.clone(),
-                traits: Vec::new(),
-                configs: Vec::new(),
+                traits: resolved.traits,
+                configs: resolved.configs,
             }
         })
         .collect()
@@ -55,15 +61,6 @@ pub(super) fn lower_parameter_kind(kind: ParameterKind) -> ParamKind {
         ParameterKind::Positional => ParamKind::Positional,
         ParameterKind::Named => ParamKind::Named,
     }
-}
-
-/// Lowers a parsed annotation into resolver-compatible annotation IR.
-pub(super) fn lower_annotation_ir(
-    file_id: dust_text::FileId,
-    annotation: &ParsedAnnotation,
-    catalog: &SymbolCatalog,
-) -> AnnotationIr {
-    dust_resolver::resolve_annotation_ir(file_id, annotation, catalog)
 }
 
 /// Builds a name IR value from raw source and source span.

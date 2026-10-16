@@ -34,7 +34,8 @@ pub(super) fn lower_library_directive(
 pub(super) fn lower_library_annotations(
     file_id: dust_text::FileId,
     directives: &[ParsedDirective],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<AnnotationIr> {
     directives
         .iter()
@@ -44,7 +45,7 @@ pub(super) fn lower_library_annotations(
         })
         .into_iter()
         .flatten()
-        .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+        .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
         .collect()
 }
 

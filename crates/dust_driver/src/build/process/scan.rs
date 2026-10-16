@@ -141,6 +141,7 @@ fn lower_for_workspace_analysis(
         &pending.library,
         parsed,
         lowering,
+        None,
         &mut diagnostics,
     )?;
     diagnostics.is_empty().then_some(lowered)
