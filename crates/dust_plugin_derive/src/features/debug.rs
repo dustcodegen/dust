@@ -1,5 +1,6 @@
 use std::fmt::Write;
 
+use dust_dart_emit::render_class_type;
 use dust_ir::ClassIr;
 
 use crate::features::{DEBUG_SYMBOL, TO_STRING_SYMBOL, eq_hash::has_trait};
@@ -29,7 +30,7 @@ fn render_empty_debug(class: &ClassIr) -> String {
 fn render_field_debug(class: &ClassIr) -> String {
     format!(
         "@override\nString toString() {{\n  final self = this as {};\n  return '{}('\n{}\n      ')';\n}}",
-        class.name,
+        render_class_type(class),
         class.name,
         render_debug_field_lines(class)
     )

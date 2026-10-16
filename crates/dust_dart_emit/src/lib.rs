@@ -27,7 +27,9 @@ pub use dart_names::{
 };
 
 pub use arguments::named_argument_name;
-pub use generics::{render_type_arguments, render_type_parameters};
+pub use generics::{
+    render_class_type, render_type_arguments, render_type_parameter, render_type_parameters,
+};
 pub use literals::{dart_string_literal, escape_dart_string};
 
 pub use source::{

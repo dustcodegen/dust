@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:primary_flutter_consumer/counter.dart';
+import 'package:primary_flutter_consumer/generic_value.dart';
 import 'package:primary_flutter_consumer/pages.dart';
 import 'package:primary_flutter_consumer/route.dart';
 
 void main() {
+  test('generic primary copies distinguish omission from nullable values', () {
+    const value = GenericValue<String?>('before');
+    final GenericValue<String?> Function() copy = value.copyWith.call;
+    expect(copy().value, 'before');
+    expect(value.copyWith(value: null).value, isNull);
+    expect(const GenericValue<int>(1).copyWith(value: null).value, 1);
+  });
+
   test('primary state defaults and generated copy remain typed', () {
     const state = CounterState();
     expect(state.count, 0);

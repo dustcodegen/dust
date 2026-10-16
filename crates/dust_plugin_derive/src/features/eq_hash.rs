@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Write};
 
-use dust_dart_emit::{DART_ITERABLE, DART_LIST, DART_MAP, DART_SET};
+use dust_dart_emit::{DART_ITERABLE, DART_LIST, DART_MAP, DART_SET, render_class_type};
 use dust_diagnostics::Diagnostic;
 use dust_ir::{ClassIr, DartFileIr, TypeIr};
 
@@ -88,15 +88,15 @@ pub(crate) fn emit_eq(class: &ClassIr, equality: &EqualityPlan) -> Option<String
     if class.fields.is_empty() {
         return Some(format!(
             "@override\nbool operator ==(Object other) =>\n    identical(this, other) ||\n    other is {} &&\n        runtimeType == other.runtimeType;",
-            class.name
+            render_class_type(class)
         ));
     }
 
     let self_name = self_name(class);
     Some(format!(
         "@override\nbool operator ==(Object other) {{\n  final {self_name} = this as {};\n  return identical(this, other) ||\n      other is {} &&\n          runtimeType == other.runtimeType{};\n}}",
-        class.name,
-        class.name,
+        render_class_type(class),
+        render_class_type(class),
         render_equality_comparisons(class, equality, &self_name)
     ))
 }
@@ -111,7 +111,10 @@ pub(crate) fn emit_hash_code(class: &ClassIr, equality: &EqualityPlan) -> Option
     let self_binding = if class.fields.is_empty() {
         String::new()
     } else {
-        format!("  final {self_name} = this as {};\n", class.name)
+        format!(
+            "  final {self_name} = this as {};\n",
+            render_class_type(class)
+        )
     };
     Some(format!(
         "@override\nint get hashCode {{\n{}  return Object.hashAll([\n    runtimeType,\n{}  ]);\n}}",

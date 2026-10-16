@@ -26,9 +26,18 @@ pub(super) fn copy_with_value_expr(
     ty: &TypeIr,
     self_name: &str,
     sentinel_name: Option<&str>,
+    accepts_null_helper: Option<&str>,
 ) -> String {
     let self_field = format!("{self_name}.{field_name}");
     let argument = named_argument_name(field_name);
+    if let Some(helper) = accepts_null_helper {
+        let sentinel = sentinel_name.expect("generic fields require a sentinel");
+        let ty_name = replacement_cast_type(ty);
+        let replacement = replacement_expr(argument, ty);
+        return format!(
+            "identical({argument}, {sentinel}) || ({argument} == null && !{helper}<{ty_name}>())\n    ? {self_field}\n    : {replacement}"
+        );
+    }
     if needs_copy_with_sentinel(ty) {
         let sentinel = sentinel_name.expect("sentinel field requires sentinel name");
         let replacement = replacement_expr(argument, ty);

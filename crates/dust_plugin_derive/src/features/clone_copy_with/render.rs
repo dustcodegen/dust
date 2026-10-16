@@ -1,13 +1,13 @@
 use std::fmt::Write;
 
-use dust_dart_emit::named_argument_name;
+use dust_dart_emit::{named_argument_name, render_class_type};
 use dust_ir::{ClassIr, FieldIr};
 
-use crate::features::names::lower_first;
-
 use super::{
-    CopyWithNames, CopyWithPlan, ValueSampleKind, nested_target_type, sample_replacement_field,
-    sample_value,
+    CopyWithNames, CopyWithPlan,
+    docs::render_getter_docs,
+    generics::{class_helper_arguments, helper_parameters},
+    nested::{render_nested_impl_getters, render_nested_interface_getters},
     support::{
         copy_with_impl_param_type, copy_with_interface_param_type, needs_copy_with_sentinel,
     },
@@ -27,13 +27,15 @@ pub(super) fn render_copy_with_getter(
     plan: &CopyWithPlan,
 ) -> String {
     let docs = render_getter_docs(class, plan);
+    let class_type = render_class_type(class);
+    let arguments = class_helper_arguments(class, &class_type);
     format!(
         "{docs}\n@pragma('vm:prefer-inline')\n{}<{}> get copyWith => {}<{}>(this as {}, ({}) => {});",
         names.interface_name,
-        class.name,
+        arguments,
         names.impl_name,
-        class.name,
-        class.name,
+        arguments,
+        class_type,
         names.callback_value_name,
         names.callback_value_name
     )
@@ -48,10 +50,22 @@ pub(super) fn render_copy_with_support(
     include_credit: bool,
 ) -> String {
     let interface_params = render_interface_params(class);
-    let interface_getters = render_nested_interface_getters(class, plan);
+    let interface_getters = render_nested_interface_getters(class, names, plan);
     let impl_params = render_impl_params(class, names);
     let return_call = render_then_return(constructor_call, &names.then_name);
     let impl_getters = render_nested_impl_getters(class, names, plan);
+    let parameters = helper_parameters(class, names);
+    let arguments = class_helper_arguments(class, &names.result_type);
+    let class_type = render_class_type(class);
+    let (self_parameter, self_field) =
+        if class.fields.is_empty() && !class.type_parameters.is_empty() {
+            (format!("{class_type} _"), String::new())
+        } else {
+            (
+                format!("this.{}", names.self_name),
+                format!("  final {class_type} {};\n", names.self_name),
+            )
+        };
     let credit = if include_credit {
         "// CopyWith API inspired by Freezed.\n\n"
     } else {
@@ -59,25 +73,23 @@ pub(super) fn render_copy_with_support(
     };
 
     format!(
-        "{credit}/// @nodoc\nabstract class {}<{}> {{\n  {} call({});{}\n}}\n\n/// @nodoc\nfinal class {}<{}> implements {}<{}> {{\n  const {}(this.{}, this.{});\n\n  final {} {};\n  final {} Function({}) {};\n\n  @override\n  @pragma('vm:prefer-inline')\n  {} call({}) {{\n{}\n  }}{}\n}}",
+        "{credit}/// @nodoc\nabstract class {}<{}> {{\n  {} call({});{}\n}}\n\n/// @nodoc\nfinal class {}<{}> implements {}<{}> {{\n  const {}({}, this.{});\n\n{self_field}  final {} Function({}) {};\n\n  @override\n  @pragma('vm:prefer-inline')\n  {} call({}) {{\n{}\n  }}{}\n}}",
         names.interface_name,
-        "$Res",
-        "$Res",
+        parameters,
+        names.result_type,
         interface_params,
         interface_getters,
         names.impl_name,
-        "$Res",
+        parameters,
         names.interface_name,
-        "$Res",
+        arguments,
         names.impl_name,
-        names.self_name,
+        self_parameter,
         names.then_name,
-        class.name,
-        names.self_name,
-        "$Res",
-        class.name,
+        names.result_type,
+        class_type,
         names.then_name,
-        "$Res",
+        names.result_type,
         impl_params,
         return_call,
         impl_getters
@@ -98,7 +110,8 @@ fn render_interface_params(class: &ClassIr) -> String {
 /// Renders implementation call parameters with sentinel defaults.
 fn render_impl_params(class: &ClassIr, names: &CopyWithNames) -> String {
     render_call_params(class, |field| {
-        let default = if needs_copy_with_sentinel(&field.ty) {
+        let default = if names.accepts_null_helper.is_some() || needs_copy_with_sentinel(&field.ty)
+        {
             names
                 .sentinel
                 .as_ref()
@@ -140,151 +153,4 @@ fn render_then_return(constructor_call: &str, then_name: &str) -> String {
     }
     out.push_str("    );");
     out
-}
-
-/// Renders nested copyWith getters on the public interface.
-fn render_nested_interface_getters(class: &ClassIr, plan: &CopyWithPlan) -> String {
-    let mut out = String::new();
-    for field in &class.fields {
-        let Some(target) = nested_target(field, plan) else {
-            continue;
-        };
-
-        write!(
-            out,
-            "\n\n  {}<$Res>{} get {};",
-            target.names.interface_name,
-            if target.nullable { "?" } else { "" },
-            named_argument_name(&field.name)
-        )
-        .expect("writing to String cannot fail");
-    }
-    out
-}
-
-/// Renders nested copyWith getter implementations.
-fn render_nested_impl_getters(
-    class: &ClassIr,
-    names: &CopyWithNames,
-    plan: &CopyWithPlan,
-) -> String {
-    let mut out = String::new();
-    for field in &class.fields {
-        let Some(target) = nested_target(field, plan) else {
-            continue;
-        };
-
-        if target.nullable {
-            let value_name = names
-                .nested_value_names
-                .get(&field.name)
-                .map(String::as_str)
-                .unwrap_or(field.name.as_str());
-            write!(
-                out,
-                "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {}<$Res>? get {} {{\n    final {} = {}.{};\n    if ({} == null) {{\n      return null;\n    }}\n\n    return {}<$Res>(\n      {},\n      ({}) => call({}: {}),\n    );\n  }}",
-                target.names.interface_name,
-                named_argument_name(&field.name),
-                value_name,
-                names.self_name,
-                field.name,
-                value_name,
-                target.names.impl_name,
-                value_name,
-                names.callback_value_name,
-                named_argument_name(&field.name),
-                names.callback_value_name,
-            )
-            .expect("writing to String cannot fail");
-        } else {
-            write!(
-                out,
-                "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {}<$Res> get {} {{\n    return {}<$Res>(\n      {}.{},\n      ({}) => call({}: {}),\n    );\n  }}",
-                target.names.interface_name,
-                named_argument_name(&field.name),
-                target.names.impl_name,
-                names.self_name,
-                field.name,
-                names.callback_value_name,
-                named_argument_name(&field.name),
-                names.callback_value_name,
-            )
-            .expect("writing to String cannot fail");
-        }
-    }
-    out
-}
-
-/// Renders Dartdoc for the generated copyWith getter.
-fn render_getter_docs(class: &ClassIr, plan: &CopyWithPlan) -> String {
-    let receiver = lower_first(&class.name);
-    let mut docs = format!(
-        "/// Creates a copy of this `{}` with selected fields replaced.\n///\n/// Usage:\n/// ```dart",
-        class.name
-    );
-
-    if let Some(field) = sample_replacement_field(class) {
-        writeln!(
-            docs,
-            "\n/// final updated = {receiver}.copyWith({}: {});",
-            named_argument_name(&field.name),
-            sample_value(&field.ty, ValueSampleKind::Replacement)
-        )
-        .expect("writing to String cannot fail");
-    } else {
-        writeln!(docs, "\n/// final updated = {receiver}.copyWith();")
-            .expect("writing to String cannot fail");
-    }
-
-    if let Some(field) = class
-        .fields
-        .iter()
-        .find(|field| needs_copy_with_sentinel(&field.ty))
-    {
-        writeln!(
-            docs,
-            "/// final cleared = {receiver}.copyWith({}: null);",
-            named_argument_name(&field.name)
-        )
-        .expect("writing to String cannot fail");
-    }
-
-    if let Some((field, target)) = class
-        .fields
-        .iter()
-        .filter_map(|field| {
-            nested_target_type(&field.ty).map(|(target_name, _)| (field, target_name))
-        })
-        .find_map(|(field, target_name)| {
-            let sample = plan.samples_by_class.get(target_name)?;
-            Some((field, (sample.field_name.as_str(), sample.nested_value)))
-        })
-    {
-        writeln!(
-            docs,
-            "/// final nested = {receiver}.copyWith.{}({}: {});",
-            named_argument_name(&field.name),
-            target.0,
-            target.1
-        )
-        .expect("writing to String cannot fail");
-    }
-
-    docs.push_str("/// ```");
-    docs
-}
-
-/// Resolves the nested copyWith target for a field.
-fn nested_target<'a>(field: &FieldIr, plan: &'a CopyWithPlan) -> Option<NestedTarget<'a>> {
-    let (name, nullable) = nested_target_type(&field.ty)?;
-    let names = plan.names_for(name)?;
-    Some(NestedTarget { names, nullable })
-}
-
-/// Nested copyWith target metadata for one field.
-struct NestedTarget<'a> {
-    /// Generated names for the nested target class.
-    names: &'a CopyWithNames,
-    /// Whether the source field is nullable.
-    nullable: bool,
 }

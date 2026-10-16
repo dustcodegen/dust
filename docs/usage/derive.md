@@ -137,6 +137,34 @@ chained helper:
 final moved = profile.copyWith.address(city: 'London');
 ```
 
+### Generic Models (Unreleased Draft)
+
+The draft for [#93](https://github.com/dustcodegen/dust/issues/93) preserves the
+chosen type arguments through generated mixins and copy helpers:
+
+```dart
+@Derive([CopyWith(), ToString(), Eq()])
+class Box<T> with _$Box<T> {
+  const Box(this.value);
+
+  final T value;
+}
+
+final Box<int> updated = const Box<int>(1).copyWith(value: 2);
+final Box<String?> cleared = const Box<String?>('before').copyWith(value: null);
+```
+
+Pass every class parameter to the mixin in declaration order. Dust rejects
+missing or substituted arguments rather than silently erasing types.
+Omission keeps the field; explicit null clears it only when the instantiated
+field type accepts null. For non-nullable fields, null keeps the existing value.
+Copies stay shallow. Same-library nested helpers retain their type arguments;
+imported models support typed replacement, not private chained helpers.
+
+Traditional and primary-constructor consumers exercise these cases locally.
+This is not published support: core-name collisions, generic validation helpers
+and other plugin capabilities remain under the [generic model design](../design/generic-models.md).
+
 ### Explicit Generic Callbacks
 
 A non-generic model can contain a callback with its own type parameters:
@@ -175,3 +203,5 @@ primary callback-formal support (#92).
 - [Generated copyWith tests](../../examples/product_showcase/test/generated_copywith_test.dart)
 - [Explicit callback model](../../examples/product_showcase/lib/models/callback_model.dart)
 - [Callback copy tests](../../examples/product_showcase/test/models/callback_model_test.dart)
+- [Draft generic models](../../examples/product_showcase/lib/models/generic_models.dart)
+- [Generic copy tests](../../examples/product_showcase/test/models/generic_models_test.dart)
