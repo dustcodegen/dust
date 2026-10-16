@@ -4,6 +4,9 @@ use crate::{DustPlugin, PluginContext, SymbolPlan, WorkspaceAnalysisBuilder};
 use dust_diagnostics::Diagnostic;
 use dust_ir::{DartFileIr, SymbolId};
 
+/// Explicit declaration metadata follows effective symbol ownership.
+mod origins;
+
 /// One plugin registration plus its claimed symbols.
 struct RegisteredPlugin {
     /// The plugin implementation.
@@ -61,6 +64,7 @@ impl PluginRegistry {
         skip_owned_symbols: bool,
     ) -> Result<(), Diagnostic> {
         let plugin_name = plugin.plugin_name();
+        self.validate_annotation_origins(plugin.as_ref(), skip_owned_symbols)?;
         let mut trait_symbols = Vec::new();
         let mut config_symbols = Vec::new();
         let supported_annotations = if executes {

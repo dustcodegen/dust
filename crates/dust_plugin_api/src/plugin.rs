@@ -1,7 +1,7 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 
-use crate::{PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder};
+use crate::{AnnotationOrigin, PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder};
 
 /// Context available while generating plugin output.
 #[derive(Debug, Clone, Copy)]
@@ -22,6 +22,13 @@ pub trait DustPlugin: Send + Sync {
 
     /// Returns the fully-qualified config symbols this plugin exclusively owns.
     fn claimed_configs(&self) -> &'static [&'static str] {
+        &[]
+    }
+
+    /// Identifies actual Dart declarations for this plugin's claimed symbols.
+    ///
+    /// Omitting metadata preserves unknown provenance, not a foreign binding.
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
         &[]
     }
 

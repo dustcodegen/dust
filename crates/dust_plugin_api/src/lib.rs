@@ -20,6 +20,7 @@ pub use analysis::{
     WorkspaceAnalysis, WorkspaceAnalysisBuilder,
 };
 pub use contribution::{AuxiliaryOutputContribution, ClassMixinContribution, PluginContribution};
+pub use dust_ir::AnnotationOrigin;
 pub use mode::{MetadataOutput, PluginExecutionMode, ValidationAccess};
 pub use plugin::{DustPlugin, PluginContext};
 pub use registry::PluginRegistry;

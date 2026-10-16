@@ -1,6 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_plugin_api::{DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder};
+use dust_plugin_api::{
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+};
 
 /// Workspace-wide fact collection for state and view model declarations.
 mod analysis;
@@ -48,6 +50,16 @@ impl DustPlugin for StatePlugin {
 
     fn claimed_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[AnnotationOrigin::new(
+                "dust_flutter::ViewModel",
+                "package:dust_flutter/src/state/annotations.dart",
+                "ViewModel",
+            )]
+        }
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {

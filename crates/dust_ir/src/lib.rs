@@ -28,6 +28,8 @@ mod lowering;
 mod method;
 /// Ordered, source-preserving directive namespace inputs.
 mod namespace;
+/// Declaration identities attached to registered annotations.
+mod origin;
 /// Query function metadata.
 mod query_call;
 /// Route configuration.
@@ -68,6 +70,7 @@ pub use method::{MethodIr, MethodParamIr};
 pub use namespace::{
     CombinatorKindIr, ConditionalUriIr, NamespaceDirectiveIr, VisibilityCombinatorIr,
 };
+pub use origin::AnnotationOrigin;
 pub use query_call::{QueryCallIr, QueryFunctionIr};
 pub use route::{RouteConfigIr, RouterConfigIr};
 pub use serde::{

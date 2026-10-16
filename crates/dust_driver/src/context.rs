@@ -39,7 +39,7 @@ impl DriverContext {
             }
         };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
-        let catalog = build_symbol_catalog(&registry);
+        let catalog = build_symbol_catalog(&registry)?;
 
         Ok(Self {
             workspace,

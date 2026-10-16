@@ -1,7 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
-    DustPlugin, PluginContext, PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder,
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, SymbolPlan,
+    WorkspaceAnalysisBuilder,
 };
 
 use crate::{
@@ -30,6 +31,9 @@ const CLAIMED_CONFIGS: &[&str] = &["dust_dart::SerDe"];
 /// Short annotation names supported by the serde plugin.
 const SUPPORTED_ANNOTATIONS: &[&str] = &["Serialize", "Deserialize", "SerDe"];
 
+/// All three markers are declared together, independently of export entrypoints.
+const ANNOTATION_LIBRARY: &str = "package:dust_dart/src/serde/serde.dart";
+
 impl DustPlugin for SerdePlugin {
     fn plugin_name(&self) -> &'static str {
         "dust_plugin_serde"
@@ -43,6 +47,16 @@ impl DustPlugin for SerdePlugin {
     /// Claims the core configuration trait for customizing serialization behavior.
     fn claimed_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIGS
+    }
+
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[
+                AnnotationOrigin::new("dust_dart::Serialize", ANNOTATION_LIBRARY, "Serialize"),
+                AnnotationOrigin::new("dust_dart::Deserialize", ANNOTATION_LIBRARY, "Deserialize"),
+                AnnotationOrigin::new("dust_dart::SerDe", ANNOTATION_LIBRARY, "SerDe"),
+            ]
+        }
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {
