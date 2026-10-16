@@ -11,6 +11,7 @@ use super::{
     annotated_members,
     constructors::{extract_constructor, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
+    generics::{extract_class_mixins, extract_class_type_parameters},
     methods::extract_method,
     primary::extract_declaring_fields,
 };
@@ -85,6 +86,8 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     ParsedClassSurface {
         kind,
         name: class_name,
+        type_parameters: extract_class_type_parameters(node, source),
+        mixins: extract_class_mixins(node, source),
         is_abstract,
         is_interface,
         superclass_name,

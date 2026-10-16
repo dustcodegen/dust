@@ -73,7 +73,7 @@ These are scoped tests, not proof of every primary-constructor form. Inferred
 declaring-parameter types, generic/inherited field combinations and full
 acceptance checks still need complete validation.
 
-Two concrete failures remain in this draft:
+Remaining gaps in this draft:
 
 - [Shorthand callback declaring parameters (#92)](https://github.com/dustcodegen/dust/issues/92),
   such as `final bool predicate(String value)`, currently lose the callable
@@ -81,11 +81,14 @@ Two concrete failures remain in this draft:
   `final bool Function(String) predicate` form compiled in the scoped
   latest-Dart probe; it does not need a new handwritten API. Source-preserving
   effective-function parser facts need review before fixing the shorthand.
-- [Generic class copy generation (#93)](https://github.com/dustcodegen/dust/issues/93)
-  can leak an unresolved `T` into generated helpers. This also fails for an
-  equivalent traditional class, so it is not a primary-only regression.
-  Class type-parameter/bound facts and the generic emission strategy need review;
-  see the [generic model proposal](../design/generic-models.md).
+- [Generic class generation (#93)](https://github.com/dustcodegen/dust/issues/93)
+  now has scoped executable typed-copy checks for traditional and primary
+  classes using `with _$Box<T>`. These cover bounds, nullable arguments,
+  nested helpers, equality/debug output and typed imported replacements.
+  Core-name/local collisions have separate traditional/primary executable
+  probes. The [approved design](../design/generic-models.md) still requires
+  generated-member collisions (#103), generic validation helpers and integration
+  capability checks. Passing the copy cases does not establish all generic derives.
 
 For these cases, a successful `dust build` does not establish that the generated
 Dart compiles. Do not use the draft feature as production-readiness evidence.

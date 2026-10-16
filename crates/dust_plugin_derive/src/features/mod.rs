@@ -1,5 +1,7 @@
 /// Generates copyWith support.
 pub(crate) mod clone_copy_with;
+/// Protects generated core references from source lexical names.
+pub(crate) mod core_names;
 /// Generates `toString` support.
 pub(crate) mod debug;
 /// Generates equality and hashCode support.

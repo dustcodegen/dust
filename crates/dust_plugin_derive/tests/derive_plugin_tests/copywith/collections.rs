@@ -26,6 +26,8 @@ fn copywith_replaces_collection_fields_shallowly() {
                 part_of: None,
                 span: span(0, 100),
                 classes: vec![ClassIr {
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     kind: ClassKindIr::Class,
                     name: "Catalog".to_owned(),
                     is_abstract: false,

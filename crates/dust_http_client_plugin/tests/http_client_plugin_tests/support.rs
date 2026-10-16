@@ -90,6 +90,8 @@ pub(crate) fn http_client_class(
     methods: Vec<MethodIr>,
 ) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "Api".to_owned(),
         is_abstract: true,
@@ -203,6 +205,8 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
         .collect();
 
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,

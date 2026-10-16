@@ -6,6 +6,8 @@
 mod emit;
 /// Generated source final formatting.
 mod format;
+/// Generic generated-mixin application validation.
+mod generics;
 /// Plugin contribution merging.
 mod merge;
 /// Filesystem write orchestration.

@@ -36,4 +36,4 @@ pub use result::{
     ResolveResult, ResolvedClass, ResolvedConstructor, ResolvedEnum, ResolvedEnumVariant,
     ResolvedField, ResolvedLibrary, ResolvedMethod, ResolvedMethodParam,
 };
-pub use types::lower_type_ir;
+pub use types::{lower_type_ir, lower_type_ir_in_scope};

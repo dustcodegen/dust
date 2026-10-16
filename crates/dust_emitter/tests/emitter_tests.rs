@@ -6,5 +6,8 @@ mod support;
 #[path = "emitter_tests/emit.rs"]
 mod emit;
 
+#[path = "emitter_tests/generics.rs"]
+mod generics;
+
 #[path = "emitter_tests/write.rs"]
 mod write;

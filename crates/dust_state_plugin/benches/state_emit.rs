@@ -15,6 +15,8 @@ fn span() -> SpanIr {
 /// Builds a synthetic view model class configured for state emission.
 fn view_model(name: &str) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,

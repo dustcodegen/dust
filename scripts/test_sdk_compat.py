@@ -85,7 +85,7 @@ class SdkCompatibilityTests(unittest.TestCase):
             (root / "analysis_options.yaml").write_text(
                 "linter:\n  rules:\n    unnecessary_ignore: true\n"
             )
-            with patch("sdk_compat.ROOT", root), patch("sdk_compat.stage_consumer", return_value=root):
+            with patch("sdk_codegen_fixtures.ROOT", root), patch("sdk_codegen_fixtures.stage_consumer", return_value=root):
                 stage_example(root, "examples/product_showcase", "7.0.0")
             self.assertIn("unnecessary_ignore: true", (root / "analysis_options.yaml").read_text())
 

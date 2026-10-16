@@ -24,6 +24,8 @@ fn copywith_requires_reconstructible_constructor() {
         part_of: None,
         span: span(0, 100),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "User".to_owned(),
             is_abstract: false,
@@ -108,6 +110,8 @@ fn copywith_rejects_abstract_classes() {
         part_of: None,
         span: span(0, 100),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "Entity".to_owned(),
             is_abstract: true,
@@ -182,6 +186,8 @@ fn rejects_mixin_class_targets() {
         part_of: None,
         span: span(0, 100),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::MixinClass,
             name: "MixinTarget".to_owned(),
             is_abstract: false,

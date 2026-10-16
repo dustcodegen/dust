@@ -1,12 +1,13 @@
 use std::{collections::HashMap, fmt::Write};
 
-use dust_dart_emit::{DART_ITERABLE, DART_LIST, DART_MAP, DART_SET};
+use dust_dart_emit::{DART_ITERABLE, DART_LIST, DART_MAP, DART_SET, render_class_type};
 use dust_diagnostics::Diagnostic;
 use dust_ir::{ClassIr, DartFileIr, TypeIr};
 
 use crate::features::{
     EQ_SYMBOL,
-    names::{NameAllocator, library_declaration_names, lower_first, upper_first},
+    core_names::{CoreNames, runtime_type},
+    names::{NameAllocator, class_helper_stem, library_reference_names, upper_first},
 };
 
 /// Planned equality helper names and declarations for a library.
@@ -48,7 +49,7 @@ pub(crate) fn validate_eq_hash(class: &ClassIr) -> Vec<Diagnostic> {
 
 /// Plans collection equality helper declarations for a library.
 pub(crate) fn plan_equality(library: &DartFileIr) -> EqualityPlan {
-    let mut allocator = NameAllocator::new(library_declaration_names(library));
+    let mut allocator = NameAllocator::new(library_reference_names(library));
     let mut plan = EqualityPlan::default();
 
     for class in library
@@ -62,7 +63,7 @@ pub(crate) fn plan_equality(library: &DartFileIr) -> EqualityPlan {
             };
             let base = format!(
                 "_{}{}Equality",
-                lower_first(&class.name),
+                class_helper_stem(class),
                 upper_first(&field.name)
             );
             let helper_name = allocator.allocate(base);
@@ -80,41 +81,61 @@ pub(crate) fn plan_equality(library: &DartFileIr) -> EqualityPlan {
 }
 
 /// Emits a generated equality operator for an `Eq` class.
-pub(crate) fn emit_eq(class: &ClassIr, equality: &EqualityPlan) -> Option<String> {
+pub(crate) fn emit_eq(
+    class: &ClassIr,
+    equality: &EqualityPlan,
+    core: &CoreNames,
+) -> Option<String> {
     if !has_trait(class, EQ_SYMBOL) {
         return None;
     }
 
+    let other = NameAllocator::new(class.type_parameters.iter().map(|p| p.name.source.as_str()))
+        .allocate("other");
+    let boolean = core.get("bool");
+    let object = core.get("Object");
+    let identical = core.get("identical");
+    let runtime_type = runtime_type(class);
     if class.fields.is_empty() {
         return Some(format!(
-            "@override\nbool operator ==(Object other) =>\n    identical(this, other) ||\n    other is {} &&\n        runtimeType == other.runtimeType;",
-            class.name
+            "@override\n{boolean} operator ==({object} {other}) =>\n    {identical}(this, {other}) ||\n    {other} is {} &&\n        {runtime_type} == {other}.runtimeType;",
+            render_class_type(class)
         ));
     }
 
     let self_name = self_name(class);
     Some(format!(
-        "@override\nbool operator ==(Object other) {{\n  final {self_name} = this as {};\n  return identical(this, other) ||\n      other is {} &&\n          runtimeType == other.runtimeType{};\n}}",
-        class.name,
-        class.name,
-        render_equality_comparisons(class, equality, &self_name)
+        "@override\n{boolean} operator ==({object} {other}) {{\n  final {self_name} = this as {};\n  return {identical}(this, {other}) ||\n      {other} is {} &&\n          {runtime_type} == {other}.runtimeType{};\n}}",
+        render_class_type(class),
+        render_class_type(class),
+        render_equality_comparisons(class, equality, &self_name, &other)
     ))
 }
 
 /// Emits a generated `hashCode` getter for an `Eq` class.
-pub(crate) fn emit_hash_code(class: &ClassIr, equality: &EqualityPlan) -> Option<String> {
+pub(crate) fn emit_hash_code(
+    class: &ClassIr,
+    equality: &EqualityPlan,
+    core: &CoreNames,
+) -> Option<String> {
     if !has_trait(class, EQ_SYMBOL) {
         return None;
     }
 
     let self_name = self_name(class);
+    let integer = core.get("int");
+    let object = core.get("Object");
+    let runtime_type = runtime_type(class);
     let self_binding = if class.fields.is_empty() {
         String::new()
     } else {
-        format!("  final {self_name} = this as {};\n", class.name)
+        format!(
+            "  final {self_name} = this as {};\n",
+            render_class_type(class)
+        )
     };
     Some(format!(
-        "@override\nint get hashCode {{\n{}  return Object.hashAll([\n    runtimeType,\n{}  ]);\n}}",
+        "@override\n{integer} get hashCode {{\n{}  return {object}.hashAll([\n    {runtime_type},\n{}  ]);\n}}",
         self_binding,
         render_hash_values(class, equality, &self_name)
     ))
@@ -125,13 +146,14 @@ fn render_equality_comparisons(
     class: &ClassIr,
     equality: &EqualityPlan,
     self_name: &str,
+    other: &str,
 ) -> String {
     let mut out = String::with_capacity(class.fields.len() * 40);
     for field in &class.fields {
         write!(
             out,
             " &&\n          {}",
-            render_equality_comparison(class, &field.name, equality, self_name)
+            render_equality_comparison(class, &field.name, equality, self_name, other)
         )
         .expect("writing to String cannot fail");
     }
@@ -158,10 +180,11 @@ fn render_equality_comparison(
     field_name: &str,
     equality: &EqualityPlan,
     self_name: &str,
+    other: &str,
 ) -> String {
     match equality.helper_name(&class.name, field_name) {
-        Some(helper) => format!("{helper}.equals(other.{field_name}, {self_name}.{field_name})"),
-        None => format!("other.{field_name} == {self_name}.{field_name}"),
+        Some(helper) => format!("{helper}.equals({other}.{field_name}, {self_name}.{field_name})"),
+        None => format!("{other}.{field_name} == {self_name}.{field_name}"),
     }
 }
 
@@ -191,7 +214,13 @@ fn deep_equality_constructor(ty: &TypeIr) -> Option<&'static str> {
 
 /// Allocates a collision-safe local receiver name for generated equality.
 fn self_name(class: &ClassIr) -> String {
-    let mut allocator = NameAllocator::new(class.fields.iter().map(|field| field.name.as_str()));
+    let mut allocator = NameAllocator::new(
+        class
+            .fields
+            .iter()
+            .map(|field| field.name.as_str())
+            .chain(class.type_parameters.iter().map(|p| p.name.source.as_str())),
+    );
     allocator.allocate("self")
 }
 

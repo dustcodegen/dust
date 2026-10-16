@@ -35,6 +35,8 @@ fn main() {
     const METHODS: usize = 500;
     const ITERS: usize = 50;
     let row = ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "BenchRow".to_owned(),
         is_abstract: false,
@@ -73,6 +75,8 @@ fn main() {
         serde: None,
     };
     let dao = ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "BenchDao".to_owned(),
         is_abstract: true,

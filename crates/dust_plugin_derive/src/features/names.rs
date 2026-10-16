@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use dust_ir::DartFileIr;
+use dust_ir::{ClassIr, DartFileIr};
 
 /// Deterministic allocator for generated names with numeric suffix fallback.
 #[derive(Clone)]
@@ -79,6 +79,27 @@ pub(crate) fn library_declaration_names(library: &DartFileIr) -> BTreeSet<String
     names.extend(library.enums.iter().map(|enum_ir| enum_ir.name.clone()));
 
     names
+}
+
+/// Reserves names that could capture a generated library reference inside a class.
+pub(crate) fn library_reference_names(library: &DartFileIr) -> BTreeSet<String> {
+    let mut names = library_declaration_names(library);
+    for class in &library.classes {
+        names.extend(class.type_parameters.iter().map(|p| p.name.source.clone()));
+        names.extend(class.fields.iter().map(|field| field.name.clone()));
+        names.extend(class.methods.iter().map(|method| method.name.clone()));
+    }
+    names
+}
+
+/// Lowercases the first ASCII character in a generated identifier fragment.
+pub(crate) fn class_helper_stem(class: &ClassIr) -> String {
+    // Generic helpers normalize private names without changing legacy output.
+    lower_first(if class.type_parameters.is_empty() {
+        &class.name
+    } else {
+        class.name.trim_start_matches('_')
+    })
 }
 
 /// Lowercases the first ASCII character in a generated identifier fragment.

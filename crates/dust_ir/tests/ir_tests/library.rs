@@ -13,6 +13,8 @@ fn workspace_ir_collects_libraries() {
         span(0, 100),
     );
     file.classes.push(ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "User".to_owned(),
         is_abstract: false,

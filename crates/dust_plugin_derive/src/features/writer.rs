@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt::Write};
 
-use dust_dart_emit::named_argument_name;
+use dust_dart_emit::{named_argument_name, render_class_type};
 use dust_ir::{ClassIr, ConstructorIr, ParamKind};
 
 /// Finds a constructor that can initialize every field.
@@ -83,7 +83,7 @@ fn render_arg_value(out: &mut String, value: &str, continuation_indent: &str) {
 /// Renders the Dart constructor target name.
 fn constructor_name(class: &ClassIr, constructor: &ConstructorIr) -> String {
     match &constructor.name {
-        Some(name) => format!("{}.{}", class.name, name),
-        None => class.name.clone(),
+        Some(name) => format!("{}.{}", render_class_type(class), name),
+        None => render_class_type(class),
     }
 }

@@ -1,0 +1,70 @@
+import 'package:generic_names_probe/generic_names.dart';
+import 'package:test/test.dart';
+
+int choose<T>(int value, T unused) => value;
+
+void main() {
+  test('class binders never replace generated core types, calls or locals', () {
+    const original = CoreNames<int, String, double, bool, String?, int, int, String, bool>(
+      1, 'object', 1.5, true, 'identity', 2, 3, 'peer', true, choose,
+    );
+    final CoreNames<int, String, double, bool, String?, int, int, String, bool> Function() copy = original.copyWith.call;
+    expect(copy(), original);
+    expect(copy().hashCode, original.hashCode);
+    expect(original == original, isTrue);
+    expect(original == Object(), isFalse);
+    expect(original.toString(), startsWith('CoreNames(text: 1, object: object, flag: 1.5'));
+    expect(original.callback<String>(7, 'unused'), 7);
+    final cleared = original.copyWith(
+      text: null, object: null, flag: null, number: null, identity: null,
+      metadata: null, receiver: null, peer: null, runtime: null, callback: null,
+    );
+    expect(cleared.text, 1);
+    expect(cleared.object, 'object');
+    expect(cleared.flag, 1.5);
+    expect(cleared.number, isTrue);
+    expect(cleared.identity, isNull);
+    expect(cleared.metadata, 2);
+    expect(cleared.receiver, 3);
+    expect(cleared.peer, 'peer');
+    expect(cleared.runtime, isTrue);
+    expect(cleared.callback<String>(7, 'unused'), 7);
+    final replaced = original.copyWith(text: 2, object: 'after', flag: 2.5, number: false,
+      identity: 'after', metadata: 4, receiver: 5, peer: 'after', runtime: false, callback: choose);
+    expect(replaced.text, 2);
+    expect(replaced.object, 'after');
+    expect(replaced.flag, 2.5);
+    expect(replaced.number, isFalse);
+    expect(replaced.identity, 'after');
+    expect(replaced.metadata, 4);
+    expect(replaced.receiver, 5);
+    expect(replaced.peer, 'after');
+    expect(replaced.runtime, isFalse);
+    expect(replaced, isNot(original));
+    final dynamic receiver = original;
+    expect(receiver.copyWith(text: 3).text, 3);
+    expect(() => receiver.copyWith(text: 'wrong'), throwsA(isA<TypeError>()));
+  });
+
+  test('empty generic equality, debug and copy paths keep core identity', () {
+    const original = EmptyNames<int, String, double, bool, String, int>();
+    final EmptyNames<int, String, double, bool, String, int> Function() copy = original.copyWith.call;
+    expect(copy(), original);
+    expect(copy().hashCode, original.hashCode);
+    expect(original == original, isTrue);
+    expect(original == Object(), isFalse);
+    expect(original, isNot(const EmptyNames<num, String, double, bool, String, int>()));
+    expect(original.toString(), 'EmptyNames()');
+  });
+
+  test('class binders do not capture allocated deep equality helpers', verifyCollectionNames);
+
+  test('nested getters keep protected annotations and actual arguments', () {
+    const empty = EmptyNames<int, int, int, int, int, int>();
+    const original = NestedNames<int>(empty, empty);
+    expect(original.copyWith.child().child, empty);
+    expect(original.copyWith.optional!().optional, empty);
+    expect(original.copyWith(optional: null).copyWith.optional, isNull);
+    expect(original.copyWith(child: null).child, same(empty));
+  });
+}

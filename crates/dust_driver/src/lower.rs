@@ -1,3 +1,5 @@
+/// Class header facts and scoped member lowering.
+mod classes;
 /// Lowering for top-level declarations.
 mod declarations;
 /// Lowering for library, import, export and part directives.
@@ -8,7 +10,9 @@ mod inheritance;
 mod members;
 mod tests_declarations;
 mod tests_directives;
+mod tests_generics;
 mod tests_inheritance;
+mod tests_type_signatures;
 
 use std::collections::HashMap;
 
@@ -17,24 +21,24 @@ use dust_ir::{
     AnnotationIr, ClassIr, ClassKindIr, ConfigApplicationIr, ConstructorIr, ConstructorParamIr,
     DartFileIr, EnumIr, EnumVariantIr, ExportIr, ExprSourceIr, ExtensionIr, ExtensionTypeIr,
     FieldIr, FunctionIr, ImportIr, LibraryDeclIr, LoweringOutcome, MethodIr, MethodParamIr,
-    MixinIr, NameIr, ParamKind, PartIr, PartOfIr, SerdeClassConfigIr, SpanIr, TopLevelVariableIr,
-    TraitApplicationIr, TypedefIr,
+    MixinApplicationIr, MixinIr, NameIr, ParamKind, PartIr, PartOfIr, SerdeClassConfigIr, SpanIr,
+    TopLevelVariableIr, TraitApplicationIr, TypeParamIr, TypedefIr,
 };
 use dust_parser_dart::{
     ParameterKind, ParsedAnnotation, ParsedDirective, ParsedExtensionSurface,
     ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
     ParsedMethodParamSurface, ParsedMixinSurface, ParsedTopLevelVariableSurface,
-    ParsedTypedefSurface,
+    ParsedTypeParamSurface, ParsedTypeSurface, ParsedTypedefSurface,
 };
 use dust_resolver::{
     ResolvedConstructor, ResolvedField, ResolvedLibrary, ResolvedMethod, SymbolCatalog,
-    lower_type_ir as lower_type,
+    lower_type_ir as lower_type, lower_type_ir_in_scope as lower_type_in_scope,
 };
 
 use self::inheritance::{
     infer_param_type, merged_fields_for_class, resolve_constructor_param_types,
 };
-use self::{declarations::*, directives::*, members::*};
+use self::{classes::*, declarations::*, directives::*, members::*};
 
 /// Lowers one resolved library into semantic IR.
 #[cfg(test)]
@@ -62,6 +66,8 @@ pub(crate) fn lower_library_with_catalog(
             let outcome = lower_class_from_parts(ClassLoweringInput {
                 kind: class.kind,
                 name: &class.name,
+                type_parameters: &class.type_parameters,
+                mixins: &class.mixins,
                 is_abstract: class.is_abstract,
                 is_interface: class.is_interface,
                 superclass_name: class.superclass_name.as_deref(),

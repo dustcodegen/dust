@@ -49,6 +49,11 @@ Generate the part file from your package root:
 dust build
 ```
 
+For a library that fails validation, Dust leaves its last successful generated
+output and cache entry unchanged. Fix the diagnostic and run `dust build` again;
+deleting the cache or editing generated files is not required. Other valid
+libraries in the same build can still update normally.
+
 You can now use the generated members normally:
 
 ```dart
@@ -132,8 +137,73 @@ chained helper:
 final moved = profile.copyWith.address(city: 'London');
 ```
 
+### Generic Models (Unreleased Draft)
+
+The draft for [#93](https://github.com/dustcodegen/dust/issues/93) preserves the
+chosen type arguments through generated mixins and copy helpers:
+
+```dart
+@Derive([CopyWith(), ToString(), Eq()])
+class Box<T> with _$Box<T> {
+  const Box(this.value);
+
+  final T value;
+}
+
+final Box<int> updated = const Box<int>(1).copyWith(value: 2);
+final Box<String?> cleared = const Box<String?>('before').copyWith(value: null);
+```
+
+Pass every class parameter to the mixin in declaration order. Dust rejects
+missing or substituted arguments rather than silently erasing types.
+Omission keeps the field; explicit null clears it only when the instantiated
+field type accepts null. For non-nullable fields, null keeps the existing value.
+Copies stay shallow. Same-library nested helpers retain their type arguments;
+imported models support typed replacement, not private chained helpers.
+
+Traditional and primary-constructor consumers exercise these cases locally.
+This is not published support. Core-name/local collision cases have scoped
+tests, but names matching generated members such as `copyWith` still need
+[#103](https://github.com/dustcodegen/dust/issues/103). Generic validation helpers
+and other plugin capabilities remain under the [generic model design](../design/generic-models.md).
+
+### Explicit Generic Callbacks
+
+A non-generic model can contain a callback with its own type parameters:
+
+```dart
+@Derive([CopyWith()])
+class CallbackModel with _$CallbackModel {
+  const CallbackModel({required this.transform, this.optionalTransform});
+
+  final T Function<T>(T) transform;
+  final T Function<T>(T)? optionalTransform;
+}
+```
+
+Write the full function type on the field. The callback's `T` belongs to its
+function signature; it does not make `CallbackModel` a generic class.
+
+```dart
+T identity<T>(T value) => value;
+
+final model = CallbackModel(transform: identity, optionalTransform: identity);
+final copied = model.copyWith();
+final int result = copied.transform<int>(42);
+final cleared = model.copyWith(optionalTransform: null);
+```
+
+Omission retains the callback. Passing `null` clears a nullable callback, while
+the required callback keeps the existing non-nullable null-as-omission behavior.
+This example does not establish generic class generation (#93) or shorthand
+primary callback-formal support (#92).
+
 ## Examples
 
 - [Product showcase models](../../examples/product_showcase/lib/models)
 - [Generated derive tests](../../examples/product_showcase/test/generated_derive_models_test.dart)
 - [Generated copyWith tests](../../examples/product_showcase/test/generated_copywith_test.dart)
+- [Explicit callback model](../../examples/product_showcase/lib/models/callback_model.dart)
+- [Callback copy tests](../../examples/product_showcase/test/models/callback_model_test.dart)
+- [Draft generic models](../../examples/product_showcase/lib/models/generic_models.dart)
+- [Generic copy tests](../../examples/product_showcase/test/models/generic_models_test.dart)

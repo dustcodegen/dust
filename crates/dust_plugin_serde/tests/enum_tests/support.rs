@@ -114,6 +114,8 @@ pub(crate) fn class(
     traits: &[&str],
 ) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,

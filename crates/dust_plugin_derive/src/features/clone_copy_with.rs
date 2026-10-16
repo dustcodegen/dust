@@ -1,3 +1,11 @@
+/// Public copy usage documentation.
+mod docs;
+/// Generic helper binders and applied arguments.
+mod generics;
+/// Same-library nested copy getter rendering.
+mod nested;
+/// Per-library name and shared-helper planning.
+mod plan;
 /// Renders generated copyWith source.
 mod render;
 /// Shared copyWith type and value expression helpers.
@@ -5,22 +13,22 @@ mod support;
 /// CopyWith constructor and public argument validation.
 mod validation;
 
+pub(crate) use plan::plan_copy_with;
 pub(crate) use validation::validate_copy_with;
 
 use std::{borrow::Cow, collections::BTreeMap};
 
-use dust_dart_emit::named_argument_name;
-use dust_ir::{ClassIr, DartFileIr, FieldIr, TypeIr};
+use dust_ir::{ClassIr, FieldIr, TypeIr};
 
 use crate::features::{
     COPY_WITH_SYMBOL,
+    core_names::CoreNames,
     eq_hash::has_trait,
-    names::{NameAllocator, library_declaration_names, lower_first},
     writer::{build_constructor_call_multiline, find_clone_constructor},
 };
 
 use self::{
-    render::{render_copy_with_getter, render_copy_with_support, render_sentinel_helper},
+    render::{render_copy_with_getter, render_copy_with_support},
     support::{copy_with_value_expr, needs_copy_with_sentinel},
 };
 
@@ -48,6 +56,14 @@ impl CopyWithPlan {
 
 /// Collision-safe generated names for one class's copyWith support.
 struct CopyWithNames {
+    /// Core references protected against this class's lexical names.
+    core: CoreNames,
+    /// Collision-safe result binder for this helper declaration.
+    result_type: String,
+    /// Number of source class binders expected at nested use sites.
+    type_parameter_count: usize,
+    /// Shared generic nullability predicate, only for generic classes with fields.
+    accepts_null_helper: Option<String>,
     /// Generated callable copyWith interface name.
     interface_name: String,
     /// Generated callable copyWith implementation name.
@@ -86,86 +102,6 @@ pub(crate) struct CopyWithEmission {
     pub(crate) support_type: String,
 }
 
-/// Plans copyWith support names and shared helpers for the whole library.
-pub(crate) fn plan_copy_with(library: &DartFileIr) -> CopyWithPlan {
-    let mut allocator = NameAllocator::new(library_declaration_names(library));
-    let mut by_class = BTreeMap::new();
-    let mut samples_by_class = BTreeMap::new();
-    let mut shared_helpers = Vec::new();
-
-    for class in &library.classes {
-        if !has_trait(class, COPY_WITH_SYMBOL) || find_clone_constructor(class).is_none() {
-            continue;
-        }
-
-        let interface_name = allocator.allocate(format!("_${}CopyWith", class.name));
-        let impl_name = allocator.allocate(format!("_${}CopyWithImpl", class.name));
-        let mut local_allocator = NameAllocator::new(
-            class
-                .fields
-                .iter()
-                .flat_map(|field| [field.name.as_str(), named_argument_name(&field.name)]),
-        );
-        let self_name = local_allocator.allocate("_self");
-        let then_name = local_allocator.allocate("_then");
-        let callback_value_name = local_allocator.allocate("value");
-        let nested_value_names = class
-            .fields
-            .iter()
-            .filter(|field| nested_target_type(&field.ty).is_some_and(|(_, nullable)| nullable))
-            .map(|field| {
-                (
-                    field.name.clone(),
-                    local_allocator.allocate(format!("{}Value", field.name)),
-                )
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        if let Some(field) = sample_replacement_field(class) {
-            samples_by_class.insert(
-                class.name.clone(),
-                CopyWithSample {
-                    field_name: named_argument_name(&field.name).to_owned(),
-                    nested_value: sample_value(&field.ty, ValueSampleKind::Nested),
-                },
-            );
-        }
-
-        let sentinel = if class
-            .fields
-            .iter()
-            .any(|field| needs_copy_with_sentinel(&field.ty))
-        {
-            let class_name = allocator.allocate(format!("_{}CopyWithUnset", class.name));
-            let value_name =
-                allocator.allocate(format!("_{}CopyWithUnset", lower_first(&class.name)));
-            shared_helpers.push(render_sentinel_helper(&class_name, &value_name));
-            Some(CopyWithSentinel { value_name })
-        } else {
-            None
-        };
-
-        by_class.insert(
-            class.name.clone(),
-            CopyWithNames {
-                interface_name,
-                impl_name,
-                sentinel,
-                self_name,
-                then_name,
-                callback_value_name,
-                nested_value_names,
-            },
-        );
-    }
-
-    CopyWithPlan {
-        by_class,
-        samples_by_class,
-        shared_helpers,
-    }
-}
-
 /// Emits copyWith support for a class when it derives `CopyWith`.
 pub(crate) fn emit_copy_with(
     class: &ClassIr,
@@ -192,6 +128,8 @@ pub(crate) fn emit_copy_with(
                         .sentinel
                         .as_ref()
                         .map(|sentinel| sentinel.value_name.as_str()),
+                    names.accepts_null_helper.as_deref(),
+                    &names.core,
                 )),
             )
         })
@@ -207,27 +145,28 @@ pub(crate) fn emit_copy_with(
 /// Picks a non-nullable replacement field for generated Dartdoc samples.
 fn sample_replacement_field(class: &ClassIr) -> Option<&FieldIr> {
     class.fields.iter().find(|field| {
-        !needs_copy_with_sentinel(&field.ty)
+        !is_class_parameter(class, &field.ty)
+            && !needs_copy_with_sentinel(&field.ty)
             && sample_value(&field.ty, ValueSampleKind::Replacement) != "null"
     })
 }
 
 /// Returns the nested copy target class name and whether the field is nullable.
-fn nested_target_type(ty: &TypeIr) -> Option<(&str, bool)> {
-    let TypeIr::Named {
-        name,
-        args,
-        nullable,
-    } = ty
-    else {
+fn nested_target_type<'a>(class: &ClassIr, ty: &'a TypeIr) -> Option<(&'a str, bool)> {
+    if is_class_parameter(class, ty) {
+        return None;
+    }
+    let TypeIr::Named { name, nullable, .. } = ty else {
         return None;
     };
 
-    if !args.is_empty() {
-        return None;
-    }
-
     Some((name.as_ref(), *nullable))
+}
+
+/// Distinguishes a class binder from an unrelated same-spelled local model.
+fn is_class_parameter(class: &ClassIr, ty: &TypeIr) -> bool {
+    matches!(ty, TypeIr::Named { name, args, .. } if args.is_empty()
+        && class.type_parameters.iter().any(|parameter| parameter.name.source == name.as_ref()))
 }
 
 /// Kind of generated copyWith Dartdoc sample being rendered.

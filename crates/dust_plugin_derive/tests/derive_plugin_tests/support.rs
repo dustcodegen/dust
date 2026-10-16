@@ -11,6 +11,8 @@ pub(crate) fn span(start: u32, end: u32) -> SpanIr {
 
 pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,

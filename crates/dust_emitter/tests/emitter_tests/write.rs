@@ -84,6 +84,8 @@ fn emitter_generates_real_multi_class_output_with_derive_plugin() {
         span: span(0, 200),
         classes: vec![
             ClassIr {
+                type_parameters: Vec::new(),
+                mixins: Vec::new(),
                 kind: ClassKindIr::Class,
                 name: "User".to_owned(),
                 is_abstract: false,
@@ -111,6 +113,8 @@ fn emitter_generates_real_multi_class_output_with_derive_plugin() {
                 serde: None,
             },
             ClassIr {
+                type_parameters: Vec::new(),
+                mixins: Vec::new(),
                 kind: ClassKindIr::Class,
                 name: "Team".to_owned(),
                 is_abstract: false,

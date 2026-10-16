@@ -1,14 +1,17 @@
 use dust_text::TextRange;
 
-use crate::ParsedQueryCallSurface;
+use crate::{ParsedQueryCallSurface, ParsedTypeSurface};
 
 /// Surface types for annotations and their argument values.
 mod annotations;
 /// Surface types for top-level and member declarations.
 mod declarations;
+/// Generic class-header facts.
+mod generics;
 /// Surface types for fields, constructors and parameters.
 mod members;
 
+pub use self::generics::ParsedTypeParamSurface;
 pub use self::{annotations::*, declarations::*, members::*};
 
 /// A generation-relevant view of one parsed Dart file.
@@ -140,6 +143,10 @@ pub struct ParsedClassSurface {
     pub kind: ParsedClassKind,
     /// The class name.
     pub name: String,
+    /// Class type parameters in declaration order.
+    pub type_parameters: Vec<ParsedTypeParamSurface>,
+    /// Written mixin applications in source order.
+    pub mixins: Vec<ParsedTypeSurface>,
     /// Whether the declaration is marked `abstract`.
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.

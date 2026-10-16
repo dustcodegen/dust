@@ -28,6 +28,8 @@ fn parse_surface_can_model_real_dart_library_shapes() {
         classes: vec![ParsedClassSurface {
             kind: ParsedClassKind::Class,
             name: "User".to_owned(),
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             is_abstract: true,
             is_interface: false,
             superclass_name: Some("Entity".to_owned()),

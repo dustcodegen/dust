@@ -26,6 +26,8 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                 part_of: None,
                 span: span(0, 100),
                 classes: vec![ClassIr {
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     kind: ClassKindIr::Class,
                     name: "Catalog".to_owned(),
                     is_abstract: false,

@@ -23,6 +23,8 @@ impl ParseBackend for FakeBackend {
                 classes: vec![ParsedClassSurface {
                     kind: ParsedClassKind::Class,
                     name: "User".to_owned(),
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: Some("Entity".to_owned()),
@@ -163,6 +165,8 @@ fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
     let class = ParsedClassSurface {
         kind: ParsedClassKind::MixinClass,
         name: "UserMixin".to_owned(),
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         is_abstract: true,
         is_interface: false,
         superclass_name: None,

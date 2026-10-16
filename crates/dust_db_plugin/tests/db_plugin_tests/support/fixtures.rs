@@ -7,6 +7,8 @@ use super::ir::{config, field, method_param, named_param, result_type, span, tra
 
 pub(crate) fn row_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "UserProfile".to_owned(),
         is_abstract: false,
@@ -100,6 +102,8 @@ pub(crate) fn simple_user_row_class() -> ClassIr {
 
 pub(crate) fn dao_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "UserDao".to_owned(),
         is_abstract: true,
@@ -131,6 +135,8 @@ pub(crate) fn dao_class() -> ClassIr {
 
 pub(crate) fn database_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "AppDatabase".to_owned(),
         is_abstract: true,

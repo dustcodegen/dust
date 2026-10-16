@@ -38,6 +38,8 @@ pub(crate) fn config(args: Option<&str>) -> ConfigApplicationIr {
 
 pub(crate) fn view_model_class(name: &str, args: &str) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
@@ -55,6 +57,8 @@ pub(crate) fn view_model_class(name: &str, args: &str) -> ClassIr {
 
 pub(crate) fn args_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TaskBoardArgs".to_owned(),
         is_abstract: false,
@@ -79,6 +83,8 @@ pub(crate) fn args_class() -> ClassIr {
 
 pub(crate) fn state_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TaskBoardState".to_owned(),
         is_abstract: false,

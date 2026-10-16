@@ -12,7 +12,8 @@ from sdk_compat import ROOT, check_primary
 from sqlite_sdk_consumer import stage_consumer
 
 
-PARTS = ("models", "private_models", "language_models", "api", "database")
+PARTS = ("models", "private_models", "language_models", "api",
+         "generic_models", "generic_imported", "database")
 MODES = ("all", "execute", "one", "one", "optional")
 
 
@@ -54,9 +55,19 @@ class PrimarySdkTests(unittest.TestCase):
                 return staged
 
             with patch.dict(os.environ, {"DUST_DATABASE_URL": "sqlite:/must-not-open"}), \
-                    patch("sdk_compat.stage_consumer", side_effect=stale_copy):
+                    patch("sdk_codegen_fixtures.stage_consumer", side_effect=stale_copy), \
+                    patch("sdk_compat.check_generic_types", return_value=["checked"]) as negatives, \
+                    patch("sdk_compat.check_generic_analysis") as strict, \
+                    patch("sdk_compat.check_generic_names") as names:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
+            negatives.assert_called_once()
+            strict.assert_called_once()
+            names.assert_called_once()
+            self.assertEqual(names.call_args.kwargs, {"primary": True})
+            self.assertEqual(negatives.call_args.args[1:5],
+                             (Path("/sdk/bin/dart"), app, output / "primary-generic-negative",
+                              "primary_sdk_consumer"))
             self.assertEqual(set(generated), {f"lib/{part}.g.dart" for part in PARTS})
             self.assertEqual([call[0][1] for call in calls],
                              ["pub", "pub", "build", "check", "db", "check", "check",
@@ -68,10 +79,10 @@ class PrimarySdkTests(unittest.TestCase):
             ])
             self.assertEqual(calls[-2][0], ["/sdk/bin/dart", "analyze", "--fatal-infos"])
             expected_sources = [f"lib/{part}.dart" for part in
-                                ("api", "checked_queries", "database", "language_models",
+                                ("api", "checked_queries", "database", "generic_imported", "generic_models", "language_models",
                                  "models", "private_models")]
             expected_sources += [f"test/{part}_test.dart" for part in
-                                 ("api", "checked_queries", "language_models", "models",
+                                 ("api", "checked_queries", "generic_models", "language_models", "models",
                                   "private_models", "sqlite_runtime")]
             self.assertEqual(calls[-3][0][4:], expected_sources)
             self.assertEqual(calls[-1][0], ["/sdk/bin/dart", "test", "--reporter=expanded"])
@@ -156,6 +167,7 @@ class PrimarySdkTests(unittest.TestCase):
                     calls.append(command)
                     if "build" in command:
                         (app / "lib/counter.g.dart").write_text("fresh state")
+                        (app / "lib/generic_value.g.dart").write_text("fresh generic model")
                         if complete:
                             (app / "lib/route").mkdir()
                             for part in ("routes", "paths", "navigation", "metadata", "runtime"):
@@ -168,7 +180,7 @@ class PrimarySdkTests(unittest.TestCase):
                     self.assertFalse(any("analyze" in call or "test" in call for call in calls))
                     continue
                 generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
-                self.assertEqual(len(generated), 6)
+                self.assertEqual(len(generated), 7)
                 self.assertEqual(calls[-2], [*flutter, "analyze", "--no-pub", "--fatal-infos"])
                 self.assertEqual(calls[-1], [*flutter, "test", "--no-pub", "--reporter=expanded"])
                 self.assertFalse(any("db" in call or "--offline" in call for call in calls))
