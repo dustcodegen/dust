@@ -84,6 +84,13 @@ final sameValue = product ==
   the normal mixin list.
 - Dust does not generate derive members for `mixin class` targets.
 
+Unannotated `mixin class` helpers can live beside derived classes and participate
+in their mixin lists. The helper itself is not a derive target: adding a
+Dust-owned derive trait to it still fails with an unsupported-target diagnostic.
+The [Product example](../../examples/product_showcase/lib/models/product.dart)
+uses a handwritten mixin-class label getter alongside generated equality and
+copyWith; replacing a model field preserves the inherited helper behavior.
+
 Fields are usually `final` for data-class usage, but Dust does not require
 immutability.
 

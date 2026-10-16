@@ -9,6 +9,9 @@ use super::helpers::{
     DustImport, make_pub_workspace_member, make_workspace, write_dust_file, write_file,
 };
 
+#[path = "build_mixin_classes.rs"]
+mod mixin_classes;
+
 #[test]
 fn cli_build_writes_real_output() {
     let workspace = make_workspace();

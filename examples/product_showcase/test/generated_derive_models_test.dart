@@ -47,6 +47,8 @@ void main() {
     );
 
     expect(product, equals(sameProduct));
+    expect(product.displayLabel, 'sku-1: Runner');
+    expect(product.copyWith(title: 'Trainer').displayLabel, 'sku-1: Trainer');
     expect(product.hashCode, equals(sameProduct.hashCode));
     expect(product.copyWith(), equals(product));
     expect(product.copyWith(featured: false).featured, isFalse);
