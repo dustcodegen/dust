@@ -37,13 +37,12 @@ pub fn annotation_ir_from_parsed(
     annotation: &ParsedAnnotation,
     resolved_symbol: Option<SymbolId>,
 ) -> AnnotationIr {
-    let name = name_ir(file_id, &annotation.qualified_name, annotation.span);
     let (positional_args, named_args) = annotation_argument_values(file_id, annotation);
 
     AnnotationIr {
-        raw_name: name.source,
-        short_name: name.short,
-        prefix: name.prefix,
+        raw_name: annotation.qualified_name.clone(),
+        short_name: annotation.name.clone(),
+        prefix: annotation.prefix.clone(),
         positional_args,
         named_args,
         resolved_symbol,

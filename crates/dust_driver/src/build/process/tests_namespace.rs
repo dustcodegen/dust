@@ -11,6 +11,7 @@ use std::path::Path;
 
 mod failures;
 mod groups;
+mod trivia;
 
 const APP: &str = "package:app/main.dart";
 const CLIENT: &str = "package:dust_dart/src/http/http_client_annotations.dart";

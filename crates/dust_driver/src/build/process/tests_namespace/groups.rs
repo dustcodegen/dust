@@ -191,3 +191,36 @@ fn validated_groups_do_not_enable_derivation_at_method_or_parameter_sites() {
     assert_eq!(method.params[0].traits, []);
     assert_eq!(method.params[0].configs, []);
 }
+
+#[test]
+fn outer_derive_trivia_preserves_intrinsic_binding_and_nested_trait_application() {
+    let written = "d /* owner . ( */ . Derive";
+    let source = format!(
+        "import '{BASE}' as d; import '{TRAIT}' as t; part 'main.g.dart';
+@{written}([t.ToString()]) class C {{}}
+@{written}([t.ToString()]) void handler() {{}}"
+    );
+    let (graph, catalog, parsed) = group_inputs(&source);
+    let (ir, diagnostics) = pipeline(&graph, &catalog, &parsed);
+    assert_eq!(diagnostics, []);
+    let ir = ir.unwrap();
+    let start = source.find(&format!("@{written}")).unwrap() as u32;
+    assert_eq!(
+        ir.classes[0].traits,
+        [dust_ir::TraitApplicationIr {
+            symbol: SymbolId::new("dust_dart::ToString"),
+            span: dust_ir::SpanIr::new(
+                FileId::new(3),
+                dust_text::TextRange::new(
+                    start,
+                    start + format!("@{written}([t.ToString()])").len() as u32
+                )
+            )
+        }]
+    );
+    assert_eq!(ir.functions[0].annotations[0].raw_name, written);
+    assert_eq!(
+        ir.functions[0].annotations[0].resolved_symbol,
+        Some(SymbolId::new("dust_dart::Derive"))
+    );
+}
