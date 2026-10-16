@@ -10,3 +10,4 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings -D clippy::
 echo "==> Pinned listed Dart grammar"
 python3 scripts/check_listed_dart_grammar.py
 cargo clippy --manifest-path vendor/tree-sitter-dart/Cargo.toml --locked --all-targets -- -D warnings -D clippy::missing_docs_in_private_items -D missing_docs
+cargo clippy --manifest-path crates/dust_parser_dart_ts/parity/Cargo.toml --locked --all-targets -- -D warnings -D clippy::missing_docs_in_private_items -D missing_docs

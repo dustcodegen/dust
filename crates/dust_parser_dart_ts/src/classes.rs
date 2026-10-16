@@ -9,6 +9,10 @@ pub(crate) mod methods;
 /// Source-text helpers for parameter parsing.
 mod parse_text;
 
+/// Cross-grammar contracts for the staged extraction migration.
+#[cfg(test)]
+mod parity_tests;
+
 use dust_parser_dart::ParsedClassSurface;
 use dust_text::SourceText;
 use tree_sitter::Node;
@@ -19,7 +23,7 @@ pub(crate) fn extract_classes(root: Node<'_>, source: &SourceText) -> Vec<Parsed
     let mut cursor = root.walk();
 
     for child in root.children(&mut cursor).filter(|node| node.is_named()) {
-        if child.kind() == "class_declaration" {
+        if matches!(child.kind(), "class_declaration" | "class_definition") {
             classes.push(class_decl::extract_class(child, source));
         }
     }

@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from check_listed_dart_grammar import FILES, ROOT, check
+from check_listed_class_parity import CASES, MARKER, compare, records
 
 
 class ListedGrammarTests(unittest.TestCase):
@@ -36,6 +37,20 @@ class ListedGrammarTests(unittest.TestCase):
         self.assertEqual(check(ROOT / "vendor/tree-sitter-dart"), [])
         manifest = (ROOT / "crates/dust_parser_dart_ts/Cargo.toml").read_text()
         self.assertIn('tree-sitter-dart = "0.1.0"', manifest)
+        harness = (ROOT / "crates/dust_parser_dart_ts/parity/Cargo.toml").read_text()
+        self.assertIn('tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }', harness)
+
+    def test_class_parity_requires_all_complete_matching_records(self) -> None:
+        output = "\n".join(f"test prefix {MARKER}{name}:[ParsedClassSurface {{ name: User }}]" for name in sorted(CASES))
+        self.assertEqual(set(records(output)), CASES)
+        compare(output, output)
+        with self.assertRaisesRegex(ValueError, "differs"):
+            compare(output, output.replace("User", "Other", 1))
+        for invalid in ("", output.split("\n", 1)[1], output + "\n" + output,
+                        output.replace("[ParsedClassSurface { name: User }]", "[]", 1),
+                        output + f"\n{MARKER}unknown:invalid", output + f"\n{MARKER}broken"):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                records(invalid)
 
     def test_pinned_bytes_survive_crlf_checkout_configuration(self) -> None:
         snapshot = ROOT / "vendor/tree-sitter-dart"

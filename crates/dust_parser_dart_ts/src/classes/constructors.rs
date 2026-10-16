@@ -1,11 +1,13 @@
 use dust_parser_dart::{
     ParameterKind, ParsedAnnotation, ParsedConstructorParamSurface, ParsedConstructorSurface,
 };
-use dust_text::SourceText;
+use dust_text::{SourceText, TextRange};
 use tree_sitter::Node;
 
-use crate::annotations::extract_direct_annotations;
-use crate::syntax::{find_first_descendant, find_first_descendant_by, node_text, text_range};
+use crate::annotations::{extract_annotation, extract_direct_annotations};
+use crate::syntax::{
+    direct_named_child, find_first_descendant, find_first_descendant_by, node_text, text_range,
+};
 use crate::types::extract_type_before;
 
 use super::parse_text::{
@@ -72,10 +74,11 @@ pub(super) fn is_constructor_signature_kind(kind: &str) -> bool {
 
 /// Extracts the named-constructor suffix from a constructor signature.
 fn constructor_name(signature: Node<'_>, source: &SourceText) -> Option<String> {
+    let boundary = direct_named_child(signature, "formal_parameter_list")?.start_byte();
     let mut cursor = signature.walk();
-    let mut identifiers = signature
-        .children_by_field_name("name", &mut cursor)
-        .filter(|child| child.is_named() && child.kind() == "identifier");
+    let mut identifiers = signature.children(&mut cursor).filter(|child| {
+        child.is_named() && child.kind() == "identifier" && child.start_byte() < boundary
+    });
     identifiers.next();
     identifiers
         .next()
@@ -99,7 +102,19 @@ fn redirecting_factory_target(
         last_target = Some(target);
     }
     let Some(first_target) = first_target else {
-        return (None, None);
+        let boundary = direct_named_child(signature, "formal_parameter_list")
+            .map(|params| params.end_byte())
+            .unwrap_or(signature.end_byte());
+        let mut cursor = signature.walk();
+        let first_target = signature
+            .named_children(&mut cursor)
+            .find(|child| child.kind() == "type_identifier" && child.start_byte() >= boundary);
+        let target = first_target.map(|first| {
+            source.as_str()[first.start_byte()..signature.end_byte()]
+                .trim()
+                .to_owned()
+        });
+        return (target.clone(), target);
     };
     let Some(last_target) = last_target else {
         return (None, None);
@@ -137,11 +152,20 @@ fn collect_formal_parameters(
     out: &mut Vec<ParsedConstructorParamSurface>,
     kind: ParameterKind,
 ) {
+    let mut pending_annotations = Vec::new();
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
         match child.kind() {
+            "annotation" => pending_annotations.push(extract_annotation(child, source)),
             "formal_parameter" | "default_formal_parameter" => {
-                out.push(extract_formal_parameter(child, source, kind));
+                let mut param = extract_formal_parameter(child, source, kind);
+                if let Some(first) = pending_annotations.first() {
+                    param.span = TextRange::new(first.span.start(), param.span.end());
+                    let mut annotations = std::mem::take(&mut pending_annotations);
+                    annotations.extend(param.annotations);
+                    param.annotations = annotations;
+                }
+                out.push(param);
             }
             "optional_formal_parameters" => {
                 collect_optional_formal_parameters(child, source, out);
@@ -158,15 +182,7 @@ fn collect_optional_formal_parameters(
     out: &mut Vec<ParsedConstructorParamSurface>,
 ) {
     let kind = optional_parameter_kind(node, source);
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor).filter(|child| child.is_named()) {
-        if matches!(
-            child.kind(),
-            "formal_parameter" | "default_formal_parameter"
-        ) {
-            out.push(extract_formal_parameter(child, source, kind));
-        }
-    }
+    collect_formal_parameters(node, source, out, kind);
 }
 
 /// Converts one tree-sitter parameter node into constructor parameter metadata.

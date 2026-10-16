@@ -22,7 +22,7 @@ members = [
     "crates/dust_db_plugin",
 ]
 resolver = "2"
-exclude = ["vendor/tree-sitter-dart"]
+exclude = ["vendor/tree-sitter-dart", "crates/dust_parser_dart_ts/parity"]
 
 [workspace.package]
 version = "0.2.1"

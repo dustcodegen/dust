@@ -32,6 +32,23 @@ No existing handwritten app API, generated output, runtime constraint or
 package/CLI version changes in the binding preparation stage. No released
 binary gains primary-constructor support from this work.
 
+## Extraction parity in progress
+
+The first #70 slice adapts backend-private traditional class/member extraction:
+class node names, sibling metadata and bodies, field identifiers/initializers,
+factory names/targets and operator names. The production grammar stays unchanged.
+The same seven contracts execute with each grammar in separate native binaries
+and compare complete parser facts, including byte spans, with no rewritten
+snapshots. They cover nested nullable types/defaults, named/super parameters,
+modifiers/inheritance, annotated members/parameters, factories and adjacent
+method/operator bodies.
+
+Run `python3 scripts/check_listed_class_parity.py` locally. The
+[isolated harness notes](../../crates/dust_parser_dart_ts/parity/README.md)
+explain why both native grammars must not share a test executable. These scoped
+contracts do not prove whole-backend or new-syntax compatibility; #70 and #68
+stay open until all remaining extraction and generated-consumer gates pass.
+
 ## Stages under #68
 
 1. [#69: pinned Rust binding](https://github.com/dustcodegen/dust/issues/69).

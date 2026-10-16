@@ -22,7 +22,7 @@ pub(crate) fn extract_annotation(node: Node<'_>, source: &SourceText) -> ParsedA
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
-        if child.kind() == "annotation_arguments" {
+        if matches!(child.kind(), "annotation_arguments" | "arguments") {
             arguments_source = Some(node_text(child, source));
             parsed_arguments = Some(extract_annotation_arguments(child, source));
         }
@@ -41,7 +41,7 @@ pub(crate) fn extract_annotation(node: Node<'_>, source: &SourceText) -> ParsedA
 /// Splits an annotation name into short, prefix, and qualified forms.
 fn annotation_name(node: Node<'_>, source: &SourceText) -> (String, Option<String>, String) {
     let qualified_name = node_text(node, source);
-    if node.kind() != "qualified" {
+    if !matches!(node.kind(), "qualified" | "scoped_identifier") {
         return (qualified_name.clone(), None, qualified_name);
     }
 
@@ -74,9 +74,14 @@ fn extract_annotation_arguments(node: Node<'_>, source: &SourceText) -> ParsedAn
     let mut cursor = node.walk();
     for child in node
         .children(&mut cursor)
-        .filter(|child| child.is_named() && child.kind() == "argument")
+        .filter(|child| child.is_named() && matches!(child.kind(), "argument" | "named_argument"))
     {
-        if let Some(named) = direct_named_child(child, "named_argument") {
+        let named = if child.kind() == "named_argument" {
+            Some(child)
+        } else {
+            direct_named_child(child, "named_argument")
+        };
+        if let Some(named) = named {
             if let Some(argument) = extract_named_argument(child, named, source) {
                 arguments.named.push(argument);
             }
