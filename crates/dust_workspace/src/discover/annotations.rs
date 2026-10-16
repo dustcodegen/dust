@@ -24,13 +24,13 @@ pub(super) fn has_supported_annotation(
 /// immediately followed by `(`. String literals are skipped, so the SQL handed
 /// to `@Query` does not contribute `count` from `count(*)`.
 pub(super) fn annotation_short_names(source: &str) -> Vec<&str> {
+    // shortcut: lexical candidates only; replace with resolved graph discovery in #114.
     let mut names = Vec::new();
     for (index, _) in source.match_indices('@') {
         let Some((name, after)) = identifier_at(source, index + 1) else {
             continue;
         };
-        names.push(short_name(name));
-        let after = skip_whitespace(source, after);
+        names.push(name);
         if source[after..].starts_with('(') {
             collect_call_names(source, after, &mut names);
         }
@@ -44,7 +44,11 @@ pub(super) fn collect_call_names<'a>(source: &'a str, open: usize, names: &mut V
     let mut depth = 0_usize;
     let mut index = open;
     while index < bytes.len() {
-        match bytes[index] {
+        index = skip_trivia(source, index);
+        let Some(&byte) = bytes.get(index) else {
+            return;
+        };
+        match byte {
             b'(' => {
                 depth += 1;
                 index += 1;
@@ -62,8 +66,8 @@ pub(super) fn collect_call_names<'a>(source: &'a str, open: usize, names: &mut V
                     index += 1;
                     continue;
                 };
-                if source[skip_whitespace(source, after)..].starts_with('(') {
-                    names.push(short_name(name));
+                if source[after..].starts_with('(') {
+                    names.push(name);
                 }
                 index = after;
             }
@@ -72,23 +76,27 @@ pub(super) fn collect_call_names<'a>(source: &'a str, open: usize, names: &mut V
     }
 }
 
-/// Returns the identifier starting at or just after `start`, and where it ends.
+/// Returns the final qualified identifier and the first offset after its trivia.
 pub(super) fn identifier_at(source: &str, start: usize) -> Option<(&str, usize)> {
     let bytes = source.as_bytes();
-    let start = skip_whitespace(source, start);
-    let mut end = start;
-    while bytes
-        .get(end)
-        .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$' | b'.'))
-    {
-        end += 1;
+    let mut start = skip_trivia(source, start);
+    loop {
+        let mut end = start;
+        while bytes
+            .get(end)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$'))
+        {
+            end += 1;
+        }
+        if end == start {
+            return None;
+        }
+        let after = skip_trivia(source, end);
+        if bytes.get(after) != Some(&b'.') {
+            return Some((&source[start..end], after));
+        }
+        start = skip_trivia(source, after + 1);
     }
-    (end > start).then(|| (&source[start..end], end))
-}
-
-/// Returns the last dotted segment of an annotation name.
-pub(super) fn short_name(name: &str) -> &str {
-    name.rsplit('.').next().unwrap_or(name)
 }
 
 /// Returns the offset just past the string literal opening at `start`.
@@ -106,14 +114,45 @@ pub(super) fn string_end(source: &str, start: usize) -> usize {
     source.len()
 }
 
-/// Returns the first offset at or after `start` that is not whitespace.
-pub(super) fn skip_whitespace(source: &str, start: usize) -> usize {
+/// Advances over Dart trivia without rewriting source or reading inside strings.
+fn skip_trivia(source: &str, start: usize) -> usize {
     let bytes = source.as_bytes();
     let mut index = start;
-    while bytes.get(index).is_some_and(u8::is_ascii_whitespace) {
-        index += 1;
+    loop {
+        if bytes.get(index).is_some_and(u8::is_ascii_whitespace) {
+            index += 1;
+        } else if bytes[index..].starts_with(b"//") {
+            index = bytes[index..]
+                .iter()
+                .position(|&byte| byte == b'\n')
+                .map_or(bytes.len(), |end| index + end + 1);
+        } else if bytes[index..].starts_with(b"/*") {
+            index = block_comment_end(bytes, index);
+        } else {
+            return index;
+        }
     }
-    index
+}
+
+/// Dart block comments may nest; unfinished trivia consumes the remaining input.
+fn block_comment_end(bytes: &[u8], start: usize) -> usize {
+    let mut depth = 1;
+    let mut index = start + 2;
+    while index < bytes.len() {
+        if bytes[index..].starts_with(b"/*") {
+            depth += 1;
+            index += 2;
+        } else if bytes[index..].starts_with(b"*/") {
+            depth -= 1;
+            index += 2;
+            if depth == 0 {
+                return index;
+            }
+        } else {
+            index += 1;
+        }
+    }
+    bytes.len()
 }
 
 /// Returns whether source imports or exports a Dust annotation package URI.

@@ -4,6 +4,8 @@
 mod config;
 #[path = "workspace_tests/discovery.rs"]
 mod discovery;
+#[path = "workspace_tests/discovery_trivia.rs"]
+mod discovery_trivia;
 
 #[path = "workspace_tests/support.rs"]
 mod support;
