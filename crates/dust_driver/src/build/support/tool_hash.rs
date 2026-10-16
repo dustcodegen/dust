@@ -99,4 +99,72 @@ mod tests {
         );
         assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("crates/dust_dart_syntax/src/lib.rs"));
     }
+
+    #[test]
+    fn grammar_fingerprint_contains_exact_active_inputs_and_bytes() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap();
+        let mut paths = Vec::new();
+        for entry in CODEGEN_TOOL_FINGERPRINT_INPUT
+            .lines()
+            .skip(1)
+            .filter(|entry| entry.starts_with("vendor/"))
+        {
+            let fields = entry.split('\0').collect::<Vec<_>>();
+            assert_eq!(fields.len(), 3);
+            let bytes = std::fs::read(root.join(fields[0])).unwrap();
+            assert_eq!(fields[1], bytes.len().to_string());
+            assert_eq!(fields[2], format!("{:016x}", hash_bytes(&bytes)));
+            paths.push(fields[0]);
+        }
+        assert_eq!(
+            paths,
+            [
+                "vendor/tree-sitter-dart/Cargo.toml",
+                "vendor/tree-sitter-dart/UPSTREAM.json",
+                "vendor/tree-sitter-dart/bindings/rust/build.rs",
+                "vendor/tree-sitter-dart/bindings/rust/lib.rs",
+                "vendor/tree-sitter-dart/grammar.js",
+                "vendor/tree-sitter-dart/src/node-types.json",
+                "vendor/tree-sitter-dart/src/parser.c",
+                "vendor/tree-sitter-dart/src/scanner.c",
+                "vendor/tree-sitter-dart/src/tree_sitter/alloc.h",
+                "vendor/tree-sitter-dart/src/tree_sitter/array.h",
+                "vendor/tree-sitter-dart/src/tree_sitter/parser.h",
+            ]
+        );
+    }
+
+    #[test]
+    fn native_only_grammar_change_invalidates_all_registry_hashes() {
+        let path = "vendor/tree-sitter-dart/src/scanner.c";
+        let entry = CODEGEN_TOOL_FINGERPRINT_INPUT
+            .lines()
+            .find(|entry| entry.split('\0').next() == Some(path))
+            .expect("active native grammar must be fingerprinted");
+        let mut fields = entry.split('\0');
+        assert_eq!(fields.next(), Some(path));
+        let size = fields.next().unwrap();
+        let digest = fields.next().unwrap();
+        let changed_digest = format!("{:016x}", u64::from_str_radix(digest, 16).unwrap() ^ 1);
+        let changed_entry = format!("{path}\0{size}\0{changed_digest}");
+        let changed_manifest = CODEGEN_TOOL_FINGERPRINT_INPUT.replace(entry, &changed_entry);
+        for selection in [
+            RegistrySelection::All,
+            RegistrySelection::for_build(crate::request::DbRequestOptions {
+                only_db: true,
+                offline: false,
+            }),
+        ] {
+            let original = codegen_tool_hash_for_selection_with_input(
+                selection,
+                CODEGEN_TOOL_FINGERPRINT_INPUT,
+            );
+            let changed = codegen_tool_hash_for_selection_with_input(selection, &changed_manifest);
+            assert_ne!(original.value(), changed.value());
+        }
+    }
 }
