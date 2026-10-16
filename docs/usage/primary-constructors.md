@@ -72,6 +72,23 @@ class const AccountRow(final String name, final String? note);
 These are scoped tests, not proof of every primary-constructor form. Inferred
 declaring-parameter types, generic/inherited field combinations and full
 acceptance checks still need complete validation.
-Keep traditional declarations for production until the issue's full acceptance
-gates pass. Named concise `new` constructors and dot shorthands remain separate
+
+Two concrete failures remain in this draft:
+
+- [Shorthand callback declaring parameters (#92)](https://github.com/dustcodegen/dust/issues/92),
+  such as `final bool predicate(String value)`, currently lose the callable
+  signature and can produce invalid `copyWith` code. The explicit
+  `final bool Function(String) predicate` form compiled in the scoped
+  latest-Dart probe; it does not need a new handwritten API. Source-preserving
+  effective-function parser facts need review before fixing the shorthand.
+- [Generic class copy generation (#93)](https://github.com/dustcodegen/dust/issues/93)
+  can leak an unresolved `T` into generated helpers. This also fails for an
+  equivalent traditional class, so it is not a primary-only regression.
+  Class type-parameter/bound facts and the generic emission strategy need review.
+
+For these cases, a successful `dust build` does not establish that the generated
+Dart compiles. Do not use the draft feature as production-readiness evidence.
+
+Keep verified traditional declarations for production until the issue's full
+acceptance gates pass. Named concise `new` constructors and dot shorthands remain separate
 unsupported features and fail clearly.
