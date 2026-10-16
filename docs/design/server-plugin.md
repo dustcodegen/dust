@@ -91,6 +91,10 @@ distinct import prefixes do not prevent misrouting. The regression spike in
 fix. Do not enable the default server registry until the ownership and legacy
 alias compatibility contracts are resolved.
 
+The [annotation namespace proposal](annotation-namespaces.md) spells out the
+canonical ownership, visibility, re-export and legacy-fallback decisions for
+review. It is not an implemented resolver fix.
+
 ### Cleared: class interfaces in IR
 
 `ClassIr` records `superclass_name: Option<String>` and `is_interface`, but no
