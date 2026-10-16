@@ -71,31 +71,6 @@ fn call_shape(call: Node<'_>, source: &SourceText) -> Option<I18nCallShape> {
     selector_call_shape(call, source)
 }
 
-/// Resolves `const TranslatedText(...)`.
-fn const_object_call_shape(call: Node<'_>, source: &SourceText) -> Option<I18nCallShape> {
-    let type_node = call.child_by_field_name("type")?;
-    let type_name = node_text(type_node, source);
-    if type_name == "Text" {
-        return Some(I18nCallShape {
-            kind: I18nCallKind::HardcodedText,
-            span: text_range(call.start_byte(), call.end_byte()),
-        });
-    }
-    if type_name != "TranslatedText" {
-        return None;
-    }
-    if call
-        .child_by_field_name("constructor")
-        .is_some_and(|constructor| node_text(constructor, source) == "dynamic")
-    {
-        return None;
-    }
-    Some(I18nCallShape {
-        kind: I18nCallKind::Translation(I18nTranslationKind::TranslatedText),
-        span: text_range(call.start_byte(), call.end_byte()),
-    })
-}
-
 /// Resolves selector calls such as `TranslatedText(...)` and `context.tr(...)`.
 fn selector_call_shape(selector: Node<'_>, source: &SourceText) -> Option<I18nCallShape> {
     let previous = selector.prev_named_sibling()?;
@@ -165,8 +140,11 @@ fn named_argument_value<'tree>(
 fn argument_values(arguments: Node<'_>) -> Vec<Node<'_>> {
     named_children(arguments)
         .into_iter()
-        .filter(|child| child.kind() == "argument")
-        .filter_map(first_named_child)
+        .filter_map(|child| match child.kind() {
+            "argument" => first_named_child(child),
+            "named_argument" => Some(child),
+            _ => None,
+        })
         .collect()
 }
 

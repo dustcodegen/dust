@@ -117,10 +117,30 @@ pub(super) fn selector_type_arguments_source(
     selector: Node<'_>,
     source: &SourceText,
 ) -> Option<String> {
-    let type_args = named_children(selector)
-        .into_iter()
-        .find(|child| child.kind() == "type_arguments")?;
+    let children = named_children(selector);
+    let type_args = children
+        .iter()
+        .copied()
+        .find(|child| child.kind() == "type_arguments")
+        .or_else(|| {
+            let part = children
+                .iter()
+                .find(|child| child.kind() == "argument_part")?;
+            named_children(*part)
+                .into_iter()
+                .find(|child| child.kind() == "type_arguments")
+        })?;
     type_arguments_source(type_args, source)
+}
+
+/// Returns arguments, whether generic arguments share their selector or not.
+pub(super) fn selector_arguments(selector: Node<'_>) -> Option<Node<'_>> {
+    let argument_part = named_children(selector)
+        .into_iter()
+        .find(|child| child.kind() == "argument_part")?;
+    named_children(argument_part)
+        .into_iter()
+        .find(|child| child.kind() == "arguments")
 }
 
 /// Returns query argument sources from a selector node.
@@ -128,12 +148,7 @@ pub(super) fn selector_argument_sources(
     selector: Node<'_>,
     source: &SourceText,
 ) -> Option<Vec<String>> {
-    let argument_part = named_children(selector)
-        .into_iter()
-        .find(|child| child.kind() == "argument_part")?;
-    let arguments = named_children(argument_part)
-        .into_iter()
-        .find(|child| child.kind() == "arguments")?;
+    let arguments = selector_arguments(selector)?;
     Some(argument_sources(arguments, source))
 }
 

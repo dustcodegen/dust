@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from check_listed_dart_grammar import FILES, ROOT, check
-from check_listed_parser_parity import CASES, CLASS_CASES, MARKER, compare, records
+from check_listed_parser_parity import CASES, CLASS_CASES, I18N_CASES, MARKER, compare, records
 
 
 class ListedGrammarTests(unittest.TestCase):
@@ -43,7 +43,8 @@ class ListedGrammarTests(unittest.TestCase):
     def test_parser_parity_requires_all_complete_matching_records(self) -> None:
         output = "\n".join(
             f"test prefix {MARKER}{name}:" +
-            ("[ParsedClassSurface { name: User }]" if name in CLASS_CASES else "ParsedDartFileSurface { name: User }")
+            ("I18nScanResult { name: User }" if name in I18N_CASES else
+             "[ParsedClassSurface { name: User }]" if name in CLASS_CASES else "ParsedDartFileSurface { name: User }")
             for name in sorted(CASES)
         )
         self.assertEqual(set(records(output)), CASES)
@@ -54,6 +55,8 @@ class ListedGrammarTests(unittest.TestCase):
                         output.replace("[ParsedClassSurface { name: User }]", "[]", 1),
                         output.replace("ParsedDartFileSurface { name: User }", "[]", 1),
                         output.replace("ParsedDartFileSurface { name: User }", "[ParsedClassSurface { name: User }]", 1),
+                        output.replace("I18nScanResult { name: User }", "[]", 1),
+                        output.replace("I18nScanResult { name: User }", "ParsedDartFileSurface { name: User }", 1),
                         output + f"\n{MARKER}unknown:invalid", output + f"\n{MARKER}broken"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 records(invalid)

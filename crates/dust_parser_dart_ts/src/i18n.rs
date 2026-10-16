@@ -76,8 +76,8 @@ pub fn scan_i18n_source(source: &SourceText) -> I18nScanResult {
 /// Tree-sitter query for Dart call shapes relevant to i18n.
 const I18N_QUERY: &str = r#"
 (const_object_expression
-  type: (type_identifier) @constructor
-  arguments: (arguments) @arguments) @call
+  (type_identifier) @constructor
+  (arguments) @arguments) @call
 
 (selector
   (argument_part

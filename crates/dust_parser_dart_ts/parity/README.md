@@ -15,7 +15,8 @@ Run from the repository root:
 python3 scripts/check_listed_parser_parity.py
 ```
 
-The gate executes the same fifteen contracts with each grammar,
+The gate executes each grammar's full backend unit suite and the same
+twenty-four contracts,
 requires every nonempty case, and compares complete `Debug` representations of
 the parser-owned facts, including annotation/type values, member ordering and
 byte spans. It stores both outputs in `.dart_tool/listed-parser-parity/`.
@@ -26,11 +27,15 @@ and compile/lint the candidate backend separately.
 Seven contracts cover traditional classes/members; eight compare complete
 library surfaces for directives, enums, mixins, extensions/representations,
 variables, functions and typedefs. Assertions require nonempty extraction of
-the targeted category before facts are emitted. Samples are parser-fact
+the targeted category before facts are emitted. Four query contracts cover
+typed db/tx terminals, mappers, parameters, diagnostic owners, dynamic SQL and
+unchecked-SQL markers. Five i18n contracts cover complete translation entries,
+fallbacks, placeholders, dynamic opt-outs, warning labels/spans and actual
+shopping-app source parts. Samples are parser-fact
 fixtures, not standalone app examples; real app analysis remains the SDK gate.
 
 These slices of [#70](https://github.com/dustcodegen/dust/issues/70) are not
-whole-backend adoption. Further declaration forms, queries, i18n and complete
+whole-workspace adoption. Further source forms and complete
 candidate generated-consumer parity remain gates before changing the production
 dependency. Primary and concise constructors remain
 unsupported by Dust. No version bump, release or remote CI is involved.

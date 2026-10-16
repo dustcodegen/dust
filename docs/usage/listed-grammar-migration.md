@@ -39,22 +39,34 @@ class node names, sibling metadata and bodies, field identifiers/initializers,
 factory names/targets and operator names. The production grammar stays unchanged.
 The next slice adds mixin member/metadata extraction, top-level variable names
 and initializer facts, and preservation of generic/named extension-type names.
-Fifteen contracts execute with each grammar in separate native binaries and
+Twenty-four contracts execute with each grammar in separate native binaries and
 compare complete parser facts, including byte spans, with no rewritten snapshots.
 Seven cover classes, nested nullable types/defaults, named/super parameters,
 modifiers/inheritance, annotated members/parameters, factories and adjacent
 method/operator bodies. Eight cover named/unnamed libraries, URI/named parts,
 conditional imports/exports, combinators, annotated/enhanced enums, mixins,
 extensions/representations, variables, functions and typedefs. Comments and
-Unicode source spans must survive too. This preserves existing facts; it does
-not redesign or expand the public parser surface.
+Unicode source spans must survive too. Four query contracts compare direct db/tx
+terminals, generic types, parameters, mapper flags, enclosing names, dynamic SQL
+and unchecked-SQL markers. Five i18n contracts compare static keys, fallbacks,
+placeholder order, opt-outs, warnings/labels and real shopping-app source parts.
+The shared lowering accepts both generic-selector and named-argument layouts;
+the i18n query no longer requires grammar-specific constant-constructor fields.
+This preserves existing facts; it does not redesign or expand the public parser
+surface.
 
 Run `python3 scripts/check_listed_parser_parity.py` locally. The
 [isolated harness notes](../../crates/dust_parser_dart_ts/parity/README.md)
 explain why both native grammars must not share a test executable. These scoped
-contracts do not prove every declaration form, query/i18n parity, whole-backend
-adoption or new-syntax compatibility; #70 and #68 stay open until all remaining
+contracts and each grammar's full backend unit suite run together. They do not
+prove every source form, whole-workspace candidate adoption or new-syntax
+compatibility; #70 and #68 stay open until all remaining
 extraction and generated-consumer gates pass.
+
+Known production limitation: a generic query with omitted parameters can be
+missed ([#74](https://github.com/dustcodegen/dust/issues/74)). Pass an explicit
+empty list until that shape has a permanent acceptance regression and fix.
+The listed candidate discovers the focused reproducer, but it is not active yet.
 
 ## Stages under #68
 
