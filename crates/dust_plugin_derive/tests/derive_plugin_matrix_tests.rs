@@ -9,5 +9,8 @@ mod general;
 #[path = "derive_plugin_matrix_tests/copywith.rs"]
 mod copywith;
 
+#[path = "derive_plugin_matrix_tests/private_fields.rs"]
+mod private_fields;
+
 #[path = "derive_plugin_matrix_tests/equality.rs"]
 mod equality;

@@ -79,10 +79,6 @@ fn cli_build_renders_error_notes() {
 fn unsupported_syntax_fails_build_and_check_without_replacing_output() {
     for (declaration, feature) in [
         (
-            "class const User(final String name) with _$User;",
-            "primary constructors",
-        ),
-        (
             "class User with _$User { const new create(this.name); final String name; }",
             "concise constructors",
         ),

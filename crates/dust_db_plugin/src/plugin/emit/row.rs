@@ -1,6 +1,6 @@
 use dust_dart_emit::{
     DART_BOOL, DART_DATE_TIME, DART_DOUBLE, DART_DYNAMIC, DART_INT, DART_NUM, DART_OBJECT_NULLABLE,
-    DART_STRING, DYNAMIC_TYPES, render_template,
+    DART_STRING, DYNAMIC_TYPES, named_argument_name, render_template,
 };
 use dust_ir::{ClassIr, ConstructorIr, DartFileIr, ParamKind, TypeIr};
 use serde::Serialize;
@@ -66,7 +66,7 @@ pub(super) fn render_from_row_extension(
                 .or(param.default_value_source.as_deref());
             let value = render_row_value(library, field, default_source);
             Some(match param.kind {
-                ParamKind::Named => format!("{}: {value}", param.name),
+                ParamKind::Named => format!("{}: {value}", named_argument_name(&param.name)),
                 ParamKind::Positional => value,
             })
         })

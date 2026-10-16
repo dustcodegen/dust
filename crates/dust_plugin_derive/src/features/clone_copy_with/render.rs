@@ -1,5 +1,6 @@
 use std::fmt::Write;
 
+use dust_dart_emit::named_argument_name;
 use dust_ir::{ClassIr, FieldIr};
 
 use crate::features::names::lower_first;
@@ -89,7 +90,7 @@ fn render_interface_params(class: &ClassIr) -> String {
         format!(
             "{} {}",
             copy_with_interface_param_type(&field.ty),
-            field.name
+            named_argument_name(&field.name)
         )
     })
 }
@@ -109,7 +110,7 @@ fn render_impl_params(class: &ClassIr, names: &CopyWithNames) -> String {
         format!(
             "{} {} = {}",
             copy_with_impl_param_type(),
-            field.name,
+            named_argument_name(&field.name),
             default
         )
     })
@@ -154,7 +155,7 @@ fn render_nested_interface_getters(class: &ClassIr, plan: &CopyWithPlan) -> Stri
             "\n\n  {}<$Res>{} get {};",
             target.names.interface_name,
             if target.nullable { "?" } else { "" },
-            field.name
+            named_argument_name(&field.name)
         )
         .expect("writing to String cannot fail");
     }
@@ -183,7 +184,7 @@ fn render_nested_impl_getters(
                 out,
                 "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {}<$Res>? get {} {{\n    final {} = {}.{};\n    if ({} == null) {{\n      return null;\n    }}\n\n    return {}<$Res>(\n      {},\n      ({}) => call({}: {}),\n    );\n  }}",
                 target.names.interface_name,
-                field.name,
+                named_argument_name(&field.name),
                 value_name,
                 names.self_name,
                 field.name,
@@ -191,7 +192,7 @@ fn render_nested_impl_getters(
                 target.names.impl_name,
                 value_name,
                 names.callback_value_name,
-                field.name,
+                named_argument_name(&field.name),
                 names.callback_value_name,
             )
             .expect("writing to String cannot fail");
@@ -200,12 +201,12 @@ fn render_nested_impl_getters(
                 out,
                 "\n\n  @override\n  @pragma('vm:prefer-inline')\n  {}<$Res> get {} {{\n    return {}<$Res>(\n      {}.{},\n      ({}) => call({}: {}),\n    );\n  }}",
                 target.names.interface_name,
-                field.name,
+                named_argument_name(&field.name),
                 target.names.impl_name,
                 names.self_name,
                 field.name,
                 names.callback_value_name,
-                field.name,
+                named_argument_name(&field.name),
                 names.callback_value_name,
             )
             .expect("writing to String cannot fail");
@@ -226,7 +227,7 @@ fn render_getter_docs(class: &ClassIr, plan: &CopyWithPlan) -> String {
         writeln!(
             docs,
             "\n/// final updated = {receiver}.copyWith({}: {});",
-            field.name,
+            named_argument_name(&field.name),
             sample_value(&field.ty, ValueSampleKind::Replacement)
         )
         .expect("writing to String cannot fail");
@@ -243,7 +244,7 @@ fn render_getter_docs(class: &ClassIr, plan: &CopyWithPlan) -> String {
         writeln!(
             docs,
             "/// final cleared = {receiver}.copyWith({}: null);",
-            field.name
+            named_argument_name(&field.name)
         )
         .expect("writing to String cannot fail");
     }
@@ -262,7 +263,9 @@ fn render_getter_docs(class: &ClassIr, plan: &CopyWithPlan) -> String {
         writeln!(
             docs,
             "/// final nested = {receiver}.copyWith.{}({}: {});",
-            field.name, target.0, target.1
+            named_argument_name(&field.name),
+            target.0,
+            target.1
         )
         .expect("writing to String cannot fail");
     }

@@ -20,6 +20,11 @@ mod fields;
 mod library_surface;
 #[path = "extract_tests/methods.rs"]
 mod methods;
+#[path = "extract_tests/primary_constructors.rs"]
+mod primary_constructors;
+
+#[path = "extract_tests/primary_shapes.rs"]
+mod primary_shapes;
 #[path = "extract_tests/support.rs"]
 mod support;
 #[path = "extract_tests/unsupported_syntax.rs"]

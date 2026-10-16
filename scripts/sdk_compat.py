@@ -66,7 +66,12 @@ def core_lints(version: str) -> str:
 
 def stage_example(output: Path, relative: str, lint_version: str) -> tuple[Path, set[str]]:
     """Remove only copied generated files in owned staging; source files stay intact."""
-    packages = ("dust_dart",) if relative.endswith("product_showcase") else ("dust_dart", "dust_flutter")
+    if relative == "fixtures/primary_sdk_consumer":
+        packages = ("dust_dart", "dust_db_sqlite3")
+    elif relative in ("examples/benchmark_project", "fixtures/primary_flutter_consumer"):
+        packages = ("dust_dart", "dust_flutter")
+    else:
+        packages = ("dust_dart",)
     app = stage_consumer(ROOT, output, relative, lint_version, packages=packages)
     analysis = (ROOT / "analysis_options.yaml").read_text(encoding="utf-8")
     if lint_version == "7.0.0":
@@ -189,15 +194,50 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         rows.append({"role": role, "target": "flutter", "sdk": metadata, "generated": hashes})
 
     require_deterministic_generation(rows)
+    primary = {
+        "dart": check_primary(run, dust, args.latest_dart.resolve(), output),
+        "flutter": check_primary(run, dust, flutter_dart, output, flutter=flutter),
+    }
     negatives = check_unsupported(run, dust, args.latest_dart.resolve(), output)
     proof = {
         "sourceCommit": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
         "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
         "dustSha256": hashlib.sha256(dust.read_bytes()).hexdigest(),
-        "rows": rows, "unsupported": negatives,
+        "rows": rows, "primary": primary, "unsupported": negatives,
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
+
+
+def check_primary(run, dust: Path, dart: Path, output: Path,
+                  *, flutter: list[str] | None = None) -> dict[str, str]:
+    """Generate and execute primary constructors independently of traditional fixtures."""
+    relative = "fixtures/primary_flutter_consumer" if flutter else "fixtures/primary_sdk_consumer"
+    app, required = stage_example(output / ("primary-flutter" if flutter else "primary"), relative, "10.3.0")
+    sources = sorted(path.relative_to(app).as_posix() for folder in ("lib", "test")
+                     for path in (app / folder).rglob("*.dart"))
+    env = {**os.environ, "PATH": str(dart.parent) + os.pathsep + os.environ.get("PATH", "")}
+    sdk = flutter or [str(dart)]
+    no_pub = ["--no-pub"] if flutter else []
+    run([*sdk, "pub", "get"], app, env=env)
+    shutil.copy2(ROOT / relative / "analysis_options.yaml", app / "analysis_options.yaml")
+    run([*sdk, "pub", "deps", "--json"], app, env=env)
+    run([str(dust), "build", "--clean", "--root", str(app)], env=env)
+    run([str(dust), "check", "--root", str(app)], env=env)
+    hashes = generated_hashes(app)
+    if flutter:
+        required.add("lib/counter.g.dart")
+        required.update(f"lib/route/{name}.g.dart" for name in (
+            "routes", "paths", "navigation", "metadata", "runtime"))
+    else:
+        required.update(("lib/models.g.dart", "lib/private_models.g.dart",
+                         "lib/language_models.g.dart", "lib/api.g.dart"))
+    if not required.issubset(hashes):
+        raise ValueError(f"Missing fresh primary outputs: {required - hashes.keys()}")
+    run([str(dart), "format", "--output=none", "--set-exit-if-changed", *sources], app, env=env)
+    run([*sdk, "analyze", *no_pub, "--fatal-infos"], app, env=env)
+    run([*sdk, "test", *no_pub, "--reporter=expanded"], app, env=env)
+    return hashes
 
 
 def check_unsupported(run, dust: Path, dart: Path, output: Path) -> list[str]:
@@ -213,14 +253,6 @@ def check_unsupported(run, dust: Path, dart: Path, output: Path) -> list[str]:
     }) + "\n", encoding="utf-8")
     run([str(dart), "pub", "get"], app)
     sources = {
-        "primary": """class const Probe(
-  /// Name.
-  final String name,
-) {
-  /// Creates a probe.
-  this;
-}
-""",
         "named-concise": """class Probe {
   /// Creates a probe.
   const new create(this.name);
@@ -237,8 +269,7 @@ def check_unsupported(run, dust: Path, dart: Path, output: Path) -> list[str]:
         run([str(dart), "analyze", "--fatal-infos", "lib/probe.dart"], app)
         for command in ("build", "check"):
             result = run([str(dust), command, "--root", str(app)], expected=1)
-            feature = "primary constructors" if name == "primary" else "concise constructors"
-            if f"Dust does not support {feature} yet" not in result.stderr or (app / "lib/probe.g.dart").exists():
+            if "Dust does not support concise constructors yet" not in result.stderr or (app / "lib/probe.g.dart").exists():
                 raise ValueError(f"{name}: missing parser failure or unexpected generated output")
     return list(sources)
 

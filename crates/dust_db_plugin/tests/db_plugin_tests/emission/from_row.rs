@@ -4,6 +4,33 @@ use dust_plugin_api::{DustPlugin, SymbolPlan};
 use crate::support::{library, row_class};
 
 #[test]
+fn private_named_fields_keep_public_labels_and_explicit_sql_column_names() {
+    let plugin = register_row_plugin();
+    let plan = SymbolPlan::default();
+    let context = dust_plugin_api::PluginContext { symbol_plan: &plan };
+    let public = plugin
+        .generate(&library(vec![row_class()]), &context)
+        .remove(0);
+    let mut private_row = row_class();
+    private_row
+        .fields
+        .iter_mut()
+        .find(|field| field.name == "name")
+        .unwrap()
+        .name = "_name".to_owned();
+    private_row.constructors[0]
+        .params
+        .iter_mut()
+        .find(|param| param.name == "name")
+        .unwrap()
+        .name = "_name".to_owned();
+    let private = plugin
+        .generate(&library(vec![private_row]), &context)
+        .remove(0);
+    assert_eq!(private.support_types, public.support_types);
+}
+
+#[test]
 fn emits_sqlx_style_from_row_mapper() {
     let plugin = register_row_plugin();
     let contribution = plugin

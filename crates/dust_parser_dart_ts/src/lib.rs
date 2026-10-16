@@ -112,6 +112,7 @@ impl ParseBackend for TreeSitterDartBackend {
                 options.effective_language_version_for_source(source.as_str());
             let mut diagnostics = extract_diagnostics(&tree, source);
             diagnostics.extend(extract_language_version_diagnostics(
+                root,
                 &library,
                 source,
                 effective_language_version,

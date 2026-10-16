@@ -1,7 +1,9 @@
+use crate::syntax::text_range;
 use dust_dart_syntax::{DartLanguageFeature, DartLanguageVersion};
 use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_parser_dart::{ParameterKind, ParsedClassKind, ParsedDartFileSurface, ParsedTypeKind};
 use dust_text::{SourceText, TextRange};
+use tree_sitter::Node;
 
 /// Locating where an unsupported language feature appears in a source file.
 mod occurrences;
@@ -9,15 +11,26 @@ use self::occurrences::*;
 
 /// Extracts diagnostics for Dart syntax that requires a newer language version.
 pub(crate) fn extract_language_version_diagnostics(
+    root: Node<'_>,
     library: &ParsedDartFileSurface,
     source: &SourceText,
     version: DartLanguageVersion,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
+    let primary_ranges = primary_constructor_ranges(root);
     diagnostics.extend(extract_invalid_normal_parameter_modifier_diagnostics(
-        library, source, version,
+        library,
+        source,
+        version,
+        &primary_ranges,
     ));
-    for occurrence in feature_occurrences(library, source.as_str()) {
+    let mut occurrences = feature_occurrences(library, source.as_str());
+    push_range_occurrence(
+        &mut occurrences,
+        DartLanguageFeature::PrimaryConstructors,
+        primary_ranges.first().copied(),
+    );
+    for occurrence in occurrences {
         if version.supports(occurrence.feature) {
             continue;
         }
@@ -38,11 +51,21 @@ pub(crate) fn extract_language_version_diagnostics(
     diagnostics
 }
 
+/// Header AST fields cover const, generic, named, enum and mixin-class forms.
+fn primary_constructor_ranges(root: Node<'_>) -> Vec<TextRange> {
+    let mut cursor = root.walk();
+    root.named_children(&mut cursor)
+        .filter_map(|declaration| declaration.child_by_field_name("primary_constructor"))
+        .map(text_range)
+        .collect()
+}
+
 /// Extracts diagnostics for `var`/`final` used as normal parameter modifiers.
 fn extract_invalid_normal_parameter_modifier_diagnostics(
     library: &ParsedDartFileSurface,
     source: &SourceText,
     version: DartLanguageVersion,
+    primary_ranges: &[TextRange],
 ) -> Vec<Diagnostic> {
     if version < DartLanguageVersion::DART_3_13 {
         return Vec::new();
@@ -50,6 +73,7 @@ fn extract_invalid_normal_parameter_modifier_diagnostics(
 
     normal_parameter_spans(library)
         .into_iter()
+        .filter(|span| !primary_ranges.iter().any(|primary| primary.start() <= span.start() && primary.end() >= span.end()))
         .filter_map(|span| invalid_declaring_modifier(source, span))
         .map(|modifier| {
             Diagnostic::error(format!(

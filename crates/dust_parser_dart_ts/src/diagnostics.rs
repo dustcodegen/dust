@@ -16,7 +16,7 @@ pub(crate) fn extract_diagnostics(tree: &Tree, source: &SourceText) -> Vec<Diagn
             "Check this file with `dart analyze`. Valid Dart may use syntax not supported by Dust's bundled parser.".to_owned(),
         );
         first.notes.push(
-            "Primary constructors and named concise `new` constructors are not supported yet. Use traditional in-body constructors with the class name and explicit fields.".to_owned(),
+            "Named concise `new` constructors are not supported yet. Use an in-body constructor with the class name.".to_owned(),
         );
     }
     diagnostics
@@ -58,7 +58,6 @@ fn collect_error_diagnostics(
 /// Keeps newly parseable syntax gated until its generated consumers are verified.
 fn unsupported_feature(node: Node<'_>, source: &SourceText) -> Option<&'static str> {
     match node.kind() {
-        "primary_constructor" => Some("primary constructors"),
         "dot_shorthand" if !is_generic_receiver_member(node, source) => Some("dot shorthands"),
         "constructor_signature" | "constant_constructor_signature"
             if is_concise_constructor(node) =>

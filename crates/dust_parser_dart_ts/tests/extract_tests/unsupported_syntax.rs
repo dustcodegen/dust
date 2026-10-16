@@ -3,23 +3,8 @@
 use crate::support::parse;
 
 #[test]
-fn reports_exact_features_and_spans_for_new_constructor_shapes() {
+fn reports_exact_features_and_spans_for_concise_constructor_shapes() {
     for (source, feature, range) in [
-        (
-            "class const User(final String name);",
-            "primary constructors",
-            "(final String name)",
-        ),
-        (
-            "class Box<T>.named(final T value) { this; }",
-            "primary constructors",
-            ".named(final T value)",
-        ),
-        (
-            "enum Color(final String hex) { red('#f00'); }",
-            "primary constructors",
-            "(final String hex)",
-        ),
         ("class User { new(); }", "concise constructors", "new()"),
         (
             "class User { const new create(); }",

@@ -6,6 +6,9 @@ mod support;
 #[path = "class_tests/basic.rs"]
 mod basic;
 
+#[path = "class_tests/private_fields.rs"]
+mod private_fields;
+
 #[path = "class_tests/nested.rs"]
 mod nested;
 

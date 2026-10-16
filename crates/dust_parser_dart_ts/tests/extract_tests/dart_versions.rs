@@ -49,6 +49,12 @@ fn parses_supported_dart_version_fixtures_without_diagnostics() {
             path: "crates/dust_parser_dart_ts/tests/fixtures/dart_versions/dart_3_8_null_aware_collections.dart",
             source: include_str!("../fixtures/dart_versions/dart_3_8_null_aware_collections.dart"),
         },
+        DartVersionFixture {
+            label: "Dart 3.13 primary constructors",
+            language_version: "3.13",
+            path: "crates/dust_parser_dart_ts/tests/fixtures/dart_versions/dart_3_13_primary_constructors.dart",
+            source: include_str!("../fixtures/dart_versions/dart_3_13_primary_constructors.dart"),
+        },
     ];
 
     for (index, fixture) in fixtures.iter().enumerate() {
@@ -128,20 +134,12 @@ fn preserves_super_parameter_and_extension_type_surfaces() {
 
 #[test]
 fn reports_diagnostics_for_generation_blocked_future_syntax() {
-    let fixtures = [
-        DartVersionFixture {
-            label: "Dart 3.10 dot shorthands",
-            language_version: "3.10",
-            path: "crates/dust_parser_dart_ts/tests/fixtures/dart_versions/dart_3_10_dot_shorthands.dart",
-            source: include_str!("../fixtures/dart_versions/dart_3_10_dot_shorthands.dart"),
-        },
-        DartVersionFixture {
-            label: "Dart 3.13 primary constructors",
-            language_version: "3.13",
-            path: "crates/dust_parser_dart_ts/tests/fixtures/dart_versions/dart_3_13_primary_constructors.dart",
-            source: include_str!("../fixtures/dart_versions/dart_3_13_primary_constructors.dart"),
-        },
-    ];
+    let fixtures = [DartVersionFixture {
+        label: "Dart 3.10 dot shorthands",
+        language_version: "3.10",
+        path: "crates/dust_parser_dart_ts/tests/fixtures/dart_versions/dart_3_10_dot_shorthands.dart",
+        source: include_str!("../fixtures/dart_versions/dart_3_10_dot_shorthands.dart"),
+    }];
 
     for (index, fixture) in fixtures.iter().enumerate() {
         let result = parse(130 + index as u32, fixture.source);
@@ -157,15 +155,7 @@ fn reports_diagnostics_for_generation_blocked_future_syntax() {
             result
                 .diagnostics
                 .iter()
-                .any(|diagnostic| diagnostic.message
-                    == format!(
-                        "Dust does not support {} yet",
-                        if index == 0 {
-                            "dot shorthands"
-                        } else {
-                            "primary constructors"
-                        }
-                    ))
+                .any(|diagnostic| diagnostic.message == "Dust does not support dot shorthands yet")
         );
     }
 }

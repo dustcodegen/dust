@@ -2,6 +2,8 @@
 #![deny(missing_docs)]
 #![doc = "Shared Dart rendering helpers reused by Dust plugins."]
 
+/// Named argument labels distinct from private field names.
+mod arguments;
 /// Dart runtime type and symbol names.
 mod dart_names;
 /// Dart literal escaping.
@@ -22,6 +24,7 @@ pub use dart_names::{
     DART_STREAM, DART_STRING, DART_UNIT, DART_URI, DART_VOID,
 };
 
+pub use arguments::named_argument_name;
 pub use literals::{dart_string_literal, escape_dart_string};
 
 pub use source::{

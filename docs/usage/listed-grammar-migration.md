@@ -5,15 +5,17 @@ This source checkout uses the Dart grammar listed in Tree-sitter's
 [UserNobody14/tree-sitter-dart](https://github.com/UserNobody14/tree-sitter-dart).
 This is a community upstream, not an official Dart-team parser.
 
-## Active grammar, unchanged syntax support
+## Active grammar and syntax staging
 
 The active parser uses `vendor/tree-sitter-dart`, pinned at upstream commit
 `3f0c7a8309d89927e7cc6bef39569c815fddb2e5` with ABI 15 and Tree-sitter 0.25.10.
 The separate legacy harness still uses registry `tree-sitter-dart 0.1.0`.
-Primary/concise constructors and dot shorthands are explicitly rejected with
+Named concise constructors and dot shorthands are explicitly rejected with
 `Dust does not support ... yet`, source labels and a traditional-syntax
 workaround. The grammar can parse them; generated-code support is a separate
-stage. Updating a local checkout does not change already released binaries.
+stage. Primary-constructor work now has separate
+[development consumers and limits](primary-constructors.md) under #76.
+Updating a local checkout does not change already released binaries.
 
 Continue using traditional in-body constructors for models processed by Dust:
 
@@ -64,7 +66,7 @@ contracts and each grammar's full backend unit suite run together. They do not
 prove every source form or new-syntax compatibility. Adoption also requires the
 full Rust workspace, all package/example suites and freshly generated
 minimum/latest SDK consumers to pass with identical generated-file hashes.
-The negative probes now require a specific unsupported-generation diagnostic,
+The remaining negative probe requires a specific unsupported-generation diagnostic,
 not a coincidental parse error or unrelated failure. No test skips or snapshot
 rewrites are used to accept a migration regression.
 
@@ -94,8 +96,8 @@ regression. For older binaries, pass an explicit empty list.
    named-concise constructor behavior needs its own scope.
 
 The [SDK gate](sdk-validation.md) must keep proving fresh generation and exact
-minimum/latest SDK behavior. Its negative samples remain rejected until the
-corresponding new syntax has full Dust support. Existing source snapshots and
+minimum/latest SDK behavior. Primary syntax gets separate positive latest-SDK
+consumers; concise syntax retains its explicit rejection probe. Existing source snapshots and
 normal SDK users must keep working throughout the migration.
 
 All validation runs locally. No Actions workflow is added or dispatched;
