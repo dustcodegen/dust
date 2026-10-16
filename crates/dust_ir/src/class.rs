@@ -1,6 +1,6 @@
 use crate::{
     ConfigApplicationIr, ConstructorIr, FieldIr, MethodIr, SerdeClassConfigIr, SpanIr,
-    TraitApplicationIr,
+    TraitApplicationIr, TypeIr, TypeParamIr,
 };
 
 /// The lowered declaration kind of a Dart class-like target.
@@ -21,6 +21,10 @@ pub struct ClassIr {
     pub kind: ClassKindIr,
     /// The class name.
     pub name: String,
+    /// Class type parameters in declaration order.
+    pub type_parameters: Vec<TypeParamIr>,
+    /// Written mixin applications with arguments and source locations.
+    pub mixins: Vec<MixinApplicationIr>,
     /// Whether the declaration is marked `abstract`.
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.
@@ -41,4 +45,13 @@ pub struct ClassIr {
     pub configs: Vec<ConfigApplicationIr>,
     /// Normalized serde-related class configuration.
     pub serde: Option<SerdeClassConfigIr>,
+}
+
+/// One type applied in a class's `with` clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MixinApplicationIr {
+    /// The applied type, including any type arguments.
+    pub ty: TypeIr,
+    /// The original application source span.
+    pub span: SpanIr,
 }

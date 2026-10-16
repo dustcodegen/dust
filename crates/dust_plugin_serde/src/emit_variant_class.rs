@@ -84,6 +84,8 @@ fn synthesize_class(
     variant: &dust_ir::SerdeVariantConfigIr,
 ) -> ClassIr {
     ClassIr {
+        type_parameters: base.type_parameters.clone(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: variant.target_class_name.clone(),
         is_abstract: false,

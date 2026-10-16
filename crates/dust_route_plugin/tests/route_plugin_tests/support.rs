@@ -25,6 +25,8 @@ pub(crate) fn route_page_class(
     let mut route_config = config("AppRoute", Some(route_args));
     route_config.normalized = typed_route_config(&route_config).map(NormalizedConfigIr::Route);
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
@@ -64,6 +66,8 @@ fn typed_route_config(config: &ConfigApplicationIr) -> Option<RouteConfigIr> {
 
 pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
@@ -88,6 +92,8 @@ pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
 
 pub(crate) fn shell_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
@@ -130,6 +136,8 @@ pub(crate) fn router_class(args: &str) -> ClassIr {
         not_found: router_config.named_string("notFound"),
     }));
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TestRouter".to_owned(),
         is_abstract: false,

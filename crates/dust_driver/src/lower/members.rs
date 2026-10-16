@@ -86,86 +86,20 @@ pub(super) fn lower_name_ir(
     }
 }
 
-/// Lowers one resolved class into semantic IR.
-pub(super) struct ClassLoweringInput<'a> {
-    /// Declaration kind.
-    pub(super) kind: ClassKindIr,
-    /// Class name.
-    pub(super) name: &'a str,
-    /// Whether the class is abstract.
-    pub(super) is_abstract: bool,
-    /// Whether the class is an interface class.
-    pub(super) is_interface: bool,
-    /// Immediate superclass name.
-    pub(super) superclass_name: Option<&'a str>,
-    /// Class source span.
-    pub(super) span: SpanIr,
-    /// Resolved fields.
-    pub(super) fields: &'a mut [ResolvedField],
-    /// Resolved constructors.
-    pub(super) constructors: &'a [ResolvedConstructor],
-    /// Resolved methods.
-    pub(super) methods: &'a [ResolvedMethod],
-    /// Resolved trait applications.
-    pub(super) traits: &'a [TraitApplicationIr],
-    /// Resolved configuration applications.
-    pub(super) configs: &'a [ConfigApplicationIr],
-    /// Resolver-normalized SerDe configuration.
-    pub(super) serde_value: &'a mut Option<SerdeClassConfigIr>,
-}
-
-/// Lowers explicit class inputs into semantic IR.
-pub(super) fn lower_class_from_parts(input: ClassLoweringInput<'_>) -> LoweringOutcome<ClassIr> {
-    let ClassLoweringInput {
-        kind,
-        name,
-        is_abstract,
-        is_interface,
-        superclass_name,
-        span,
-        fields,
-        constructors,
-        methods,
-        traits,
-        configs,
-        serde_value,
-    } = input;
-    let mut diagnostics = Vec::new();
-    let serde = serde_value.take();
-
-    let fields = lower_resolved_fields(fields, &mut diagnostics);
-    let methods = lower_resolved_methods(methods, &mut diagnostics);
-    let constructors =
-        lower_resolved_constructors(span.file_id, constructors, &fields, &mut diagnostics);
-
-    LoweringOutcome {
-        value: ClassIr {
-            kind,
-            name: name.to_owned(),
-            is_abstract,
-            is_interface,
-            superclass_name: superclass_name.map(str::to_owned),
-            span,
-            fields,
-            constructors,
-            methods,
-            traits: traits.to_vec(),
-            configs: configs.to_vec(),
-            serde,
-        },
-        diagnostics,
-    }
-}
-
 /// Lowers resolved fields without requiring the owning class model.
 pub(super) fn lower_resolved_fields(
     fields: &mut [ResolvedField],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<FieldIr> {
     fields
         .iter_mut()
         .map(|field| {
-            let outcome = lower_type(field.parsed_type.as_ref(), field.type_source.as_deref());
+            let outcome = lower_type_in_scope(
+                field.parsed_type.as_ref(),
+                field.type_source.as_deref(),
+                type_parameters,
+            );
             diagnostics.extend(outcome.diagnostics);
             FieldIr {
                 name: field.name.clone(),
@@ -182,23 +116,26 @@ pub(super) fn lower_resolved_fields(
 /// Lowers resolved methods without requiring the owning class model.
 pub(super) fn lower_resolved_methods(
     methods: &[ResolvedMethod],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MethodIr> {
     methods
         .iter()
         .map(|method| {
-            let return_type = lower_type(
+            let return_type = lower_type_in_scope(
                 method.surface.parsed_return_type.as_ref(),
                 method.surface.return_type_source.as_deref(),
+                type_parameters,
             );
             diagnostics.extend(return_type.diagnostics);
             let params = method
                 .params
                 .iter()
                 .map(|param| {
-                    let ty = lower_type(
+                    let ty = lower_type_in_scope(
                         param.surface.parsed_type.as_ref(),
                         param.surface.type_source.as_deref(),
+                        type_parameters,
                     );
                     diagnostics.extend(ty.diagnostics);
                     MethodParamIr {
@@ -235,6 +172,7 @@ pub(super) fn lower_resolved_constructors(
     file_id: dust_text::FileId,
     constructors: &[ResolvedConstructor],
     fields: &[FieldIr],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ConstructorIr> {
     constructors
@@ -248,7 +186,13 @@ pub(super) fn lower_resolved_constructors(
                     let ty = param
                         .type_source
                         .as_deref()
-                        .map(|source| lower_type(param.parsed_type.as_ref(), Some(source)))
+                        .map(|source| {
+                            lower_type_in_scope(
+                                param.parsed_type.as_ref(),
+                                Some(source),
+                                type_parameters,
+                            )
+                        })
                         .unwrap_or_else(|| infer_param_type(param.name.as_str(), fields));
                     diagnostics.extend(ty.diagnostics);
                     ConstructorParamIr {

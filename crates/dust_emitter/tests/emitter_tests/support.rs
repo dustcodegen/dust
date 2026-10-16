@@ -63,6 +63,8 @@ pub(crate) fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -
 
 pub(crate) fn class(name: &str, fields: Vec<FieldIr>, constructors: Vec<ConstructorIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,

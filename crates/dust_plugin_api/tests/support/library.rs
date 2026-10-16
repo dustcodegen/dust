@@ -16,6 +16,8 @@ pub(crate) fn sample_library() -> DartFileIr {
         part_of: None,
         span: span(0, 100),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "User".to_owned(),
             is_abstract: false,

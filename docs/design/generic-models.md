@@ -202,7 +202,17 @@ regressions. They prove the proposed language shapes are viable and rule out
 specific alternatives. They do not prove parser extraction, nested generic
 copy generation, source preservation, every nullability shape, Flutter/native
 platform execution or overall primary-constructor support. The user approved
-this design; implementation has started with ordered parser facts and their
-preservation through resolution. Class IR/lowering, typed emission, capability
-checks and real generated consumers remain unfinished under #93. Neither the
-design approval nor this initial fact stage establishes generic model support.
+this design; parser facts now survive resolution and class IR/lowering with
+ordered bounds, mixin arguments and original spans. Scoped lowering distinguishes
+class binders from builtin types, including nested types and constructor/member
+signatures. Typed emission, mixin validation, capability checks and real generated
+consumers remain unfinished under #93. The emitter must also avoid shadowing its
+own core-type references when source binders use names such as `String`; the IR
+distinction is not by itself a rendering solution. Neither design approval nor
+the fact/lowering stages establish generic model support.
+
+Explicit generic function-type classification is tracked separately in
+[#99](https://github.com/dustcodegen/dust/issues/99). Unlike shorthand callback
+formals in #92, these signatures already spell `Function<T>(...)`; the shared
+type parser currently misclassifies them. Scoped lowering does not repair or
+rewrite that source.

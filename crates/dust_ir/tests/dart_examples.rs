@@ -26,6 +26,8 @@ fn models_real_dart_data_class_shapes() {
         part_of: None,
         span: span(1, 0, 220),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "UserProfile".to_owned(),
             is_abstract: false,

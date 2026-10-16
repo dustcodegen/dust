@@ -27,6 +27,8 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                 span: span(0, 120),
                 classes: vec![
                     ClassIr {
+                        type_parameters: Vec::new(),
+                        mixins: Vec::new(),
                         kind: ClassKindIr::Class,
                         name: "Price".to_owned(),
                         is_abstract: false,
@@ -65,6 +67,8 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         serde: None,
                     },
                     ClassIr {
+                        type_parameters: Vec::new(),
+                        mixins: Vec::new(),
                         kind: ClassKindIr::Class,
                         name: "Product".to_owned(),
                         is_abstract: false,

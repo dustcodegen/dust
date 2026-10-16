@@ -14,6 +14,8 @@ fn span(start: u32, end: u32) -> SpanIr {
 fn merges_inherited_fields_before_own_fields() {
     let classes = vec![
         ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "Entity".to_owned(),
             is_abstract: true,
@@ -35,6 +37,8 @@ fn merges_inherited_fields_before_own_fields() {
             serde: None,
         },
         ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "DetailedEntity".to_owned(),
             is_abstract: false,
