@@ -2,26 +2,44 @@
 
 use super::*;
 
-/// Resolves an annotation by canonical symbol identity, then short-name compatibility.
-pub(super) fn resolve_annotation<'a>(
-    catalog: &'a SymbolCatalog,
-    annotation: &ParsedAnnotation,
-) -> Option<&'a crate::ResolvedSymbol> {
-    catalog
-        .resolve_qualified_config(&annotation.qualified_name)
-        .or_else(|| catalog.resolve_config(&annotation.name))
-        .or_else(|| catalog.resolve_qualified_trait(&annotation.qualified_name))
-        .or_else(|| catalog.resolve_trait(&annotation.name))
-}
-
-/// Resolves a trait annotation by canonical name, then short-name compatibility.
-pub(super) fn resolve_annotation_trait<'a>(
-    catalog: &'a SymbolCatalog,
-    annotation: &ParsedAnnotation,
-) -> Option<&'a crate::ResolvedSymbol> {
-    catalog
-        .resolve_qualified_trait(&annotation.qualified_name)
-        .or_else(|| catalog.resolve_trait(&annotation.name))
+/// Fields and constructors retain the same config-only role and warning policy.
+pub(super) fn resolve_configs(
+    file_id: FileId,
+    annotations: &[ParsedAnnotation],
+    context: &BindingContext<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+    site: &str,
+) -> Vec<ConfigApplicationIr> {
+    let mut configs = Vec::new();
+    for annotation in annotations {
+        let Application::Symbol(resolved) = context.application(file_id, annotation, diagnostics)
+        else {
+            continue;
+        };
+        if resolved.kind != SymbolKind::Config {
+            diagnostics.push(
+                Diagnostic::warning(format!(
+                    "trait annotation `{}` is not supported on {site}s",
+                    annotation.name
+                ))
+                .with_label(SourceLabel::new(
+                    file_id,
+                    annotation.span,
+                    format!("{site} annotations may only use Dust config symbols"),
+                )),
+            );
+            continue;
+        }
+        let (positional_args, named_args) = annotation_argument_values(file_id, annotation);
+        configs.push(ConfigApplicationIr::with_arguments(
+            resolved.symbol.clone(),
+            annotation.arguments_source.clone(),
+            positional_args,
+            named_args,
+            SpanIr::new(file_id, annotation.span),
+        ));
+    }
+    configs
 }
 
 /// Returns the first generated part URI from parsed directives.

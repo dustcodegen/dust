@@ -10,6 +10,15 @@ const DERIVE_ORIGIN: AnnotationOrigin = AnnotationOrigin::new(
 );
 
 impl SymbolCatalog {
+    /// Enumerates explicit declarations, including the intrinsic grouping marker.
+    pub fn annotation_origins(&self) -> impl Iterator<Item = &AnnotationOrigin> {
+        std::iter::once(&DERIVE_ORIGIN).chain(
+            self.origins
+                .values()
+                .filter(|origin| origin.symbol != DERIVE_ORIGIN.symbol),
+        )
+    }
+
     /// Adds an explicit declaration only for a registered semantic owner.
     ///
     /// Identical repeats are harmless; conflicting declarations never replace

@@ -24,5 +24,11 @@ fn derive_members_come_from_structured_constructor_values() {
         }),
     ])];
 
-    assert_eq!(derive_member_names(&values), ["ToString"]);
+    let AnnotationValueIr::List(items) = &values[0] else {
+        panic!("list expected")
+    };
+    let AnnotationValueIr::Constructor { name, .. } = &items[0] else {
+        panic!("constructor expected")
+    };
+    assert_eq!(derive_member_names(&values), [name]);
 }

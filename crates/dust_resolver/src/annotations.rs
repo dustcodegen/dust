@@ -9,7 +9,29 @@ use dust_parser_dart::{
 };
 use dust_text::{FileId, TextRange};
 
-use crate::SymbolCatalog;
+use crate::{NamespaceScope, SymbolCatalog, binding::BindingContext};
+
+/// Converts an annotation using the same scoped ownership as feature normalization.
+pub fn resolve_annotation_ir_in_namespace(
+    file_id: FileId,
+    annotation: &ParsedAnnotation,
+    catalog: &SymbolCatalog,
+    namespace: NamespaceScope<'_>,
+    diagnostics: &mut Vec<dust_diagnostics::Diagnostic>,
+) -> AnnotationIr {
+    let context = BindingContext {
+        catalog,
+        namespace: Some(namespace),
+    };
+    let owner = context.owner(
+        &annotation.qualified_name,
+        &annotation.name,
+        SpanIr::new(file_id, annotation.span),
+        false,
+        diagnostics,
+    );
+    annotation_ir_from_parsed(file_id, annotation, owner)
+}
 
 /// Converts one parsed annotation into semantic IR and resolves registered symbols.
 pub fn resolve_annotation_ir(

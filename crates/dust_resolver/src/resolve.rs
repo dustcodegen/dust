@@ -13,8 +13,9 @@ use dust_parser_dart::{
 use dust_text::FileId;
 
 use crate::{
-    ResolveResult, ResolvedClass, ResolvedEnum, ResolvedEnumVariant, ResolvedLibrary,
-    SymbolCatalog,
+    NamespaceScope, ResolveResult, ResolvedClass, ResolvedEnum, ResolvedEnumVariant,
+    ResolvedLibrary, SymbolCatalog,
+    binding::BindingContext,
     db::normalize_db,
     http::normalize_http,
     query_calls::normalize_query_calls,
@@ -59,22 +60,72 @@ pub fn resolve_library_with_partless_configs(
     catalog: &SymbolCatalog,
     partless_config_symbols: &[&str],
 ) -> ResolveResult {
+    resolve_with_context(
+        file_id,
+        source_path,
+        output_path,
+        library,
+        &BindingContext {
+            catalog,
+            namespace: None,
+        },
+        partless_config_symbols,
+    )
+}
+
+/// Resolves actual imported declarations before any feature normalization.
+///
+/// The caller supplies a fully loaded namespace graph; this does not load files
+/// or change the context-free compatibility entrypoints.
+pub fn resolve_library_in_namespace(
+    file_id: FileId,
+    source_path: &str,
+    output_path: &str,
+    library: &ParsedDartFileSurface,
+    catalog: &SymbolCatalog,
+    namespace: NamespaceScope<'_>,
+    partless_config_symbols: &[&str],
+) -> ResolveResult {
+    resolve_with_context(
+        file_id,
+        source_path,
+        output_path,
+        library,
+        &BindingContext {
+            catalog,
+            namespace: Some(namespace),
+        },
+        partless_config_symbols,
+    )
+}
+
+/// Compatibility and production-context paths share feature resolution.
+fn resolve_with_context(
+    file_id: FileId,
+    source_path: &str,
+    output_path: &str,
+    library: &ParsedDartFileSurface,
+    context: &BindingContext<'_>,
+    partless_config_symbols: &[&str],
+) -> ResolveResult {
     let mut diagnostics = Vec::new();
-    validate_annotation_prefixes(file_id, library, &mut diagnostics);
+    if context.namespace.is_none() {
+        validate_annotation_prefixes(file_id, library, &mut diagnostics);
+    }
     let part_uri = first_part_uri(&library.directives);
     let mut enums: Vec<ResolvedEnum> = Vec::new();
     let mut classes = Vec::new();
     let mut saw_dust_symbol = false;
 
     for class in &library.classes {
-        let resolved = resolve_class(file_id, class, catalog, &mut diagnostics);
+        let resolved = resolve_class(file_id, class, context, &mut diagnostics);
         if class_has_dust_symbol(&resolved) {
             saw_dust_symbol = true;
         }
         classes.push(resolved);
     }
     for enum_surface in &library.enums {
-        let resolved: ResolvedEnum = resolve_enum(file_id, enum_surface, catalog, &mut diagnostics);
+        let resolved: ResolvedEnum = resolve_enum(file_id, enum_surface, context, &mut diagnostics);
         if !resolved.traits.is_empty() || !resolved.configs.is_empty() {
             saw_dust_symbol = true;
         }
@@ -137,7 +188,7 @@ pub fn resolve_library_with_partless_configs(
 fn resolve_enum(
     file_id: FileId,
     enum_surface: &dust_parser_dart::ParsedEnumSurface,
-    catalog: &SymbolCatalog,
+    context: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> ResolvedEnum {
     let mut traits: Vec<TraitApplicationIr> = Vec::new();
@@ -145,7 +196,7 @@ fn resolve_enum(
     resolve_declaration_annotations(
         file_id,
         &enum_surface.annotations,
-        catalog,
+        context,
         diagnostics,
         &mut traits,
         &mut configs,
@@ -160,7 +211,7 @@ fn resolve_enum(
             resolve_declaration_annotations(
                 file_id,
                 &variant.annotations,
-                catalog,
+                context,
                 diagnostics,
                 &mut variant_traits,
                 &mut variant_configs,

@@ -9,6 +9,13 @@ pub struct ParsedUriLiteral {
     pub span: TextRange,
 }
 
+impl ParsedUriLiteral {
+    /// Decodes this single static literal without changing its source or span.
+    pub fn value(&self) -> Option<String> {
+        dust_dart_syntax::parse_static_dart_string_literal(&self.source)
+    }
+}
+
 /// One conditional URI alternative in source order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedConditionalUri {

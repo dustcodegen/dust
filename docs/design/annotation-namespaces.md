@@ -8,8 +8,10 @@ Status: **approved policy; implementation in progress**. Prerequisite
 The catalog foundation in [#104](https://github.com/dustcodegen/dust/issues/104)
 retains canonical owners and adds unique-only context-free lookup. The two
 canonical-retention regressions from [#85](https://github.com/dustcodegen/dust/pull/85)
-are covered by permanent passing tests in that implementation. Import-prefix
-binding, the graph and the other #84 acceptance gates remain unfinished.
+are covered by permanent passing tests in that implementation. The source-fact
+graph and opt-in scoped resolver are implemented in
+[#112](https://github.com/dustcodegen/dust/issues/112); production driver loading,
+all-site lowering and dependency/cache acceptance gates remain unfinished.
 Do not enable the server plugin in the default registry or claim server codegen
 works on the strength of this document or the catalog layer alone.
 
@@ -152,10 +154,11 @@ against the real runtime class or typedef, including both legacy DB aliases and
 the intrinsic group. These are real source/metadata audits, not an imported
 namespace or generated-server proof.
 
-The graph must still load actual inputs, resolve URIs/aliases/parts and visibility,
-and compare discovered declaration identity with these records. This stage does
-not resolve a written prefix, change any handwritten Dart annotation API, enable
-server generation or complete #84's binding and cache-preservation acceptance.
+The metadata stage alone does not resolve a written prefix, change any handwritten
+Dart annotation API, enable server generation or complete #84's acceptance.
+The next [graph and scoped resolver stage](annotation-namespace-graph.md) compares
+real parser declaration identities with these records. Its caller must supply
+source facts and resolved URIs; the production loader is still outstanding.
 
 ## Structured namespace facts
 
