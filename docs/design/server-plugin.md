@@ -4,8 +4,8 @@ Status: proposal, with the runtime built. This document describes a Dust feature
 for generating Dart HTTP server wiring from annotated controller classes, with
 runtime route composition.
 
-`packages/dust_server` exists, is published, and is held at 100% line coverage
-by a gate in CI. That includes `test/generated/`, which hand-writes what the
+`packages/dust_server` exists and has a local 100% line-coverage gate.
+That includes `test/generated/`, which hand-writes what the
 plugin will emit for the [Worked Example](#worked-example) below, and the
 examples in `example/`, which exercise every extractor, layer, and response path
 the plugin will emit against.
@@ -66,7 +66,7 @@ The existing HTTP client sets the precedent. It is Dio-specific but ships as
 | :--- | :--- |
 | `packages/dust_server` | Annotations, `FromRequestParts`, `Router`, `Rejection`, `IntoResponse`, `Layer`, `MountedRoute`, the shipped layers, and `serve`. |
 | `crates/dust_server_plugin` | `DustPlugin` implementation. |
-| `crates/dust_ir/src/server.rs` | `ServerIr`, matching the existing `http.rs`, `route.rs`, `db.rs` split. |
+| `crates/dust_ir/src/server.rs` | Planned shared normalization, matching the existing `http.rs`, `route.rs`, `db.rs` split; introduce reviewed types when emission consumes them. |
 
 `dust_server` depends on `dust_dart`, `shelf`, `mime`, and `meta`. Routing is
 its own, so `shelf_router` is not a dependency.
@@ -77,13 +77,19 @@ its own, so `shelf_router` is not a dependency.
 > Flutter application.
 
 `dust_server/server.dart` re-exports `shelf`'s `Request`, `Response`,
-`Middleware`, `shelf_io.serve`, and `dust_dart/fp.dart`, so applications need
-one import.
+`Middleware`, and `dust_dart/fp.dart`, alongside Dust's own `serve`.
+Serving entrypoints also import `dart:io` for `InternetAddress`; shelf's
+`shelf_io.serve` is not re-exported.
 
 ## Engine Prerequisites
 
-None blocking. Every phase below builds against today's parser, resolver, and
-IR.
+Namespace-safe annotation resolution is a phase-0 prerequisite tracked in
+[#84](https://github.com/dustcodegen/dust/issues/84). Registering client and
+server verbs with the same short name currently loses one canonical owner;
+distinct import prefixes do not prevent misrouting. The regression spike in
+[#85](https://github.com/dustcodegen/dust/pull/85) is intentionally red, not a
+fix. Do not enable the default server registry until the ownership and legacy
+alias compatibility contracts are resolved.
 
 ### Cleared: class interfaces in IR
 
@@ -94,8 +100,8 @@ this design needed it to bind an extractor to its value type across files.
 
 Naming the extractor **type** at the call site removes that need. `@Extract`
 supplies the extractor type, the parameter's own type supplies the value type,
-and the generated cast makes `dart analyze` verify they agree. Dust never
-resolves the binding, so it never needs the interface list.
+and an explicitly typed result local makes `dart analyze` verify they agree.
+Dust never resolves the binding, so it never needs the interface list.
 
 The remaining users of an `implements` list are `IntoResponse` and `Validatable`
 dispatch, and both detect structurally from `MethodIr` instead — the same
@@ -306,13 +312,16 @@ framework produces those values from the request or fails with a typed
 rejection. Axum resolves extractors through trait impls at compile time. Dart
 has no equivalent dispatch, which is the gap Dust fills.
 
-### One interface
+### Parts and body interfaces
 
 ```dart
 /// Builds [T] from a request, or rejects it.
-abstract interface class Extractable<T> {
+abstract interface class FromRequestParts<T> {
   Future<Result<T, Rejection>> extract(Request request);
 }
+
+/// Marks an extractor that consumes the request body.
+abstract interface class FromRequest<T> implements FromRequestParts<T> {}
 ```
 
 Dart has no static interface members, since `implements` constrains instance
@@ -331,11 +340,10 @@ Extractors that do not need the body use `RequestParts.of(request)` internally
 for headers, method, and URI.
 
 > [!NOTE]
-> Axum splits this into `FromRequestParts` and `FromRequest` because Rust
-> ownership forces the body to be consumed exactly once. For custom extractors
-> Dust keeps one interface: the split would require Dust to determine which
-> interface a class implements, a cross-file lookup this design avoids. The
-> built-ins recover the guarantee without it; see
+> The runtime uses axum's `FromRequestParts` / `FromRequest` names. Both expose
+> `extract(Request)`; the latter marks body consumption. The generator knows
+> the built-ins by annotation symbol, but does not infer custom extractor
+> interfaces across files; see
 > [Body ordering is checked](#body-ordering-is-checked).
 
 ### Binding names the extractor type
@@ -345,9 +353,11 @@ for headers, method, and URI.
 ```
 
 The annotation argument is a type reference, not a value. Dust emits
-`await const BearerAuth().extract(request)` from the type name alone and casts
-the result to the parameter's declared type. An extractor declared as
-`Extractable<SomethingElse>` fails to compile against an `AuthUser` parameter.
+`await const BearerAuth().extract(request)` from the type name alone and assigns
+the result to a `Result<AuthUser, Rejection>` local for an `AuthUser` parameter.
+An extractor producing an incompatible value type then fails static analysis.
+A cast alone does not provide that guarantee: Dart permits a cast that fails
+only at runtime. The subsequent `Ok` cast unwraps an already checked result.
 
 Rule: an extractor named this way needs a zero-argument `const` constructor.
 Violations surface as an analyzer error at the generated call site; Phase 2 adds
@@ -358,7 +368,7 @@ encodes the scope in the type because Rust cannot pass a value at that position
 either:
 
 ```dart
-final class BearerAuth implements Extractable<AuthUser> {
+class BearerAuth implements FromRequestParts<AuthUser> {
   const BearerAuth({this.scope});
   final String? scope;
 
@@ -404,9 +414,9 @@ becomes cheap, and `@Extract(Type)` stays as the disambiguator.
 
 ### Built-ins, taken from axum
 
-Built-ins ship in `dust_server` implementing the same `Extractable<T>`
-interface. The annotation is sugar over a const extractor instance, so custom
-extractors are not second-class. The set and the naming follow axum:
+Built-ins ship in `dust_server` implementing `FromRequestParts<T>` or the
+body-reading `FromRequest<T>`. The annotation is sugar over a const extractor
+instance, so custom extractors are not second-class. The set and naming follow axum:
 
 | axum | Dust | Notes |
 | :--- | :--- | :--- |
@@ -423,21 +433,21 @@ extractors are not second-class. The set and the naming follow axum:
 | `HeaderMap` | `@HeaderMap() Map<String, String> headers` | |
 | `TypedHeader<T>` | `@Header('x-request-id') String? id` | |
 | `State<S>` | `@State() NoteRepo repo` | attached with `withState`, keyed by type |
-| `ConnectInfo<T>` | `@Peer() ConnectionInfo info` | `shelf.io.connection_info` |
-| `Method`, `Uri`, `Version` | `RequestParts` parameter | one parameter beats four annotations |
+| `ConnectInfo<T>` | `@Peer() PeerInfo info` | `shelf.io.connection_info` |
+| `Method`, `Uri` | `RequestParts` parameter | exposes method, URIs, headers and context, not an HTTP-version field |
 | `Request`, `Parts` | bare `Request` / `RequestParts` parameter | passthrough |
 | `State<S>` | controller constructor field | see Non-goals |
 | `WebSocketUpgrade` | deferred | see [Deferred surfaces](#deferred-surfaces) |
 
-Three names are server-only because the client has no use for them: `@RawBody`,
+Four names are server-only because the client has no use for them: `@RawBody`,
 `@RawQuery`, `@State`, and `@Peer`. Everything else in the table is a name the
 HTTP client already ships, carrying the same meaning.
 
-`{id}` in a route path is rewritten to shelf's `<id>` during emission. A
-`@Path()` parameter whose key has no matching path segment is a build
-diagnostic.
+`{id}` is the runtime's native route-placeholder syntax and stays unchanged
+during emission. A `@Path()` parameter whose key has no matching path segment
+is a build diagnostic.
 
-`shelf_router` hands over path segments exactly as they appeared on the wire, so
+The runtime matcher captures path segments as they appeared on the wire, so
 `@Path()` percent-decodes before coercing (runtime-checked). `/files/a%20b`
 yields `a b`, and malformed encoding is a 400 rather than a value carrying a
 literal `%zz`.
@@ -555,10 +565,9 @@ know about:
   which a plain JSON error body omits. `Rejection.unauthorized` defaults the
   challenge to `Bearer`; an extractor authenticating differently passes its own.
 - A known path reached with the wrong method answers 405 with `Allow`, not 404.
-  `shelf_router` answers both cases with 404, so the router matches the
-  request against the flattened route table itself before falling through.
-  `HEAD` is listed in `Allow` wherever `GET` is, because `shelf_router` already
-  serves `HEAD` from a `GET` route.
+  The runtime matcher distinguishes both cases directly. `HEAD` is listed in
+  `Allow` wherever `GET` is, and falls back to a `GET` route when no matching
+  `HEAD` route exists.
 
 ## Responses
 
@@ -598,8 +607,8 @@ thrown `Rejection` into its declared status and anything else into an opaque
 The error and stack trace go to the `onError` callback passed to
 `Router(onError:)`. That sink is scoped to a zone (`ServerErrors`),
 because generated code is static and holds no reference to the group that
-mounted it. One root per isolate is the assumption; a second root replaces the
-sink when its handler is built.
+mounted it. Separate routers in one isolate retain their own request-scoped
+sinks. `ServerErrors.reporter` is only the fallback outside those zones.
 
 500 is therefore possible on every route.
 
@@ -609,11 +618,11 @@ sink when its handler is built.
 generated code needs a way to turn a const into a `shelf` `Middleware`:
 
 ```dart
-abstract interface class RouteMiddleware {
+abstract interface class Layer {
   Middleware toMiddleware();
 }
 
-final class RateLimit implements RouteMiddleware {
+final class RateLimit implements Layer {
   const RateLimit({required this.perMinute});
   final int perMinute;
 
@@ -643,23 +652,19 @@ controller can be mounted twice.
 `handler` caches its result: the tree is walked once, and mounting after it
 exists throws instead of returning a handler that silently ignores the new
 routes. Building seals the whole mounted subtree, not just the group that was
-built, since a nested group left unsealed would keep accepting includes the composed
-handler can never see. `serveOpenApi` works on any group, not only the root:
-the document is served at the mount-joined path, so a versioned group can carry
-its own.
+built, since a nested group left unsealed would keep accepting changes the
+composed handler can never see. OpenAPI serving is deferred; no `serveOpenApi`
+API exists in the runtime.
 
 ```dart
 Router({Object? metadata, int? bodyLimit, void Function(Object, StackTrace)? onError});
-Router.module({String prefix, List<Route> routes, Object? metadata});
+Router.module({String prefix = '', List<Route> routes = const [], Object? metadata});
 
-void nest(
-  String path,
-  Router router, {
-  String? prefix,
-  List<String> tags = const [],
-  List<Middleware> middleware = const [],
-  Object? metadata,
-});
+void nest(String path, Router router);
+void merge(Router router);
+void layer(Object middleware); // Layer or shelf Middleware
+void routeLayer(Object middleware);
+void withState<T extends Object>(T value);
 
 Handler get handler;
 ```
@@ -669,9 +674,9 @@ Mapping to FastAPI:
 | FastAPI | Dust |
 | :--- | :--- |
 | `APIRouter(prefix=, tags=)` | `Router()..nest(path, router)` |
-| `app.include_router(r, prefix=, tags=)` | `group.include(r, prefix:, tags:)` |
-| nested `include_router` | nested `include` |
-| `dependencies=[Depends(auth)]` | `middleware:` for guards, parameter extractors when the handler needs the value |
+| `app.include_router(r, prefix=)` | `group.nest(prefix, r)`, or `merge(r)` with no added prefix |
+| nested `include_router` | nested `nest` / `merge` |
+| `dependencies=[Depends(auth)]` | `routeLayer` for route guards, parameter extractors when the handler needs the value |
 
 There is no `@ServerApp` annotation. Controller discovery is automatic,
 middleware is code, and anything else is an argument at the call site. An
@@ -704,7 +709,7 @@ Two things, both generic:
 
 ```dart
 Router({Object? metadata});
-Router.module({String prefix, List<Route> routes, Object? metadata});
+Router.module({String prefix = '', List<Route> routes = const [], Object? metadata});
 void nest(String path, Router router);
 
 List<MountedRoute> describe();
@@ -766,6 +771,16 @@ Two layers, both riding existing machinery:
 composition, `Rejection` encoding, and each built-in extractor.
 
 ## Worked Example
+
+The controller and `.g.dart` snippets below describe planned generation, not
+output from an existing server plugin. The executable handwritten stand-ins in
+[`test/generated/controller.dart`](../../packages/dust_server/test/generated/controller.dart)
+and [`functions.dart`](../../packages/dust_server/test/generated/functions.dart)
+exercise the runtime contract. Their
+[read](../../packages/dust_server/test/generated/read_handler_test.dart),
+[write](../../packages/dust_server/test/generated/write_handler_test.dart) and
+[function](../../packages/dust_server/test/generated/functions_test.dart) tests
+are runtime evidence, not proof that Dust emits these handlers today.
 
 ```text
 todo_api/
@@ -833,10 +848,7 @@ class NotFound implements IntoResponse {
   final String message;
 
   @override
-  Response intoResponse() => Response.notFound(
-        jsonEncode({'error': message}),
-        headers: const {'content-type': 'application/json'},
-      );
+  Response intoResponse() => jsonResponse({'error': message}, status: 404);
 }
 ```
 
@@ -862,7 +874,7 @@ import 'package:dust_server/server.dart';
 
 import 'auth_user.dart';
 
-final class BearerAuth implements Extractable<AuthUser> {
+class BearerAuth implements FromRequestParts<AuthUser> {
   const BearerAuth({this.scope});
 
   final String? scope;
@@ -985,13 +997,15 @@ Router buildApp(TodoRepo repo) {
 
 ```dart
 // bin/server.dart
+import 'dart:io';
+
 import 'package:dust_server/server.dart';
 import 'package:todo_api/src/app.dart';
 import 'package:todo_api/src/repo/todo_repo.dart';
 
 Future<void> main(List<String> args) async {
   final app = buildApp(TodoRepo());
-  final server = await serve(app.handler, '0.0.0.0', 8080);
+  final server = await serve(app, InternetAddress.anyIPv4, 8080);
   print('listening on http://${server.address.host}:${server.port}');
 }
 ```
@@ -1011,56 +1025,48 @@ mixin _$TodoController {
         prefix: '/todos',
         routes: [
           Route('GET', '/', _$handleList),
-          Route('GET', '/<id>', _$handleGet),
+          Route('GET', '/{id}', _$handleGet),
           Route('POST', '/', _$handleCreate),
-          Route('DELETE', '/<id>', _$handleRemove),
+          Route('DELETE', '/{id}', _$handleRemove),
         ],
       );
 
   Future<Response> _$handleCreate(Request request) async {
-    final $user = await const TodosWrite().extract(request);
+    final Result<AuthUser, Rejection> $user =
+        await const TodosWrite().extract(request);
     if ($user case Err(:final error)) return error.intoResponse();
     final user = ($user as Ok<AuthUser, Rejection>).value;
 
-    final $input = await const JsonExtractable<CreateTodo>(CreateTodo.deserialize)
-        .extract(request);
+    final Result<CreateTodo, Rejection> $input =
+        await const JsonExtractable<CreateTodo>(CreateTodo.deserialize)
+            .extract(request);
     if ($input case Err(:final error)) return error.intoResponse();
     final input = ($input as Ok<CreateTodo, Rejection>).value;
 
-    if (input.validate() case Invalid(:final errors)) {
-      return Rejection.unprocessable(errors).intoResponse();
-    }
+    final rejection = input.validate().rejection;
+    if (rejection != null) return rejection.intoResponse();
 
-    try {
+    return guard(() async {
       final result = await create(user, input);
-      return Response(
-        201,
-        body: jsonEncode(result.serialize()),
-        headers: const {'content-type': 'application/json'},
-      );
-    } on Rejection catch (rejection) {
-      return rejection.intoResponse();
-    } catch (error, stack) {
-      ServerErrors.report(error, stack);
-      return Rejection.internal().intoResponse();
-    }
+      return jsonResponse(result.serialize(), status: 201);
+    });
   }
 }
 ```
 
 Straight-line code. No reflection, no runtime registry, every type static.
 
-Two casts are load-bearing. `as Ok<AuthUser, Rejection>` is where the analyzer
-confirms that `TodosWrite` really does produce an `AuthUser`; Dust emits it from
-the parameter's declared type without knowing anything about the extractor. The
-`const TodosWrite()` call is where the analyzer confirms the zero-argument const
-constructor exists.
+The explicitly typed `Result<AuthUser, Rejection>` assignment is where the
+analyzer confirms that `TodosWrite` produces a compatible value type; Dust emits
+it from the parameter's declared type without resolving the extractor's
+interfaces. The `Ok` cast only unwraps that result. The `const TodosWrite()`
+call is where the analyzer confirms the zero-argument const constructor exists.
 
 ### Request lifecycle
 
 For `POST /api/v1/todos`:
 
-1. Root group middleware runs in declaration order: `Cors`, `logRequests`.
+1. Root group middleware runs in declaration order: `Cors`, `RequestId`.
 2. The composed router matches the mounted prefix and dispatches to
    `_$handleCreate`.
 3. Extractors run in declaration order. `TodosWrite` returns `Err`,
@@ -1174,11 +1180,11 @@ Phase 6.
 
 | Phase | Scope | Exit criteria |
 | :--- | :--- | :--- |
-| 0 | Symbol-ownership spike. Package and crate skeletons, `dust_ir/src/server.rs`, registry entry. No parser, resolver, or IR work. | Server and client plugins coexist; discovery finds both. |
-| 1 | `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Path syntax rewrite and the missing-path-key diagnostic. | Todo controller serves GET and POST. |
+| 0 | Symbol-ownership spike. Resolve #84 before enabling crate/driver/registry integration; introduce shared IR when emission consumes it. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing client output. |
+| 1 | `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Native path validation and the missing-path-key diagnostic. | Todo controller serves GET and POST. |
 | 2 | `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
 | 3 | Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
-| 4 | `Router`, `include`, prefix normalization, `RouteMiddleware` emission, middleware composition, body limit, `onError`. Runtime library only, no driver work. | `bin/server.dart` runs end to end. |
+| 4 | `Router`, `merge` / `nest`, prefix normalization, `Layer` emission, middleware composition, body limit, `onError`. Verify existing runtime composition with generated handlers. | `bin/server.dart` runs end to end. |
 | 5 | `metadata:` emission on generated controllers, and whatever workspace facts the documentation package needs. Documentation itself ships separately. | A `describe()` walk recovers every route with its metadata. |
 | 6 | `@HttpContract`. Factor the client plugin's emission into a callable module, claim the symbol in `dust_server_plugin`, emit `_$TodoApi` and `_$TodoApiServer`, server-only parameter rules. | A shared contract package where a path change breaks both sides at compile time. |
 
@@ -1206,14 +1212,15 @@ Per the [Plugin Guide](../plugin-guide.md):
 3. Export `register_plugin()`.
 4. Register it in `crates/dust_driver/src/build/support/registry.rs`.
 
-Templates and modules under the plugin's `src/` tree are fingerprinted
-automatically.
+Add the plugin's `src/` directory to `CODEGEN_FINGERPRINT_ROOTS` in
+`crates/dust_driver/build.rs`. Its modules and templates are then included
+recursively; a new plugin directory is not discovered automatically.
 
 ## Open Questions
 
-None outstanding. The runtime was built first so the design could be checked
-against working code, and every question that blocked the generator is answered
-below.
+The namespace-binding and legacy alias compatibility policy in #84 remains
+blocking for phase 0. The runtime decisions below are settled, but do not prove
+that the generator or its engine prerequisites are complete.
 
 ## Deferred
 
@@ -1246,7 +1253,8 @@ below.
 
   What `describe()` already gives such a package: every route with its method,
   its path with `{name}` placeholders intact, and the metadata of every router it
-  was mounted through, innermost first. What it does **not** give, and what an
+  was mounted through, outermost first (`metadataOf<T>()` searches innermost
+  first). What it does **not** give, and what an
   OpenAPI generator would take from the IR at build time instead: parameter
   types, request and response schemas, and status codes. `describe()` is runtime
   introspection of the route table, not a schema source.
