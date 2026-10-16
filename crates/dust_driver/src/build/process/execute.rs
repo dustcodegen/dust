@@ -9,7 +9,7 @@ use dust_resolver::ResolveResult;
 use dust_text::{FileId, SourceText};
 use dust_workspace::SourceLibrary;
 
-use crate::lower::lower_library_with_catalog;
+use crate::lower::lower_library_with_bindings;
 
 use super::{
     BuildOutcome, LoweringConfig, PendingLibrary, PreprocessedLibrary, ProcessingConfig,
@@ -132,7 +132,14 @@ pub(crate) fn process_library_from_source(
             catalog: processing.catalog,
             registry: processing.registry,
         };
-        match resolve_and_lower_library(file_id, library, &parsed, &lowering, &mut diagnostics) {
+        match resolve_and_lower_library(
+            file_id,
+            library,
+            &parsed,
+            &lowering,
+            None,
+            &mut diagnostics,
+        ) {
             Some(library) => library,
             None => {
                 let diagnostic_file = diagnostic_file_if_needed(
@@ -187,26 +194,31 @@ pub(crate) fn resolve_and_lower_library(
     library: &SourceLibrary,
     parsed: &ParsedDartFileSurface,
     lowering: &LoweringConfig<'_>,
+    namespace: Option<dust_resolver::NamespaceScope<'_>>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<dust_ir::DartFileIr> {
     let partless_configs = lowering.registry.all_partless_configs();
+    let bindings = dust_resolver::BindingContext::new(lowering.catalog, namespace);
     let ResolveResult {
         library: mut resolved_library,
         diagnostics: resolve_diagnostics,
-    } = dust_resolver::resolve_library_with_partless_configs(
+    } = dust_resolver::resolve_library_with_bindings(
         file_id,
         &workspace_relative_path(lowering.package_root, &library.source_path),
         &workspace_relative_path(lowering.package_root, &library.output_path),
         parsed,
-        lowering.catalog,
+        &bindings,
         &partless_configs,
     );
     diagnostics.extend(resolve_diagnostics);
+    if namespace.is_some() && diagnostics.iter().any(Diagnostic::is_error) {
+        return None;
+    }
 
     let LoweringOutcome {
         value: mut lowered_library,
         diagnostics: lower_diagnostics,
-    } = lower_library_with_catalog(&mut resolved_library, lowering.catalog);
+    } = lower_library_with_bindings(&mut resolved_library, &bindings);
     diagnostics.extend(lower_diagnostics);
     lowered_library.package_root = lowering.package_root.to_string_lossy().into_owned();
     lowered_library.package_name = lowering.package_name.to_owned();

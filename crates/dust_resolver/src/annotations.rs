@@ -19,18 +19,7 @@ pub fn resolve_annotation_ir_in_namespace(
     namespace: NamespaceScope<'_>,
     diagnostics: &mut Vec<dust_diagnostics::Diagnostic>,
 ) -> AnnotationIr {
-    let context = BindingContext {
-        catalog,
-        namespace: Some(namespace),
-    };
-    let owner = context.owner(
-        &annotation.qualified_name,
-        &annotation.name,
-        SpanIr::new(file_id, annotation.span),
-        false,
-        diagnostics,
-    );
-    annotation_ir_from_parsed(file_id, annotation, owner)
+    BindingContext::new(catalog, Some(namespace)).annotation_ir(file_id, annotation, diagnostics)
 }
 
 /// Converts one parsed annotation into semantic IR and resolves registered symbols.
@@ -39,11 +28,7 @@ pub fn resolve_annotation_ir(
     annotation: &ParsedAnnotation,
     catalog: &SymbolCatalog,
 ) -> AnnotationIr {
-    let resolved_symbol = catalog
-        .resolve_qualified(&annotation.qualified_name)
-        .or_else(|| catalog.resolve(&annotation.name))
-        .map(|resolved| resolved.symbol.clone());
-    annotation_ir_from_parsed(file_id, annotation, resolved_symbol)
+    BindingContext::new(catalog, None).annotation_ir(file_id, annotation, &mut Vec::new())
 }
 
 /// Converts one parsed annotation into semantic IR, optionally attaching a resolved symbol.

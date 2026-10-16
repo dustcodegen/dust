@@ -1,6 +1,7 @@
 # Source-fact annotation namespace graph
 
 Status: scoped resolver implementation for [#112](https://github.com/dustcodegen/dust/issues/112),
+with shared metadata lowering in [#117](https://github.com/dustcodegen/dust/issues/117),
 under the approved [namespace policy](annotation-namespaces.md) and #84.
 This does **not** connect the graph to production build/discovery or enable server
 generation. No Dart API, SDK floor, dependency, version or workflow changes.
@@ -28,6 +29,12 @@ let result = dust_resolver::resolve_library_in_namespace(
 annotation and collects source-labeled diagnostics. Neither entrypoint rewrites a
 parsed name or its arguments to a synthetic canonical name. Context-free entrypoints
 remain compatibility adapters; they do not claim imported-namespace correctness.
+
+`BindingContext::new(&catalog, Some(graph.scope(uri)))` now lets the driver share
+that exact context between `resolve_library_with_bindings` and IR lowering.
+`None` is an explicit compatibility mode, never a fallback for a failed source
+read or graph lookup. Scoped resolver errors stop before metadata lowering;
+lowering ownership errors prevent IR from reaching emission.
 
 ## Computation and ownership
 
@@ -58,6 +65,21 @@ bind before feature normalization. Nested `Derive` constructor values retain
 their full written prefixes/spans. The standalone annotation-IR entrypoint uses
 the same policy. In particular, a server-owned `GET` never becomes a Dio verb.
 
+Driver lowering also uses that context for retained library, mixin, extension,
+extension-type, function, variable and typedef metadata. Top-level function
+parameters reuse method-parameter resolution and retain typed trait/config roles.
+Constructor-parameter and mixin-field ownership is validated even on otherwise
+unannotated types. Their existing IR representation and mixin field normalization
+stay unchanged; this does not add new annotation slots or enable inherited mixin
+serialization. Nested standalone `Derive` values keep their prefixes and get
+ownership validation only when the group is the actual intrinsic declaration.
+Ignored groups on methods and parameters still validate nested ownership; valid
+groups at those unsupported sites do not enable derivation.
+
+These are tests of retained parser surfaces, not a claim to full Dart metadata
+extraction. Missing mixin/extension member facts and the unapproved #92 design
+remain separate limitations; this change does not bypass that design boundary.
+
 ## Evidence and remaining gates
 
 The Rust regression suite parses the real client and server declaring libraries,
@@ -72,10 +94,11 @@ Still required under #84 before claiming production namespace support:
 
 1. A real package-config/source loader, including implicit SDK namespaces and an
    explicit policy for the generator's own not-yet-created output parts.
-2. Wire scoped binding into production resolution and every metadata-lowering
-   caller: library/top-level declarations, constructor parameters and other
-   currently raw member metadata. The new standalone IR API is not proof that
-   those existing driver callers have been migrated.
+2. Supply the real scoped graph to production scan/build/check resolution. The
+   driver's shared resolve-and-lower operation now accepts a scope and propagates
+   it through retained metadata callers, but automatic source loading still uses
+   explicit context-free mode. Parser-backed graph fixtures test that operation;
+   they do not prove package-config loading, discovery or unrepresented AST sites.
 3. Track actual reads and graph dependencies through discovery/analysis/output
    caches; changing barrels/visibility must invalidate results. Missing required
    reads must preserve previous output/cache bytes.

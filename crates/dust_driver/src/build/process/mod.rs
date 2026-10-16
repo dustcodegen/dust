@@ -4,6 +4,9 @@ mod execute;
 mod output;
 /// Workspace analysis scan for pending libraries.
 mod scan;
+/// End-to-end resolver/lowering binding regressions with explicit source graphs.
+#[cfg(test)]
+mod tests_namespace;
 
 use std::sync::Arc;
 

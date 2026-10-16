@@ -34,11 +34,12 @@ mod types;
 pub use annotations::{
     annotation_ir_from_parsed, resolve_annotation_ir, resolve_annotation_ir_in_namespace,
 };
+pub use binding::BindingContext;
 pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
 pub use namespace::{NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope};
 pub use resolve::{
-    resolve_library, resolve_library_in_namespace, resolve_library_with_partless_configs,
-    validate_generated_part_uri,
+    resolve_library, resolve_library_in_namespace, resolve_library_with_bindings,
+    resolve_library_with_partless_configs, validate_generated_part_uri,
 };
 pub use result::{
     ResolveResult, ResolvedClass, ResolvedConstructor, ResolvedEnum, ResolvedEnumVariant,

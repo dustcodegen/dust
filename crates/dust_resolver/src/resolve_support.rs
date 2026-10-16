@@ -82,7 +82,7 @@ pub(crate) fn resolve_method(
 }
 
 /// Resolves annotations for one method parameter.
-fn resolve_method_param(
+pub(crate) fn resolve_method_param(
     file_id: FileId,
     param: &ParsedMethodParamSurface,
     context: &BindingContext<'_>,
@@ -130,45 +130,12 @@ pub(crate) fn resolve_declaration_annotations(
 ) {
     for annotation in annotations {
         let application = context.application(file_id, annotation, diagnostics);
-        if matches!(application, Application::Group) {
-            let (positional, _) = annotation_argument_values(file_id, annotation);
-            for name in derive_member_names(&positional) {
-                let diagnostic_count = diagnostics.len();
-                match context.derive_trait(name, diagnostics) {
-                    Some(resolved) => push_resolved_symbol(
-                        file_id,
-                        ResolvedAnnotationSymbol {
-                            span: annotation.span,
-                            kind: resolved.kind,
-                            symbol: resolved.symbol.clone(),
-                            arguments_source: None,
-                            arguments: (Vec::new(), BTreeMap::new()),
-                        },
-                        traits,
-                        configs,
-                    ),
-                    None if diagnostics.len() == diagnostic_count => diagnostics.push(
-                        Diagnostic::warning(format!(
-                            "unknown derive trait or config `{}`",
-                            if context.namespace.is_some() {
-                                &name.source
-                            } else {
-                                &name.short
-                            }
-                        ))
-                        .with_label(SourceLabel::new(
-                            file_id,
-                            if context.namespace.is_some() {
-                                name.span.range
-                            } else {
-                                annotation.span
-                            },
-                            "annotation member is not owned by any registered symbol",
-                        )),
-                    ),
-                    None => {}
-                }
+        if let Application::Group(mut group_traits) = application {
+            if context.namespace.is_none() {
+                let (values, _) = annotation_argument_values(file_id, annotation);
+                group_traits = context.group_traits(file_id, annotation, &values, diagnostics);
             }
+            traits.extend(group_traits);
         } else if let Application::Symbol(resolved) = application {
             push_resolved_symbol(
                 file_id,
@@ -187,7 +154,7 @@ pub(crate) fn resolve_declaration_annotations(
 }
 
 /// Returns constructor names from structured `Derive` positional values.
-fn derive_member_names(values: &[AnnotationValueIr]) -> Vec<&dust_ir::NameIr> {
+pub(crate) fn derive_member_names(values: &[AnnotationValueIr]) -> Vec<&dust_ir::NameIr> {
     values
         .iter()
         .flat_map(|value| match value {
