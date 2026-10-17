@@ -66,7 +66,7 @@ fn lexical_scopes_keep_constants_members_and_generic_binders_separate() {
 #[test]
 fn constant_initializers_retain_callee_arguments_references_and_opaque_shapes() {
     let parsed = parse(
-        "class Markers { static const first = foreign /* q */ . Marker<int>('key', flag: true), alias = Markers /* q */ . first, opaque = true ? first : alias; }",
+        "class Markers { static const first = foreign /* q */ . /* selector */ Marker<int>('key', flag: true), alias = Markers /* q */ . first, opaque = true ? first : alias; }",
     );
     let declarations = &parsed.lexical_scopes[1].declarations;
     assert_eq!(declarations.len(), 3);
@@ -88,7 +88,7 @@ fn constant_initializers_retain_callee_arguments_references_and_opaque_shapes() 
     assert_eq!(arguments.named[0].value_source, "true");
     assert_eq!(
         first.source,
-        "foreign /* q */ . Marker<int>('key', flag: true)"
+        "foreign /* q */ . /* selector */ Marker<int>('key', flag: true)"
     );
     let Declaration::Constant(Some(alias)) = &declarations[1].kind else {
         panic!("reference initializer missing")

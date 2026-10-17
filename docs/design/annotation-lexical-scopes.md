@@ -100,6 +100,12 @@ source read sets and cache/watch invalidation, including constants defined in
 handwritten parts. No general constant evaluator or generated-source provenance
 is introduced.
 
+Conditional alternatives preserve concrete provenance failures and their original
+declaration labels before comparing ownership. A missing member in one branch
+does not hide another branch's failure. Otherwise, differing member availability
+produces a target-dependent ownership error labeling the qualifying declarations;
+the build host never chooses a branch.
+
 Generated consumer probes compile and execute on minimum/latest Dart and latest
 primary syntax with identical expected output and complete generated-line
 coverage. Build/check/watch regressions preserve prior successful output/cache

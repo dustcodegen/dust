@@ -10,6 +10,8 @@ use dust_text::{FileId, TextRange};
 
 use crate::SymbolCatalog;
 
+/// Shared conditional ownership and concrete failure precedence.
+mod agreement;
 /// Parser facts become immutable graph inputs with caller-resolved identities.
 mod input;
 /// Source-position-aware lexical shadows and constant identity.
@@ -21,6 +23,7 @@ mod model;
 /// Declaration-origin ownership and transparent alias binding.
 mod owner;
 
+use agreement::agree;
 use model::*;
 
 /// Why a written annotation name cannot be safely bound.

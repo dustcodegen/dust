@@ -4,6 +4,15 @@ use dust_text::TextRange;
 use crate::support::parse;
 
 #[test]
+fn bodyless_extensions_do_not_invent_a_member_scope() {
+    let parsed = parse(313, "extension Empty on int;");
+    assert_eq!(parsed.diagnostics, []);
+    assert_eq!(parsed.library.lexical_scopes.len(), 1);
+    assert_eq!(parsed.library.lexical_scopes[0].kind, Scope::Library);
+    assert_eq!(parsed.library.lexical_scopes[0].declarations, []);
+}
+
+#[test]
 fn primary_headers_and_body_metadata_share_a_scope_but_outer_metadata_does_not() {
     let source = "@foreign() class Model(@local final int value) { static const local = Object(); @local void call(@local int value) {} }";
     let parsed = parse(313, source);
@@ -42,5 +51,19 @@ fn shorthand_callback_declaring_parameters_keep_their_member_names() {
             .map(|decl| decl.name.name.as_str())
             .collect::<Vec<_>>(),
         ["marker", "call"]
+    );
+}
+
+#[test]
+fn primary_representation_parameters_retain_members_without_a_direct_name_field() {
+    let parsed = parse(313, "extension type Token({required final int value}) {}");
+    assert_eq!(parsed.diagnostics, []);
+    assert_eq!(
+        parsed.library.lexical_scopes[1]
+            .declarations
+            .iter()
+            .map(|decl| decl.name.name.as_str())
+            .collect::<Vec<_>>(),
+        ["value"]
     );
 }

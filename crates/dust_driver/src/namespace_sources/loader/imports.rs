@@ -1,5 +1,9 @@
 use super::*;
 
+/// Part requests must promote their actual owner, never imports on a part.
+#[cfg(test)]
+mod tests;
+
 impl Loader<'_> {
     /// Promote only namespaces actually queried while resolving constant provenance.
     pub(in crate::namespace_sources) fn require_lexical_imports(

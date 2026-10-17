@@ -22,6 +22,11 @@ fn qualified_shadows_and_unresolved_constant_types_cannot_use_import_fallback() 
             "lexical annotation constant has unknown provenance; imported-name fallback is forbidden",
         ),
         (
+            "class Api { static const GET = Alias.named(); @GET void call() {} } typedef Alias = Missing;",
+            "GET",
+            "lexical annotation constant has unknown provenance; imported-name fallback is forbidden",
+        ),
+        (
             "class Api { @Holder.GET void call() {} } class Holder {}",
             "Holder.GET",
             "annotation member `GET` is not declared by `Holder`",
@@ -123,14 +128,7 @@ fn conditional_constant_values_require_target_independent_ownership() {
             if right == "Foreign()" {
                 assert_eq!(result, NamespaceBinding::Foreign);
             } else {
-                rejection(
-                    result,
-                    if qualified {
-                        Failure::Conditional
-                    } else {
-                        Failure::MissingInput
-                    },
-                );
+                rejection(result, Failure::MissingInput);
             }
         }
     }
@@ -238,5 +236,24 @@ fn incomplete_library_type_aliases_retain_the_explicit_legacy_unknown_contract()
     assert_eq!(
         graph.scope(APP).bind("Holder.marker", &catalog(false)),
         NamespaceBinding::Unknown
+    );
+}
+
+#[test]
+fn missing_owner_namespace_is_not_rescued_by_a_present_metadata_source() {
+    let mut graph = graph();
+    let source = "class Api { @Holder.marker void call() {} }";
+    add(&mut graph, 3, APP, source);
+    let error = rejection(
+        graph.scope("package:missing/root.dart").bind_at(
+            "Holder.marker",
+            &catalog(false),
+            use_span(source),
+        ),
+        Failure::MissingInput,
+    );
+    assert_eq!(
+        error.message,
+        "missing required namespace input `package:missing/root.dart`"
     );
 }

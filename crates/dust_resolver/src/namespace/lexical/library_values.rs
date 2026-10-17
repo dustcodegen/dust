@@ -45,19 +45,11 @@ impl NamespaceGraph {
         if !inspected {
             return None;
         }
-        if let Some(error) = bindings.iter().find(|binding| matches!(binding, NamespaceBinding::Rejected { kind, .. } if *kind != NamespaceFailureKind::Hidden)) { return Some(error.clone()); }
-        let first = bindings.first()?;
-        Some(if bindings.iter().all(|binding| binding == first) {
-            first.clone()
-        } else {
-            rejected(
-                NamespaceFailureKind::Conditional,
-                format!("annotation `{name}` has target-dependent conditional ownership"),
-                worlds
-                    .iter()
-                    .flat_map(|world| world.declarations.iter().map(Declaration::label))
-                    .collect(),
-            )
+        agree(name, &bindings, || {
+            worlds
+                .iter()
+                .flat_map(|world| world.declarations.iter().map(Declaration::label))
+                .collect()
         })
     }
 }

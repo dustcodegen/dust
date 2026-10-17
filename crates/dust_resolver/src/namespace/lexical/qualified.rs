@@ -27,14 +27,16 @@ impl NamespaceGraph {
             Err(error) => return Some(error),
         };
         let mut results = Vec::new();
-        for owner in types {
-            let Some(value) = owner
+        for owner in &types {
+            let result = if let Some(value) = owner
                 .scope
                 .declarations
                 .iter()
                 .find(|value| value.name.name == member)
-            else {
-                return Some(rejected(
+            {
+                self.constant(&owner.uri, owner.unit, value, catalog, active)
+            } else {
+                rejected(
                     NamespaceFailureKind::Hidden,
                     format!("annotation member `{member}` is not declared by `{type_name}`"),
                     vec![SourceLabel::new(
@@ -42,19 +44,21 @@ impl NamespaceGraph {
                         owner.scope.span,
                         "qualifying type declared here",
                     )],
-                ));
+                )
             };
-            results.push(self.constant(&owner.uri, owner.unit, value, catalog, active));
+            results.push(result);
         }
-        let first = results.first()?;
-        Some(if results.iter().all(|result| result == first) {
-            first.clone()
-        } else {
-            rejected(
-                NamespaceFailureKind::Conditional,
-                format!("annotation `{name}` has target-dependent conditional ownership"),
-                Vec::new(),
-            )
+        agree(name, &results, || {
+            types
+                .iter()
+                .map(|owner| {
+                    SourceLabel::new(
+                        owner.unit.file_id,
+                        owner.scope.span,
+                        "qualifying type declared here",
+                    )
+                })
+                .collect()
         })
     }
 
