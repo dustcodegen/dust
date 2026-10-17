@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use dust_dart_emit::named_argument_name;
+use dust_dart_emit::{named_argument_name, render_class_type};
 use dust_ir::{ClassIr, ConstructorIr, ParamKind, SerdeFieldConfigIr};
 
 /// Dart's standard formatter line width.
@@ -94,8 +94,8 @@ pub(crate) fn render_constructor_call(
     }
 
     let ctor = match &constructor.name {
-        Some(name) => format!("{}.{}", class.name, name),
-        None => class.name.clone(),
+        Some(name) => format!("{}.{}", render_class_type(class), name),
+        None => render_class_type(class),
     };
 
     let mut args = positional;

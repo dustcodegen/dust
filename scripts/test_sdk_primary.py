@@ -59,13 +59,16 @@ class PrimarySdkTests(unittest.TestCase):
                     patch("sdk_compat.check_generic_types", return_value=["checked"]) as negatives, \
                     patch("sdk_compat.check_generic_analysis") as strict, \
                     patch("sdk_compat.check_generic_names") as names, \
-                    patch("sdk_compat.check_generic_validation") as validation:
+                    patch("sdk_compat.check_generic_validation") as validation, \
+                    patch("sdk_compat.check_generic_serde") as serde:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
             negatives.assert_called_once()
             strict.assert_called_once()
             names.assert_called_once()
             validation.assert_called_once()
+            serde.assert_called_once()
+            self.assertEqual(serde.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(names.call_args.kwargs, {"primary": True})
             self.assertEqual(negatives.call_args.args[1:5],
@@ -182,9 +185,12 @@ class PrimarySdkTests(unittest.TestCase):
                         check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
                     self.assertFalse(any("analyze" in call or "test" in call for call in calls))
                     continue
-                with patch("sdk_compat.check_generic_validation") as validation:
+                with patch("sdk_compat.check_generic_validation") as validation, \
+                        patch("sdk_compat.check_generic_serde") as serde:
                     generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
                 validation.assert_called_once()
+                serde.assert_called_once()
+                self.assertEqual(serde.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(len(generated), 7)
                 self.assertEqual(calls[-2], [*flutter, "analyze", "--no-pub", "--fatal-infos"])

@@ -264,10 +264,25 @@ collection elements/values. Such fields require explicit mapping under the
 existing codec contract; no conversion is inferred from bounds. The diagnostic
 retains the field source location, and rejected input preserves prior output and
 cache. Qualified external names and concrete fields are not blanket-rejected.
-This guard is [#129](https://github.com/dustcodegen/dust/issues/129), not generic
-helper support: [#128](https://github.com/dustcodegen/dust/issues/128) separately
-tracks raw helpers erasing chosen type arguments, even for a phantom parameter
-with concrete fields. Generic SerDe is not production-ready.
+This guard is [#129](https://github.com/dustcodegen/dust/issues/129), separate from
+typed helper emission under [#128](https://github.com/dustcodegen/dust/issues/128).
+Ordinary generic SerDe helpers, wrappers and public directional codecs now retain
+class parameters/bounds, applied receiver/result types and constructor arguments.
+Shared name allocation protects core/runtime references and generated locals
+without renaming source binders. Where private JSON aliases would leak into a
+public signature, a private implementation base preserves the public codec API.
+Non-generic output remains byte-identical. Three complete generated snapshots
+cover concrete fields, collections, codecs, defaults, strict keys and captured
+names; real traditional/primary SDK probes execute runtime contracts and reject
+four wrong receiver/result/bound uses per consumer.
+
+This does not establish general generic SerDe readiness. Applied superclass facts
+and inherited field substitution remain in
+[#133](https://github.com/dustcodegen/dust/issues/133); structured redirect targets,
+generic sealed dispatch and synthesized variants remain in
+[#134](https://github.com/dustcodegen/dust/issues/134). Their structured-facts design
+is approved: preserve source binders/spans, substitute proven types structurally,
+and reject opaque unsupported substitutions without source-string rewriting.
 
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /

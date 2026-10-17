@@ -1,0 +1,94 @@
+import 'package:dust_dart/serde.dart';
+
+part 'serde_values.g.dart';
+
+/// JSON object used by this consumer.
+typedef Json = Map<String, Object?>;
+
+/// Concrete scalar and collection mappings keep the owning phantom argument.
+@Derive([Serialize(), Deserialize()])
+@SerDe(disallowUnrecognizedKeys: true)
+class Values<T> with _$Values<T> {
+  /// Creates one JSON value.
+  const Values(
+    this.date,
+    this.numbers,
+    this.nested,
+    this.total,
+    this.any, {
+    required this.flag,
+    this.enabled = true,
+  });
+
+  /// Decodes using the helper's inferred arguments.
+  factory Values.fromJson(Json json) => _$ValuesDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Values.alias(Json json) => _$ValuesFromJson<T>(json);
+
+  /// Date value, with JSON nullability owned by Dust.
+  @SerDe(aliases: ['legacyDate'])
+  final DateTime? date;
+
+  /// Concrete integer set.
+  final Set<int> numbers;
+
+  /// Nested concrete JSON collections.
+  final Map<String, List<int>> nested;
+
+  /// Concrete floating-point value.
+  final double total;
+
+  /// Nullable JSON value.
+  final Object? any;
+
+  /// Boolean with a declared default.
+  @SerDe(defaultValue: false)
+  final bool flag;
+
+  /// Boolean with a true default and a legacy key.
+  @SerDe(defaultValue: true, aliases: ['legacyEnabled'])
+  final bool enabled;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$ValuesToJson<T>(this);
+}
+
+/// Converts concrete dates to epoch milliseconds.
+class EpochCodec implements SerDeCodec<DateTime, int> {
+  /// Creates one JSON value.
+  const EpochCodec();
+  @override
+  int serialize(DateTime value) => value.millisecondsSinceEpoch;
+  @override
+  DateTime deserialize(int value) =>
+      DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+}
+
+// The generated JSON input must not capture this actual codec reference.
+/// Deliberately shares the usual generated input name.
+const json = EpochCodec();
+
+/// Concrete custom codecs must not be captured by generated JSON locals.
+@Derive([Serialize(), Deserialize()])
+class WithCodec<T> with _$WithCodec<T> {
+  /// Creates one JSON value.
+  const WithCodec(this.date, this.optional);
+
+  /// Decodes using the helper's inferred arguments.
+  factory WithCodec.fromJson(Json data) => _$WithCodecDeserialize(data);
+
+  /// Decodes through the explicitly typed alias.
+  factory WithCodec.alias(Json data) => _$WithCodecFromJson<T>(data);
+
+  /// Date value, with JSON nullability owned by Dust.
+  @SerDe(using: json)
+  final DateTime date;
+
+  /// Optional custom-coded date.
+  @SerDe(using: json)
+  final DateTime? optional;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$WithCodecToJson<T>(this);
+}

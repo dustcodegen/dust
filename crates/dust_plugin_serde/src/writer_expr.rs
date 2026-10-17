@@ -1,13 +1,17 @@
-use dust_dart_emit::{
-    DART_BIG_INT, DART_BOOL, DART_DATE_TIME, DART_INT, DART_LIST, DART_MAP, DART_NUM, DART_OBJECT,
-    DART_SET, DART_STRING, DART_URI, OBJECT_NULLABLE_TYPES,
-};
-use dust_ir::{BuiltinType, FieldIr, TypeIr};
+use dust_ir::{FieldIr, TypeIr};
 
-use crate::{
-    enum_codecs::EnumCodecs,
-    writer_type::{access_receiver, non_null_encode_expr, non_nullable},
-};
+use crate::{enum_codecs::EnumCodecs, names::JsonNames};
+
+/// Custom codec conversion expressions.
+mod codec;
+/// Structural JSON decoding expressions.
+mod decode;
+/// Structural JSON encoding expressions.
+mod encode;
+
+use codec::{decode_with_codec, encode_with_codec};
+use decode::decode_expr;
+use encode::encode_expr;
 
 /// Renders a JSON encode expression for a class field.
 pub(crate) fn encode_field_expr(
@@ -15,40 +19,22 @@ pub(crate) fn encode_field_expr(
     field: &FieldIr,
     serializable_classes: &[&str],
     serializable_enums: EnumCodecs<'_>,
+    names: &JsonNames,
 ) -> String {
     match field
         .serde
         .as_ref()
         .and_then(|serde| serde.codec_source.as_deref())
     {
-        Some(codec) => encode_with_codec(expr, &field.ty, codec),
-        None => encode_expr(expr, &field.ty, serializable_classes, serializable_enums),
-    }
-}
-
-/// Renders a JSON encode expression for a type.
-pub(crate) fn encode_expr(
-    expr: &str,
-    ty: &TypeIr,
-    serializable_classes: &[&str],
-    serializable_enums: EnumCodecs<'_>,
-) -> String {
-    if nullable_identity_encode(ty) {
-        return expr.to_owned();
-    }
-
-    if ty.is_nullable() {
-        let inner = non_nullable(ty);
-        let encoded = encode_non_nullable_expr(
-            &non_null_encode_expr(expr),
-            &inner,
+        Some(codec) => encode_with_codec(expr, &field.ty, codec, names),
+        None => encode_expr(
+            expr,
+            &field.ty,
             serializable_classes,
             serializable_enums,
-        );
-        return format!("{expr} == null\n    ? null\n    : {encoded}");
+            names,
+        ),
     }
-
-    encode_non_nullable_expr(expr, ty, serializable_classes, serializable_enums)
 }
 
 /// Renders a JSON decode expression for a class field.
@@ -58,205 +44,23 @@ pub(crate) fn decode_field_expr(
     field: &FieldIr,
     deserializable_classes: &[&str],
     deserializable_enums: EnumCodecs<'_>,
+    names: &JsonNames,
 ) -> String {
     match field
         .serde
         .as_ref()
         .and_then(|serde| serde.codec_source.as_deref())
     {
-        Some(codec) => decode_with_codec(raw, key, &field.ty, codec),
+        Some(codec) => decode_with_codec(raw, key, &field.ty, codec, names),
         None => decode_expr(
             raw,
             key,
             &field.ty,
             deserializable_classes,
             deserializable_enums,
+            names,
         ),
     }
-}
-
-/// Renders a JSON decode expression for a type.
-pub(crate) fn decode_expr(
-    raw: &str,
-    key: &str,
-    ty: &TypeIr,
-    deserializable_classes: &[&str],
-    deserializable_enums: EnumCodecs<'_>,
-) -> String {
-    if ty.is_nullable() {
-        let inner = non_nullable(ty);
-        let decoded = decode_non_nullable_expr(
-            raw,
-            key,
-            &inner,
-            deserializable_classes,
-            deserializable_enums,
-        );
-        return format!("{raw} == null\n    ? null\n    : {decoded}");
-    }
-
-    decode_non_nullable_expr(raw, key, ty, deserializable_classes, deserializable_enums)
-}
-
-/// Returns true when nullable values can be serialized unchanged.
-fn nullable_identity_encode(ty: &TypeIr) -> bool {
-    matches!(ty, TypeIr::Builtin { nullable: true, .. } | TypeIr::Dynamic)
-}
-
-/// Renders a JSON encode expression for a non-nullable value.
-fn encode_non_nullable_expr(
-    expr: &str,
-    ty: &TypeIr,
-    serializable_classes: &[&str],
-    serializable_enums: EnumCodecs<'_>,
-) -> String {
-    match ty {
-        TypeIr::Builtin { .. } | TypeIr::Dynamic | TypeIr::Unknown => expr.to_owned(),
-        TypeIr::Function { .. } | TypeIr::Record { .. } => expr.to_owned(),
-        TypeIr::Named { name, .. } if name.as_ref() == DART_DATE_TIME => {
-            format!("{expr}.toIso8601String()")
-        }
-        TypeIr::Named { name, .. }
-            if name.as_ref() == DART_URI || name.as_ref() == DART_BIG_INT =>
-        {
-            format!("{expr}.toString()")
-        }
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_LIST => format!(
-            "{expr}\n    .map((item) => {})\n    .toList()",
-            encode_expr("item", &args[0], serializable_classes, serializable_enums)
-        ),
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_SET => format!(
-            "{expr}\n    .map((item) => {})\n    .toList()",
-            encode_expr("item", &args[0], serializable_classes, serializable_enums)
-        ),
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_MAP => {
-            let value_expr =
-                encode_expr("value", &args[1], serializable_classes, serializable_enums);
-            if value_expr.contains('\n') {
-                format!(
-                    "{expr}\n    .map(\n      (key, value) => MapEntry(\n        key,\n{},\n      ),\n    )",
-                    indent_expr(&value_expr, 8)
-                )
-            } else {
-                format!("{expr}\n    .map((key, value) => MapEntry(key, {value_expr}))")
-            }
-        }
-        TypeIr::Named { name, .. } => {
-            if contains_symbol(serializable_classes, name.as_ref()) {
-                format!("_${name}Serialize({expr})")
-            } else if let Some(encoded) = serializable_enums.encode(name, expr) {
-                encoded
-            } else {
-                format!("{expr}.toJson()")
-            }
-        }
-    }
-}
-
-/// Renders a JSON decode expression for a non-nullable value.
-fn decode_non_nullable_expr(
-    raw: &str,
-    key: &str,
-    ty: &TypeIr,
-    deserializable_classes: &[&str],
-    deserializable_enums: EnumCodecs<'_>,
-) -> String {
-    match ty {
-        TypeIr::Builtin { kind, .. } => match kind {
-            BuiltinType::String => {
-                format!("JsonHelper.as<{DART_STRING}>({raw}, {key}, '{DART_STRING}')")
-            }
-            BuiltinType::Int => format!("JsonHelper.as<{DART_INT}>({raw}, {key}, '{DART_INT}')"),
-            BuiltinType::Bool => {
-                format!("JsonHelper.as<{DART_BOOL}>({raw}, {key}, '{DART_BOOL}')")
-            }
-            BuiltinType::Double => {
-                format!("JsonHelper.as<{DART_NUM}>({raw}, {key}, '{DART_NUM}').toDouble()")
-            }
-            BuiltinType::Num => {
-                format!("JsonHelper.as<{DART_NUM}>({raw}, {key}, '{DART_NUM}')")
-            }
-            BuiltinType::Object => {
-                format!("JsonHelper.as<{DART_OBJECT}>({raw}, {key}, '{DART_OBJECT}')")
-            }
-        },
-        TypeIr::Dynamic | TypeIr::Unknown => raw.to_owned(),
-        TypeIr::Function { .. } | TypeIr::Record { .. } => raw.to_owned(),
-        TypeIr::Named { name, .. } if name.as_ref() == DART_DATE_TIME => {
-            format!("JsonHelper.asDateTime({raw}, {key})")
-        }
-        TypeIr::Named { name, .. } if name.as_ref() == DART_URI => {
-            format!("JsonHelper.asUri({raw}, {key})")
-        }
-        TypeIr::Named { name, .. } if name.as_ref() == DART_BIG_INT => {
-            format!("JsonHelper.asBigInt({raw}, {key})")
-        }
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_LIST => {
-            let item_expr = decode_expr(
-                "item",
-                "itemKey",
-                &args[0],
-                deserializable_classes,
-                deserializable_enums,
-            );
-            decode_collection_expr("decodeList", raw, key, "item", "itemKey", &item_expr)
-        }
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_SET => {
-            let item_expr = decode_expr(
-                "item",
-                "itemKey",
-                &args[0],
-                deserializable_classes,
-                deserializable_enums,
-            );
-            decode_collection_expr("decodeSet", raw, key, "item", "itemKey", &item_expr)
-        }
-        TypeIr::Named { name, args, .. } if name.as_ref() == DART_MAP => {
-            let value_expr = decode_expr(
-                "value",
-                "valueKey",
-                &args[1],
-                deserializable_classes,
-                deserializable_enums,
-            );
-            decode_collection_expr("decodeMap", raw, key, "value", "valueKey", &value_expr)
-        }
-        TypeIr::Named { name, .. } => {
-            if contains_symbol(deserializable_classes, name.as_ref()) {
-                format!("_${name}Deserialize(JsonHelper.asMap({raw}, {key}))")
-            } else if let Some(decoded) = deserializable_enums.decode(name, raw, key) {
-                decoded
-            } else {
-                format!("{name}.fromJson(JsonHelper.asMap({raw}, {key}))")
-            }
-        }
-    }
-}
-
-/// Renders a path-aware collection decode expression.
-fn decode_collection_expr(
-    helper: &str,
-    raw: &str,
-    key: &str,
-    value_name: &str,
-    key_name: &str,
-    value_expr: &str,
-) -> String {
-    if value_expr.contains('\n') {
-        format!(
-            "JsonHelper.{helper}({raw}, {key},\n    ({value_name}, {key_name}) =>\n{})",
-            indent_expr(value_expr, 8)
-        )
-    } else {
-        format!(
-            "JsonHelper.{helper}({raw}, {key},\n    ({value_name}, {key_name}) => {value_expr})"
-        )
-    }
-}
-
-/// Returns true when a generated helper exists for a symbol name.
-fn contains_symbol(symbols: &[&str], name: &str) -> bool {
-    symbols.contains(&name)
 }
 
 /// Indents a multiline expression by a fixed number of spaces.
@@ -266,29 +70,4 @@ fn indent_expr(expr: &str, spaces: usize) -> String {
         .map(|line| format!("{pad}{line}"))
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-/// Renders JSON encoding through a user-provided codec.
-fn encode_with_codec(expr: &str, ty: &TypeIr, codec: &str) -> String {
-    let codec = access_receiver(codec);
-    let value_ty = OBJECT_NULLABLE_TYPES.render_non_nullable(ty);
-    if ty.is_nullable() {
-        let encoded = format!("JsonHelper.encodeWithCodec<{value_ty}, Object?>({codec}, {expr}!)");
-        return format!("{expr} == null\n    ? null\n    : {encoded}");
-    }
-
-    format!("JsonHelper.encodeWithCodec<{value_ty}, Object?>({codec}, {expr})")
-}
-
-/// Renders JSON decoding through a user-provided codec.
-fn decode_with_codec(raw: &str, key: &str, ty: &TypeIr, codec: &str) -> String {
-    let codec = access_receiver(codec);
-    let value_ty = OBJECT_NULLABLE_TYPES.render_non_nullable(ty);
-    if ty.is_nullable() {
-        let decoded =
-            format!("JsonHelper.decodeWithCodec<{value_ty}, Object?>({codec}, {raw}, {key})");
-        return format!("{raw} == null\n    ? null\n    : {decoded}");
-    }
-
-    format!("JsonHelper.decodeWithCodec<{value_ty}, Object?>({codec}, {raw}, {key})")
 }
