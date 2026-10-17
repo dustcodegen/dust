@@ -23,6 +23,8 @@ mod input_failures;
 mod lexical_shadowing;
 #[path = "production_namespaces/metadata_sites.rs"]
 mod metadata_sites;
+#[path = "production_namespaces/mixin_applications.rs"]
+mod mixin_applications;
 #[path = "production_namespaces/namespace_diagnostics.rs"]
 mod namespace_diagnostics;
 #[path = "production_namespaces/part_paths.rs"]

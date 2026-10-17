@@ -75,6 +75,12 @@ acceptance checks still need complete validation.
 
 Remaining gaps in this draft:
 
+- Named mixin applications (`class Alias = Base with Mix;`) retain declaration
+  identity for annotation ownership, but Dust generation for those classes
+  remains unsupported. Their implicit forwarding constructors are not ordinary
+  primary or body constructors. Use an ordinary class with explicit constructors
+  for generated models; [#155](https://github.com/dustcodegen/dust/issues/155)
+  tracks the namespace and explicit-diagnostic boundary.
 - [Shorthand callback declaring parameters (#92)](https://github.com/dustcodegen/dust/issues/92),
   such as `final bool predicate(String value)`, currently lose the callable
   signature and can produce invalid `copyWith` code. The explicit

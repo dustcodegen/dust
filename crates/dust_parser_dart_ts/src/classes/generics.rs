@@ -36,7 +36,17 @@ fn extract_type_parameter(
     let name = direct_named_child(parameter, "type_identifier")
         .or_else(|| direct_named_child(parameter, "identifier"))?;
     let bound = direct_named_child(parameter, "type_bound")
-        .and_then(|bound| extract_type_before(bound, bound.end_byte(), source));
+        .and_then(|bound| extract_type_before(bound, bound.end_byte(), source))
+        .or_else(|| {
+            let mut cursor = parameter.walk();
+            parameter
+                .children(&mut cursor)
+                .skip_while(|child| child.kind() != "extends")
+                .find(|child| {
+                    child.is_named() && !matches!(child.kind(), "comment" | "documentation_comment")
+                })
+                .and_then(|bound| extract_type_node(bound, parameter.end_byte(), source))
+        });
     Some(ParsedTypeParamSurface {
         name: node_text(name, source),
         name_span: text_range(name),
@@ -45,15 +55,18 @@ fn extract_type_parameter(
     })
 }
 
-/// Extracts only an actual `extends` application, excluding mixins and trailing trivia.
+/// Extracts the written superclass, including a named mixin application's base.
 pub(super) fn extract_class_superclass(
     class: Node<'_>,
     source: &SourceText,
 ) -> Option<ParsedTypeSurface> {
-    let superclass = class.child_by_field_name("superclass")?;
-    if !has_direct_child_kind(superclass, "extends") {
-        return None;
-    }
+    let superclass = if class.kind() == "mixin_application_class" {
+        direct_named_child(class, "mixin_application")?
+    } else {
+        class
+            .child_by_field_name("superclass")
+            .filter(|superclass| has_direct_child_kind(*superclass, "extends"))?
+    };
     let mut cursor = superclass.walk();
     let end = superclass
         .named_children(&mut cursor)
@@ -70,6 +83,10 @@ pub(super) fn extract_class_mixins(class: Node<'_>, source: &SourceText) -> Vec<
         .child_by_field_name("superclass")
         .and_then(|superclass| find_first_descendant(superclass, "mixins"))
         .or_else(|| direct_named_child(class, "mixins"))
+        .or_else(|| {
+            direct_named_child(class, "mixin_application")
+                .and_then(|application| direct_named_child(application, "mixins"))
+        })
     else {
         return Vec::new();
     };

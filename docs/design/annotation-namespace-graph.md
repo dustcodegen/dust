@@ -57,6 +57,11 @@ lowering ownership errors prevent IR from reaching emission.
   Transparent named-type aliases can forward ownership. Opaque constants,
   unsupported alias facts and cyclic alias provenance stay unknown, not foreign.
   Known foreign declarations never fall back to a registered same-name owner.
+- Named mixin-application classes retain their local declaration identity and
+  structured generic/base/mixin facts. They shadow imported annotation spellings
+  like ordinary declarations. This does not enable derivation: the driver and
+  derive/serde validators reject unsupported generation rather than inventing
+  implicit forwarding constructors (#155).
 - Only genuinely unknown provenance allows unique eligible legacy lookup. A
   nested derive trait considers trait eligibility for that exact alias, not a
   role registered under another alias. Overlapping eligible owners fail clearly.

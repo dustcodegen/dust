@@ -9,6 +9,44 @@ use dust_plugin_serde::register_plugin;
 use dust_text::{FileId, TextRange};
 
 #[test]
+fn named_mixin_applications_reject_serde_but_allow_unowned_declarations() {
+    let plugin = register_plugin();
+    for (kind, name) in [
+        (ClassKindIr::MixinClass, "mixin class"),
+        (
+            ClassKindIr::MixinApplicationClass,
+            "named mixin-application class",
+        ),
+    ] {
+        for traits in [
+            vec![],
+            vec!["foreign::Serialize"],
+            vec!["dust_dart::Serialize"],
+            vec!["dust_dart::Deserialize"],
+        ] {
+            let mut target = class("Alias", vec![], vec![], &traits);
+            target.kind = kind;
+            let errors = plugin.validate(&library(vec![target], vec![]));
+            let messages = errors
+                .into_iter()
+                .map(|error| error.message)
+                .collect::<Vec<_>>();
+            let expected = if traits
+                .first()
+                .is_some_and(|symbol| symbol.starts_with("dust_dart::"))
+            {
+                vec![format!(
+                    "Dust serde generation does not support `{name}` targets like `Alias`"
+                )]
+            } else {
+                vec![]
+            };
+            assert_eq!(messages, expected);
+        }
+    }
+}
+
+#[test]
 fn rejects_record_fields_and_generic_named_models() {
     let plugin = register_plugin();
     let record_type = TypeIr::record("({String id})");

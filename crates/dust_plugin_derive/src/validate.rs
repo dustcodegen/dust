@@ -26,11 +26,18 @@ pub(crate) fn validate_library_with_plan(
 fn validate_library_inner(library: &DartFileIr, emit_form_helpers: bool) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     for class in &library.classes {
-        if matches!(class.kind, ClassKindIr::MixinClass)
-            && CLAIMED_TRAITS.iter().any(|symbol| has_trait(class, symbol))
+        if matches!(
+            class.kind,
+            ClassKindIr::MixinClass | ClassKindIr::MixinApplicationClass
+        ) && CLAIMED_TRAITS.iter().any(|symbol| has_trait(class, symbol))
         {
+            let kind = if class.kind == ClassKindIr::MixinClass {
+                "mixin class"
+            } else {
+                "named mixin-application class"
+            };
             diagnostics.push(Diagnostic::error(format!(
-                "Dust derive generation does not support `mixin class` targets like `{}`",
+                "Dust derive generation does not support `{kind}` targets like `{}`",
                 class.name
             )));
             continue;

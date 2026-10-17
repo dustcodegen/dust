@@ -19,6 +19,7 @@ mod primary;
 #[cfg(test)]
 mod parity_tests;
 
+pub(crate) use class_decl::class_header;
 pub(crate) use members::annotated_members;
 pub(crate) use parse_text::parameter_name_node;
 

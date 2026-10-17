@@ -44,6 +44,15 @@ fn assert_parity(case: &str, text: &str, count: usize) {
 }
 
 #[test]
+fn named_mixin_applications_keep_complete_header_facts() {
+    assert_parity(
+        "named-mixins",
+        "class Base<T> {} mixin Mix<T> {} @Tag() abstract class Alias<T /* binder */ extends /* bound */ Object> = Base<List<T>> with Mix<T>;",
+        2,
+    );
+}
+
+#[test]
 fn traditional_classes_fields_and_constructors() {
     assert_parity(
         "traditional",

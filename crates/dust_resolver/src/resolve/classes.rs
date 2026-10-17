@@ -50,6 +50,7 @@ pub(super) fn resolve_class(
             ParsedClassKind::Class => ClassKindIr::Class,
             ParsedClassKind::SealedClass => ClassKindIr::SealedClass,
             ParsedClassKind::MixinClass => ClassKindIr::MixinClass,
+            ParsedClassKind::MixinApplicationClass => ClassKindIr::MixinApplicationClass,
         },
         name: class.name.clone(),
         type_parameters: class.type_parameters.clone(),

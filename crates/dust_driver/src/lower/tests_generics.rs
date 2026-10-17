@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::lower_library;
-use dust_ir::{MixinApplicationIr, NameIr, SpanIr, TypeIr, TypeParamIr};
+use dust_ir::{ClassKindIr, MixinApplicationIr, NameIr, SpanIr, SuperclassIr, TypeIr, TypeParamIr};
 use dust_parser_dart::{ParseBackend, ParseOptions};
 use dust_parser_dart_ts::TreeSitterDartBackend;
 use dust_resolver::{SymbolCatalog, resolve_library};
@@ -32,6 +32,38 @@ fn span(text: &str, fragment: &str) -> SpanIr {
         FileId::new(93),
         TextRange::new(start, start + fragment.len() as u32),
     )
+}
+
+#[test]
+fn named_mixin_applications_keep_typed_header_identity_without_inventing_constructors() {
+    let text = "class Alias<T extends Object> = p.Base<List<T>> with p.Mix<T>;";
+    let file = lower(text);
+    let class = &file.classes[0];
+    assert_eq!(class.kind, ClassKindIr::MixinApplicationClass);
+    assert_eq!(class.name, "Alias");
+    assert_eq!(class.type_parameters[0].name.source, "T");
+    assert_eq!(class.type_parameters[0].bound, Some(TypeIr::object()));
+    assert_eq!(class.type_parameters[0].name.span, span(text, "T"));
+    assert_eq!(
+        class.type_parameters[0].span,
+        span(text, "T extends Object")
+    );
+    assert_eq!(
+        class.superclass,
+        Some(SuperclassIr {
+            ty: TypeIr::generic("p.Base", vec![TypeIr::list_of(TypeIr::named("T"))]),
+            span: span(text, "p.Base<List<T>>"),
+        })
+    );
+    assert_eq!(
+        class.mixins,
+        [MixinApplicationIr {
+            ty: TypeIr::generic("p.Mix", vec![TypeIr::named("T")]),
+            span: span(text, "p.Mix<T>"),
+        }]
+    );
+    assert_eq!(class.constructors, []);
+    assert_eq!(class.fields, []);
 }
 
 #[test]
