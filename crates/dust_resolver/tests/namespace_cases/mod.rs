@@ -11,6 +11,7 @@ mod mixin_applications;
 mod parts;
 mod roles;
 mod scoped;
+mod server_surface;
 mod surfaces;
 mod typed_values;
 
