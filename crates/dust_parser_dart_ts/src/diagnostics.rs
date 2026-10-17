@@ -5,6 +5,9 @@ use tree_sitter::{Node, Tree};
 use crate::language_gates::{FeatureOccurrence, record_syntax_occurrence};
 use crate::syntax::{direct_named_child, node_text, text_range};
 
+/// Dependency method/function defaults, not constructor or metadata defaults.
+mod defaults;
+
 /// Two diagnostic projections of the same immutable tree and source facts.
 #[derive(Default)]
 pub(crate) struct DiagnosticViews {
@@ -60,7 +63,9 @@ fn collect_error_diagnostics(
                 .with_note("Check this file with `dart analyze`. Dust's bundled parser accepts this syntax, but code generation is not implemented yet.")
                 .with_note(guidance);
         if !matches!(feature, UnsupportedFeature::DotShorthands)
-            || !(is_body_only_dot(node) || is_instance_initializer_dot(node))
+            || !(is_body_only_dot(node)
+                || is_instance_initializer_dot(node)
+                || defaults::is_callable_default_dot(node))
         {
             views.namespace_diagnostics.push(diagnostic.clone());
         }

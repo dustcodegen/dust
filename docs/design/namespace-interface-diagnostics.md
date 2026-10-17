@@ -30,7 +30,7 @@ by message or label text. The namespace projection must retain:
 
 - Every actual syntax error or missing token, including inside executable bodies.
 - Every language-version error, even in bodies not used for ownership.
-- Unsupported generation forms in declarations, metadata, parameter defaults,
+- Unsupported generation forms in declarations, metadata, constructor defaults,
   static/top-level initializers and aliases until their interface facts are proven.
 - Unsupported forms whose location or effect on interface extraction is unknown.
 
@@ -42,7 +42,18 @@ excludes valid dot shorthands inside non-static, non-const instance-field
 initializer expressions. The AST must identify the actual initializer after `=`
 inside a field declaration; a surrounding initializer cannot excuse nested
 metadata or parameter defaults. Full generation diagnostics stay unchanged.
-Neither exception excuses concise constructor signatures, annotations, other
+The approved [#148](https://github.com/dustcodegen/dust/issues/148) follow-up also
+excludes valid dot shorthands in default expressions owned by declared methods
+and functions, including optional positional and named defaults. The AST must
+identify an expression after `=` within that callable's optional parameter group;
+it must not cross a sibling parameter or include parameter metadata/type syntax.
+Constructor defaults, anonymous-closure defaults and defaults in nested callable
+parameter types remain strict. The complete generation/root view is unchanged.
+For example, a required dependency can declare
+`Kind choose({Kind value = .ready}) => value;` without poisoning unrelated
+annotation ownership. The same declaration in a Dust generation root still
+reports the existing unsupported-generation diagnostic.
+None of these exceptions excuses concise constructor signatures, annotations, other
 unsupported initializers, or broken syntax nested under an unsupported node.
 
 The diagnostic walker must still traverse for syntax errors and language-feature

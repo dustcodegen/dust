@@ -40,8 +40,6 @@ fn metadata_initializers_defaults_and_constructor_signatures_stay_namespace_erro
     for declaration in [
         "final Kind value = .ready;",
         "@Marker(.ready) class C {}",
-        "void choose([Kind value = .ready]) {}",
-        "class C { void choose([Kind value = .ready]) {} }",
         "final callback = () => .ready;",
         "class C { new(); }",
         "class C { factory create() = C; }",

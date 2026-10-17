@@ -26,6 +26,8 @@ mod language_occurrences;
 mod library_surface;
 #[path = "extract_tests/methods.rs"]
 mod methods;
+#[path = "extract_tests/namespace_defaults.rs"]
+mod namespace_defaults;
 #[path = "extract_tests/namespace_diagnostics.rs"]
 mod namespace_diagnostics;
 #[path = "extract_tests/namespace_initializers.rs"]
