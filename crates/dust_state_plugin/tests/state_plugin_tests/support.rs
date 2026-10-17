@@ -45,6 +45,7 @@ pub(crate) fn view_model_class(name: &str, args: &str) -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: Some(format!("${name}")),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),
@@ -64,6 +65,7 @@ pub(crate) fn args_class() -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("ViewModelArgs".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: vec![FieldIr {
             name: "repository".to_owned(),
@@ -90,6 +92,7 @@ pub(crate) fn state_class() -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),

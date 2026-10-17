@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use dust_diagnostics::Diagnostic;
 use dust_ir::{ClassIr, FieldIr, LoweringOutcome, TypeIr};
 
+/// Binder-aware substitution of proven local superclass applications.
+mod substitution;
+
 /// Infers a constructor parameter type from a field with the same name.
 pub(crate) fn infer_param_type(name: &str, fields: &[FieldIr]) -> LoweringOutcome<TypeIr> {
     if let Some(field) = fields.iter().find(|field| field.name == name) {
@@ -17,10 +20,10 @@ pub(crate) fn merged_fields_for_class(
     index: usize,
     classes: &[ClassIr],
     index_by_name: &HashMap<String, usize>,
-    cache: &mut HashMap<usize, Vec<FieldIr>>,
+    cache: &mut HashMap<usize, LoweringOutcome<Vec<FieldIr>>>,
     active_stack: &mut Vec<usize>,
     diagnostics: &mut Vec<Diagnostic>,
-) -> Vec<FieldIr> {
+) -> LoweringOutcome<Vec<FieldIr>> {
     if let Some(cached) = cache.get(&index) {
         return cached.clone();
     }
@@ -30,42 +33,53 @@ pub(crate) fn merged_fields_for_class(
             "cyclic superclass chain detected while lowering `{}`",
             classes[index].name
         )));
-        return classes[index].fields.clone();
+        return LoweringOutcome::new(classes[index].fields.clone());
     }
 
     active_stack.push(index);
 
-    let mut fields = if let Some(superclass_name) = classes[index].superclass_name.as_ref() {
+    let class = &classes[index];
+    let superclass_name = class
+        .superclass
+        .as_ref()
+        .and_then(|application| application.ty.name())
+        .or(class.superclass_name.as_deref());
+    let mut inherited = if let Some(superclass_name) = superclass_name {
         if let Some(super_index) = index_by_name.get(superclass_name) {
-            merged_fields_for_class(
+            let parent = merged_fields_for_class(
                 *super_index,
                 classes,
                 index_by_name,
                 cache,
                 active_stack,
                 diagnostics,
-            )
+            );
+            let mut applied =
+                substitution::apply_superclass(class, &classes[*super_index], parent.value);
+            applied.diagnostics.extend(parent.diagnostics);
+            applied
         } else {
-            Vec::new()
+            LoweringOutcome::new(Vec::new())
         }
     } else {
-        Vec::new()
+        LoweringOutcome::new(Vec::new())
     };
 
     for field in &classes[index].fields {
-        if let Some(existing) = fields
+        if let Some(existing) = inherited
+            .value
             .iter_mut()
             .find(|existing| existing.name == field.name)
         {
             *existing = field.clone();
         } else {
-            fields.push(field.clone());
+            inherited.value.push(field.clone());
         }
     }
 
     active_stack.pop();
-    cache.insert(index, fields.clone());
-    fields
+    cache.insert(index, inherited.clone());
+    inherited
 }
 
 /// Resolves unknown constructor parameter types from same-named fields.

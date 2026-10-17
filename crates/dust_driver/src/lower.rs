@@ -15,6 +15,7 @@ mod tests_directives;
 mod tests_generics;
 mod tests_inheritance;
 mod tests_namespaces;
+mod tests_superclasses;
 mod tests_type_signatures;
 
 use std::collections::HashMap;
@@ -96,6 +97,7 @@ pub(crate) fn lower_library_with_bindings(
                 is_abstract: class.is_abstract,
                 is_interface: class.is_interface,
                 superclass_name: class.superclass_name.as_deref(),
+                superclass: class.superclass.as_ref(),
                 span: class.span,
                 fields: &mut class.fields,
                 constructors: &class.constructors,
@@ -136,7 +138,10 @@ pub(crate) fn lower_library_with_bindings(
             &mut active_stack,
             &mut diagnostics,
         );
-        classes[index].fields = merged_fields;
+        if collect_diagnostics_by_class[index] {
+            diagnostics.extend(merged_fields.diagnostics);
+        }
+        classes[index].fields = merged_fields.value;
         let mut constructor_diagnostics = Vec::new();
         resolve_constructor_param_types(&mut classes[index], &mut constructor_diagnostics);
         if collect_diagnostics_by_class[index] {

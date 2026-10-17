@@ -42,6 +42,7 @@ fn main() {
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: vec![FieldIr {
             name: "id".to_owned(),
@@ -82,6 +83,7 @@ fn main() {
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {

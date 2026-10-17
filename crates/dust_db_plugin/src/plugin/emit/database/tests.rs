@@ -22,6 +22,7 @@ fn class(name: &str) -> ClassIr {
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: Vec::new(),

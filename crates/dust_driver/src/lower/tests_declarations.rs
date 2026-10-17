@@ -186,6 +186,7 @@ fn lowers_explicit_required_method_parameter_state() {
             is_abstract: true,
             is_interface: true,
             superclass_name: None,
+            superclass: None,
             span: span(0, 100),
             fields: Vec::new(),
             constructors: Vec::new(),

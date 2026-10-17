@@ -111,6 +111,8 @@ pub struct ResolvedClass {
     pub is_interface: bool,
     /// The immediate superclass name, if one was declared.
     pub superclass_name: Option<String>,
+    /// Parser-owned superclass type with actual arguments and original spans.
+    pub superclass: Option<ParsedTypeSurface>,
     /// The class source span.
     pub span: SpanIr,
     /// The resolved fields preserved for later lowering.

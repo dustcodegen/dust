@@ -3,7 +3,9 @@ use dust_text::SourceText;
 use tree_sitter::Node;
 
 use crate::{
-    syntax::{direct_named_child, find_first_descendant, node_text, text_range},
+    syntax::{
+        direct_named_child, find_first_descendant, has_direct_child_kind, node_text, text_range,
+    },
     types::{extract_type_before, extract_type_node},
 };
 
@@ -41,6 +43,25 @@ fn extract_type_parameter(
         bound,
         span: text_range(parameter),
     })
+}
+
+/// Extracts only an actual `extends` application, excluding mixins and trailing trivia.
+pub(super) fn extract_class_superclass(
+    class: Node<'_>,
+    source: &SourceText,
+) -> Option<ParsedTypeSurface> {
+    let superclass = class.child_by_field_name("superclass")?;
+    if !has_direct_child_kind(superclass, "extends") {
+        return None;
+    }
+    let mut cursor = superclass.walk();
+    let end = superclass
+        .named_children(&mut cursor)
+        .take_while(|child| child.kind() != "mixins")
+        .filter(|child| !matches!(child.kind(), "comment" | "documentation_comment"))
+        .last()?
+        .end_byte();
+    extract_type_before(superclass, end, source)
 }
 
 /// Extracts written mixins without treating `extends` or `implements` as mixins.

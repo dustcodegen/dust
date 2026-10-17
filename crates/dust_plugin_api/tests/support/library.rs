@@ -23,6 +23,7 @@ pub(crate) fn sample_library() -> DartFileIr {
             is_abstract: false,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(10, 80),
             fields: Vec::new(),
             constructors: Vec::new(),

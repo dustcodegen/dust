@@ -277,8 +277,29 @@ names; real traditional/primary SDK probes execute runtime contracts and reject
 four wrong receiver/result/bound uses per consumer.
 
 This does not establish general generic SerDe readiness. Applied superclass facts
-and inherited field substitution remain in
-[#133](https://github.com/dustcodegen/dust/issues/133); structured redirect targets,
+and inherited field substitution are implemented under
+[#133](https://github.com/dustcodegen/dust/issues/133): parser/resolver/IR retain
+applied types and source spans. Parent identities use syntax identifiers, never
+qualifier/argument trivia. Raw type source stays unchanged. Shared lowering substitutes proven local
+parent arguments simultaneously through nested/nullability shapes and multiple
+levels. Source binders and original field locations remain intact. Child
+overrides retain field order; super-formals infer the effective field type.
+Raw or wrong-arity applications and substitutions inside opaque function/record
+types fail clearly, rather than guessing bounds or rewriting source. Whole opaque
+types can still be passed unchanged as actual arguments. Cached ancestor errors
+propagate to generated descendants and preserve existing output/cache; unrelated
+unused classes do not block a valid model. The permanent
+[inheritance fixtures](../../fixtures/generic_inheritance) cover traditional and
+primary concrete children, named super-formals, nested/reordered/dependent types,
+callback overrides, named construction and inherited validation/JSON metadata.
+The SDK gate requires complete generated snapshots, runtime/form behavior,
+generated-line coverage and seven intended compiler failures per consumer.
+Legacy non-generic lint headers are retained; strict language checks are not
+relaxed. Intentional explicit-override style infos are recorded, not suppressed.
+Imported parent/alias expansion and general opaque substitution remain outside
+this proven scope. Empty-rule non-generic validation emits an existing unused
+receiver warning, tracked separately in [#137](https://github.com/dustcodegen/dust/issues/137).
+Structured redirect targets,
 generic sealed dispatch and synthesized variants remain in
 [#134](https://github.com/dustcodegen/dust/issues/134). Their structured-facts design
 is approved: preserve source binders/spans, substitute proven types structurally,

@@ -164,6 +164,8 @@ pub struct ParsedClassSurface {
     pub is_interface: bool,
     /// The immediate superclass name, if the declaration has an `extends` clause.
     pub superclass_name: Option<String>,
+    /// Written superclass application, including arguments and source locations.
+    pub superclass: Option<ParsedTypeSurface>,
     /// All metadata annotations attached to the class.
     pub annotations: Vec<ParsedAnnotation>,
     /// Extracted fields from the class body.

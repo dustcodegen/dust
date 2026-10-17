@@ -32,6 +32,7 @@ pub(crate) fn route_page_class(
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("StatelessWidget".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -73,6 +74,7 @@ pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -99,6 +101,7 @@ pub(crate) fn shell_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("StatelessWidget".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -143,6 +146,7 @@ pub(crate) fn router_class(args: &str) -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("$TestRouter".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),

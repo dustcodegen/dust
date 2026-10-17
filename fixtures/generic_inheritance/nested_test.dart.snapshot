@@ -1,0 +1,50 @@
+import 'package:dust_dart/serde.dart';
+import 'package:inheritance_probe/inheritance_nested.dart';
+import 'package:test/test.dart';
+
+Map<String, List<int?>>? _items(Nested value) => value.items;
+
+void main() {
+  test(
+    'nested reordered arguments retain nullable values and inherited aliases',
+    () {
+      const items = <String, List<int?>>{
+        'a': [1, null],
+      };
+      const value = Nested(items: items);
+      expect(_items(value), items);
+      expect(value.copyWith().items, items);
+      expect(
+        value
+            .copyWith(
+              items: {
+                'b': [2],
+              },
+            )
+            .items,
+        {
+          'b': [2],
+        },
+      );
+      expect(value.copyWith(items: null).items, isNull);
+      const Serializer<Nested, Map<String, Object?>> encoder =
+          $NestedSerializer();
+      const Deserializer<Nested, Map<String, Object?>> decoder =
+          $NestedDeserializer();
+      for (final current in [value, const Nested()]) {
+        final json = <String, Object?>{'items': current.items};
+        expect(current.serialize(), json);
+        expect(current.toJson(), json);
+        expect(current.aliasJson(), json);
+        expect(encoder.serialize(current), json);
+        expect(Nested.fromJson(json).items, current.items);
+        expect(decoder.deserialize(json).items, current.items);
+        expect(
+          Nested.fromJson({'oldItems': current.items}).items,
+          current.items,
+        );
+      }
+      expect(Nested.fromJson({}).items, isNull);
+    },
+  );
+}

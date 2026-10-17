@@ -57,6 +57,7 @@ pub(super) fn resolve_class(
         is_abstract: class.is_abstract,
         is_interface: class.is_interface,
         superclass_name: class.superclass_name.clone(),
+        superclass: class.superclass.clone(),
         span: SpanIr::new(file_id, class.span),
         fields,
         constructors,

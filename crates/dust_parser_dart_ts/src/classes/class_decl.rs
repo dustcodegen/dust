@@ -1,17 +1,17 @@
-use dust_parser_dart::{ParsedClassKind, ParsedClassSurface};
+use dust_parser_dart::{ParsedClassKind, ParsedClassSurface, ParsedTypeKind};
 use dust_text::SourceText;
 use tree_sitter::Node;
 
 use crate::{
     annotations::extract_annotation,
-    syntax::{find_first_descendant_text, has_direct_child_kind, node_text, text_range},
+    syntax::{has_direct_child_kind, node_text, text_range},
 };
 
 use super::{
     annotated_members,
     constructors::{extract_constructor, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
-    generics::{extract_class_mixins, extract_class_type_parameters},
+    generics::{extract_class_mixins, extract_class_superclass, extract_class_type_parameters},
     methods::extract_method,
     primary::extract_declaring_fields,
 };
@@ -32,10 +32,14 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
         .child_by_field_name("name")
         .map(|name| node_text(name, source))
         .unwrap_or_default();
-    let superclass_name = node
-        .child_by_field_name("superclass")
-        .and_then(|superclass| {
-            find_first_descendant_text(superclass, source, &["type_identifier"])
+    let superclass = extract_class_superclass(node, source);
+    let superclass_name = superclass
+        .as_ref()
+        .and_then(|superclass| match &superclass.kind {
+            ParsedTypeKind::Named { name, .. } | ParsedTypeKind::Builtin(name) => {
+                Some(name.clone())
+            }
+            _ => None,
         });
     let mut annotations = Vec::new();
     let mut fields = Vec::new();
@@ -91,6 +95,7 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
         is_abstract,
         is_interface,
         superclass_name,
+        superclass,
         annotations,
         fields,
         constructors,

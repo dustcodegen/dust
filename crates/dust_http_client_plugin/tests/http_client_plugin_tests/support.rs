@@ -97,6 +97,7 @@ pub(crate) fn http_client_class(
         is_abstract: true,
         is_interface: true,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![factory_constructor()],
@@ -212,6 +213,7 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields,
         constructors: vec![

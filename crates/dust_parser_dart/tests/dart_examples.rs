@@ -35,6 +35,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
             is_abstract: true,
             is_interface: false,
             superclass_name: Some("Entity".to_owned()),
+            superclass: None,
             annotations: vec![ParsedAnnotation {
                 name: "Derive".to_owned(),
                 prefix: None,

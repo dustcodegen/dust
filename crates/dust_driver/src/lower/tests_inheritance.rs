@@ -21,6 +21,7 @@ fn merges_inherited_fields_before_own_fields() {
             is_abstract: true,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(0, 20),
             fields: vec![FieldIr {
                 name: "id".to_owned(),
@@ -44,6 +45,7 @@ fn merges_inherited_fields_before_own_fields() {
             is_abstract: false,
             is_interface: false,
             superclass_name: Some("Entity".to_owned()),
+            superclass: None,
             span: span(20, 40),
             fields: vec![FieldIr {
                 name: "label".to_owned(),
@@ -67,8 +69,8 @@ fn merges_inherited_fields_before_own_fields() {
         .collect::<HashMap<_, _>>();
     let mut cache = HashMap::new();
     let mut active_stack = Vec::new();
-    let mut diagnostics = Vec::new();
 
+    let mut diagnostics = Vec::new();
     let merged = merged_fields_for_class(
         1,
         &classes,
@@ -78,9 +80,11 @@ fn merges_inherited_fields_before_own_fields() {
         &mut diagnostics,
     );
 
-    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    assert_eq!(merged.diagnostics, []);
+    assert_eq!(diagnostics, []);
     assert_eq!(
         merged
+            .value
             .iter()
             .map(|field| field.name.as_str())
             .collect::<Vec<_>>(),

@@ -7,7 +7,8 @@ from pathlib import Path
 
 def check_generic_analysis(run, dart: Path, app: Path, options: Path,
                            library: str, env: dict[str, str], *,
-                           stems: tuple[str, ...] = ("generic_models", "generic_imported")) -> None:
+                           stems: tuple[str, ...] = ("generic_models", "generic_imported"),
+                           legacy_lint_stems: tuple[str, ...] = ()) -> None:
     """Restore every staged byte even on failure; never touch source checkout files."""
     config = app / "analysis_options.yaml"
     targets = [app / library / f"{name}{suffix}.dart"
@@ -24,6 +25,8 @@ def check_generic_analysis(run, dart: Path, app: Path, options: Path,
     try:
         config.write_text(analysis, encoding="utf-8")
         for path in targets[1::2]:
+            if path.name.removesuffix(".g.dart") in legacy_lint_stems:
+                continue
             path.write_text(originals[path].decode("utf-8").replace(
                 "// ignore_for_file: type=lint\n", ""), encoding="utf-8")
         run([str(dart), "analyze", "--fatal-infos", *map(str, targets)], app, env=env)

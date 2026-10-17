@@ -1,0 +1,27 @@
+import 'package:dust_dart/derive.dart';
+
+part 'inheritance_generic.g.dart';
+
+/// The dependent bound belongs to this declaration.
+class const BoundBase<K, V extends List<K>>(
+  /// Required validation must retain the final child's actual container type.
+  @Validate<Object?>(required: true) final V? values,
+) {
+  /// Creates a nullable applied container.
+  this;
+}
+
+/// A forward dependent bound and reordered argument list.
+class const Flip<Y extends List<X>, X>(super.values) extends BoundBase<X, Y> {
+  /// Forwards the applied container.
+  this;
+}
+
+/// Identity and reordered edges must still yield the child's B, not K or V.
+@Derive([CopyWith(), Validate<Object?>()])
+class const GenericChild<A, B extends List<A>>(super.values)
+    extends Flip<B, A>
+    with _$GenericChild<A, B> {
+  /// Forwards the child's container through both edges.
+  this;
+}

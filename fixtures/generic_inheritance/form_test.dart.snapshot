@@ -1,0 +1,19 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:inheritance_probe/inheritance_concrete.dart';
+
+const FormFieldValidator<String> _validator = validateConcreteAmountInput;
+
+void main() {
+  test(
+    'inherited numeric fields generate concrete Flutter input validators',
+    () {
+      expect(_validator(null), 'Invalid number');
+      expect(_validator(''), 'Invalid number');
+      expect(_validator('bad'), 'Invalid number');
+      expect(_validator('0'), 'Too small');
+      expect(_validator('10'), 'Too large');
+      expect(_validator('3'), isNull);
+    },
+  );
+}

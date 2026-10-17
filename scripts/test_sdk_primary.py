@@ -60,7 +60,8 @@ class PrimarySdkTests(unittest.TestCase):
                     patch("sdk_compat.check_generic_analysis") as strict, \
                     patch("sdk_compat.check_generic_names") as names, \
                     patch("sdk_compat.check_generic_validation") as validation, \
-                    patch("sdk_compat.check_generic_serde") as serde:
+                    patch("sdk_compat.check_generic_serde") as serde, \
+                    patch("sdk_compat.check_generic_inheritance") as inheritance:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
             negatives.assert_called_once()
@@ -68,6 +69,8 @@ class PrimarySdkTests(unittest.TestCase):
             names.assert_called_once()
             validation.assert_called_once()
             serde.assert_called_once()
+            inheritance.assert_called_once()
+            self.assertEqual(inheritance.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(serde.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(names.call_args.kwargs, {"primary": True})
@@ -186,10 +189,13 @@ class PrimarySdkTests(unittest.TestCase):
                     self.assertFalse(any("analyze" in call or "test" in call for call in calls))
                     continue
                 with patch("sdk_compat.check_generic_validation") as validation, \
-                        patch("sdk_compat.check_generic_serde") as serde:
+                        patch("sdk_compat.check_generic_serde") as serde, \
+                        patch("sdk_compat.check_generic_inheritance") as inheritance:
                     generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
                 validation.assert_called_once()
                 serde.assert_called_once()
+                inheritance.assert_called_once()
+                self.assertEqual(inheritance.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(serde.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(len(generated), 7)
