@@ -36,6 +36,22 @@ fn named_mixin_application_classes_retain_their_identity_and_span() {
 }
 
 #[test]
+fn named_mixin_applications_are_not_mistaken_for_too_new_syntax() {
+    for version in ["3.6", "3.13"] {
+        let source = format!(
+            "// @dart = {version}\nclass Base {{}} mixin Mix {{}} class Alias<T extends Object> = Base with Mix;"
+        );
+        let parsed = parse(155, &source);
+        assert_eq!(parsed.diagnostics, [], "{version}");
+        assert_eq!(parsed.library.classes[1].name, "Alias");
+        assert_eq!(
+            parsed.library.classes[1].kind,
+            ParsedClassKind::MixinApplicationClass
+        );
+    }
+}
+
+#[test]
 fn named_mixin_headers_keep_structured_applications_binders_and_source_spans() {
     let source = "@Tag() abstract class Alias<T extends Object> = p /* base */ . Base<List<T>> with p /* mixin */ . Mix<T>, Extra;";
     let parsed = parse(155, source);

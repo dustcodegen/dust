@@ -151,7 +151,10 @@ fn watch_named_mixin_failure_preserves_success_and_recovers_after_restoration() 
     );
     let watch = result.watch.unwrap();
     assert_eq!(watch.rebuild_batches, 1);
-    assert_eq!(watch.rebuilt_libraries, [model.clone()]);
+    assert_eq!(
+        watch.rebuilt_libraries.as_slice(),
+        std::slice::from_ref(&model)
+    );
     assert_eq!(fs::read(output_path).unwrap(), output);
     assert_eq!(fs::read(cache_path).unwrap(), cache);
     write_file(&model, &original);

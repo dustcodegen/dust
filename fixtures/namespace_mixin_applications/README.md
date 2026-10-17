@@ -9,6 +9,11 @@ with `--enable-asserts main.dart`. Mirrors verifies the actual annotation
 instance is the named mixin class, not a guessed imported annotation. This
 probe has no package dependencies or network services.
 
+Run `generic.dart.snapshot` the same way in a separate temporary file. It
+checks that applied base/mixin arguments and bounded parameters are valid on
+both Dart endpoints. A parser regression separately selects source language
+versions 3.6 and 3.13; latest-default parsing cannot stand in for that check.
+
 The real-parser Rust tests separately introduce the actual Dust runtime
 annotation declarations and catalog owners:
 
