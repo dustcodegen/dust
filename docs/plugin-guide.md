@@ -108,6 +108,11 @@ extension point is normalized IR:
    workspace flow.
 4. Plugins validate `DartFileIr` and return generated contributions.
 
+The shared emitter collects every active plugin's validation diagnostics before
+generation. Any validation error stops generation for that library and preserves
+its previous files and cache entry; warnings alone do not stop generation.
+Direct callers of a plugin's `generate()` must validate its input themselves.
+
 If a plugin needs source information that is not present in `DartFileIr`, add a
 parser fact, resolver normalization, or IR field first. Do not add feature
 branches to driver lowering.
