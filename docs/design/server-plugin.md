@@ -97,6 +97,20 @@ is not the full fix.
 The runtime contract aligned in [#87](https://github.com/dustcodegen/dust/pull/87)
 is included here; the generator must follow that reviewed contract as well.
 
+The [phase-0 ownership regressions](../../crates/dust_resolver/tests/namespace_cases/server_surface.rs)
+load the actual annotation declarations and annotation barrel, covering all
+24 server annotations, conflicting client names in both registration orders,
+and class/library/handler/parameter metadata coordinates. Their server catalog
+is test-only: passing them is not production plugin registration, generated
+handlers, or completion of #84's loader/ownership acceptance gates.
+
+The [public-entrypoint controls](../../fixtures/namespace_server_barrel/README.md)
+also exercise the production loader against actual Dust runtime sources, with
+test-only server catalog claims and separate default-registry build/check,
+cache preservation and recovery. Real minimum/latest SDK consumers verify the
+unregistered-server case. These scoped checks still do not enable or complete
+default server integration or generated handlers.
+
 ### Cleared: class interfaces in IR
 
 `ClassIr` records `superclass_name: Option<String>` and `is_interface`, but no
@@ -153,6 +167,7 @@ The complete list:
 | Annotation | Target |
 | :--- | :--- |
 | `@Controller(path, ...)` | controller class (optional; a library of top-level handlers needs none) |
+| `@Routes(path, ...)` | library-level route module configuration |
 | `@GET` `@POST` `@PUT` `@PATCH` `@DELETE` `@HEAD` `@OPTIONS` | handler method or top-level function |
 | `@FormUrlEncoded` `@MultiPart` | handler method or function, body media type |
 | `@Extract(<extractor type>)` | handler parameter, custom extractor |
