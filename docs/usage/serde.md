@@ -155,6 +155,16 @@ a custom codec. Dust validates JSON capability for types declared in the
 current workspace; external package types are checked later by the Dart
 analyzer.
 
+In the generic-model development branch, a field using its class parameter
+(for example `T` or `List<T?>`) requires explicit `@SerDe(using: ...)` mapping.
+Skipped directions do not need parameter conversion; deserialization defaults
+still apply. Bounds do not imply a JSON conversion. A parameter named `DateTime`, `List` or
+another SDK type is still a parameter, not that SDK type; Dust reports the field
+instead of guessing its conversion. This capability check is not complete
+generic SerDe support: typed helper emission remains open in
+[#128](https://github.com/dustcodegen/dust/issues/128). Do not use generic SerDe
+models in production yet; see the [generic-model design](../design/generic-models.md).
+
 ## Enums
 
 Enums can derive both directions and use declaration or variant renames:

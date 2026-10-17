@@ -56,6 +56,9 @@ mod generic_validation;
 #[path = "driver_tests/validation_generation.rs"]
 mod validation_generation;
 
+#[path = "driver_tests/serde_parameters.rs"]
+mod serde_parameters;
+
 #[path = "driver_tests/build_validation.rs"]
 mod build_validation;
 

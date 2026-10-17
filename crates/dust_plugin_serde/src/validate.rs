@@ -3,10 +3,10 @@
 use std::collections::BTreeMap;
 
 use dust_dart_emit::{DART_LIST, DART_MAP, DART_SET};
-use dust_diagnostics::Diagnostic;
+use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::{
     AnnotationNumberKindIr, AnnotationValueIr, BuiltinType, ClassIr, ClassKindIr, DartFileIr,
-    EnumIr, TypeIr,
+    EnumIr, FieldIr, TypeIr,
 };
 use dust_plugin_api::WorkspaceAnalysis;
 
@@ -126,8 +126,8 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
                 validate_type_supported(
                     &field.ty,
                     &context,
-                    &class.name,
-                    &field.name,
+                    class,
+                    field,
                     "Serialize",
                     &mut diagnostics,
                 );
@@ -136,8 +136,8 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
                 validate_type_supported(
                     &field.ty,
                     &context,
-                    &class.name,
-                    &field.name,
+                    class,
+                    field,
                     "Deserialize",
                     &mut diagnostics,
                 );
