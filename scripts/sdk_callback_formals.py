@@ -41,7 +41,7 @@ def check_callback_formals(run, dust: Path, dart: Path, app: Path, output: Path,
         analysis = run([str(dart), "analyze", "--format=machine", str(source), str(generated), str(test)], app, env=env)
         infos = expected_style_infos(analysis.stdout + analysis.stderr, source, primary=primary)
         generated.write_bytes(snapshot)
-        runner = [*flutter, "test", "--no-pub"] if flutter else [str(dart), "test"]
+        runner = [*flutter, "test", "--no-pub", "--coverage"] if flutter else [str(dart), "test"]
         coverage_arg = f"--coverage-path={output / 'generated.lcov'}" if flutter else f"--coverage={output / 'coverage'}"
         run([*runner, coverage_arg, "--reporter=expanded", "test/callback_probe_test.dart"], app, env=env)
         report = output / "generated.lcov"

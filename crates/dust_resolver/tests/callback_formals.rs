@@ -140,3 +140,51 @@ fn ordinary_parameter_lowering_keeps_its_existing_scope_and_fallback_policy() {
         TypeIr::Unknown
     );
 }
+
+#[test]
+fn sealed_variant_parameters_use_callable_facts_instead_of_scalar_returns() {
+    use dust_resolver::{SymbolCatalog, resolve_library};
+
+    let file_id = FileId::new(42);
+    for (parameter, expected) in [
+        (
+            "bool predicate(String value)",
+            TypeIr::function("bool Function(String value)"),
+        ),
+        ("predicate(String value)", TypeIr::Unknown),
+    ] {
+        let source = SourceText::new(
+            file_id,
+            format!(
+                "part 'action.g.dart'; @Derive([Serialize()]) @SerDe(tag: 'kind') sealed class Action {{ const Action._(); const factory Action.callback({parameter}) = Handler; }} final class Handler extends Action {{ const Handler(this.predicate) : super._(); final bool Function(String value) predicate; }}"
+            ),
+        );
+        let parsed = TreeSitterDartBackend::new().parse_file(&source, ParseOptions::default());
+        assert_eq!(parsed.diagnostics, []);
+        let mut catalog = SymbolCatalog::new();
+        catalog.register_trait("Serialize", "dust_dart::Serialize");
+        catalog.register_config("SerDe", "dust_dart::SerDe");
+        let resolved = resolve_library(
+            file_id,
+            "lib/action.dart",
+            "lib/action.g.dart",
+            &parsed.library,
+            &catalog,
+        );
+        let variants = &resolved.library.classes[0].serde.as_ref().unwrap().variants;
+        assert_eq!(variants.len(), 1);
+        assert_eq!(variants[0].params[0].ty, expected);
+        if expected == TypeIr::Unknown {
+            assert_eq!(
+                resolved
+                    .diagnostics
+                    .iter()
+                    .map(|error| error.message.as_str())
+                    .collect::<Vec<_>>(),
+                ["Cannot lower declaring callback type"]
+            );
+        } else {
+            assert_eq!(resolved.diagnostics, []);
+        }
+    }
+}

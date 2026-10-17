@@ -51,6 +51,8 @@ class CallbackTests(unittest.TestCase):
                                     info += f"INFO|LINT|PREFER_INITIALIZING_FORMALS|{app}/lib/callback_probe.dart|1|1|4|Use field\n" * 6
                                 return subprocess.CompletedProcess(command, 0, "unexpected" if failure == "diagnostic" else info, "")
                             if verb == "run" or (flutter and verb == "test"):
+                                if flutter:
+                                    self.assertIn("--coverage", command)
                                 (output / "generated.lcov").write_text(f"SF:{app}/lib/callback_probe.g.dart\nDA:1,{0 if failure == 'coverage' else 1}\nend_of_record\n")
                             return subprocess.CompletedProcess(command, 0, "", "")
 
