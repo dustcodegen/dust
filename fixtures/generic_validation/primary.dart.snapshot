@@ -1,0 +1,13 @@
+import 'package:dust_dart/derive.dart';
+
+part 'model.g.dart';
+
+/// A bounded primary value retains its chosen validation type.
+@Derive(<Validate<Object?>>[Validate()])
+class const Holder<T extends num>(
+  /// Required, nullable input of the chosen type.
+  @Validate<Object?>(required: true) final T? value,
+) with _$Holder<T> {
+  /// Creates one value for validation.
+  this;
+}

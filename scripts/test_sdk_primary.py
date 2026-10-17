@@ -58,12 +58,15 @@ class PrimarySdkTests(unittest.TestCase):
                     patch("sdk_codegen_fixtures.stage_consumer", side_effect=stale_copy), \
                     patch("sdk_compat.check_generic_types", return_value=["checked"]) as negatives, \
                     patch("sdk_compat.check_generic_analysis") as strict, \
-                    patch("sdk_compat.check_generic_names") as names:
+                    patch("sdk_compat.check_generic_names") as names, \
+                    patch("sdk_compat.check_generic_validation") as validation:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
             negatives.assert_called_once()
             strict.assert_called_once()
             names.assert_called_once()
+            validation.assert_called_once()
+            self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(names.call_args.kwargs, {"primary": True})
             self.assertEqual(negatives.call_args.args[1:5],
                              (Path("/sdk/bin/dart"), app, output / "primary-generic-negative",
@@ -179,7 +182,10 @@ class PrimarySdkTests(unittest.TestCase):
                         check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
                     self.assertFalse(any("analyze" in call or "test" in call for call in calls))
                     continue
-                generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
+                with patch("sdk_compat.check_generic_validation") as validation:
+                    generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
+                validation.assert_called_once()
+                self.assertEqual(validation.call_args.kwargs, {"primary": True, "flutter": flutter})
                 self.assertEqual(len(generated), 7)
                 self.assertEqual(calls[-2], [*flutter, "analyze", "--no-pub", "--fatal-infos"])
                 self.assertEqual(calls[-1], [*flutter, "test", "--no-pub", "--reporter=expanded"])

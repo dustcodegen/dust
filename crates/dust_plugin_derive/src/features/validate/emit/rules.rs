@@ -3,9 +3,13 @@
 use super::*;
 
 /// Builds a template context for one validation config.
-pub(super) fn render_config(field: &FieldIr, config: &ValidateConfig) -> ConfigContext {
+pub(super) fn render_config(
+    field: &FieldIr,
+    config: &ValidateConfig,
+    nullable_candidate: bool,
+) -> ConfigContext {
     ConfigContext {
-        nullable: field.ty.is_nullable(),
+        nullable: nullable_candidate || field.ty.is_nullable(),
         required_message: config
             .required
             .then(|| dart_string_literal(message(config, "Required"))),

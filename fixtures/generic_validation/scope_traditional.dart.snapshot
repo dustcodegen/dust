@@ -1,0 +1,99 @@
+import 'package:dust_dart/derive.dart';
+
+part 'validation_scope.g.dart';
+
+/// Runtime names must not resolve to these unrelated model parameters.
+@Derive(<Validate<Object?>>[Validate()])
+class Scoped<ValidationResult, ValidationError, Valid, Invalid,
+        ValidationException, Validatable, List, ValidationHelper, RegExp>
+    with
+        _$Scoped<ValidationResult, ValidationError, Valid, Invalid,
+            ValidationException, Validatable, List, ValidationHelper, RegExp> {
+  /// Creates concrete fields with phantom generic arguments.
+  const Scoped(
+      {this.email,
+      this.age,
+      this.ratio,
+      this.score = 2,
+      this.amount = 2,
+      this.password = 'secret',
+      this.confirmation = 'secret',
+      this.url = 'https://example.com',
+      this.code = 'abc'});
+
+  /// Nullable input exercises required and string rules.
+  @Validate<Object?>(
+      required: true,
+      email: true,
+      regex: '^a',
+      contains: '@',
+      doesNotContain: 'blocked',
+      length: Length(min: 3, max: 40))
+  final String? email;
+
+  /// Receiver field for must-match validation.
+  final String password;
+
+  /// Must-match helpers retain the full generic model receiver.
+  @Validate<Object?>(mustMatch: 'password')
+  final String confirmation;
+
+  /// Nullable integer form input.
+  @Validate<Object?>(range: Range(min: 1, max: 3))
+  final int? age;
+
+  /// Nullable double form input.
+  @Validate<Object?>(range: Range(min: 1, max: 3))
+  final double? ratio;
+
+  /// Non-nullable integer form input with an explicit parse/rule message.
+  @Validate<Object?>(range: Range(min: 1, max: 3), message: 'score')
+  final int score;
+
+  /// Non-nullable numeric form input.
+  @Validate<Object?>(range: Range(min: 1, max: 3))
+  final num amount;
+
+  /// URL helper reference must remain the imported runtime.
+  @Validate<Object?>(url: true)
+  final String url;
+
+  /// Exact length validation remains unchanged.
+  @Validate<Object?>(length: Length(exact: 3))
+  final String code;
+}
+
+/// Local variables cannot capture the owning model's type arguments.
+@Derive(<Validate<Object?>>[Validate()])
+class LocalNames<self, errors, value, result>
+    with _$LocalNames<self, errors, value, result> {
+  /// Creates values and a matching string pair.
+  const LocalNames(this.payload,
+      {this.password = 'a', this.confirmation = 'a'});
+
+  /// Required generic value.
+  @Validate<Object?>(required: true)
+  final self? payload;
+
+  /// Receiver field.
+  final String password;
+
+  /// Form input allocates receiver/input locals outside every binder name.
+  @Validate<Object?>(mustMatch: 'password')
+  final String confirmation;
+}
+
+/// A core-looking class binder is not a concrete text/collection input kind.
+@Derive(<Validate<Object?>>[Validate()])
+class Spelled<String, List> with _$Spelled<String, List> {
+  /// Creates values of the actual selected types.
+  const Spelled(this.first, this.second);
+
+  /// Required value, not necessarily core String.
+  @Validate<Object?>(required: true)
+  final String? first;
+
+  /// Required value, not necessarily a core List.
+  @Validate<Object?>(required: true)
+  final List? second;
+}

@@ -1,0 +1,176 @@
+import 'package:dust_dart/derive.dart';
+import 'package:test/test.dart';
+import 'package:validation_probe/validation_basic.dart';
+import 'package:validation_probe/validation_shapes.dart';
+import 'package:validation_probe/validation_scope.dart';
+
+typedef _Scoped = Scoped<int, int, int, int, int, int, int, int, int>;
+
+// Inherited exception helpers must dispatch to an overridden validator too.
+class _InvalidEmpty extends Empty<int> {
+  const _InvalidEmpty();
+
+  @override
+  ValidationResult validate() => const Invalid([
+        ValidationError(field: 'subclass', message: 'invalid'),
+      ]);
+}
+
+void main() {
+  group('typed generic validation', () {
+    test('bounded required values and exception contract', () {
+      expect(const Holder<int>(1).validate(), const Valid());
+      const invalid = Holder<int>(null);
+      expect(invalid.validate().errors,
+          [const ValidationError(field: 'value', message: 'Required')]);
+      expect(invalid.validateOrThrow, throwsA(isA<ValidationException>()));
+      expect(const Holder<double>(1.5).validateOrThrow, returnsNormally);
+    });
+
+    test('effective argument and alias nullability are retained', () {
+      expect(const ValueBox<int>(1).validate().isValid, isTrue);
+      expect(const ValueBox<int?>(null).validate().isValid, isFalse);
+      expect(const ValueBox<Object?>(null).validate().isValid, isFalse);
+      expect(const ValueBox<Null>(null).validate().isValid, isFalse);
+      expect(const ValueBox<dynamic>(null).validate().isValid, isFalse);
+      expect(const AliasBox<int>(null).validate().isValid, isFalse);
+      expect(const AliasBox<int>(1).validate().isValid, isTrue);
+    });
+
+    test('nested validation keeps typed children and field paths', () {
+      expect(const Parent<int>(null).validate(), const Valid());
+      expect(const Parent<int>(Child<int>(1)).validate(), const Valid());
+      expect(const Parent<int>(Child<int>(null)).validate().errors,
+          [const ValidationError(field: 'child.value', message: 'Required')]);
+    });
+
+    test('recursive and dependent bounds survive helper declarations', () {
+      expect(const Bounded<String, String>('a', 'b').validate(), const Valid());
+      expect(const Bounded<String, String>(null, null).validate().errors.length,
+          2);
+    });
+
+    test('records, callbacks and FutureOr keep their original scopes', () {
+      var callbackCalls = 0;
+      int callback<S>(S value) {
+        callbackCalls++;
+        return 7;
+      }
+
+      expect(Payload<int>(Future<int>.value(1), (1, 2), callback).validate(),
+          const Valid());
+      expect(callbackCalls, 0,
+          reason: 'validation must not execute a callback value');
+      expect(Payload<int>(1, (1, 2), callback).validate(), const Valid());
+      expect(const Payload<int?>(null, null, null).validate().errors.length, 3);
+    });
+
+    test('container rules and empty phantom models remain valid', () {
+      expect(const Items<int>([1, 2]).validate(), const Valid());
+      expect(
+          const Items<int>([]).validate().errors.single.message, 'Too short');
+      expect(const Empty<int>().validateOrThrow, returnsNormally);
+    });
+
+    test('custom validators skip nullable actual values and retain errors', () {
+      customCalls = 0;
+      expect(const CustomBox<String?>(null).validate(), const Valid());
+      expect(customCalls, 0);
+      expect(const CustomBox<String>('ok').validate(), const Valid());
+      expect(const CustomBox<String>('forbidden').validate().errors,
+          [const ValidationError(field: 'value', message: 'forbidden')]);
+      expect(customCalls, 2);
+    });
+
+    test('runtime references do not resolve to phantom binder names', () {
+      expect(const _Scoped(email: 'a@example.com', age: 2, ratio: 2).validate(),
+          const Valid());
+      expect(const _Scoped().validate().errors.single.field, 'email');
+      final invalid = const _Scoped(
+              email: 'blocked',
+              confirmation: 'wrong',
+              age: 0,
+              ratio: 4,
+              score: 0,
+              amount: 4,
+              url: 'invalid',
+              code: 'bad!')
+          .validate();
+      expect(
+          invalid.errors.map((error) => error.field),
+          containsAll([
+            'email',
+            'confirmation',
+            'age',
+            'ratio',
+            'score',
+            'amount',
+            'url',
+            'code'
+          ]));
+      expect(
+          const _Scoped(email: 'a@longlonglonglonglonglonglonglonglonglong.com')
+              .validate()
+              .isValid,
+          isFalse);
+      expect(const _Scoped(email: 'a').validate().isValid, isFalse);
+      expect(
+          const _Scoped(
+                  email: 'a@example.com', age: 4, ratio: 0, score: 4, amount: 0)
+              .validate()
+              .errors
+              .length,
+          4);
+    });
+
+    test('locals and builtin-looking binders keep their actual types', () {
+      expect(const LocalNames<int, int, int, int>(1).validate(), const Valid());
+      expect(
+          const LocalNames<int, int, int, int>(null, confirmation: 'wrong')
+              .validate()
+              .errors
+              .length,
+          2);
+      expect(const Spelled<int, String>(1, 'ok').validate(), const Valid());
+      expect(
+          const Spelled<int, String>(null, null).validate().errors.length, 2);
+    });
+
+    test('every generated exception helper keeps the ordinary contract', () {
+      final valid = <Validatable>[
+        const ValueBox<int>(1),
+        const AliasBox<int>(1),
+        const Child<int>(1),
+        const Parent<int>(Child<int>(1)),
+        const Bounded<String, String>('a', 'b'),
+        Payload<int>(1, (1, 2), <S>(value) => 1),
+        const Items<int>([1, 2]),
+        const Empty<int>(),
+        const CustomBox<String>('ok'),
+        const _Scoped(email: 'a@example.com'),
+        const LocalNames<int, int, int, int>(1),
+        const Spelled<int, String>(1, 'ok'),
+      ];
+      for (final value in valid) {
+        expect(value.validateOrThrow, returnsNormally);
+      }
+      final invalid = <Validatable>[
+        const ValueBox<int?>(null),
+        const AliasBox<int>(null),
+        const Child<int>(null),
+        const Parent<int>(Child<int>(null)),
+        const Bounded<String, String>(null, null),
+        const Payload<int?>(null, null, null),
+        const Items<int>([]),
+        const CustomBox<String>('forbidden'),
+        const _Scoped(),
+        const LocalNames<int, int, int, int>(null),
+        const Spelled<int, String>(null, null),
+        const _InvalidEmpty(),
+      ];
+      for (final value in invalid) {
+        expect(value.validateOrThrow, throwsA(isA<ValidationException>()));
+      }
+    });
+  });
+}

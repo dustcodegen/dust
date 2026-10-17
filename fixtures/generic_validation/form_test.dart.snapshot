@@ -1,0 +1,54 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:validation_probe/validation_scope.dart';
+
+typedef _Scoped = Scoped<int, int, int, int, int, int, int, int, int>;
+const FormFieldValidator<String> _emailValidator = validateScopedEmailInput;
+
+void main() {
+  test('receiver-free form validators keep ordinary tearoff usage', () {
+    final email = _emailValidator;
+    expect(email(null), 'Required');
+    expect(email('bad'), isNotNull);
+    expect(email('a@example.com'), isNull);
+    expect(validateScopedUrlInput('invalid'), 'Invalid URL');
+    expect(validateScopedUrlInput('https://example.com'), isNull);
+    expect(validateScopedCodeInput('bad!'), 'Invalid length');
+    expect(validateScopedCodeInput('abc'), isNull);
+  });
+
+  test('receiver-dependent form validators infer every phantom argument', () {
+    const source = _Scoped(email: 'a@example.com');
+    expect(validateScopedConfirmationInput(source, 'secret'), isNull);
+    expect(
+        validateScopedConfirmationInput(source, null), 'Fields do not match');
+    const locals = LocalNames<int, int, int, int>(1);
+    expect(validateLocalNamesConfirmationInput(locals, 'a'), isNull);
+    expect(validateLocalNamesConfirmationInput(locals, null),
+        'Fields do not match');
+  });
+
+  test('numeric form parsing retains nullable and non-nullable behavior', () {
+    for (final validator in [
+      validateScopedAgeInput,
+      validateScopedRatioInput
+    ]) {
+      expect(validator(null), isNull);
+      expect(validator(''), isNull);
+      expect(validator('bad'), 'Invalid number');
+      expect(validator('0'), 'Too small');
+      expect(validator('4'), 'Too large');
+      expect(validator('2'), isNull);
+    }
+    expect(validateScopedScoreInput(null), 'score');
+    expect(validateScopedScoreInput('bad'), 'score');
+    expect(validateScopedScoreInput('0'), 'score');
+    expect(validateScopedScoreInput('4'), 'score');
+    expect(validateScopedScoreInput('2'), isNull);
+    expect(validateScopedAmountInput(null), 'Invalid number');
+    expect(validateScopedAmountInput('bad'), 'Invalid number');
+    expect(validateScopedAmountInput('0'), 'Too small');
+    expect(validateScopedAmountInput('4'), 'Too large');
+    expect(validateScopedAmountInput('2'), isNull);
+  });
+}

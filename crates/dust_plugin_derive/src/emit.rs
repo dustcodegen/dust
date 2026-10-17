@@ -13,9 +13,9 @@ use crate::features::{
 pub(crate) fn emit_library(library: &DartFileIr, plan: &SymbolPlan) -> PluginContribution {
     let mut contribution = PluginContribution::default();
     let equality = plan_equality(library);
-    let core = plan_core_names(library);
-    let copy_with_plan = plan_copy_with(library, &core);
     let emit_form_helpers = emit_flutter_form_helpers(plan);
+    let core = plan_core_names(library, emit_form_helpers);
+    let copy_with_plan = plan_copy_with(library, &core);
     contribution
         .shared_helpers
         .extend(core.declarations.iter().cloned());
@@ -43,8 +43,8 @@ pub(crate) fn emit_library(library: &DartFileIr, plan: &SymbolPlan) -> PluginCon
             contribution.support_types.push(copy_with.support_type);
             copy_with_credit_pending = false;
         }
-        if let Some(validate) = emit_validate(library, class, emit_form_helpers) {
-            contribution.push_mixin_interface(&class.name, "Validatable");
+        if let Some(validate) = emit_validate(library, class, emit_form_helpers, core) {
+            contribution.push_mixin_interface(&class.name, core.get("Validatable"));
             contribution.push_mixin_member(&class.name, validate.mixin_member);
             contribution.support_types.push(validate.support_type);
         }

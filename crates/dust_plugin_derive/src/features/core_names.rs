@@ -6,10 +6,11 @@ use super::{
     COPY_WITH_SYMBOL, DEBUG_SYMBOL, EQ_SYMBOL, TO_STRING_SYMBOL,
     eq_hash::has_trait,
     names::{NameAllocator, library_reference_names},
+    validate::runtime_references,
     writer::find_clone_constructor,
 };
 
-/// Core references protected from the owning class's lexical names.
+/// Generated core/runtime references protected from the owning class's lexical names.
 #[derive(Clone, Default)]
 pub(crate) struct CoreNames {
     /// Only references requiring a private library alias.
@@ -39,7 +40,7 @@ impl CoreNamePlan {
 }
 
 /// Plans core aliases without changing source binder or opaque type text.
-pub(crate) fn plan_core_names(library: &DartFileIr) -> CoreNamePlan {
+pub(crate) fn plan_core_names(library: &DartFileIr, emit_form_helpers: bool) -> CoreNamePlan {
     let mut allocator = NameAllocator::new(library_reference_names(library));
     let mut shared = BTreeMap::new();
     let mut plan = CoreNamePlan {
@@ -68,7 +69,20 @@ pub(crate) fn plan_core_names(library: &DartFileIr) -> CoreNamePlan {
             ("int", "_DustCoreInt", eq),
             ("identical", "_dustCoreIdentical", eq || copy_sentinel),
             ("pragma", "_DustCorePragma", copy),
-        ] {
+        ]
+        .into_iter()
+        .map(|(name, base, needed)| (name, base.to_owned(), needed))
+        .chain(
+            runtime_references(library, class, emit_form_helpers)
+                .into_iter()
+                .map(|name| {
+                    let base = match name {
+                        "String" | "List" | "RegExp" => format!("_DustCore{name}"),
+                        _ => format!("_DustRuntime{name}"),
+                    };
+                    (name, base, true)
+                }),
+        ) {
             let shadowed = class.type_parameters.iter().any(|p| p.name.source == name)
                 || class.fields.iter().any(|field| field.name == name)
                 || class.methods.iter().any(|method| method.name == name);
@@ -76,9 +90,12 @@ pub(crate) fn plan_core_names(library: &DartFileIr) -> CoreNamePlan {
                 continue;
             }
             let alias = shared.entry(name).or_insert_with(|| {
-                let alias = allocator.allocate(base);
+                let alias = allocator.allocate(&base);
                 plan.declarations.push(if name == "identical" {
                     format!("const bool Function(Object?, Object?) {alias} = identical;")
+                } else if name == "List" {
+                    let item = allocator.allocate("E");
+                    format!("typedef {alias}<{item}> = List<{item}>;")
                 } else {
                     format!("typedef {alias} = {name};")
                 });

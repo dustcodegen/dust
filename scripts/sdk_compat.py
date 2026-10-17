@@ -19,6 +19,7 @@ from sdk_codegen_fixtures import generated_files, generated_hashes, stage_exampl
 from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import check_generic_names
+from sdk_generic_validation import check_generic_validation, require_validation_parity
 from sdk_static_strings import check_static_strings
 
 
@@ -134,9 +135,11 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         names = check_generic_names(run, dust, dart, app, output / role / "generic-names",
                                     output / role / "dart/analysis_options.yaml", "product_showcase", env)
         strings = check_static_strings(run, dart, app, output / role / "static-strings", env)
+        validation = check_generic_validation(run, dust, dart, app, output / role / "generic-validation",
+                                             output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
                      "generated": hashes, "genericNegative": negatives, "genericNames": names,
-                     "staticStrings": strings})
+                     "staticStrings": strings, "genericValidation": validation})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
@@ -160,7 +163,11 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
             raise ValueError(f"Missing fresh Flutter outputs: {required - hashes.keys()}")
         run([*flutter, "analyze", "--no-pub", "--fatal-infos"], app, env=env)
         run([*flutter, "test", "--no-pub", "--reporter=expanded"], app, env=env)
-        rows.append({"role": role, "target": "flutter", "sdk": metadata, "generated": hashes})
+        validation = check_generic_validation(run, dust, flutter_dart, app, output / role / "flutter-validation",
+                                             output / role / "flutter/analysis_options.yaml", "dust_benchmark_project", env,
+                                             flutter=flutter)
+        rows.append({"role": role, "target": "flutter", "sdk": metadata, "generated": hashes,
+                     "genericValidation": validation})
 
     require_deterministic_generation(rows)
     primary = {
@@ -168,12 +175,16 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         "flutter": check_primary(run, dust, flutter_dart, output, flutter=flutter),
     }
     negatives = check_unsupported(run, dust, args.latest_dart.resolve(), output)
+    validation = {target: json.loads((output / f"primary-{target}-validation/results.json").read_text())
+                  for target in ("dart", "flutter")}
+    require_validation_parity(rows, validation)
     proof = {
         "sourceCommit": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
         "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
         "dustSha256": hashlib.sha256(dust.read_bytes()).hexdigest(),
         "rows": rows, "primary": primary, "unsupported": negatives,
         "primaryGenericNames": json.loads((output / "primary-generic-names/results.json").read_text()),
+        "primaryGenericValidation": validation,
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
@@ -225,6 +236,10 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
                             "primary_sdk_consumer", env)
         check_generic_names(run, dust, dart, app, output / "primary-generic-names",
                             output / "primary/analysis_options.yaml", "primary_sdk_consumer", env, primary=True)
+    check_generic_validation(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-validation",
+                             output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
+                             "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env,
+                             primary=True, flutter=flutter)
     return hashes
 
 
