@@ -104,6 +104,13 @@ and class/library/handler/parameter metadata coordinates. Their server catalog
 is test-only: passing them is not production plugin registration, generated
 handlers, or completion of #84's loader/ownership acceptance gates.
 
+The [public-entrypoint controls](../../fixtures/namespace_server_barrel/README.md)
+also exercise the production loader against actual Dust runtime sources, with
+test-only server catalog claims and separate default-registry build/check,
+cache preservation and recovery. Real minimum/latest SDK consumers verify the
+unregistered-server case. These scoped checks still do not enable or complete
+default server integration or generated handlers.
+
 ### Cleared: class interfaces in IR
 
 `ClassIr` records `superclass_name: Option<String>` and `is_interface`, but no

@@ -29,6 +29,8 @@ mod mixin_applications;
 mod namespace_diagnostics;
 #[path = "production_namespaces/part_paths.rs"]
 mod part_paths;
+#[path = "production_namespaces/server_barrel.rs"]
+mod server_barrel;
 #[path = "production_namespaces/watch_analysis.rs"]
 mod watch_analysis;
 

@@ -1,0 +1,20 @@
+import 'package:dust_dart/derive.dart';
+import 'package:dust_server/server.dart' as server;
+
+part 'model.g.dart';
+
+@Derive([ToString()])
+class Model with _$Model {
+  const Model(this.value);
+
+  final int value;
+
+  @server.GET('/{id}')
+  String read(@server.Path() String id, @server.Query('q') String query) =>
+      '$id:$query';
+}
+
+void main() {
+  assert(const Model(7).toString() == 'Model(value: 7)');
+  assert(const Model(7).read('1', 'search') == '1:search');
+}
