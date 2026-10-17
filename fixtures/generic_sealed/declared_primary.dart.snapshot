@@ -1,0 +1,71 @@
+import 'package:dust_dart/serde.dart';
+
+part 'sealed_declared.g.dart';
+
+/// Exercises the ordinary leaf's decoding alias without changing its ctor policy.
+Done<Y, X> decodeDone<Y extends List<X>, X>(Map<String, Object?> json) =>
+    _$DoneFromJson<Y, X>(json);
+
+/// Exercises the ordinary leaf's payload-encoding alias.
+Map<String, Object?> encodeDone<Y extends List<X>, X>(Done<Y, X> value) =>
+    _$DoneToJson<Y, X>(value);
+
+/// Exercises the phantom leaf's decoding alias.
+Empty<X, Y> decodeEmpty<X, Y extends List<X>>(Map<String, Object?> json) =>
+    _$EmptyFromJson<X, Y>(json);
+
+/// Exercises the phantom leaf's encoding alias.
+Map<String, Object?> encodeEmpty<X, Y extends List<X>>(Empty<X, Y> value) =>
+    _$EmptyToJson<X, Y>(value);
+
+/// A sealed family whose payload is concrete but binders remain meaningful.
+@Derive([Serialize(), Deserialize()])
+@SerDe(tag: 'type')
+sealed class const Event<A, B extends List<A>>() with _$Event<A, B> {
+  /// Creates a base value.
+  this;
+
+  /// Redirects through reordered variant arguments and a named constructor.
+  const factory Event.done(String label) = Done<B, A>.create;
+
+  /// A payload-free variant still retains its phantom arguments.
+  const factory Event.empty() = Empty<A, B>;
+
+  /// Decodes a typed sealed value.
+  factory Event.fromJson(Map<String, Object?> json) =>
+      _$EventFromJson<A, B>(json);
+
+  /// Exercises the directional forwarding helper.
+  Map<String, Object?> aliasJson() => _$EventToJson<A, B>(this);
+}
+
+/// Own binders deliberately differ from their sealed owner's names and order.
+@Derive([Serialize(), Deserialize()])
+final class const Done<Y extends List<X>, X>.normalized(
+  String label, {
+  bool raw = false,
+}) extends Event<X, Y> with _$Done<Y, X> {
+  /// The ordinary leaf codec keeps its existing first-constructor selection.
+  this : label = raw ? label : 'first:$label';
+
+  /// Creates a completed value.
+  const Done.create(String label) : this.normalized(label, raw: true);
+
+  /// The concrete payload requires no generic decoder callback.
+  final String label;
+}
+
+/// A phantom variant with the original owner order.
+@Derive([Serialize(), Deserialize()])
+final class const Empty<X, Y extends List<X>>()
+    extends Event<X, Y>
+    with _$Empty<X, Y> {
+  /// Creates an empty value.
+  this;
+}
+
+/// A legal local subtype not included in the declared wire protocol.
+final class const Unlisted<X, Y extends List<X>>() extends Event<X, Y> {
+  /// Creates an intentionally unregistered value.
+  this;
+}

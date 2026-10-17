@@ -1,0 +1,297 @@
+import 'dart:core';
+import 'dart:core' as core;
+
+import 'package:dust_dart/serde.dart';
+
+part 'sealed_scope.g.dart';
+
+/// Exercises the generated leaf alias outside the captured parameter scope.
+Map<String, Object?> aliasLeafPayload(CapturedDone value) =>
+    _$CaptureDoneToJson<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >(value);
+
+/// Every runtime reference and sealed-dispatch local may be a source binder.
+@Derive([Serialize(), Deserialize()])
+@SerDe(tag: 'kind', content: 'data')
+sealed class Capture<
+  String,
+  Object,
+  Map,
+  Serializable,
+  Serializer,
+  Deserializer,
+  JsonHelper,
+  ArgumentError,
+  instance,
+  value,
+  json,
+  tagValue,
+  variantJson,
+  contentValue
+>
+    with
+        _$Capture<
+          String,
+          Object,
+          Map,
+          Serializable,
+          Serializer,
+          Deserializer,
+          JsonHelper,
+          ArgumentError,
+          instance,
+          value,
+          json,
+          tagValue,
+          variantJson,
+          contentValue
+        > {
+  /// Creates the base value.
+  const Capture();
+
+  /// The omitted leaf must protect its public factory's JSON parameter too.
+  const factory Capture.done(int number) =
+      CaptureDone<
+        String,
+        Object,
+        Map,
+        Serializable,
+        Serializer,
+        Deserializer,
+        JsonHelper,
+        ArgumentError,
+        instance,
+        value,
+        json,
+        tagValue,
+        variantJson,
+        contentValue
+      >.create;
+
+  /// Decodes without treating class binders as runtime JSON types.
+  factory Capture.fromJson(core.Map<core.String, core.Object?> data) =>
+      _$CaptureFromJson<
+        String,
+        Object,
+        Map,
+        Serializable,
+        Serializer,
+        Deserializer,
+        JsonHelper,
+        ArgumentError,
+        instance,
+        value,
+        json,
+        tagValue,
+        variantJson,
+        contentValue
+      >(data);
+
+  /// Exercises the protected forwarding alias.
+  core.Map<core.String, core.Object?> aliasJson() =>
+      _$CaptureToJson<
+        String,
+        Object,
+        Map,
+        Serializable,
+        Serializer,
+        Deserializer,
+        JsonHelper,
+        ArgumentError,
+        instance,
+        value,
+        json,
+        tagValue,
+        variantJson,
+        contentValue
+      >(this);
+}
+
+/// A legal value outside the declared wire protocol.
+final class Unlisted<
+  String,
+  Object,
+  Map,
+  Serializable,
+  Serializer,
+  Deserializer,
+  JsonHelper,
+  ArgumentError,
+  instance,
+  value,
+  json,
+  tagValue,
+  variantJson,
+  contentValue
+>
+    extends
+        Capture<
+          String,
+          Object,
+          Map,
+          Serializable,
+          Serializer,
+          Deserializer,
+          JsonHelper,
+          ArgumentError,
+          instance,
+          value,
+          json,
+          tagValue,
+          variantJson,
+          contentValue
+        > {
+  /// Creates an unregistered value.
+  const Unlisted();
+}
+
+/// A concrete use of every retained source binder.
+typedef Captured =
+    Capture<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+
+/// A concrete generated leaf use.
+typedef CapturedDone =
+    CaptureDone<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+
+/// A concrete unregistered subtype use.
+typedef CapturedUnlisted =
+    Unlisted<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+
+/// Exercises the protected public serializer.
+Map<String, Object?> encode(Captured value) =>
+    const $CaptureSerializer<
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int
+        >()
+        .serialize(value);
+
+/// Exercises the protected public deserializer.
+Captured decode(Map<String, Object?> json) =>
+    const $CaptureDeserializer<
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int
+        >()
+        .deserialize(json);
+
+/// Exercises the generated leaf's payload serializer.
+Map<String, Object?> encodeLeaf(CapturedDone value) =>
+    const $CaptureDoneSerializer<
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int
+        >()
+        .serialize(value);
+
+/// Exercises the generated leaf's payload deserializer.
+CapturedDone decodeLeaf(Map<String, Object?> json) =>
+    const $CaptureDoneDeserializer<
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int,
+          int
+        >()
+        .deserialize(json);

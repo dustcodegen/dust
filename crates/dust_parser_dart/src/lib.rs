@@ -33,7 +33,7 @@ pub use surface::{
     ParsedDartFileSurface, ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface,
     ParsedExtensionSurface, ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
     ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface, ParsedNamespaceDirective,
-    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypedefSurface, ParsedUriLiteral,
-    ParsedVisibilityCombinator,
+    ParsedRedirectIdentifierSurface, ParsedRedirectTargetSurface, ParsedTopLevelVariableSurface,
+    ParsedTypeParamSurface, ParsedTypedefSurface, ParsedUriLiteral, ParsedVisibilityCombinator,
 };
 pub use type_surface::{ParsedTypeKind, ParsedTypeSurface};

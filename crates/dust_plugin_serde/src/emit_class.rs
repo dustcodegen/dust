@@ -54,10 +54,15 @@ struct ClassTemplateContext<'a> {
 pub(crate) fn emit_serialize_mixin_members(
     class: &ClassIr,
     helper_class_name: &str,
+    helper_type: Option<&dust_ir::TypeIr>,
     names: &JsonNames,
 ) -> Vec<String> {
-    let arguments = render_type_arguments(&class.type_parameters);
-    let helper_type = format!("{helper_class_name}{arguments}");
+    let arguments = helper_type
+        .map(crate::variant_types::applied_arguments)
+        .unwrap_or_else(|| render_type_arguments(&class.type_parameters));
+    let helper_type = helper_type
+        .map(|ty| dust_dart_emit::DYNAMIC_TYPES.render(ty))
+        .unwrap_or_else(|| format!("{helper_class_name}{arguments}"));
     let json_type = names.json_type();
     let inline = format!(
         "{json_type} serialize() => _${helper_class_name}Serialize{arguments}(this as {helper_type});"
@@ -135,6 +140,62 @@ pub(crate) fn emit_from_json_helper(
     names: &JsonNames,
 ) -> Option<String> {
     let constructor = find_deserialize_constructor(class)?;
+    let body = emit_from_json_body(
+        class,
+        constructor,
+        deserializable_classes,
+        deserializable_enums,
+        names,
+    )?;
+    Some(render_template(
+        "from_json_helper",
+        include_str!("templates/from_json_helper.jinja"),
+        ClassTemplateContext {
+            class_name: &class.name,
+            class_type: render_class_type(class),
+            type_parameters: render_type_parameters(&class.type_parameters),
+            type_arguments: render_type_arguments(&class.type_parameters),
+            json_type: names.json_type(),
+            instance: names.local("instance").into(),
+            json: names.local("json").into(),
+            body,
+        },
+    ))
+}
+
+/// Renders a private sealed decoder for an explicitly selected constructor.
+pub(crate) fn emit_constructor_decode_helper(
+    class: &ClassIr,
+    constructor: &dust_ir::ConstructorIr,
+    function_name: &str,
+    deserializable_classes: &[&str],
+    deserializable_enums: EnumCodecs<'_>,
+    names: &JsonNames,
+) -> Option<String> {
+    let body = emit_from_json_body(
+        class,
+        constructor,
+        deserializable_classes,
+        deserializable_enums,
+        names,
+    )?;
+    Some(format!(
+        "{} {function_name}{}({} {}) {{\n{body}\n}}",
+        render_class_type(class),
+        render_type_parameters(&class.type_parameters),
+        names.json_type(),
+        names.local("json")
+    ))
+}
+
+/// Shares field decoding and key validation without changing ordinary ctor selection.
+fn emit_from_json_body(
+    class: &ClassIr,
+    constructor: &dust_ir::ConstructorIr,
+    deserializable_classes: &[&str],
+    deserializable_enums: EnumCodecs<'_>,
+    names: &JsonNames,
+) -> Option<String> {
     let mut lines = Vec::new();
 
     if class
@@ -168,20 +229,7 @@ pub(crate) fn emit_from_json_helper(
     let call = render_constructor_call(class, constructor, &values)?;
     append_constructor_return(&mut lines, &call);
 
-    Some(render_template(
-        "from_json_helper",
-        include_str!("templates/from_json_helper.jinja"),
-        ClassTemplateContext {
-            class_name: &class.name,
-            class_type: render_class_type(class),
-            type_parameters: render_type_parameters(&class.type_parameters),
-            type_arguments: render_type_arguments(&class.type_parameters),
-            json_type: names.json_type(),
-            instance: names.local("instance").into(),
-            json: names.local("json").into(),
-            body: lines.join("\n"),
-        },
-    ))
+    Some(lines.join("\n"))
 }
 
 /// Emits runtime validation for allowed JSON keys.

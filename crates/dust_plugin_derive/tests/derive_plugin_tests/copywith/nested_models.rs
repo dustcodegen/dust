@@ -49,6 +49,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                             is_factory: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
+                            redirected_target: None,
                             span: span(3, 4),
                             params: vec![ConstructorParamIr {
                                 name: "currency".to_owned(),
@@ -100,6 +101,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                             is_factory: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
+                            redirected_target: None,
                             span: span(24, 25),
                             params: vec![
                                 ConstructorParamIr {

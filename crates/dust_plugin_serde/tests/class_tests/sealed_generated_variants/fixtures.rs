@@ -10,6 +10,8 @@ pub(super) fn payment_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "success".to_owned(),
                 target_class_name: "JsonPaymentSuccess".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_success".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Named),
@@ -20,6 +22,8 @@ pub(super) fn payment_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "failed".to_owned(),
                 target_class_name: "JsonPaymentFailed".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_failed".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Named),
@@ -41,12 +45,16 @@ pub(super) fn shape_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "empty".to_owned(),
                 target_class_name: "EmptyVariant".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "empty".to_owned(),
                 params: Vec::new(),
             },
             SerdeVariantConfigIr {
                 constructor_name: "mixed".to_owned(),
                 target_class_name: "MixedVariant".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "mixed".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Positional),

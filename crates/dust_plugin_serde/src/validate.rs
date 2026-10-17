@@ -42,9 +42,14 @@ pub(crate) fn validate_library_with_workspace(
 
 /// Validates a library using the provided JSON capability context.
 fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = crate::variant_types::validate_variant_types(library);
 
-    for class in &library.classes {
+    let generated = crate::emit_variant_class::generated_variant_classes(library);
+    for class in library
+        .classes
+        .iter()
+        .chain(generated.iter().map(|variant| &variant.class))
+    {
         let serialize = wants_serialize(class);
         let deserialize = wants_deserialize(class);
         if !serialize && !deserialize {

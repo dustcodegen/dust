@@ -8,7 +8,7 @@ use dust_ir::{
 };
 use dust_parser_dart::ParameterKind;
 
-use crate::{ResolvedClass, ResolvedConstructor, lower_type_ir};
+use crate::{ResolvedClass, ResolvedConstructor};
 
 /// Resolving how one enum variant is tagged and what it carries.
 mod variants;

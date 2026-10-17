@@ -61,6 +61,8 @@ pub struct ResolvedMethodParam {
 pub struct ResolvedConstructor {
     /// The parsed constructor surface.
     pub surface: ParsedConstructorSurface,
+    /// Semantic target facts after type-path/constructor disambiguation.
+    pub redirected_target: Option<dust_ir::RedirectTargetIr>,
     /// Resolved config applications.
     pub configs: Vec<ConfigApplicationIr>,
 }

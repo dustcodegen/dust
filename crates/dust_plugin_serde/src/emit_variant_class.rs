@@ -1,9 +1,13 @@
 use std::collections::HashSet;
 
-use dust_dart_emit::DYNAMIC_TYPES;
+use crate::{
+    names::JsonNames,
+    variant_types::{class_type, generated_parameters},
+};
+use dust_dart_emit::{DYNAMIC_TYPES, render_type_arguments, render_type_parameters};
 use dust_ir::{
     ClassIr, ClassKindIr, ConstructorIr, ConstructorParamIr, DartFileIr, FieldIr, ParamKind,
-    SerdeClassConfigIr, SerdeFieldConfigIr,
+    SerdeClassConfigIr, SerdeFieldConfigIr, SuperclassIr, TypeIr,
 };
 
 /// A concrete sealed variant class generated from a redirecting factory.
@@ -11,7 +15,7 @@ pub(crate) struct GeneratedVariantClass {
     /// The synthesized class model used by existing SerDe helpers.
     pub(crate) class: ClassIr,
     /// The sealed base class this variant extends.
-    pub(crate) base_class_name: String,
+    pub(crate) base_type: TypeIr,
     /// Whether to emit serialization helpers for this variant.
     pub(crate) serializable: bool,
     /// Whether to emit deserialization helpers for this variant.
@@ -35,9 +39,14 @@ pub(crate) fn generated_variant_classes(library: &DartFileIr) -> Vec<GeneratedVa
             if existing.contains(variant.target_class_name.as_str()) {
                 continue;
             }
+            let Ok(parameters) = generated_parameters(base, variant) else {
+                continue;
+            };
+            let mut class = synthesize_class(base, serde, variant);
+            class.type_parameters = parameters;
             generated.push(GeneratedVariantClass {
-                class: synthesize_class(base, serde, variant),
-                base_class_name: base.name.clone(),
+                class,
+                base_type: class_type(base),
                 serializable: wants_trait(base, "dust_dart::Serialize"),
                 deserializable: wants_trait(base, "dust_dart::Deserialize"),
             });
@@ -48,25 +57,54 @@ pub(crate) fn generated_variant_classes(library: &DartFileIr) -> Vec<GeneratedVa
 }
 
 /// Renders the Dart source for one generated concrete variant class.
-pub(crate) fn emit_generated_variant_class(variant: &GeneratedVariantClass) -> String {
+pub(crate) fn emit_generated_variant_class(
+    variant: &GeneratedVariantClass,
+    names: &JsonNames,
+) -> String {
     let class = &variant.class;
-    let mut lines = vec![format!(
-        "final class {} extends {} {{",
-        class.name, variant.base_class_name
-    )];
+    let generic = !class.type_parameters.is_empty();
+    let mut lines = Vec::new();
+    if generic {
+        lines.push(format!(
+            "/// A generated variant of `{}`.",
+            DYNAMIC_TYPES.render(&variant.base_type)
+        ));
+    }
+    lines.push(format!(
+        "final class {}{} extends {} {{",
+        class.name,
+        render_type_parameters(&class.type_parameters),
+        DYNAMIC_TYPES.render(&variant.base_type)
+    ));
+    if generic {
+        lines.push("  /// Creates this sealed variant.".into());
+    }
     lines.extend(render_constructor(class));
     if variant.deserializable {
         lines.push(String::new());
+        if generic {
+            lines.push("  /// Decodes this variant's payload.".into());
+        }
         lines.push(format!(
-            "  factory {}.fromJson(Map<String, Object?> json) =>",
-            class.name
+            "  factory {}.fromJson({} {}) =>",
+            class.name,
+            names.factory_json_type(),
+            names.local("json")
         ));
-        lines.push(format!("      _${}FromJson(json);", class.name));
+        lines.push(format!(
+            "      _${}FromJson{}({});",
+            class.name,
+            render_type_arguments(&class.type_parameters),
+            names.local("json")
+        ));
     }
     if !class.fields.is_empty() {
         lines.push(String::new());
     }
     for field in &class.fields {
+        if generic {
+            lines.push(format!("  /// The `{}` payload value.", field.name));
+        }
         lines.push(format!(
             "  final {} {};",
             DYNAMIC_TYPES.render(&field.ty),
@@ -91,14 +129,41 @@ fn synthesize_class(
         is_abstract: false,
         is_interface: false,
         superclass_name: Some(base.name.clone()),
-        superclass: None,
+        superclass: Some(SuperclassIr {
+            ty: class_type(base),
+            span: base.span,
+        }),
         span: base.span,
-        fields: variant.params.iter().map(field_from_param).collect(),
+        fields: variant
+            .params
+            .iter()
+            .map(|param| {
+                let mut field = field_from_param(param);
+                if let Some(serde) = variant.field_serde.get(&param.name) {
+                    let default = field
+                        .serde
+                        .as_ref()
+                        .and_then(|serde| serde.default_value_source.clone());
+                    let mut serde = serde.clone();
+                    if serde.default_value_source.is_none() {
+                        serde.default_value_source = default;
+                    }
+                    field.serde = Some(serde);
+                }
+                field
+            })
+            .collect(),
         constructors: vec![ConstructorIr {
-            name: None,
+            name: variant
+                .target
+                .as_ref()
+                .and_then(|target| target.constructor.as_ref())
+                .filter(|name| name.source != "new")
+                .map(|name| name.source.clone()),
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: base.span,
             params: variant.params.clone(),
         }],
@@ -133,13 +198,21 @@ fn field_from_param(param: &ConstructorParamIr) -> FieldIr {
 
 /// Renders the generated const constructor.
 fn render_constructor(class: &ClassIr) -> Vec<String> {
+    let constructor_name = class
+        .constructors
+        .first()
+        .and_then(|constructor| constructor.name.as_deref())
+        .map_or_else(
+            || class.name.clone(),
+            |name| format!("{}.{name}", class.name),
+        );
     let params = class
         .constructors
         .first()
         .map(|constructor| constructor.params.as_slice())
         .unwrap_or(&[]);
     if params.is_empty() {
-        return vec![format!("  const {}() : super();", class.name)];
+        return vec![format!("  const {constructor_name}() : super();")];
     }
 
     let positional = params
@@ -153,7 +226,7 @@ fn render_constructor(class: &ClassIr) -> Vec<String> {
         .collect::<Vec<_>>();
 
     if positional.is_empty() && !named_params.is_empty() {
-        let mut lines = vec![format!("  const {}({{", class.name)];
+        let mut lines = vec![format!("  const {constructor_name}({{")];
         lines.extend(
             named_params
                 .iter()
@@ -163,7 +236,7 @@ fn render_constructor(class: &ClassIr) -> Vec<String> {
         return lines;
     }
 
-    let mut lines = vec![format!("  const {}(", class.name)];
+    let mut lines = vec![format!("  const {constructor_name}(")];
     lines.extend(positional);
     if !named_params.is_empty() {
         lines.push("    {".to_owned());

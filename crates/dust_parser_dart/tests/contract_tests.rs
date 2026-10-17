@@ -59,6 +59,7 @@ impl ParseBackend for FakeBackend {
                         annotations: Vec::new(),
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         params: vec![ParsedConstructorParamSurface {
                             name: "name".to_owned(),
                             annotations: Vec::new(),

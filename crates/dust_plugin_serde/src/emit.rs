@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dust_ir::{ClassIr, DartFileIr, EnumIr};
+use dust_ir::{ClassIr, DartFileIr, EnumIr, TypeIr};
 use dust_plugin_api::{PluginContribution, WorkspaceAnalysis};
 
 use crate::{
@@ -31,7 +31,7 @@ pub(crate) fn emit_library(
 ) -> PluginContribution {
     let mut contribution = PluginContribution::default();
     let generated_variants = generated_variant_classes(library);
-    let names = plan_json_names(
+    let json_names = plan_json_names(
         library,
         &generated_variants
             .iter()
@@ -40,7 +40,7 @@ pub(crate) fn emit_library(
     );
     contribution
         .shared_helpers
-        .extend(names.declarations.iter().cloned());
+        .extend(json_names.declarations.iter().cloned());
     let mut serializable_classes = library
         .classes
         .iter()
@@ -97,18 +97,25 @@ pub(crate) fn emit_library(
 
     // Generate class-specific code.
     for class in &library.classes {
-        let names = names.names_for(class);
+        let names = json_names.names_for(class);
         if wants_serialize(class) {
             let helper_class_name = sealed_base_by_variant
                 .get(class.name.as_str())
-                .copied()
+                .and_then(|ty| ty.name())
                 .unwrap_or(class.name.as_str());
             contribution.push_mixin_interface(&class.name, names.reference("Serializable"));
-            for member in emit_serialize_mixin_members(class, helper_class_name, names) {
+            for member in emit_serialize_mixin_members(
+                class,
+                helper_class_name,
+                sealed_base_by_variant.get(class.name.as_str()),
+                names,
+            ) {
                 contribution.push_mixin_member(&class.name, member);
             }
             if is_sealed_serde_class(class) {
-                if let Some(helper) = emit_sealed_to_json_helper(class, &serializable_classes) {
+                if let Some(helper) =
+                    emit_sealed_to_json_helper(class, &serializable_classes, names)
+                {
                     contribution
                         .support_types
                         .push(emit_serializer_support_type(class, names));
@@ -129,7 +136,9 @@ pub(crate) fn emit_library(
         if wants_deserialize(class) {
             let mut emitted_helper = false;
             if is_sealed_serde_class(class) {
-                if let Some(helper) = emit_sealed_from_json_helper(class, &deserializable_classes) {
+                if let Some(helper) =
+                    emit_sealed_from_json_helper(class, &deserializable_classes, names, &json_names)
+                {
                     contribution.top_level_functions.push(helper);
                     emitted_helper = true;
                 }
@@ -149,7 +158,7 @@ pub(crate) fn emit_library(
 
     let generated_variant_support = generated_variants
         .iter()
-        .map(emit_generated_variant_class)
+        .map(|variant| emit_generated_variant_class(variant, json_names.names_for(&variant.class)))
         .collect::<Vec<_>>()
         .join("\n\n");
     if !generated_variant_support.is_empty() {
@@ -157,7 +166,7 @@ pub(crate) fn emit_library(
     }
 
     for variant in &generated_variants {
-        let names = names.names_for(&variant.class);
+        let names = json_names.names_for(&variant.class);
         if variant.serializable {
             contribution
                 .support_types
@@ -184,6 +193,15 @@ pub(crate) fn emit_library(
         }
     }
 
+    contribution
+        .top_level_functions
+        .extend(crate::variant_decoders::emit_selected_decoders(
+            library,
+            &json_names,
+            &deserializable_classes,
+            deserializable_enums,
+        ));
+
     // Generate enum-specific code.
     for e in &library.enums {
         if wants_serialize_enum(e) {
@@ -207,14 +225,21 @@ pub(crate) fn emit_library(
 }
 
 /// Maps sealed variant target class names back to their sealed base class.
-fn sealed_base_by_variant(library: &DartFileIr) -> HashMap<&str, &str> {
+fn sealed_base_by_variant(library: &DartFileIr) -> HashMap<&str, TypeIr> {
     let mut base_by_variant = HashMap::new();
     for class in &library.classes {
         let Some(serde) = &class.serde else {
             continue;
         };
         for variant in &serde.variants {
-            base_by_variant.insert(variant.target_class_name.as_str(), class.name.as_str());
+            if let Some(target) = library
+                .classes
+                .iter()
+                .find(|target| target.name == variant.target_class_name)
+                && let Ok(ty) = crate::variant_types::base_type(target, class, library)
+            {
+                base_by_variant.insert(variant.target_class_name.as_str(), ty);
+            }
         }
     }
     base_by_variant

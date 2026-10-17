@@ -1,6 +1,24 @@
-use dust_ir::{BuiltinType, LoweringOutcome, TypeIr};
-use dust_parser_dart::{ParsedTypeKind, ParsedTypeSurface};
-use dust_text::TextRange;
+use dust_ir::{BuiltinType, LoweringOutcome, NameIr, RedirectTargetIr, SpanIr, TypeIr};
+use dust_parser_dart::{ParsedRedirectTargetSurface, ParsedTypeKind, ParsedTypeSurface};
+use dust_text::{FileId, TextRange};
+
+/// Lowers a parser-owned redirect without treating its application as a declaration name.
+pub(crate) fn lower_redirect_target_ir(
+    file_id: FileId,
+    target: &ParsedRedirectTargetSurface,
+    type_parameters: &[&str],
+) -> RedirectTargetIr {
+    RedirectTargetIr {
+        ty: type_from_parsed_surface(&target.ty, type_parameters),
+        constructor: target.constructor.as_ref().map(|constructor| NameIr {
+            source: constructor.name.clone(),
+            short: constructor.name.clone(),
+            prefix: None,
+            span: SpanIr::new(file_id, constructor.span),
+        }),
+        span: SpanIr::new(file_id, target.span),
+    }
+}
 
 /// Lowers parser-owned Dart type facts, or a raw fallback source, into `TypeIr`.
 pub fn lower_type_ir(

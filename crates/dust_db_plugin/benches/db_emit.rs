@@ -57,6 +57,7 @@ fn main() {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "id".to_owned(),
@@ -91,6 +92,7 @@ fn main() {
             is_factory: true,
             redirected_target_source: Some("_$BenchDao".to_owned()),
             redirected_target_name: Some("_$BenchDao".to_owned()),
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "db".to_owned(),

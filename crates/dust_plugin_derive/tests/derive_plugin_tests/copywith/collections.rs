@@ -58,6 +58,7 @@ fn copywith_replaces_collection_fields_shallowly() {
                         is_factory: false,
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         span: span(40, 60),
                         params: vec![
                             ConstructorParamIr {

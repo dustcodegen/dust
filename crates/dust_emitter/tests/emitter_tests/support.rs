@@ -56,6 +56,7 @@ pub(crate) fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(30, 40),
         params,
     }

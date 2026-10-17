@@ -1,0 +1,91 @@
+import 'package:test/test.dart';
+import 'package:sealed_probe/sealed_declared.dart' as declared;
+
+void main() {
+  test(
+    'declared variants keep dependent/reordered owner types and wire tags',
+    () {
+      const done = declared.Event<int, List<int>>.done('ready');
+      const empty = declared.Event<int, List<int>>.empty();
+      expect(done, isA<declared.Done<List<int>, int>>());
+      expect(done.serialize(), {'label': 'ready', 'type': 'done'});
+      expect(done.toJson(), done.serialize());
+      expect(done.aliasJson(), done.serialize());
+      expect(empty.serialize(), {'type': 'empty'});
+      expect(empty.toJson(), empty.serialize());
+      final restored = declared.Event<int, List<int>>.fromJson(
+        done.serialize(),
+      );
+      expect(restored, isA<declared.Done<List<int>, int>>());
+      expect((restored as declared.Done<List<int>, int>).label, 'ready');
+      expect(
+        const declared.$EventDeserializer<int, List<int>>().deserialize(
+          empty.serialize(),
+        ),
+        isA<declared.Empty<int, List<int>>>(),
+      );
+      expect(
+        const declared.$EventSerializer<int, List<int>>().serialize(done),
+        done.serialize(),
+      );
+      expect(
+        const declared.$DoneSerializer<List<int>, int>().serialize(restored),
+        {'label': 'ready'},
+      );
+      expect(
+        const declared.$DoneDeserializer<List<int>, int>().deserialize({
+          'label': 'again',
+        }).label,
+        'first:again',
+      );
+      expect(
+        const declared.$EmptySerializer<int, List<int>>().serialize(
+          empty as declared.Empty<int, List<int>>,
+        ),
+        isEmpty,
+      );
+      expect(
+        const declared.$EmptyDeserializer<int, List<int>>().deserialize({}),
+        isA<declared.Empty<int, List<int>>>(),
+      );
+      expect(
+        declared.decodeDone<List<int>, int>({'label': 'alias'}).label,
+        'first:alias',
+      );
+      expect(
+        declared.encodeDone<List<int>, int>(
+          done as declared.Done<List<int>, int>,
+        ),
+        {'label': 'ready'},
+      );
+      expect(
+        declared.decodeEmpty<int, List<int>>({}),
+        isA<declared.Empty<int, List<int>>>(),
+      );
+      expect(declared.encodeEmpty<int, List<int>>(empty), isEmpty);
+      expect(
+        () => declared.Event<int, List<int>>.fromJson({'type': 'missing'}),
+        throwsArgumentError,
+      );
+      expect(
+        () => declared.Event<int, List<int>>.fromJson({'type': 1}),
+        throwsArgumentError,
+      );
+      expect(
+        () => declared.Event<int, List<int>>.fromJson({
+          'type': 'done',
+          'label': 1,
+        }),
+        throwsArgumentError,
+      );
+      expect(
+        () => const declared.Unlisted<int, List<int>>().serialize(),
+        throwsArgumentError,
+      );
+      expect(
+        () => const declared.Unlisted<int, List<int>>().toJson(),
+        throwsArgumentError,
+      );
+    },
+  );
+}

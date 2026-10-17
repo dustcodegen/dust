@@ -33,6 +33,8 @@ mod typed_annotation_values;
 
 #[path = "extract_tests/primary_shapes.rs"]
 mod primary_shapes;
+#[path = "extract_tests/redirect_targets.rs"]
+mod redirect_targets;
 #[path = "extract_tests/static_strings.rs"]
 mod static_strings;
 #[path = "extract_tests/superclasses.rs"]

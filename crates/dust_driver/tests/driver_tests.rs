@@ -61,8 +61,12 @@ mod serde_parameters;
 
 #[path = "driver_tests/generic_inheritance.rs"]
 mod generic_inheritance;
+#[path = "driver_tests/generic_sealed.rs"]
+mod generic_sealed;
 #[path = "driver_tests/generic_serde.rs"]
 mod generic_serde;
+#[path = "driver_tests/sealed_redirect_failures.rs"]
+mod sealed_redirect_failures;
 #[path = "driver_tests/superclass_substitution.rs"]
 mod superclass_substitution;
 

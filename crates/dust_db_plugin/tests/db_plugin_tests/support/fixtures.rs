@@ -55,6 +55,7 @@ pub(crate) fn row_class() -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![
                 named_param("id", TypeIr::int(), false),
@@ -90,6 +91,7 @@ pub(crate) fn simple_user_row_class() -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![
                 named_param("id", TypeIr::int(), false),
@@ -118,6 +120,7 @@ pub(crate) fn dao_class() -> ClassIr {
             is_factory: true,
             redirected_target_source: Some("_$UserDao".to_owned()),
             redirected_target_name: Some("_$UserDao".to_owned()),
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "db".to_owned(),

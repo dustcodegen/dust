@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use dust_diagnostics::{Diagnostic, SourceLabel};
-use dust_ir::{ClassIr, FieldIr, LoweringOutcome, TypeIr};
+use dust_ir::{ClassIr, FieldIr, LoweringOutcome, substitute_type};
 
 /// Substitutes only a parent whose declaration identity is known in this library.
 pub(super) fn apply_superclass(
@@ -43,7 +43,7 @@ pub(super) fn apply_superclass(
         if child.fields.iter().any(|own| own.name == field.name) {
             continue;
         }
-        match substitute(&field.ty, &bindings) {
+        match substitute_type(&field.ty, &bindings) {
             Ok(ty) => field.ty = ty,
             Err(shape) => diagnostics.push(
                 Diagnostic::error(format!(
@@ -66,40 +66,5 @@ pub(super) fn apply_superclass(
     LoweringOutcome {
         value: fields,
         diagnostics,
-    }
-}
-
-/// Replaces bare owning binders simultaneously; opaque source is never rewritten.
-fn substitute(ty: &TypeIr, bindings: &HashMap<&str, &TypeIr>) -> Result<TypeIr, &'static str> {
-    if bindings.is_empty() {
-        return Ok(ty.clone());
-    }
-    match ty {
-        TypeIr::Named {
-            name,
-            args,
-            nullable,
-        } => {
-            if let Some(argument) = bindings.get(name.as_ref()) {
-                if !args.is_empty() {
-                    return Err("applied type parameter");
-                }
-                return Ok(if *nullable {
-                    (*argument).clone().nullable()
-                } else {
-                    (*argument).clone()
-                });
-            }
-            let args = args
-                .iter()
-                .map(|arg| substitute(arg, bindings))
-                .collect::<Result<Vec<_>, _>>()?;
-            let result = TypeIr::generic(name.clone(), args);
-            Ok(if *nullable { result.nullable() } else { result })
-        }
-        TypeIr::Function { .. } => Err("opaque function type"),
-        TypeIr::Record { .. } => Err("opaque record type"),
-        TypeIr::Unknown => Err("unresolved type"),
-        TypeIr::Builtin { .. } | TypeIr::Dynamic => Ok(ty.clone()),
     }
 }

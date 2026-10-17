@@ -65,6 +65,7 @@ pub(super) fn codec_guidance() -> &'static str {
 /// Completes sealed class SerDe variant metadata from redirecting factory constructors.
 pub(crate) fn normalize_sealed_serde_variants(
     classes: &mut [ResolvedClass],
+    context: &crate::BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let index_by_name = classes
@@ -98,6 +99,11 @@ pub(crate) fn normalize_sealed_serde_variants(
             .as_ref()
             .and_then(|serde| serde.rename_all);
         let constructors = &classes[index].constructors;
+        let type_parameters = classes[index]
+            .type_parameters
+            .iter()
+            .map(|parameter| parameter.name.as_str())
+            .collect::<Vec<_>>();
         let mut variants = Vec::new();
         let mut seen_tags = HashSet::new();
 
@@ -108,8 +114,28 @@ pub(crate) fn normalize_sealed_serde_variants(
             let Some(constructor_name) = constructor.surface.name.as_deref() else {
                 continue;
             };
-            let Some(target_class_name) = constructor.surface.redirected_target_name.as_deref()
-            else {
+            let target = constructor.redirected_target.clone();
+            let target_name = match target.as_ref().map(|target| &target.ty) {
+                Some(TypeIr::Named { name, .. }) => Some(name.as_ref()),
+                Some(_) => {
+                    let span = target
+                        .as_ref()
+                        .map_or(classes[index].span, |target| target.span);
+                    diagnostics.push(
+                        Diagnostic::error(format!(
+                            "Sealed SerDe redirect on `{base_name}` requires a named target class"
+                        ))
+                        .with_label(dust_diagnostics::SourceLabel::new(
+                            span.file_id,
+                            span.range,
+                            "unsupported sealed redirect target",
+                        )),
+                    );
+                    continue;
+                }
+                None => constructor.surface.redirected_target_name.as_deref(),
+            };
+            let Some(target_class_name) = target_name else {
                 continue;
             };
 
@@ -117,7 +143,9 @@ pub(crate) fn normalize_sealed_serde_variants(
                 .get(target_class_name)
                 .and_then(|target_index| classes.get(*target_index))
                 .and_then(|target| target.superclass_name.as_deref());
-            if target_superclass.is_some() && target_superclass != Some(base_name.as_str()) {
+            if target_superclass.is_some()
+                && !local_superclass_reaches(target_class_name, &base_name, classes, &index_by_name)
+            {
                 diagnostics.push(Diagnostic::error(format!(
                     "Variant target class {target_class_name} does not extend {base_name}"
                 )));
@@ -133,10 +161,18 @@ pub(crate) fn normalize_sealed_serde_variants(
             variants.push(SerdeVariantConfigIr {
                 constructor_name: constructor_name.to_owned(),
                 target_class_name: target_class_name.to_owned(),
+                target: target.clone(),
+                field_serde: variant_field_serde(
+                    classes[index].span.file_id,
+                    constructor,
+                    context,
+                    diagnostics,
+                ),
                 tag,
                 params: variant_constructor_params(
                     classes[index].span.file_id,
                     constructor,
+                    &type_parameters,
                     diagnostics,
                 ),
             });
@@ -152,4 +188,27 @@ pub(crate) fn normalize_sealed_serde_variants(
             serde.variants = variants;
         }
     }
+}
+
+/// Checks declaration identity only; argument substitution belongs to shared type IR.
+fn local_superclass_reaches(
+    target: &str,
+    base: &str,
+    classes: &[ResolvedClass],
+    indices: &HashMap<String, usize>,
+) -> bool {
+    let mut current = target;
+    for _ in 0..classes.len() {
+        let Some(parent) = indices
+            .get(current)
+            .and_then(|index| classes[*index].superclass_name.as_deref())
+        else {
+            return false;
+        };
+        if parent == base {
+            return true;
+        }
+        current = parent;
+    }
+    false
 }

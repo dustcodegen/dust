@@ -157,6 +157,7 @@ fn rejects_state_constructor_with_required_params() {
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: super::support::span(20, 30),
         params: vec![ConstructorParamIr {
             name: "count".to_owned(),

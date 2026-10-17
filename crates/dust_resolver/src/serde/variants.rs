@@ -54,6 +54,7 @@ pub(super) fn variant_serde_tag(
 pub(super) fn variant_constructor_params(
     file_id: dust_text::FileId,
     constructor: &ResolvedConstructor,
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ConstructorParamIr> {
     constructor
@@ -64,7 +65,13 @@ pub(super) fn variant_constructor_params(
             let outcome = param
                 .type_source
                 .as_deref()
-                .map(|source| lower_type_ir(param.parsed_type.as_ref(), Some(source)))
+                .map(|source| {
+                    crate::lower_type_ir_in_scope(
+                        param.parsed_type.as_ref(),
+                        Some(source),
+                        type_parameters,
+                    )
+                })
                 .unwrap_or_else(|| dust_ir::LoweringOutcome::new(TypeIr::unknown()));
             diagnostics.extend(outcome.diagnostics);
             ConstructorParamIr {
@@ -78,6 +85,33 @@ pub(super) fn variant_constructor_params(
                 has_default: param.has_default,
                 default_value_source: param.default_value_source.clone(),
             }
+        })
+        .collect()
+}
+
+/// Retains field metadata through the same binding policy as handwritten fields.
+pub(super) fn variant_field_serde(
+    file_id: dust_text::FileId,
+    constructor: &ResolvedConstructor,
+    context: &crate::BindingContext<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> std::collections::BTreeMap<String, SerdeFieldConfigIr> {
+    constructor
+        .surface
+        .params
+        .iter()
+        .filter_map(|param| {
+            let field = dust_parser_dart::ParsedFieldSurface {
+                name: param.name.clone(),
+                annotations: param.annotations.clone(),
+                type_source: param.type_source.clone(),
+                parsed_type: param.parsed_type.clone(),
+                has_default: param.has_default,
+                span: param.span,
+            };
+            crate::resolve_support::resolve_field(file_id, &field, context, diagnostics)
+                .serde
+                .map(|serde| (param.name.clone(), serde))
         })
         .collect()
 }

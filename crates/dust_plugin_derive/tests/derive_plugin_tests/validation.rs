@@ -56,6 +56,7 @@ fn copywith_requires_reconstructible_constructor() {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(40, 50),
                 params: vec![ConstructorParamIr {
                     name: "id".to_owned(),
@@ -133,6 +134,7 @@ fn copywith_rejects_abstract_classes() {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(40, 50),
                 params: vec![ConstructorParamIr {
                     name: "id".to_owned(),
@@ -210,6 +212,7 @@ fn rejects_mixin_class_targets() {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(40, 50),
                 params: vec![ConstructorParamIr {
                     name: "id".to_owned(),
