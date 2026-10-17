@@ -14,6 +14,9 @@ pub struct DbRequestOptions {
 pub struct BuildRequest {
     /// The working directory used to discover the Dart workspace.
     pub cwd: PathBuf,
+    /// Optional Dart SDK root containing `version` and `lib/libraries.json`.
+    /// `None` discovers the active Dart/Flutter SDK for namespace source loading.
+    pub sdk_source_root: Option<PathBuf>,
     /// Whether the driver should stop after the first error diagnostic.
     pub fail_fast: bool,
     /// The optional parallel job count for library processing.
@@ -29,6 +32,8 @@ pub struct BuildRequest {
 pub struct CheckRequest {
     /// The working directory used to discover the Dart workspace.
     pub cwd: PathBuf,
+    /// Optional Dart SDK root; `None` discovers the active SDK for source loading.
+    pub sdk_source_root: Option<PathBuf>,
     /// Whether the driver should stop after the first error diagnostic.
     pub fail_fast: bool,
     /// The optional parallel job count for library processing.
@@ -51,6 +56,8 @@ pub struct DoctorRequest {
 pub struct RouteTableRequest {
     /// The working directory used to discover the Dart workspace.
     pub cwd: PathBuf,
+    /// Optional Dart SDK root; `None` discovers the active SDK for source loading.
+    pub sdk_source_root: Option<PathBuf>,
 }
 
 /// One i18n scan request.
@@ -90,6 +97,8 @@ pub struct CleanRequest {
 pub struct WatchRequest {
     /// The working directory used to discover the Dart workspace.
     pub cwd: PathBuf,
+    /// Optional Dart SDK root; `None` discovers the active SDK for source loading.
+    pub sdk_source_root: Option<PathBuf>,
     /// Whether the driver should stop after the first error diagnostic.
     pub fail_fast: bool,
     /// The optional parallel job count for library processing.

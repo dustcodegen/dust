@@ -1,4 +1,4 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::{DustImport, make_workspace, write_dust_file};
 

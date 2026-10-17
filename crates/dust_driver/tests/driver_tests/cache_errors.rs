@@ -20,12 +20,14 @@ fn failed_builds_never_create_or_replace_successful_cache_state() {
                 let output = root.join("lib/box.g.dart");
                 let cache = root.join(".dart_tool/dust/build_cache_v1.json");
                 let build = BuildRequest {
+                    sdk_source_root: Some(crate::support::sdk_source_root(root)),
                     cwd: root.to_path_buf(),
                     fail_fast,
                     jobs: None,
                     db: Default::default(),
                 };
                 let check = CheckRequest {
+                    sdk_source_root: Some(crate::support::sdk_source_root(root)),
                     cwd: root.to_path_buf(),
                     fail_fast,
                     jobs: None,

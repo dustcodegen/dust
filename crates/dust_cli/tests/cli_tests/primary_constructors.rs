@@ -1,4 +1,4 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};
 
@@ -10,7 +10,8 @@ fn ambiguous_copy_labels_fail_without_replacing_generated_output() {
         "name: dust_test\nenvironment:\n  sdk: '>=3.13.0 <4.0.0'\n",
     );
     let output = workspace.path().join("lib/user.g.dart");
-    write_file(&output, "previous output\n");
+    let previous = super::helpers::owned_output("previous output\n");
+    write_file(&output, &previous);
     write_dust_file(
         &workspace.path().join("lib/user.dart"),
         &[DustImport::Derive],
@@ -24,10 +25,7 @@ fn ambiguous_copy_labels_fail_without_replacing_generated_output() {
             "{}",
             run.stderr
         );
-        assert_eq!(
-            std::fs::read_to_string(&output).unwrap(),
-            "previous output\n"
-        );
+        assert_eq!(std::fs::read_to_string(&output).unwrap(), previous);
     }
 }
 

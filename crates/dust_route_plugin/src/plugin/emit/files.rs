@@ -74,29 +74,30 @@ pub(crate) fn render_route_generated_files(
 
 /// Renders all generated route files before converting to plugin contributions.
 fn route_generated_files(library: &DartFileIr, spec: &RouterSpec) -> Vec<RouteGeneratedFile> {
-    let output_dir = route_output_dir(library);
+    let [routes, paths, metadata, navigation, runtime] =
+        crate::plugin::outputs::route_output_paths(&route_output_dir(library));
     let metadata_imports = render_route_imports(library, spec, RouteImportKind::Metadata);
     let runtime_imports = render_route_imports(library, spec, RouteImportKind::Runtime);
     let route_type_imports = render_route_imports(library, spec, RouteImportKind::RouteTypes);
     vec![
         RouteGeneratedFile {
-            path: output_dir.join("routes.g.dart"),
+            path: routes,
             source: render_routes_file(),
         },
         RouteGeneratedFile {
-            path: output_dir.join("paths.g.dart"),
+            path: paths,
             source: render_paths_file(spec, &route_type_imports),
         },
         RouteGeneratedFile {
-            path: output_dir.join("metadata.g.dart"),
+            path: metadata,
             source: render_metadata_file(spec, &metadata_imports),
         },
         RouteGeneratedFile {
-            path: output_dir.join("navigation.g.dart"),
+            path: navigation,
             source: render_navigation_file(spec, &route_type_imports),
         },
         RouteGeneratedFile {
-            path: output_dir.join("runtime.g.dart"),
+            path: runtime,
             source: render_runtime_file(spec, &runtime_imports),
         },
     ]

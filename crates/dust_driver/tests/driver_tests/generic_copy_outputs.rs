@@ -33,6 +33,7 @@ fn traditional_and_primary_generic_copies_match_complete_generated_contracts() {
             write_file(&root.join(format!("lib/{name}.dart")), source);
         }
         let request = BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,
@@ -52,6 +53,7 @@ fn traditional_and_primary_generic_copies_match_complete_generated_contracts() {
             );
         }
         let checked = run_check(CheckRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,

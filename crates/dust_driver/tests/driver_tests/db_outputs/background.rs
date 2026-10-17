@@ -36,6 +36,7 @@ abstract class AppDatabase implements DatabaseClient {{
     let output = workspace.path().join("lib/db.g.dart");
     let build = || {
         let result = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
             cwd: workspace.path().to_path_buf(),
             fail_fast: true,
             jobs: None,

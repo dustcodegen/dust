@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path, sync::Arc};
+use std::{fs, io, path::Path};
 
 use dust_diagnostics::Diagnostic;
 use dust_emitter::hash_output_set;
@@ -29,14 +29,15 @@ pub(crate) fn load_library_input(
     cache_fingerprint: Option<CacheFingerprint>,
     package_config_hash: u64,
     tool_hash: CodegenToolHash,
+    namespaces: &crate::namespace_sources::NamespaceSources,
 ) -> Result<LoadedLibraryInput, Diagnostic> {
-    let source = fs::read_to_string(&library.source_path).map_err(|error| {
+    let source = namespaces.source(&library.source_path).ok_or_else(|| {
         Diagnostic::error(format!(
-            "failed to read `{}`: {error}",
+            "missing namespace source snapshot `{}`",
             library.source_path.display()
         ))
     })?;
-    let source_hash = hash_text(&source);
+    let source_hash = namespaces.fingerprint(&library.source_path);
     let tool_hash = tool_hash.value();
     let previous_output_hash = cache_fingerprint
         .as_ref()
@@ -53,7 +54,7 @@ pub(crate) fn load_library_input(
     Ok(LoadedLibraryInput {
         source_hash,
         tool_hash,
-        source: Arc::<str>::from(source),
+        source,
         checked_output_hash,
         previous_output_hash,
     })

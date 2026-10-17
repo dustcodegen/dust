@@ -22,6 +22,7 @@ fn build_reports_missing_initial_route_page() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -55,6 +56,7 @@ fn build_reports_missing_not_found_route_page() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -85,6 +87,7 @@ fn build_reports_route_shell_or_guard_without_visible_import() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -116,6 +119,7 @@ fn build_reports_duplicate_route_path_params() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -154,6 +158,7 @@ fn build_reports_static_and_dynamic_route_siblings() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -195,6 +200,7 @@ fn build_reports_deeper_static_and_dynamic_route_siblings() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

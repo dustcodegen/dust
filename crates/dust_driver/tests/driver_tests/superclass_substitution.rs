@@ -37,6 +37,7 @@ fn inherited_errors_survive_unannotated_parent_cache_and_preserve_output() {
                 let output = root.join("lib/child.g.dart");
                 let cache = root.join(".dart_tool/dust/build_cache_v1.json");
                 let request = BuildRequest {
+                    sdk_source_root: Some(crate::support::sdk_source_root(root)),
                     cwd: root.to_path_buf(),
                     fail_fast,
                     jobs: None,
@@ -58,6 +59,7 @@ fn inherited_errors_survive_unannotated_parent_cache_and_preserve_output() {
                         run_build(request.clone())
                     } else {
                         run_check(CheckRequest {
+                            sdk_source_root: Some(crate::support::sdk_source_root(root)),
                             cwd: root.to_path_buf(),
                             fail_fast,
                             jobs: None,
@@ -102,6 +104,7 @@ fn unused_opaque_inheritance_does_not_block_an_unrelated_model() {
          @Derive([CopyWith()]) class Good with _$Good { const Good(this.value); final int value; }",
     );
     let report = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(root)),
         cwd: root.to_path_buf(),
         fail_fast: false,
         jobs: None,

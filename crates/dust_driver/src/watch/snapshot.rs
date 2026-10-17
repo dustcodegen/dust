@@ -1,13 +1,12 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use dust_diagnostics::Diagnostic;
-use dust_workspace::{SourceLibrary, SupportedAnnotations, discover_workspace};
+use dust_workspace::{SourceLibrary, WorkspacePlan};
 
-use crate::build::{default_registry, hash_text, read_workspace_config_hash};
+use crate::{build::read_workspace_config_hash, namespace_sources::NamespaceSources};
 
 /// Snapshot of workspace inputs relevant to watch rebuild decisions.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,40 +30,41 @@ pub(crate) struct SnapshotEntry {
     pub(crate) contains_router_marker: bool,
 }
 
-/// Builds a fresh workspace snapshot from disk.
-pub(crate) fn build_snapshot(cwd: &Path) -> Result<WorkspaceSnapshot, Diagnostic> {
-    let registry = default_registry();
-    let supported_annotations: SupportedAnnotations =
-        registry.all_supported_annotations().into_iter().collect();
-    let workspace = discover_workspace(cwd, &supported_annotations)?;
+/// Fingerprints the same resolved source snapshot used by build workers.
+pub(crate) fn build_snapshot(
+    workspace: &WorkspacePlan,
+    namespaces: &NamespaceSources,
+    catalog: &dust_resolver::SymbolCatalog,
+) -> Result<WorkspaceSnapshot, Diagnostic> {
     let package_config_hash = read_workspace_config_hash(
         &workspace.package_config.path,
         workspace.dust_config.path.as_deref(),
         &workspace.package_root.join("pubspec.yaml"),
-    )
-    .ok();
+    )?;
 
     let mut libraries = BTreeMap::new();
-    for library in workspace.libraries {
-        let source = fs::read_to_string(&library.source_path).map_err(|error| {
-            Diagnostic::error(format!(
-                "failed to read `{}` during watch scan: {error}",
-                library.source_path.display()
-            ))
-        })?;
+    for library in &workspace.libraries {
         libraries.insert(
             library.source_path.clone(),
             SnapshotEntry {
-                library,
-                source_hash: hash_text(&source),
-                contains_route_marker: source.contains("@AppRoute"),
-                contains_router_marker: source.contains("@AppRouter"),
+                library: library.clone(),
+                source_hash: namespaces.fingerprint(&library.source_path),
+                contains_route_marker: namespaces.has_annotation(
+                    &library.source_path,
+                    "dust_flutter::AppRoute",
+                    catalog,
+                ),
+                contains_router_marker: namespaces.has_annotation(
+                    &library.source_path,
+                    "dust_flutter::AppRouter",
+                    catalog,
+                ),
             },
         );
     }
 
     Ok(WorkspaceSnapshot {
-        package_config_hash,
+        package_config_hash: Some(package_config_hash),
         libraries,
     })
 }

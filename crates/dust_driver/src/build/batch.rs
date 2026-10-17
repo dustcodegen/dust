@@ -1,9 +1,13 @@
+/// Source contexts needed by diagnostics from dependency libraries.
+mod diagnostics;
 /// Serial and parallel processing of uncached libraries.
 mod execute;
 /// Parallel source and output fingerprint loading.
 mod load;
 /// Constructors for cached and load-error build outcomes.
 mod outcome;
+/// Reject ownership errors before any generation or cache updates.
+mod preflight;
 /// Progress callback adapter for batch execution.
 mod progress;
 
@@ -13,15 +17,14 @@ use std::{
 };
 
 use dust_cache::WorkspaceCache;
-use dust_dart_syntax::DartLanguageVersion;
 use dust_plugin_api::{PACKAGE_FEATURE_FLUTTER, PACKAGE_FEATURES_ANALYSIS_KEY};
-use dust_text::FileId;
 use dust_workspace::SourceLibrary;
 
 use crate::{
     build::{
         process::{
-            IndexedBuildOutcome, PendingLibrary, ProcessingConfig, collect_workspace_analysis,
+            IndexedBuildOutcome, LoweringConfig, PendingLibrary, ProcessingConfig,
+            collect_remaining_workspace_analysis, collect_workspace_analysis,
         },
         support::CodegenToolHash,
         work::available_worker_count,
@@ -32,6 +35,7 @@ use crate::{
 
 pub(crate) use self::progress::{ProgressReporter, ProgressSnapshot};
 use self::{
+    diagnostics::dependency_diagnostic_files,
     execute::{process_pending_parallel, process_pending_serial},
     load::load_library_inputs,
     outcome::{build_cached_outcome, build_load_error},
@@ -43,6 +47,10 @@ pub(crate) type ProgressCallback<'a> = dyn Fn(ProgressEvent) + Send + Sync + 'a;
 /// Shared inputs needed to load, cache-check, analyze, and process a library batch.
 #[derive(Clone, Copy)]
 pub(crate) struct BatchConfig<'a> {
+    /// Complete current corpus, even when watch processes only changed libraries.
+    pub(crate) analysis_libraries: &'a [SourceLibrary],
+    /// Resolved namespace snapshot shared with discovery and all workers.
+    pub(crate) namespaces: &'a crate::namespace_sources::NamespaceSources,
     /// Root directory that stores Dust cache metadata.
     pub(crate) cache_root: &'a Path,
     /// Package root used to resolve source-relative output paths.
@@ -51,9 +59,6 @@ pub(crate) struct BatchConfig<'a> {
     pub(crate) package_name: &'a str,
     /// Whether the package is a Flutter package.
     pub(crate) is_flutter_package: bool,
-    /// Workspace-level Dart language version for source files without an
-    /// explicit `// @dart = x.y` comment.
-    pub(crate) dart_language_version: DartLanguageVersion,
     /// Hash of package and Dust configuration files.
     pub(crate) package_config_hash: u64,
     /// Hash of Dust codegen logic and active plugin set.
@@ -70,8 +75,6 @@ pub(crate) struct BatchConfig<'a> {
     pub(crate) fail_fast: bool,
     /// Optional caller-specified worker limit.
     pub(crate) jobs: Option<usize>,
-    /// Starting file id assigned to parsed source libraries.
-    pub(crate) file_id_base: u32,
     /// Progress phase associated with this batch.
     pub(crate) phase: ProgressPhase,
     /// Optional progress event callback.
@@ -84,6 +87,8 @@ pub(crate) struct BatchResult {
     pub(crate) outcomes: Vec<IndexedBuildOutcome>,
     /// Hash of the workspace analysis active during this batch.
     pub(crate) workspace_analysis_hash: u64,
+    /// Referenced dependency source contexts not already attached to root outcomes.
+    pub(crate) diagnostic_files: Vec<crate::result::DiagnosticFile>,
 }
 
 /// A tentative cache hit awaiting workspace analysis hash verification.
@@ -108,10 +113,23 @@ pub(crate) fn prepare_and_process_batch(
     let reporter =
         ProgressReporter::new(config.progress, &completed, config.phase, libraries.len());
     reporter.started_batch();
+    if let Some(failure) = preflight::namespace_failure(config, libraries, &reporter) {
+        return failure;
+    }
 
     let loaded_results = load_library_inputs(config, libraries);
     let mut outcomes = Vec::with_capacity(libraries.len());
-    let mut workspace_analysis = dust_plugin_api::WorkspaceAnalysisBuilder::default();
+    let mut workspace_analysis = collect_remaining_workspace_analysis(
+        config.analysis_libraries,
+        libraries,
+        &LoweringConfig {
+            package_root: config.package_root,
+            package_name: config.package_name,
+            catalog: config.catalog,
+            registry: config.registry,
+        },
+        config.namespaces,
+    );
     if config.is_flutter_package {
         workspace_analysis
             .add_string_set_value(PACKAGE_FEATURES_ANALYSIS_KEY, PACKAGE_FEATURE_FLUTTER);
@@ -160,7 +178,10 @@ pub(crate) fn prepare_and_process_batch(
         cache_report.misses += 1;
         pending.push(PendingLibrary::new(
             index,
-            FileId::new(config.file_id_base + index as u32),
+            config
+                .namespaces
+                .file_id(&library.source_path)
+                .expect("discovered namespace root"),
             library.clone(),
             input,
         ));
@@ -171,9 +192,9 @@ pub(crate) fn prepare_and_process_batch(
         &pending,
         config.package_root,
         config.package_name,
-        config.dart_language_version,
         config.catalog,
         config.registry,
+        config.namespaces,
     );
     workspace_analysis.merge(workspace_result.analysis);
     for ((((pending, pre_parsed), pre_parse_diagnostics), pre_lowered), analysis_snapshot) in
@@ -219,7 +240,10 @@ pub(crate) fn prepare_and_process_batch(
             cache_report.misses += 1;
             let mut demoted = PendingLibrary::new(
                 hit.index,
-                FileId::new(config.file_id_base + hit.index as u32),
+                config
+                    .namespaces
+                    .file_id(&hit.library.source_path)
+                    .expect("discovered namespace root"),
                 hit.library.clone(),
                 hit.input,
             );
@@ -229,9 +253,9 @@ pub(crate) fn prepare_and_process_batch(
     }
 
     let processing = ProcessingConfig {
+        namespaces: config.namespaces,
         package_root: config.package_root,
         package_name: config.package_name,
-        dart_language_version: config.dart_language_version,
         catalog: config.catalog,
         registry: config.registry,
         workspace_analysis: Arc::new(built_analysis),
@@ -253,8 +277,10 @@ pub(crate) fn prepare_and_process_batch(
 
     outcomes.append(&mut processed);
     outcomes.sort_by_key(|outcome| outcome.index);
+    let diagnostic_files = dependency_diagnostic_files(config, &outcomes);
     BatchResult {
         outcomes,
         workspace_analysis_hash,
+        diagnostic_files,
     }
 }

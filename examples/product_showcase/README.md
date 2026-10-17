@@ -23,6 +23,15 @@ running Dust first.
 The helper coexists with the generated mixin; its computed getter still reads
 the updated fields after `copyWith`, without changing generated output.
 
+[`generic_imported.dart`](lib/models/generic_imported.dart) demonstrates qualified
+annotations, including comments around a qualifier, while importing a generic
+model from another library. The in-progress namespace integration
+([#114](https://github.com/dustcodegen/dust/issues/114)) binds those names through
+their actual imports/re-exports. Run pub get first and keep the active Dart SDK
+on `PATH`. Annotation declarations belong in handwritten libraries or parts, not
+Dust's own generated output; ordinary references to generated model types remain
+allowed. This unmerged integration still needs its full acceptance matrix.
+
 ## Run It
 
 From this package:

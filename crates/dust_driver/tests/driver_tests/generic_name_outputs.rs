@@ -25,6 +25,7 @@ fn generic_name_collisions_preserve_complete_output_for_both_header_forms() {
         );
         write_file(&root.join("lib/generic_names.dart"), source);
         let request = BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,
@@ -39,6 +40,7 @@ fn generic_name_collisions_preserve_complete_output_for_both_header_forms() {
             "{version}"
         );
         let checked = run_check(CheckRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,

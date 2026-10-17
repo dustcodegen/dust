@@ -23,6 +23,7 @@ final class TestRouter extends $TestRouter { const TestRouter(); }
     );
     let build = |only_db| {
         let result = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: true,
             jobs: None,

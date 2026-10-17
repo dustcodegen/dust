@@ -51,6 +51,7 @@ fn generic_serde_has_exact_typed_parity_for_both_headers_and_package_kinds() {
                 write_file(&root.join(format!("lib/{stem}.dart")), sources[index]);
             }
             let request = BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: false,
                 jobs: None,
@@ -64,6 +65,7 @@ fn generic_serde_has_exact_typed_parity_for_both_headers_and_package_kinds() {
                 );
             }
             let checked = run_check(CheckRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: false,
                 jobs: None,

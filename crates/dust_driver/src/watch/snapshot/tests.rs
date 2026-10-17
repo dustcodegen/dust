@@ -1,6 +1,55 @@
+use std::{fs, path::Path};
 use tempfile::tempdir;
 
 use super::*;
+
+fn build_snapshot(root: &Path) -> Result<WorkspaceSnapshot, Diagnostic> {
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    };
+    write(
+        ".dart_tool/package_config.json",
+        r#"{"configVersion":2,"packages":[
+      {"name":"sample","rootUri":"../","packageUri":"lib/","languageVersion":"3.6"},
+      {"name":"dust_dart","rootUri":"../deps/dust_dart","packageUri":"lib/","languageVersion":"3.6"}]}"#,
+    );
+    write("sdk/version", "3.6.0");
+    write(
+        "sdk/lib/libraries.json",
+        r#"{"vm":{"libraries":{"core":{"uri":"core/core.dart"}}}}"#,
+    );
+    write("sdk/lib/core/core.dart", "class Object {}");
+    write(
+        "deps/dust_dart/lib/derive.dart",
+        "export 'src/derive/base.dart'; export 'src/derive/traits.dart'; export 'src/derive/validation.dart';",
+    );
+    write("deps/dust_dart/lib/src/derive/base.dart", "class Derive {}");
+    write(
+        "deps/dust_dart/lib/src/derive/traits.dart",
+        "class ToString {}",
+    );
+    write(
+        "deps/dust_dart/lib/src/derive/validation.dart",
+        "class Validate {}",
+    );
+    let registry = crate::build::registry_for_selection(crate::build::RegistrySelection::All);
+    let catalog = crate::catalog::build_symbol_catalog(&registry)?;
+    let mut workspace = dust_workspace::discover_workspace(
+        root,
+        &registry.all_supported_annotations().into_iter().collect(),
+    )?;
+    let namespaces = NamespaceSources::load(
+        root,
+        &mut workspace,
+        Some(&root.join("sdk")),
+        &catalog,
+        &registry,
+        false,
+    )?;
+    super::build_snapshot(&workspace, &namespaces, &catalog)
+}
 
 fn library(path: &str) -> SourceLibrary {
     let source_path = PathBuf::from(path);

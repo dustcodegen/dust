@@ -29,6 +29,7 @@ Future<Result<int, SqlxError>> broken(Executor db) => queryScalar<int>(
 ",
     );
     let checked = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -102,6 +103,7 @@ fn all_five_terminals_have_online_and_offline_metadata_in_both_styles() {
         let unrelated = root.join("lib/unrelated.g.dart");
         write_file(&unrelated, "// preserve another generator's output\n");
         let built = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: true,
             jobs: None,
@@ -175,6 +177,7 @@ fn type_warning_boundary_is_explicit_for_online_and_offline_queries() {
             true,
         );
         let built = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: true,
             jobs: None,
@@ -218,6 +221,7 @@ fn changing_a_cached_query_revalidates_sql_and_does_not_rewrite_metadata() {
         write_db_workspace(root, false);
         source::write_probe(root, dao, "SELECT COUNT(*) FROM users", false);
         let built = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: true,
             jobs: None,
@@ -256,6 +260,7 @@ fn changing_a_cached_query_revalidates_sql_and_does_not_rewrite_metadata() {
 
 fn check(root: &Path, offline: bool) -> dust_driver::CommandResult {
     run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(root)),
         cwd: root.to_path_buf(),
         fail_fast: false,
         jobs: None,

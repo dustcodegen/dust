@@ -7,6 +7,7 @@ pub(crate) fn assert_static_sql_rejected(query_body: &str) {
     write_static_sql_validation_workspace(workspace.path(), query_body);
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -34,6 +35,7 @@ pub(crate) fn assert_sqlx_rejected(query_body: &str, expected: &str) {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

@@ -69,6 +69,7 @@ fn build_accepts_supported_dart_version_surfaces_while_generating_outputs() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -102,12 +103,13 @@ mixin _$CompatProfile {
 }
 
 #[test]
-fn build_uses_pubspec_sdk_lower_bound_for_language_gates() {
+fn build_uses_resolved_package_language_for_language_gates() {
     let workspace = make_workspace();
     write_file(
         &workspace.path().join("pubspec.yaml"),
         "name: dust_test\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n",
     );
+    crate::support::set_language_version(workspace.path(), "dust_test", "3.0");
     write_dust_file(
         &workspace.path().join("lib/private_param.dart"),
         &[DustImport::Derive],
@@ -120,6 +122,7 @@ fn build_uses_pubspec_sdk_lower_bound_for_language_gates() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,

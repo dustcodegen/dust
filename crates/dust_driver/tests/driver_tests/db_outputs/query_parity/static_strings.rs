@@ -12,6 +12,7 @@ fn escaped_sql_has_identical_online_and_offline_meaning_for_direct_and_dao_calls
             write_db_workspace(root, false);
             write_query(root, style, literal);
             let built = run_build(BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: true,
                 jobs: None,

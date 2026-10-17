@@ -16,6 +16,8 @@ mod compatibility;
 mod context;
 /// Doctor command diagnostics for workspace setup.
 mod doctor;
+/// Shared ownership markers for primary and auxiliary generated sources.
+mod generated_source;
 /// ARB reconciliation helpers for i18n build.
 mod i18n_arb;
 /// Flutter asset declaration checks for i18n ARB files.
@@ -34,6 +36,8 @@ mod i18n_keys;
 mod i18n_scan;
 /// Conversion from resolved parser data into Dust IR.
 mod lower;
+/// Actual package/SDK sources and library-scoped annotation namespaces.
+mod namespace_sources;
 /// Public progress event model.
 mod progress;
 /// Public command request model.
@@ -46,6 +50,8 @@ mod result;
 mod route_inspection;
 /// Route inspection command support.
 mod route_table;
+/// Filesystem identities for local Dart URI references.
+mod source_uri;
 /// Watch command orchestration and change snapshots.
 mod watch;
 

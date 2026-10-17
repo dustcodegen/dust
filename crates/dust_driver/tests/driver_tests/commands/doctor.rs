@@ -70,6 +70,10 @@ fn doctor_reports_too_new_dust_package() {
 #[test]
 fn doctor_reports_missing_used_dust_package() {
     let workspace = make_workspace();
+    crate::support::write_file(
+        &workspace.path().join(".dart_tool/package_config.json"),
+        r#"{"configVersion":2,"packages":[]}"#,
+    );
     write_dust_file(
         &workspace.path().join("lib/user.dart"),
         &[DustImport::Derive],

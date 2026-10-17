@@ -42,6 +42,7 @@ fn serde_parameters_report_field_errors_without_replacing_good_output_or_cache()
                 let output = root.join("lib/model.g.dart");
                 let cache = root.join(".dart_tool/dust/build_cache_v1.json");
                 let request = BuildRequest {
+                    sdk_source_root: Some(crate::support::sdk_source_root(root)),
                     cwd: root.to_path_buf(),
                     fail_fast,
                     jobs: None,
@@ -76,6 +77,7 @@ fn serde_parameters_report_field_errors_without_replacing_good_output_or_cache()
                             run_build(request.clone())
                         } else {
                             run_check(CheckRequest {
+                                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                                 cwd: root.to_path_buf(),
                                 fail_fast,
                                 jobs: None,

@@ -89,6 +89,7 @@ fn inherited_codegen_has_complete_traditional_primary_and_package_kind_contracts
                 write_file(&root.join(format!("lib/{stem}.dart")), sources[index]);
             }
             let request = BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: false,
                 jobs: None,
@@ -107,6 +108,7 @@ fn inherited_codegen_has_complete_traditional_primary_and_package_kind_contracts
                 );
             }
             let checked = run_check(CheckRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: false,
                 jobs: None,

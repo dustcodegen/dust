@@ -1,12 +1,39 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};
 
 const USER: &str = "part 'user.g.dart';\n@Derive([ToString()])\nclass User with _$User { const User(this.name); final String name; }\n";
 
 #[test]
+fn relative_sdk_path_uses_process_directory_not_root_option() {
+    let workspace = make_workspace();
+    let root = workspace.path();
+    let member = root.join("app");
+    super::helpers::prepare(root, &member, "app");
+    write_file(&member.join("pubspec.yaml"), "name: app\n");
+    write_file(
+        &member.join(".dart_tool/package_graph.json"),
+        r#"{"configVersion":1,"roots":["app"],"packages":[]}"#,
+    );
+    write_dust_file(&member.join("lib/user.dart"), &[DustImport::Derive], USER);
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_dust"))
+        .current_dir(root)
+        .env("PATH", ".dust-test-sdk/bin")
+        .args(["build", "--root", "app"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(member.join("lib/user.g.dart").is_file());
+}
+
+#[test]
 fn language_gates_ignore_documentation_and_regex_strings_in_build_and_check() {
     let workspace = make_workspace();
+    super::helpers::set_language_version(workspace.path(), "dust_test", "3.6");
     write_file(
         &workspace.path().join("pubspec.yaml"),
         "name: dust_test\nenvironment:\n  sdk: '>=3.6.0 <4.0.0'\n",
@@ -37,6 +64,7 @@ const pattern = r'(?:[.,](\d+))?';
 #[test]
 fn real_inline_future_syntax_preserves_successful_output_and_cache() {
     let workspace = make_workspace();
+    super::helpers::set_language_version(workspace.path(), "dust_test", "3.6");
     write_file(
         &workspace.path().join("pubspec.yaml"),
         "name: dust_test\nenvironment:\n  sdk: '>=3.6.0 <4.0.0'\n",

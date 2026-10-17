@@ -22,6 +22,7 @@ fn watch_runs_initial_build_for_existing_candidates() {
     );
 
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -78,6 +79,7 @@ fn watch_rebuilds_only_the_changed_library() {
     });
 
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -200,10 +202,14 @@ fn watch_rebuilds_all_libraries_when_package_config_changes() {
     let initial_output = root.join("lib/user.g.dart");
     let modifier = thread::spawn(move || {
         wait_for_path(&initial_output);
-        replace_file_atomically(&package_config, "{\"configVersion\":2}\n");
+        let mut config: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&package_config).unwrap()).unwrap();
+        config["generator"] = "fixture-change".into();
+        replace_file_atomically(&package_config, &config.to_string());
     });
 
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -256,6 +262,7 @@ fn watch_rebuilds_all_libraries_when_dust_config_changes() {
     });
 
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -279,6 +286,7 @@ fn watch_rebuilds_all_libraries_when_dust_config_changes() {
 fn run_dispatches_watch_requests() {
     let workspace = make_workspace();
     let result = run(CommandRequest::Watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
