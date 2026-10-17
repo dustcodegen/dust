@@ -26,6 +26,7 @@ from sdk_sealed import check_generic_sealed, require_sealed_parity
 from sdk_unsupported import check_unsupported
 from sdk_static_strings import check_static_strings
 from sdk_lexical_scopes import check_lexical_scopes
+from sdk_callback_formals import check_callback_formals
 
 
 def stable_dart_version(output: str) -> str:
@@ -134,6 +135,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         strings = check_static_strings(run, dart, app, output / role / "static-strings", env)
         lexical = check_lexical_scopes(run, dust, dart, app, output / role / "lexical-scopes",
                                      output / role / "dart/analysis_options.yaml", "product_showcase", env)
+        callbacks = check_callback_formals(run, dust, dart, app, output / role / "callbacks", output / role / "dart/analysis_options.yaml", "product_showcase", env)
         validation = check_generic_validation(run, dust, dart, app, output / role / "generic-validation",
                                              output / role / "dart/analysis_options.yaml", "product_showcase", env)
         serde = check_generic_serde(run, dust, dart, app, output / role / "generic-serde",
@@ -144,7 +146,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                       output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
                      "generated": hashes, "genericNegative": negatives, "genericNames": names,
-                     "staticStrings": strings, "lexicalScopes": lexical,
+                     "staticStrings": strings, "lexicalScopes": lexical, "callbacks": callbacks,
                      "genericValidation": validation, "genericSerde": serde,
                      "genericInheritance": inheritance, "genericSealed": sealed})
 
@@ -275,6 +277,10 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
     check_generic_sealed(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-sealed",
                         output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
                         "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env, primary=True, flutter=flutter)
+    check_callback_formals(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-callbacks",
+                           output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
+                           "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env,
+                           primary=True, flutter=flutter)
     return hashes
 
 

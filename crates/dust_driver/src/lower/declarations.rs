@@ -114,6 +114,14 @@ pub(super) fn lower_functions(
                 function.return_type_source.as_deref(),
             );
             diagnostics.extend(return_type.diagnostics);
+            let annotations = function
+                .annotations
+                .iter()
+                .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
+                .collect::<Vec<_>>();
+            let collect_type_diagnostics = annotations
+                .iter()
+                .any(|annotation| annotation.resolved_symbol.is_some());
 
             FunctionIr {
                 name: lower_name_ir(file_id, &function.name, function.span),
@@ -121,14 +129,11 @@ pub(super) fn lower_functions(
                 params: lower_unresolved_method_params(
                     file_id,
                     &function.params,
+                    collect_type_diagnostics,
                     bindings,
                     diagnostics,
                 ),
-                annotations: function
-                    .annotations
-                    .iter()
-                    .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
-                    .collect(),
+                annotations,
                 span: SpanIr::new(file_id, function.span),
             }
         })

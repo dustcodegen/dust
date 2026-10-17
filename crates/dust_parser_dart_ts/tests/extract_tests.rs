@@ -4,6 +4,8 @@
 mod annotation_values;
 #[path = "extract_tests/annotations.rs"]
 mod annotations;
+#[path = "extract_tests/callback_formals.rs"]
+mod callback_formals;
 #[path = "extract_tests/class_shapes.rs"]
 mod class_shapes;
 #[path = "extract_tests/constructors.rs"]

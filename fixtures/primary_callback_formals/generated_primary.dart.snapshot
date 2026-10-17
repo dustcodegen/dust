@@ -1,0 +1,17 @@
+import 'package:dust_dart/derive.dart';
+
+part 'callback_probe.g.dart';
+
+/// A callback-bearing model using declaring primary parameters.
+@Derive([CopyWith(), ToString()])
+class const CallbackProbe(
+  final bool predicate(String value),
+  final bool? maybe(String value),
+  final bool nullable(String value)?,
+  final T echo<T extends Object>(T value),
+  final bool nested(bool next(String value), [int? count]),
+  final bool named({required String value, int? count}),
+) with _$CallbackProbe {
+  /// Creates a model retaining each callback's invocation type.
+  this;
+}

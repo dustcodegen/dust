@@ -13,7 +13,13 @@ pub(super) fn lower_unresolved_field(
     for annotation in &field.annotations {
         let _ = bindings.annotation_ir(file_id, annotation, diagnostics);
     }
-    let ty = lower_type(field.parsed_type.as_ref(), field.type_source.as_deref());
+    let ty = lower_parameter_type_ir(
+        file_id,
+        field.parsed_type.as_ref(),
+        field.type_source.as_deref(),
+        field.function_formal.as_ref(),
+        &[],
+    );
     diagnostics.extend(ty.diagnostics);
 
     FieldIr {
@@ -30,6 +36,7 @@ pub(super) fn lower_unresolved_field(
 pub(super) fn lower_unresolved_method_params(
     file_id: dust_text::FileId,
     params: &[ParsedMethodParamSurface],
+    collect_type_diagnostics: bool,
     bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MethodParamIr> {
@@ -37,8 +44,19 @@ pub(super) fn lower_unresolved_method_params(
         .iter()
         .map(|param| {
             let resolved = bindings.parameter(file_id, param, diagnostics);
-            let ty = lower_type(param.parsed_type.as_ref(), param.type_source.as_deref());
-            diagnostics.extend(ty.diagnostics);
+            let ty = lower_parameter_type_ir(
+                file_id,
+                param.parsed_type.as_ref(),
+                param.type_source.as_deref(),
+                param.function_formal.as_ref(),
+                &[],
+            );
+            if collect_type_diagnostics
+                || !resolved.traits.is_empty()
+                || !resolved.configs.is_empty()
+            {
+                diagnostics.extend(ty.diagnostics);
+            }
 
             MethodParamIr {
                 name: param.name.clone(),
@@ -92,9 +110,11 @@ pub(super) fn lower_resolved_fields(
     fields
         .iter_mut()
         .map(|field| {
-            let outcome = lower_type_in_scope(
+            let outcome = lower_parameter_type_ir(
+                field.span.file_id,
                 field.parsed_type.as_ref(),
                 field.type_source.as_deref(),
+                field.function_formal.as_ref(),
                 type_parameters,
             );
             diagnostics.extend(outcome.diagnostics);
@@ -129,9 +149,11 @@ pub(super) fn lower_resolved_methods(
                 .params
                 .iter()
                 .map(|param| {
-                    let ty = lower_type_in_scope(
+                    let ty = lower_parameter_type_ir(
+                        param.span.file_id,
                         param.surface.parsed_type.as_ref(),
                         param.surface.type_source.as_deref(),
+                        param.surface.function_formal.as_ref(),
                         type_parameters,
                     );
                     diagnostics.extend(ty.diagnostics);
@@ -180,17 +202,17 @@ pub(super) fn lower_resolved_constructors(
                 .params
                 .iter()
                 .map(|param| {
-                    let ty = param
-                        .type_source
-                        .as_deref()
-                        .map(|source| {
-                            lower_type_in_scope(
-                                param.parsed_type.as_ref(),
-                                Some(source),
-                                type_parameters,
-                            )
-                        })
-                        .unwrap_or_else(|| infer_param_type(param.name.as_str(), fields));
+                    let ty = if param.function_formal.is_some() || param.type_source.is_some() {
+                        lower_parameter_type_ir(
+                            file_id,
+                            param.parsed_type.as_ref(),
+                            param.type_source.as_deref(),
+                            param.function_formal.as_ref(),
+                            type_parameters,
+                        )
+                    } else {
+                        infer_param_type(param.name.as_str(), fields)
+                    };
                     diagnostics.extend(ty.diagnostics);
                     ConstructorParamIr {
                         name: param.name.clone(),

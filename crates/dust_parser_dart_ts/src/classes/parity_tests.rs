@@ -53,6 +53,15 @@ fn named_mixin_applications_keep_complete_header_facts() {
 }
 
 #[test]
+fn declaring_callback_signatures_keep_complete_facts() {
+    assert_parity(
+        "callback-formals",
+        "class Callbacks { Callbacks(bool? predicate(String value)?, T echo<T extends Object>(T value), {bool fallback(String value) = accept}); void call(bool predicate(@Tag() bool nested(String value), [int? count])); void named(bool predicate({required String value, int? count})); }",
+        1,
+    );
+}
+
+#[test]
 fn traditional_classes_fields_and_constructors() {
     assert_parity(
         "traditional",

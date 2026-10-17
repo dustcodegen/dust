@@ -45,6 +45,7 @@ pub(super) fn type_scope(
     binders(parameters, index, source, scopes);
     if let Some(primary) = primary {
         primary_fields(primary, index, source, scopes);
+        super::callbacks::extract(primary, index, source, scopes);
     }
     if let Some(body) = body {
         members(body, index, source, scopes);
@@ -74,19 +75,22 @@ pub(super) fn callable(
             );
         }
     }
-    let Some(parameters) = direct_named_child(signature, "type_parameters") else {
-        return;
+    let index = if let Some(parameters) = direct_named_child(signature, "type_parameters") {
+        let index = scopes.len();
+        scopes.push(ParsedLexicalScope {
+            parent: Some(parent),
+            name: name.map(|name| identifier(name, source)),
+            kind: Scope::Callable,
+            visibility: TextRange::new(text_range(parameters).start(), text_range(signature).end()),
+            span: text_range(node),
+            declarations: Vec::new(),
+        });
+        binders(Some(parameters), index, source, scopes);
+        index
+    } else {
+        parent
     };
-    let index = scopes.len();
-    scopes.push(ParsedLexicalScope {
-        parent: Some(parent),
-        name: name.map(|name| identifier(name, source)),
-        kind: Scope::Callable,
-        visibility: TextRange::new(text_range(parameters).start(), text_range(signature).end()),
-        span: text_range(node),
-        declarations: Vec::new(),
-    });
-    binders(Some(parameters), index, source, scopes);
+    super::callbacks::extract(signature, index, source, scopes);
 }
 
 /// Binders retain their own identifier spans, not names found in bound arguments.

@@ -82,12 +82,13 @@ Remaining gaps in this draft:
   for generated models; [#155](https://github.com/dustcodegen/dust/issues/155)
   tracks the namespace and explicit-diagnostic boundary.
 - [Shorthand callback declaring parameters (#92)](https://github.com/dustcodegen/dust/issues/92),
-  such as `final bool predicate(String value)`, currently lose the callable
-  signature and can produce invalid `copyWith` code. The explicit
-  `final bool Function(String) predicate` form compiled in the scoped
-  latest-Dart probe; it does not need a new handwritten API. Source-preserving
-  effective-function parser facts need review before fixing the shorthand;
-  see the [proposed contract](../design/function-formal-types.md).
+  such as `final bool predicate(String value)`, now retain a separate effective
+  function type through copy generation. Explicit `Function(...)` syntax is
+  still recommended by Dart's style lint. Scoped minimum/latest executable
+  probes cover nullable returns/functions, generic/nested/named invocation and
+  callback retain/replace/null-clear; inference and defaults inside signatures
+  fail clearly. See the [approved contract](../design/function-formal-types.md)
+  and [executable fixtures](../../fixtures/primary_callback_formals/README.md).
 - [Generic class generation (#93)](https://github.com/dustcodegen/dust/issues/93)
   now has scoped executable typed-copy checks for traditional and primary
   classes using `with _$Box<T>`. These cover bounds, nullable arguments,

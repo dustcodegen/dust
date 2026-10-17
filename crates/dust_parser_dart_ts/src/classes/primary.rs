@@ -49,6 +49,7 @@ fn collect_declaring_fields(
                     annotations: param.annotations.clone(),
                     type_source: param.type_source.clone(),
                     parsed_type: param.parsed_type.clone(),
+                    function_formal: param.function_formal.clone(),
                     // A parameter default does not become a field initializer.
                     has_default: false,
                     span: text_range(name),

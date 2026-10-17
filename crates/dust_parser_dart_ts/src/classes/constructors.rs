@@ -202,7 +202,7 @@ fn collect_optional_formal_parameters(
 }
 
 /// Converts one tree-sitter parameter node into constructor parameter metadata.
-fn extract_formal_parameter(
+pub(super) fn extract_formal_parameter(
     node: Node<'_>,
     source: &SourceText,
     kind: ParameterKind,
@@ -225,6 +225,7 @@ fn extract_formal_parameter(
         annotations,
         type_source,
         parsed_type,
+        function_formal: super::function_formals::extract(node, source),
         kind,
         is_required: is_required_parameter(node, source)
             || (kind == ParameterKind::Positional

@@ -91,6 +91,12 @@ pub(crate) fn resolve_method_param(
     let mut traits = Vec::new();
     let mut configs = Vec::new();
 
+    if let Some(formal) = &param.function_formal {
+        for annotation in formal.annotations() {
+            let _ = context.annotation_ir(file_id, annotation, diagnostics);
+        }
+    }
+
     for annotation in &param.annotations {
         let Application::Symbol(resolved) = context.application(file_id, annotation, diagnostics)
         else {
@@ -202,6 +208,7 @@ pub(crate) fn resolve_field(
         name: field.name.clone(),
         type_source: field.type_source.clone(),
         parsed_type: field.parsed_type.clone(),
+        function_formal: field.function_formal.clone(),
         has_default: field.has_default,
         span: SpanIr::new(file_id, field.span),
         configs,

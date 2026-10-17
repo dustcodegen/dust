@@ -4,6 +4,41 @@ use std::fs;
 use super::{MODEL, build, workspace, write_file};
 
 #[test]
+fn callback_generic_binders_shadow_imports_only_inside_the_signature() {
+    let workspace = workspace();
+    let root = workspace.path();
+    let model = root.join("lib/model.dart");
+    let source = format!("import 'package:dust_dart/derive.dart';\n{MODEL}");
+    write_file(&model, &source);
+    assert_eq!(build(root).diagnostics, []);
+    let output = fs::read(root.join("lib/model.g.dart")).unwrap();
+    for declaration in [
+        "class Other { Other(bool callback<CopyWith>(@CopyWith() String value)); }",
+        "class Other { void call(bool callback<CopyWith>(@CopyWith() String value)) {} }",
+        "void other(bool callback<CopyWith>(@CopyWith() String value)) {}",
+        "void other(bool callback(bool nested<CopyWith>(@CopyWith() String value))) {}",
+    ] {
+        write_file(&model, &format!("{source}\n{declaration}"));
+        let result = build(root);
+        assert_eq!(
+            result
+                .diagnostics
+                .iter()
+                .map(|error| error.message.as_str())
+                .collect::<Vec<_>>(),
+            ["lexical annotation value has no supported constant provenance"]
+        );
+        assert_eq!(fs::read(root.join("lib/model.g.dart")).unwrap(), output);
+    }
+    write_file(
+        &model,
+        &format!("{source}\nvoid other(@CopyWith() bool callback<CopyWith>(String value)) {{}}"),
+    );
+    assert_eq!(build(root).diagnostics, []);
+    assert_eq!(fs::read(root.join("lib/model.g.dart")).unwrap(), output);
+}
+
+#[test]
 fn class_constant_metadata_shadows_an_import_prefix_without_changing_generation() {
     let workspace = workspace();
     let root = workspace.path();
