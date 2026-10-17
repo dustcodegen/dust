@@ -12,6 +12,10 @@ use crate::syntax::{direct_named_child, has_descendant_kind, node_text, text_ran
 mod collections;
 use self::collections::*;
 
+/// Structured constructor names and arguments.
+mod constructors;
+use self::constructors::constructor_kind;
+
 /// Converts an annotation argument container into a parser-owned value.
 pub(super) fn annotation_value_from_container(
     container: Node<'_>,
@@ -20,18 +24,11 @@ pub(super) fn annotation_value_from_container(
     source: &SourceText,
 ) -> Option<ParsedAnnotationValue> {
     if is_member_selector_chain(container) && has_descendant_kind(container, "arguments") {
-        let name = value_source
-            .split_once('(')
-            .map_or(value_source.as_str(), |(name, _)| name)
-            .trim()
-            .to_owned();
         return Some(ParsedAnnotationValue {
             source: value_source,
             span: value_span,
-            kind: ParsedAnnotationValueRootKind::Constructor {
-                name,
-                arguments: constructor_arguments(container, source),
-            },
+            kind: constructor_kind([container], source)
+                .unwrap_or(ParsedAnnotationValueRootKind::Expression),
         });
     }
 
@@ -49,7 +46,7 @@ pub(super) fn annotation_value_from_container(
 fn annotation_argument_value_node(node: Node<'_>, value_span: TextRange) -> Option<Node<'_>> {
     let mut cursor = node.walk();
     node.children(&mut cursor)
-        .filter(|child| child.is_named() && child.kind() != "label")
+        .filter(|child| child.is_named() && !child.is_extra() && child.kind() != "label")
         .find(|child| {
             let child_range = text_range(*child);
             child_range.start() >= value_span.start() && child_range.end() <= value_span.end()
@@ -87,10 +84,8 @@ fn annotation_value(
             "set_or_map_literal" => set_or_map_kind(node, source),
             "record_literal" => ParsedAnnotationValueRootKind::Record(record_values(node, source)),
             "const_object_expression" | "constructor_invocation" => {
-                ParsedAnnotationValueRootKind::Constructor {
-                    name: constructor_name(node, source).unwrap_or_else(|| value_source.clone()),
-                    arguments: constructor_arguments(node, source),
-                }
+                constructor_kind([node], source)
+                    .unwrap_or(ParsedAnnotationValueRootKind::Expression)
             }
             "identifier" | "qualified" | "selector" => {
                 ParsedAnnotationValueRootKind::Member(value_source.clone())
@@ -125,7 +120,7 @@ fn collection_values(node: Node<'_>, source: &SourceText) -> Vec<ParsedAnnotatio
     let mut cursor = node.walk();
     let children = node
         .children(&mut cursor)
-        .filter(|child| child.is_named() && child.kind() != "type_arguments")
+        .filter(|child| child.is_named() && !child.is_extra() && child.kind() != "type_arguments")
         .collect::<Vec<_>>();
     let mut values = Vec::new();
     let mut index = 0;
@@ -143,18 +138,8 @@ fn collection_values(node: Node<'_>, source: &SourceText) -> Vec<ParsedAnnotatio
                 let last = children[end - 1];
                 let span = TextRange::new(text_range(child).start(), text_range(last).end());
                 let value_source = source.slice(span).unwrap_or_default().to_owned();
-                let kind = if value_source.contains('(') {
-                    ParsedAnnotationValueRootKind::Constructor {
-                        name: value_source
-                            .split_once('(')
-                            .map_or(value_source.as_str(), |(name, _)| name)
-                            .trim()
-                            .to_owned(),
-                        arguments: constructor_arguments(last, source),
-                    }
-                } else {
-                    ParsedAnnotationValueRootKind::Member(value_source.clone())
-                };
+                let kind = constructor_kind(children[index..end].iter().copied(), source)
+                    .unwrap_or_else(|| ParsedAnnotationValueRootKind::Member(value_source.clone()));
                 values.push(ParsedAnnotationValue {
                     source: value_source,
                     span,

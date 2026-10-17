@@ -155,9 +155,13 @@ impl<'a> BindingContext<'a> {
         if self.namespace.is_none() {
             return self.catalog.resolve_trait(&name.short);
         }
+        let lookup = name.prefix.as_ref().map_or_else(
+            || name.short.clone(),
+            |prefix| format!("{prefix}.{}", name.short),
+        );
         let owner = self.owner(
             &name.source,
-            &name.source,
+            &lookup,
             &name.short,
             name.span,
             true,

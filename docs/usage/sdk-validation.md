@@ -108,7 +108,9 @@ the repository lock running on every SDK.
 9. Generate `fixtures/generic_validation` in owned staging on all four SDK ends,
    plus latest Dart/Flutter primary-header consumers. Strictly analyze source,
    parts and tests without broad generated lint suppression. Execute required,
-   custom, nested, nullability, bounded/compound-type and exception contracts;
+   custom, nested, nullability, bounded/compound-type and exception contracts.
+   Explicit typed derive constructors exercise unprefixed and qualified/trivia
+   spellings with nested generic arguments, without changing output bytes;
    Flutter also executes concrete and receiver-dependent form helpers. Require
    100% reported executable-line coverage of these three generated libraries,
    without honoring their coverage-ignore markers, and exact validation hashes

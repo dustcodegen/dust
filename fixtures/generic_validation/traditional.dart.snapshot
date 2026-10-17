@@ -3,7 +3,7 @@ import 'package:dust_dart/derive.dart';
 part 'model.g.dart';
 
 /// A bounded generic value retains its chosen validation type.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([Validate<Object?>()])
 class Holder<T extends num> with _$Holder<T> {
   /// Creates one value for validation.
   const Holder(this.value);

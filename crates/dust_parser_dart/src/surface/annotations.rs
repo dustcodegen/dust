@@ -70,8 +70,12 @@ pub enum ParsedAnnotationValueRootKind {
     Record(Vec<(String, ParsedAnnotationValue)>),
     /// A constructor invocation.
     Constructor {
-        /// Constructor/type source.
+        /// Exact written callee, including type arguments and qualifier trivia.
         name: String,
+        /// Final callee identifier, excluding type arguments and trivia.
+        short_name: String,
+        /// Callee identifiers before the final segment, excluding type arguments and trivia.
+        prefix: Option<String>,
         /// Structured constructor arguments.
         arguments: Box<ParsedAnnotationArguments>,
     },

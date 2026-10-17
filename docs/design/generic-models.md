@@ -249,10 +249,14 @@ The isolated [validation fixtures](../../fixtures/generic_validation) exercise
 traditional and primary headers, runtime behavior and expected compiler errors
 for a wrong private-helper receiver/candidate. These are scoped tests, not
 general bound/interface resolution or generic support in every plugin.
-Typed nested trait constructors such as `Validate<Object?>()` inside a derive
-list have a separate parser limitation tracked in
-[#125](https://github.com/dustcodegen/dust/issues/125); the strict fixtures supply
-inference context with `@Derive(<Validate<Object?>>[Validate()])` instead.
+Typed nested trait constructors such as `Validate<Object?>()` now retain
+separate parser-owned short names and prefixes; applied type arguments and
+qualifier trivia stay in raw source, not catalog lookup. The validation fixtures
+exercise prefixed/unprefixed typed traits, including nested generic arguments.
+Scoped namespace tests reject ambiguous/hidden/deferred or foreign ownership
+without treating type-argument identifiers as qualifiers. These supplied-graph
+tests are not #114's production namespace loader. Tracks
+[#125](https://github.com/dustcodegen/dust/issues/125).
 
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /
