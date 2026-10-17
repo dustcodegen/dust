@@ -86,6 +86,7 @@ impl ParseBackend for FakeBackend {
                 query_calls: Vec::new(),
             },
             diagnostics: Vec::new(),
+            namespace_diagnostics: Vec::new(),
             options,
         }
     }
@@ -115,6 +116,7 @@ fn parse_result_reports_presence_of_diagnostics() {
             query_calls: Vec::new(),
         },
         diagnostics: vec![Diagnostic::error("unexpected token")],
+        namespace_diagnostics: vec![Diagnostic::error("unexpected token")],
         options: ParseOptions::default(),
     };
 
@@ -135,6 +137,17 @@ fn parse_file_dispatches_through_injected_backend() {
         result.library.classes[0].superclass_name.as_deref(),
         Some("Entity")
     );
+}
+
+#[test]
+fn generation_error_status_is_not_weakened_by_the_namespace_projection() {
+    let source = SourceText::new(FileId::new(142), "class User {}");
+    let mut result = FakeBackend.parse_file(&source, ParseOptions::default());
+    result
+        .diagnostics
+        .push(Diagnostic::error("generation limitation"));
+    assert_eq!(result.namespace_diagnostics, []);
+    assert!(result.has_errors());
 }
 
 #[test]
