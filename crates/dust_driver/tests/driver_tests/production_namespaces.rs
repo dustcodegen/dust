@@ -11,6 +11,8 @@ use super::support::{make_workspace, write_file};
 mod boundaries;
 #[path = "production_namespaces/cache_watch.rs"]
 mod cache_watch;
+#[path = "production_namespaces/callable_defaults.rs"]
+mod callable_defaults;
 #[path = "production_namespaces/generated_libraries.rs"]
 mod generated_libraries;
 #[path = "production_namespaces/imports.rs"]
