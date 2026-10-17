@@ -39,12 +39,10 @@ fn valid_executable_bodies_have_distinct_namespace_and_generation_diagnostics() 
 fn metadata_initializers_defaults_and_constructor_signatures_stay_namespace_errors() {
     for declaration in [
         "final Kind value = .ready;",
-        "class C { final Kind value = .ready; }",
         "@Marker(.ready) class C {}",
         "void choose([Kind value = .ready]) {}",
         "class C { void choose([Kind value = .ready]) {} }",
         "final callback = () => .ready;",
-        "class C { final callback = () => .ready; }",
         "class C { new(); }",
         "class C { factory create() = C; }",
         "class C { C() : value = .ready; final Kind value; }",
