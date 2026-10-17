@@ -91,6 +91,7 @@ fn emitter_generates_real_multi_class_output_with_derive_plugin() {
                 is_abstract: false,
                 is_interface: false,
                 superclass_name: None,
+                superclass: None,
                 span: span(0, 80),
                 fields: vec![
                     field("id", TypeIr::string()),
@@ -120,6 +121,7 @@ fn emitter_generates_real_multi_class_output_with_derive_plugin() {
                 is_abstract: false,
                 is_interface: false,
                 superclass_name: None,
+                superclass: None,
                 span: span(81, 160),
                 fields: vec![field("name", TypeIr::string())],
                 constructors: vec![constructor(

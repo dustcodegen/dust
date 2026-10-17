@@ -16,6 +16,8 @@ pub(super) struct ClassLoweringInput<'a> {
     pub(super) is_interface: bool,
     /// Immediate superclass name.
     pub(super) superclass_name: Option<&'a str>,
+    /// Written superclass application in the owning class scope.
+    pub(super) superclass: Option<&'a ParsedTypeSurface>,
     /// Class source span.
     pub(super) span: SpanIr,
     /// Resolved fields.
@@ -68,6 +70,14 @@ pub(super) fn lower_class_from_parts(input: ClassLoweringInput<'_>) -> LoweringO
             }
         })
         .collect();
+    let superclass = input.superclass.map(|superclass| {
+        let outcome = lower_type_in_scope(Some(superclass), None, &names);
+        diagnostics.extend(outcome.diagnostics);
+        dust_ir::SuperclassIr {
+            ty: outcome.value,
+            span: SpanIr::new(input.span.file_id, superclass.span),
+        }
+    });
     let fields = lower_resolved_fields(input.fields, &names, &mut diagnostics);
     let methods = lower_resolved_methods(input.methods, &names, &mut diagnostics);
     let constructors = lower_resolved_constructors(
@@ -86,6 +96,7 @@ pub(super) fn lower_class_from_parts(input: ClassLoweringInput<'_>) -> LoweringO
             is_abstract: input.is_abstract,
             is_interface: input.is_interface,
             superclass_name: input.superclass_name.map(str::to_owned),
+            superclass,
             span: input.span,
             fields,
             constructors,

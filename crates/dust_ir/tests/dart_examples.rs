@@ -33,6 +33,7 @@ fn models_real_dart_data_class_shapes() {
             is_abstract: false,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(1, 40, 210),
             fields: vec![
                 FieldIr {

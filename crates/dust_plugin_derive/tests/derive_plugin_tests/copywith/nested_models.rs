@@ -34,6 +34,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         is_abstract: false,
                         is_interface: false,
                         superclass_name: None,
+                        superclass: None,
                         span: span(1, 20),
                         fields: vec![FieldIr {
                             name: "currency".to_owned(),
@@ -74,6 +75,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         is_abstract: false,
                         is_interface: false,
                         superclass_name: None,
+                        superclass: None,
                         span: span(20, 100),
                         fields: vec![
                             FieldIr {

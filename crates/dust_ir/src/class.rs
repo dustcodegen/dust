@@ -31,6 +31,8 @@ pub struct ClassIr {
     pub is_interface: bool,
     /// The immediate superclass name, if one was declared.
     pub superclass_name: Option<String>,
+    /// Written superclass application in this class's parameter scope.
+    pub superclass: Option<SuperclassIr>,
     /// The source span for the class.
     pub span: SpanIr,
     /// The lowered fields in declaration order.
@@ -51,6 +53,15 @@ pub struct ClassIr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MixinApplicationIr {
     /// The applied type, including any type arguments.
+    pub ty: TypeIr,
+    /// The original application source span.
+    pub span: SpanIr,
+}
+
+/// One type applied in a class's `extends` clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SuperclassIr {
+    /// The applied superclass type, retaining its actual arguments.
     pub ty: TypeIr,
     /// The original application source span.
     pub span: SpanIr,

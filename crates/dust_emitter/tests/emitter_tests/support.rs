@@ -70,6 +70,7 @@ pub(crate) fn class(name: &str, fields: Vec<FieldIr>, constructors: Vec<Construc
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(0, 100),
         fields,
         constructors,

@@ -33,6 +33,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: None,
+                    superclass: None,
                     span: span(10, 80),
                     fields: vec![
                         FieldIr {

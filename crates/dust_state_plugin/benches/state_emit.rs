@@ -22,6 +22,7 @@ fn view_model(name: &str) -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: Some(format!("${name}")),
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: Vec::new(),

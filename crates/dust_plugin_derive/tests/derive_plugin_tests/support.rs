@@ -18,6 +18,7 @@ pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 80),
         fields: vec![
             FieldIr {

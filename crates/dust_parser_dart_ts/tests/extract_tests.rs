@@ -35,6 +35,8 @@ mod typed_annotation_values;
 mod primary_shapes;
 #[path = "extract_tests/static_strings.rs"]
 mod static_strings;
+#[path = "extract_tests/superclasses.rs"]
+mod superclasses;
 #[path = "extract_tests/support.rs"]
 mod support;
 #[path = "extract_tests/unsupported_syntax.rs"]

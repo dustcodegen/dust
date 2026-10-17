@@ -29,6 +29,7 @@ impl ParseBackend for FakeBackend {
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: Some("Entity".to_owned()),
+                    superclass: None,
                     annotations: vec![ParsedAnnotation {
                         name: "Derive".to_owned(),
                         prefix: None,
@@ -172,6 +173,7 @@ fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         annotations: vec![ParsedAnnotation {
             name: "Derive".to_owned(),
             prefix: None,

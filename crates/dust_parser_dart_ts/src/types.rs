@@ -121,7 +121,7 @@ fn type_identifier_source(type_node: Node<'_>, source: &SourceText) -> Option<St
     (!source.is_empty()).then(|| source.to_owned())
 }
 
-/// Returns a named type's base source before type arguments.
+/// Reads the canonical identifier path before a named type's arguments.
 fn named_type_source(
     type_node: Node<'_>,
     args_node: Option<Node<'_>>,
@@ -131,9 +131,34 @@ fn named_type_source(
     let end = args_node
         .map(|node| node.start_byte())
         .unwrap_or(type_end_byte);
-    let source = source.as_str().get(type_node.start_byte()..end)?;
-    let source = source.trim().trim_end_matches('?').trim();
-    (!source.is_empty()).then(|| source.to_owned())
+    let mut container = type_node;
+    while container.end_byte() < end {
+        container = container.parent()?;
+    }
+    let mut names = Vec::new();
+    type_name_identifiers(container, type_node.start_byte(), end, source, &mut names);
+    (!names.is_empty()).then(|| names.join("."))
+}
+
+/// Reads only identifier nodes in the name range, never comments or argument names.
+fn type_name_identifiers(
+    node: Node<'_>,
+    start: usize,
+    end: usize,
+    source: &SourceText,
+    names: &mut Vec<String>,
+) {
+    if node.end_byte() <= start || node.start_byte() >= end || node.is_extra() {
+        return;
+    }
+    if node.kind() == "type_identifier" {
+        names.push(crate::syntax::node_text(node, source));
+        return;
+    }
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        type_name_identifiers(child, start, end, source, names);
+    }
 }
 
 /// Finds type arguments that follow a type identifier before a boundary.

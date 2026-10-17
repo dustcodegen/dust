@@ -91,6 +91,7 @@ fn synthesize_class(
         is_abstract: false,
         is_interface: false,
         superclass_name: Some(base.name.clone()),
+        superclass: None,
         span: base.span,
         fields: variant.params.iter().map(field_from_param).collect(),
         constructors: vec![ConstructorIr {

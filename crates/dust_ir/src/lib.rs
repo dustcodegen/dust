@@ -48,7 +48,7 @@ mod workspace;
 pub use annotation::{
     AnnotationIr, AnnotationNumberKindIr, AnnotationValueIr, ExprSourceIr, NameIr,
 };
-pub use class::{ClassIr, ClassKindIr, MixinApplicationIr};
+pub use class::{ClassIr, ClassKindIr, MixinApplicationIr, SuperclassIr};
 pub use constructor::{ConstructorIr, ConstructorParamIr, ParamKind};
 pub use db::{
     DbConfigIr, DbDatabaseConfigIr, DbDriverIr, DbQueryConfigIr, DbRenameRuleIr, DbSqlxConfigIr,

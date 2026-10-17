@@ -31,6 +31,7 @@ fn copywith_requires_reconstructible_constructor() {
             is_abstract: false,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(10, 80),
             fields: vec![
                 FieldIr {
@@ -117,6 +118,7 @@ fn copywith_rejects_abstract_classes() {
             is_abstract: true,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(10, 80),
             fields: vec![FieldIr {
                 name: "id".to_owned(),
@@ -193,6 +195,7 @@ fn rejects_mixin_class_targets() {
             is_abstract: false,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(10, 80),
             fields: vec![FieldIr {
                 name: "id".to_owned(),

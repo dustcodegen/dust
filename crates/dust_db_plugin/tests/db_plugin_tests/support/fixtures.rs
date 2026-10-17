@@ -14,6 +14,7 @@ pub(crate) fn row_class() -> ClassIr {
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: vec![
             field("id", TypeIr::int(), Vec::new()),
@@ -109,6 +110,7 @@ pub(crate) fn dao_class() -> ClassIr {
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -142,6 +144,7 @@ pub(crate) fn database_class() -> ClassIr {
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: Vec::new(),
