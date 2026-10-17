@@ -2,7 +2,7 @@ use dust_parser_dart::ParameterKind;
 use dust_text::SourceText;
 use tree_sitter::Node;
 
-use crate::syntax::direct_named_child;
+use crate::syntax::{direct_named_child, node_text};
 
 /// Determines whether an optional parameter group is named or positional.
 pub(super) fn optional_parameter_kind(node: Node<'_>) -> ParameterKind {
@@ -47,7 +47,16 @@ pub(super) fn is_field_formal_parameter(node: Node<'_>) -> bool {
 }
 
 /// Returns whether a parameter has the explicit Dart `required` modifier.
-pub(super) fn is_required_parameter(node: Node<'_>) -> bool {
+pub(super) fn is_required_parameter(node: Node<'_>, source: &SourceText) -> bool {
+    // The legacy grammar represents a field/super modifier as a type identifier.
+    let field_formal = direct_named_child(node, "constructor_param")
+        .or_else(|| direct_named_child(node, "super_formal_parameter"));
+    if field_formal
+        .and_then(|formal| direct_named_child(formal, "type_identifier"))
+        .is_some_and(|identifier| node_text(identifier, source) == "required")
+    {
+        return true;
+    }
     let Some(parent) = node.parent() else {
         return false;
     };

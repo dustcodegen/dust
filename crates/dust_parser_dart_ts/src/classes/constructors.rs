@@ -226,7 +226,7 @@ fn extract_formal_parameter(
         type_source,
         parsed_type,
         kind,
-        is_required: is_required_parameter(node)
+        is_required: is_required_parameter(node, source)
             || (kind == ParameterKind::Positional
                 && node
                     .parent()

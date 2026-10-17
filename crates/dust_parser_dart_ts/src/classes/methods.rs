@@ -209,7 +209,7 @@ fn extract_method_formal_parameter(
         type_source,
         parsed_type,
         kind,
-        is_required: is_required_parameter(node),
+        is_required: is_required_parameter(node, source),
         has_default: default_value_source.is_some(),
         default_value_source,
         span: text_range(node),
