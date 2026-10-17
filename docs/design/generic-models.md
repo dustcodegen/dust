@@ -258,6 +258,17 @@ without treating type-argument identifiers as qualifiers. These supplied-graph
 tests are not #114's production namespace loader. Tracks
 [#125](https://github.com/dustcodegen/dust/issues/125).
 
+The SerDe capability audit now distinguishes known class parameters from SDK
+scalars, containers and local/workspace JSON-capable types, including nested
+collection elements/values. Such fields require explicit mapping under the
+existing codec contract; no conversion is inferred from bounds. The diagnostic
+retains the field source location, and rejected input preserves prior output and
+cache. Qualified external names and concrete fields are not blanket-rejected.
+This guard is [#129](https://github.com/dustcodegen/dust/issues/129), not generic
+helper support: [#128](https://github.com/dustcodegen/dust/issues/128) separately
+tracks raw helpers erasing chosen type arguments, even for a phantom parameter
+with concrete fields. Generic SerDe is not production-ready.
+
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /
 [PR #100](https://github.com/dustcodegen/dust/pull/100), also applied to this draft.
