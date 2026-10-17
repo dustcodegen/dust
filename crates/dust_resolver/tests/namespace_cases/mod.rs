@@ -8,6 +8,7 @@ mod parts;
 mod roles;
 mod scoped;
 mod surfaces;
+mod typed_values;
 
 #[test]
 fn unprefixed_and_shared_prefix_conflicts_are_not_registration_order() {

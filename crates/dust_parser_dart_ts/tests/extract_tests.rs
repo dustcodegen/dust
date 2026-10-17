@@ -28,6 +28,8 @@ mod library_surface;
 mod methods;
 #[path = "extract_tests/primary_constructors.rs"]
 mod primary_constructors;
+#[path = "extract_tests/typed_annotation_values.rs"]
+mod typed_annotation_values;
 
 #[path = "extract_tests/primary_shapes.rs"]
 mod primary_shapes;

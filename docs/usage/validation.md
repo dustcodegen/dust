@@ -89,7 +89,7 @@ not a published feature or general generic-plugin guarantee. Pass the model's
 arguments to the generated mixin:
 
 ```dart
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([Validate<Object?>()])
 class RequiredValue<T> with _$RequiredValue<T> {
   const RequiredValue(this.value);
 
@@ -101,10 +101,8 @@ RequiredValue<int>(1).validate();         // Valid
 RequiredValue<String?>(null).validate();  // Invalid: value is required
 ```
 
-The typed derive list supplies context for strict inference; explicit type
-arguments on a nested derive constructor are separately tracked in
-[#125](https://github.com/dustcodegen/dust/issues/125). Type arguments can make
-an unbounded `T` nullable even without a field `?`. Optional nulls skip custom
+The explicit annotation argument supplies context for strict inference.
+Type arguments can make an unbounded `T` nullable even without a field `?`. Optional nulls skip custom
 and nested validators; `required: true` reports them. String/length/range rules
 still require their supported concrete types: a parameter named `String` is not
 the core `String` type. Concrete Flutter input helpers retain ordinary tearoffs;

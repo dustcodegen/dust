@@ -98,7 +98,9 @@ class User {}
         fields[0].1.kind,
         ParsedAnnotationValueRootKind::String("a".to_owned())
     );
-    let ParsedAnnotationValueRootKind::Constructor { name, arguments } = kind(args, "constructed")
+    let ParsedAnnotationValueRootKind::Constructor {
+        name, arguments, ..
+    } = kind(args, "constructed")
     else {
         panic!("expected structured constructor");
     };
@@ -106,7 +108,9 @@ class User {}
     assert_eq!(arguments.positional.len(), 1);
     assert!(arguments.named.is_empty());
     assert_eq!(source(args, "constructed"), "const Foo.bar(1)");
-    let ParsedAnnotationValueRootKind::Constructor { name, arguments } = kind(args, "nested")
+    let ParsedAnnotationValueRootKind::Constructor {
+        name, arguments, ..
+    } = kind(args, "nested")
     else {
         panic!("expected structured nested constructor");
     };

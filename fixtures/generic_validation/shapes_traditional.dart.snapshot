@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dust_dart/derive.dart';
+import 'package:dust_dart/derive.dart' as d;
 
 part 'validation_shapes.g.dart';
 
@@ -8,7 +9,7 @@ part 'validation_shapes.g.dart';
 typedef OptionalValue<T> = T?;
 
 /// The chosen argument determines whether an unbounded value can be null.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class ValueBox<T> with _$ValueBox<T> {
   /// Creates a value.
   const ValueBox(this.value);
@@ -19,7 +20,7 @@ class ValueBox<T> with _$ValueBox<T> {
 }
 
 /// Nullable aliases retain their actual generic argument.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class AliasBox<T> with _$AliasBox<T> {
   /// Creates an aliased value.
   const AliasBox(this.value);
@@ -30,7 +31,7 @@ class AliasBox<T> with _$AliasBox<T> {
 }
 
 /// A nested generic model retains ordinary validation dispatch.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Child<T> with _$Child<T> {
   /// Creates a child.
   const Child(this.value);
@@ -41,7 +42,7 @@ class Child<T> with _$Child<T> {
 }
 
 /// Parent validation prefixes nested errors without erasing the child type.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Parent<T> with _$Parent<T> {
   /// Creates a parent.
   const Parent(this.child);
@@ -52,7 +53,7 @@ class Parent<T> with _$Parent<T> {
 }
 
 /// Helper declarations retain recursive and dependent bounds.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Bounded<T extends Comparable<T>, U extends T> with _$Bounded<T, U> {
   /// Creates bounded values.
   const Bounded(this.left, this.right);
@@ -67,7 +68,7 @@ class Bounded<T extends Comparable<T>, U extends T> with _$Bounded<T, U> {
 }
 
 /// Function-local binders, records and FutureOr remain source-owned types.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Payload<T> with _$Payload<T> {
   /// Creates a compound payload.
   const Payload(this.future, this.pair, this.callback);
@@ -86,7 +87,7 @@ class Payload<T> with _$Payload<T> {
 }
 
 /// Non-nullable outer containers retain generic element types.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Items<T> with _$Items<T> {
   /// Creates a collection.
   const Items(this.values);
@@ -97,7 +98,7 @@ class Items<T> with _$Items<T> {
 }
 
 /// Empty generic validators need neither a raw receiver nor unused helpers.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class Empty<T> with _$Empty<T> {
   /// Creates an empty model.
   const Empty();
@@ -115,7 +116,7 @@ ValidationError? rejectForbidden(Object value) {
 }
 
 /// Nullable actual arguments skip custom callbacks when not required.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class CustomBox<T> with _$CustomBox<T> {
   /// Creates a custom-validated value.
   const CustomBox(this.value);

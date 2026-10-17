@@ -157,10 +157,20 @@ fn annotation_value_ir(file_id: FileId, value: &ParsedAnnotationValue) -> Annota
                 .map(|(name, value)| (name.clone(), annotation_value_ir(file_id, value)))
                 .collect(),
         ),
-        ParsedAnnotationValueRootKind::Constructor { name, arguments } => {
+        ParsedAnnotationValueRootKind::Constructor {
+            name,
+            short_name,
+            prefix,
+            arguments,
+        } => {
             let (positional_args, named_args) = parsed_argument_values(file_id, arguments);
             AnnotationValueIr::Constructor {
-                name: name_ir(file_id, name, value.span),
+                name: NameIr {
+                    source: name.clone(),
+                    short: short_name.clone(),
+                    prefix: prefix.clone(),
+                    span: SpanIr::new(file_id, value.span),
+                },
                 positional_args,
                 named_args,
             }

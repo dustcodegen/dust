@@ -173,3 +173,63 @@ class Box<{binder}> with _$Box<{binder}> {{
         assert!(!root.join("lib/model.g.dart").exists());
     }
 }
+
+#[test]
+fn typed_traits_preserve_good_outputs_and_cache_when_mixin_validation_fails() {
+    for (version, source) in [
+        (
+            "3.6.0",
+            include_str!("../../../../fixtures/generic_validation/traditional.dart.snapshot"),
+        ),
+        (
+            "3.13.0",
+            include_str!("../../../../fixtures/generic_validation/primary.dart.snapshot"),
+        ),
+    ] {
+        for fail_fast in [false, true] {
+            let workspace = make_workspace();
+            let root = workspace.path();
+            write_file(
+                &root.join("pubspec.yaml"),
+                &format!("name: dust_test\nenvironment:\n  sdk: '>={version} <4.0.0'\n"),
+            );
+            let path = root.join("lib/model.dart");
+            let output = root.join("lib/model.g.dart");
+            let cache = root.join(".dart_tool/dust/build_cache_v1.json");
+            write_file(&path, source);
+            let request = BuildRequest {
+                cwd: root.to_path_buf(),
+                fail_fast,
+                jobs: None,
+                db: Default::default(),
+            };
+            assert_eq!(run_build(request.clone()).diagnostics, []);
+            let warm = run_build(request.clone());
+            assert_eq!(warm.diagnostics, []);
+            assert!(warm.build_artifacts[0].cached);
+            let before_output = fs::read(&output).unwrap();
+            let before_cache = fs::read(&cache).unwrap();
+            write_file(&path, &source.replace("with _$Holder<T>", "with _$Holder"));
+            for writing in [false, true, false, true] {
+                let result = if writing {
+                    run_build(request.clone())
+                } else {
+                    run_check(CheckRequest {
+                        cwd: root.to_path_buf(),
+                        fail_fast,
+                        jobs: None,
+                        db: Default::default(),
+                    })
+                };
+                assert_eq!(result.diagnostics.len(), 1);
+                assert!(result.diagnostics[0].is_error());
+                assert_eq!(
+                    result.diagnostics[0].message,
+                    "Generic model `Holder` must apply `with _$Holder<T>`"
+                );
+                assert_eq!(fs::read(&output).unwrap(), before_output);
+                assert_eq!(fs::read(&cache).unwrap(), before_cache);
+            }
+        }
+    }
+}

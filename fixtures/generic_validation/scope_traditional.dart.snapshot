@@ -1,9 +1,10 @@
 import 'package:dust_dart/derive.dart';
+import 'package:dust_dart/derive.dart' as d;
 
 part 'validation_scope.g.dart';
 
 /// Runtime names must not resolve to these unrelated model parameters.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d.Validate<Object?>()])
 class Scoped<ValidationResult, ValidationError, Valid, Invalid,
         ValidationException, Validatable, List, ValidationHelper, RegExp>
     with
@@ -64,7 +65,7 @@ class Scoped<ValidationResult, ValidationError, Valid, Invalid,
 }
 
 /// Local variables cannot capture the owning model's type arguments.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d.Validate<Object?>()])
 class LocalNames<self, errors, value, result>
     with _$LocalNames<self, errors, value, result> {
   /// Creates values and a matching string pair.
@@ -84,7 +85,7 @@ class LocalNames<self, errors, value, result>
 }
 
 /// A core-looking class binder is not a concrete text/collection input kind.
-@Derive(<Validate<Object?>>[Validate()])
+@Derive([d.Validate<Object?>()])
 class Spelled<String, List> with _$Spelled<String, List> {
   /// Creates values of the actual selected types.
   const Spelled(this.first, this.second);
