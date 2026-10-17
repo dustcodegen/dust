@@ -86,7 +86,8 @@ Remaining gaps in this draft:
   signature and can produce invalid `copyWith` code. The explicit
   `final bool Function(String) predicate` form compiled in the scoped
   latest-Dart probe; it does not need a new handwritten API. Source-preserving
-  effective-function parser facts need review before fixing the shorthand.
+  effective-function parser facts need review before fixing the shorthand;
+  see the [proposed contract](../design/function-formal-types.md).
 - [Generic class generation (#93)](https://github.com/dustcodegen/dust/issues/93)
   now has scoped executable typed-copy checks for traditional and primary
   classes using `with _$Box<T>`. These cover bounds, nullable arguments,

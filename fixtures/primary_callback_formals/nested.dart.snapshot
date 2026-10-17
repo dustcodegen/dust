@@ -1,0 +1,7 @@
+// @dart = 3.13
+class const Probe(final bool predicate(bool next(String value), [int? count]));
+
+void main() {
+  final probe = Probe((next, [count]) => next('yes'));
+  assert(probe.predicate((value) => value.isNotEmpty));
+}

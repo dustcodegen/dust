@@ -1,0 +1,7 @@
+// @dart = 3.13
+class const Probe(final bool? predicate(String value));
+
+void main() {
+  final probe = Probe((value) => value.isEmpty ? null : true);
+  assert(probe.predicate('') == null);
+}
