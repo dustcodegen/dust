@@ -28,6 +28,9 @@ mod types;
 /// Complete library-fact contracts for the staged grammar migration.
 #[cfg(test)]
 mod parity_tests;
+/// Backend failure keeps both error views complete without timer-based tests.
+#[cfg(test)]
+mod tests_diagnostics;
 
 use dust_diagnostics::Diagnostic;
 use dust_parser_dart::{ParseBackend, ParseOptions, ParseResult, ParsedDartFileSurface};
@@ -81,50 +84,64 @@ impl ParseBackend for TreeSitterDartBackend {
     fn parse_file(&self, source: &SourceText, options: ParseOptions) -> ParseResult {
         PARSER.with(|parser_cell| {
             let mut parser = parser_cell.borrow_mut();
-            let Some(tree) = parser.parse(source.as_str(), None) else {
-                return ParseResult {
-                    library: empty_library(source),
-                    diagnostics: vec![Diagnostic::error("tree-sitter failed to parse source")],
-                    options,
-                };
-            };
-
-            let root = tree.root_node();
-            let declarations = if declarations::has_extractable_top_level_declarations(root) {
-                extract_top_level_declarations(root, source)
-            } else {
-                ParsedTopLevelDeclarations::empty()
-            };
-            let library = ParsedDartFileSurface {
-                span: text_range(root),
-                directives: extract_directives(root, source),
-                classes: extract_classes(root, source),
-                enums: extract_enums(root, source),
-                mixins: declarations.mixins,
-                extensions: declarations.extensions,
-                extension_types: declarations.extension_types,
-                functions: declarations.functions,
-                variables: declarations.variables,
-                typedefs: declarations.typedefs,
-                query_calls: extract_query_calls(root, source),
-            };
-            let effective_language_version =
-                options.effective_language_version_for_source(source.as_str());
-            let mut occurrences = Vec::new();
-            let mut diagnostics = extract_diagnostics(&tree, source, &mut occurrences);
-            diagnostics.extend(extract_language_version_diagnostics(
-                root,
-                &library,
-                source,
-                effective_language_version,
-                occurrences,
-            ));
-            ParseResult {
-                library,
-                diagnostics,
-                options,
-            }
+            extract_parse_result(parser.parse(source.as_str(), None), source, options)
         })
+    }
+}
+
+/// Builds both diagnostic projections even when the native parser returns no tree.
+fn extract_parse_result(
+    tree: Option<tree_sitter::Tree>,
+    source: &SourceText,
+    options: ParseOptions,
+) -> ParseResult {
+    let Some(tree) = tree else {
+        return ParseResult {
+            library: empty_library(source),
+            diagnostics: vec![Diagnostic::error("tree-sitter failed to parse source")],
+            namespace_diagnostics: vec![Diagnostic::error("tree-sitter failed to parse source")],
+            options,
+        };
+    };
+
+    let root = tree.root_node();
+    let declarations = if declarations::has_extractable_top_level_declarations(root) {
+        extract_top_level_declarations(root, source)
+    } else {
+        ParsedTopLevelDeclarations::empty()
+    };
+    let library = ParsedDartFileSurface {
+        span: text_range(root),
+        directives: extract_directives(root, source),
+        classes: extract_classes(root, source),
+        enums: extract_enums(root, source),
+        mixins: declarations.mixins,
+        extensions: declarations.extensions,
+        extension_types: declarations.extension_types,
+        functions: declarations.functions,
+        variables: declarations.variables,
+        typedefs: declarations.typedefs,
+        query_calls: extract_query_calls(root, source),
+    };
+    let effective_language_version = options.effective_language_version_for_source(source.as_str());
+    let mut occurrences = Vec::new();
+    let mut views = extract_diagnostics(&tree, source, &mut occurrences);
+    let language_diagnostics = extract_language_version_diagnostics(
+        root,
+        &library,
+        source,
+        effective_language_version,
+        occurrences,
+    );
+    views
+        .diagnostics
+        .extend(language_diagnostics.iter().cloned());
+    views.namespace_diagnostics.extend(language_diagnostics);
+    ParseResult {
+        library,
+        diagnostics: views.diagnostics,
+        namespace_diagnostics: views.namespace_diagnostics,
+        options,
     }
 }
 

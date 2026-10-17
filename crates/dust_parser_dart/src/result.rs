@@ -9,6 +9,11 @@ pub struct ParseResult {
     pub library: ParsedDartFileSurface,
     /// Diagnostics emitted during parsing.
     pub diagnostics: Vec<Diagnostic>,
+    /// Required interface failures, retaining syntax and language-version errors.
+    ///
+    /// A valid executable body may omit a generation-only limitation here.
+    /// Generation callers must continue using `diagnostics` and `has_errors()`.
+    pub namespace_diagnostics: Vec<Diagnostic>,
     /// The options used for this parse.
     pub options: ParseOptions,
 }
