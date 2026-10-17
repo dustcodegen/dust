@@ -59,7 +59,9 @@ fn collect_error_diagnostics(
                 .with_label(SourceLabel::new(source.file_id(), text_range(node), "unsupported code generation"))
                 .with_note("Check this file with `dart analyze`. Dust's bundled parser accepts this syntax, but code generation is not implemented yet.")
                 .with_note(guidance);
-        if !matches!(feature, UnsupportedFeature::DotShorthands) || !is_body_only_dot(node) {
+        if !matches!(feature, UnsupportedFeature::DotShorthands)
+            || !(is_body_only_dot(node) || is_instance_initializer_dot(node))
+        {
             views.namespace_diagnostics.push(diagnostic.clone());
         }
         views.diagnostics.push(diagnostic);
@@ -136,6 +138,44 @@ fn is_body_only_dot(node: Node<'_>) -> bool {
         }) {
             return true;
         }
+    }
+    false
+}
+
+/// Instance initializer expressions do not supply annotation namespace identities.
+fn is_instance_initializer_dot(node: Node<'_>) -> bool {
+    for ancestor in std::iter::successors(node.parent(), |parent| parent.parent()) {
+        if matches!(ancestor.kind(), "annotation" | "formal_parameter_list") {
+            return false;
+        }
+        if ancestor.kind() != "initialized_identifier" || ancestor.has_error() {
+            continue;
+        }
+        let Some(declaration) = ancestor
+            .parent()
+            .filter(|parent| parent.kind() == "initialized_identifier_list")
+            .and_then(|list| list.parent())
+            .filter(|parent| parent.kind() == "declaration" && !parent.has_error())
+            .filter(|declaration| {
+                matches!(
+                    declaration.parent().map(|parent| parent.kind()),
+                    Some("class_body" | "enum_body")
+                )
+            })
+        else {
+            continue;
+        };
+        let mut cursor = declaration.walk();
+        if declaration
+            .children(&mut cursor)
+            .any(|child| matches!(child.kind(), "static" | "const_builtin"))
+        {
+            return false;
+        }
+        let mut cursor = ancestor.walk();
+        return ancestor
+            .children(&mut cursor)
+            .any(|child| child.kind() == "=" && child.end_byte() <= node.start_byte());
     }
     false
 }

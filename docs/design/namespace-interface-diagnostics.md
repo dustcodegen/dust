@@ -31,14 +31,19 @@ by message or label text. The namespace projection must retain:
 - Every actual syntax error or missing token, including inside executable bodies.
 - Every language-version error, even in bodies not used for ownership.
 - Unsupported generation forms in declarations, metadata, parameter defaults,
-  field/top-level initializers and aliases until their interface facts are proven.
+  static/top-level initializers and aliases until their interface facts are proven.
 - Unsupported forms whose location or effect on interface extraction is unknown.
 
 Only a grammar-recognized generation limitation proven to be inside a complete
 executable body may be excluded from this projection. Initially, this exception
 is limited to dot-shorthand expressions within AST-owned function/method bodies.
-It must not excuse concise constructor signatures, annotations, unsupported
-initializers, or broken syntax nested under an otherwise unsupported node.
+The approved follow-up [#145](https://github.com/dustcodegen/dust/issues/145) also
+excludes valid dot shorthands inside non-static, non-const instance-field
+initializer expressions. The AST must identify the actual initializer after `=`
+inside a field declaration; a surrounding initializer cannot excuse nested
+metadata or parameter defaults. Full generation diagnostics stay unchanged.
+Neither exception excuses concise constructor signatures, annotations, other
+unsupported initializers, or broken syntax nested under an unsupported node.
 
 The diagnostic walker must still traverse for syntax errors and language-feature
 occurrences. An early return after spotting a generation limitation cannot hide
@@ -71,7 +76,7 @@ The existing compatibility adapter and frozen parser parity need explicit checks
 4. Syntax and language-version errors inside dependency bodies remain fatal when
    that interface is required. Nested failures cannot disappear behind a parent
    unsupported-form node.
-5. Unsupported metadata, aliases, initializers and constructor signatures remain
+5. Unsupported metadata, aliases, static/top-level initializers and constructor signatures remain
    errors; foreign annotations cannot reach a registered same-name owner.
 6. Run scoped coverage, all parser/driver regressions, strict Rust lint, complete
    sequential local lint/test gates, and fresh minimum/latest Dart/Flutter consumers.
