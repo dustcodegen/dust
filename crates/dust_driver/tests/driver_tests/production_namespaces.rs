@@ -19,6 +19,8 @@ mod generated_libraries;
 mod imports;
 #[path = "production_namespaces/input_failures.rs"]
 mod input_failures;
+#[path = "production_namespaces/lexical_shadowing.rs"]
+mod lexical_shadowing;
 #[path = "production_namespaces/metadata_sites.rs"]
 mod metadata_sites;
 #[path = "production_namespaces/namespace_diagnostics.rs"]

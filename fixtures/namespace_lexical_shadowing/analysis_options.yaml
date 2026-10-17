@@ -1,0 +1,6 @@
+# Standalone language/metadata probes with no package dependencies.
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
