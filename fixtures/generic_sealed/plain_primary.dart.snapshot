@@ -12,6 +12,13 @@ sealed class const PlainEvent() with _$PlainEvent {
   /// Omits the target declaration but names its constructor.
   const factory PlainEvent.done(int value) = PlainDone.create;
 
+  /// Nullable named values still require the explicitly declared argument.
+  const factory PlainEvent.named({required int? value, int? note}) = PlainNamed;
+
+  /// Optional positional values retain their bracket group.
+  const factory PlainEvent.optional([int? value, int? note]) =
+      PlainOptional.new;
+
   /// Decodes the tagged value.
   factory PlainEvent.fromJson(Map<String, Object?> json) =>
       _$PlainEventFromJson(json);
@@ -22,3 +29,11 @@ sealed class const PlainEvent() with _$PlainEvent {
 
 /// Exercises the leaf's directional alias.
 Map<String, Object?> payload(PlainDone value) => _$PlainDoneToJson(value);
+
+/// Exercises the required-nullable leaf alias.
+Map<String, Object?> namedPayload(PlainNamed value) =>
+    _$PlainNamedToJson(value);
+
+/// Exercises the optional-positional leaf alias.
+Map<String, Object?> optionalPayload(PlainOptional value) =>
+    _$PlainOptionalToJson(value);

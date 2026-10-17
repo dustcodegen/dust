@@ -207,7 +207,7 @@ fn validate_variant(
         };
         if !constructor.can_construct_all_fields(&target.fields)
             || constructor.params.iter().any(|parameter| {
-                !parameter.has_default
+                parameter.is_required
                     && !target
                         .fields
                         .iter()

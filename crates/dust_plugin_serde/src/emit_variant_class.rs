@@ -217,43 +217,49 @@ fn render_constructor(class: &ClassIr) -> Vec<String> {
 
     let positional = params
         .iter()
-        .filter(|param| param.kind == ParamKind::Positional)
-        .map(|param| format!("    this.{},", param.name))
+        .filter(|param| param.kind == ParamKind::Positional && param.is_required)
+        .map(|param| render_param(param, 4))
+        .collect::<Vec<_>>();
+    let optional_params = params
+        .iter()
+        .filter(|param| param.kind == ParamKind::Positional && !param.is_required)
         .collect::<Vec<_>>();
     let named_params = params
         .iter()
         .filter(|param| param.kind == ParamKind::Named)
         .collect::<Vec<_>>();
 
-    if positional.is_empty() && !named_params.is_empty() {
-        let mut lines = vec![format!("  const {constructor_name}({{")];
-        lines.extend(
-            named_params
-                .iter()
-                .map(|param| render_named_param(param, 4)),
-        );
-        lines.push("  }) : super();".to_owned());
+    if positional.is_empty() {
+        let (open, close, grouped) = if named_params.is_empty() {
+            ("[", "]", &optional_params)
+        } else {
+            ("{", "}", &named_params)
+        };
+        let mut lines = vec![format!("  const {constructor_name}({open}")];
+        lines.extend(grouped.iter().map(|param| render_param(param, 4)));
+        lines.push(format!("  {close}) : super();"));
         return lines;
     }
 
     let mut lines = vec![format!("  const {constructor_name}(")];
     lines.extend(positional);
+    if !optional_params.is_empty() {
+        lines.push("    [".to_owned());
+        lines.extend(optional_params.iter().map(|param| render_param(param, 6)));
+        lines.push("    ]".to_owned());
+    }
     if !named_params.is_empty() {
         lines.push("    {".to_owned());
-        lines.extend(
-            named_params
-                .iter()
-                .map(|param| render_named_param(param, 6)),
-        );
-        lines.push("    },".to_owned());
+        lines.extend(named_params.iter().map(|param| render_param(param, 6)));
+        lines.push("    }".to_owned());
     }
     lines.push("  ) : super();".to_owned());
     lines
 }
 
-/// Renders one named constructor parameter.
-fn render_named_param(param: &ConstructorParamIr, indent: usize) -> String {
-    let prefix = if !param.has_default && !param.ty.is_nullable() {
+/// Renders one field formal without conflating nullability and presence.
+fn render_param(param: &ConstructorParamIr, indent: usize) -> String {
+    let prefix = if param.kind == ParamKind::Named && param.is_required {
         "required "
     } else {
         ""

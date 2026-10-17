@@ -45,6 +45,7 @@ pub(crate) fn constructor_param(name: &str, ty: TypeIr, kind: ParamKind) -> Cons
         ty,
         span: span(20, 30),
         kind,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }

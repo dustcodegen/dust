@@ -95,6 +95,8 @@ pub struct ParsedConstructorParamSurface {
     pub parsed_type: Option<ParsedTypeSurface>,
     /// The parameter kind.
     pub kind: ParameterKind,
+    /// Whether callers must supply this argument, independently of nullability.
+    pub is_required: bool,
     /// Whether the parameter has a default value.
     pub has_default: bool,
     /// The raw default value expression source, if explicitly written.

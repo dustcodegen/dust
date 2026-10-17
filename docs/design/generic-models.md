@@ -321,9 +321,18 @@ unchanged. Five full [sealed contracts](../../fixtures/generic_sealed) exercise
 traditional and primary source, concrete/custom-codec fields, phantom/reordered/
 dependent arguments, wire defaults/aliases, strict keys, collision binders and
 unapplied non-generic named redirects.
-They do not certify every constructor shape: independent required/optional parameter
-facts and faithful omitted-variant grouping remain in
-[#138](https://github.com/dustcodegen/dust/issues/138). Generic integration and overall
+Independent required/optional constructor facts and faithful omitted-variant
+grouping are implemented under [#138](https://github.com/dustcodegen/dust/issues/138),
+with final acceptance in progress. Argument presence is not inferred from type
+nullability or JSON key presence. AST keyword/group facts survive lowering and
+synthesis; annotation strings, comments and nested callback modifiers cannot
+mark an outer argument required. Generated constructors retain optional positional
+brackets, explicit required named arguments and valid defaults. Decode calls can
+omit extra optional target arguments; when a later positional value is supplied,
+earlier omitted slots use their declared defaults or implicit null. Compiler
+probes reject missing required nullable arguments on both generated and factory
+calls. These are scoped constructor contracts, not all-constructor certification.
+Generic integration and overall
 primary-constructor support remain incomplete until their remaining gates pass.
 
 Explicit generic function-type classification is covered by

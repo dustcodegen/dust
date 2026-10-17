@@ -47,7 +47,8 @@ final class Done<Y extends List<X>, X> extends Event<X, Y> with _$Done<Y, X> {
     : label = raw ? label : 'first:$label';
 
   /// Creates a completed value.
-  const Done.create(this.label);
+  const Done.create(String label, {int? ignored})
+    : label = ignored == null ? label : 'ignored';
 
   /// The concrete payload requires no generic decoder callback.
   final String label;

@@ -32,6 +32,7 @@ fn malformed_declaring_parameters_do_not_invent_field_names() {
         type_source: None,
         parsed_type: None,
         kind: ParameterKind::Positional,
+        is_required: true,
         has_default: false,
         default_value_source: None,
         span: text_range(list),

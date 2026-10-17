@@ -41,6 +41,9 @@ final class GeneratedDone<B extends List<A>, A> extends Command<A, B> {
   /// Creates this sealed variant.
   const GeneratedDone.create(
     this.label,
+    [
+      this.note,
+    ]
   ) : super();
 
   /// Decodes this variant's payload.
@@ -49,6 +52,8 @@ final class GeneratedDone<B extends List<A>, A> extends Command<A, B> {
 
   /// The `label` payload value.
   final String label;
+  /// The `note` payload value.
+  final int? note;
 }
 
 /// A generated variant of `Command<A, B>`.
@@ -80,6 +85,7 @@ final class GeneratedAt<B extends List<A>, A> extends Command<A, B> {
 final class GeneratedCount<A, B extends List<A>> extends Command<A, B> {
   /// Creates this sealed variant.
   const GeneratedCount({
+    required this.requested,
     this.count,
     this.fallback,
   }) : super();
@@ -88,6 +94,8 @@ final class GeneratedCount<A, B extends List<A>> extends Command<A, B> {
   factory GeneratedCount.fromJson(Map<String, Object?> json) =>
       _$GeneratedCountFromJson<A, B>(json);
 
+  /// The `requested` payload value.
+  final int? requested;
   /// The `count` payload value.
   final int? count;
   /// The `fallback` payload value.
@@ -203,6 +211,7 @@ Command<A, B> _$CommandFromJson<A, B extends List<A>>(Map<String, Object?> json)
 Map<String, Object?> _$GeneratedDoneSerialize<B extends List<A>, A>(GeneratedDone<B, A> instance) {
   return <String, Object?>{
     'label': instance.label,
+    'note': instance.note,
   };
 }
 
@@ -212,8 +221,11 @@ Map<String, Object?> _$GeneratedDoneToJson<B extends List<A>, A>(GeneratedDone<B
 // factory GeneratedDone.fromJson(Map<String, Object?> json) => _$GeneratedDoneFromJson(json);
 GeneratedDone<B, A> _$GeneratedDoneDeserialize<B extends List<A>, A>(Map<String, Object?> json) {
   final labelValue = JsonHelper.as<String>(json['label'], 'label', 'String');
+  final noteValue = json['note'] == null
+      ? null
+      : JsonHelper.as<int>(json['note'], 'note', 'int');
 
-  return GeneratedDone<B, A>.create(labelValue);
+  return GeneratedDone<B, A>.create(labelValue, noteValue);
 }
 
 GeneratedDone<B, A> _$GeneratedDoneFromJson<B extends List<A>, A>(Map<String, Object?> json) =>
@@ -268,6 +280,7 @@ GeneratedAt<B, A> _$GeneratedAtFromJson<B extends List<A>, A>(Map<String, Object
 
 Map<String, Object?> _$GeneratedCountSerialize<A, B extends List<A>>(GeneratedCount<A, B> instance) {
   return <String, Object?>{
+    'requested': instance.requested,
     'count': instance.count,
     'fallback': instance.fallback,
   };
@@ -278,6 +291,9 @@ Map<String, Object?> _$GeneratedCountToJson<A, B extends List<A>>(GeneratedCount
 
 // factory GeneratedCount.fromJson(Map<String, Object?> json) => _$GeneratedCountFromJson(json);
 GeneratedCount<A, B> _$GeneratedCountDeserialize<A, B extends List<A>>(Map<String, Object?> json) {
+  final requestedValue = json['requested'] == null
+      ? null
+      : JsonHelper.as<int>(json['requested'], 'requested', 'int');
   var rawCountKey = 'count';
   Object? rawCount;
   if (json.containsKey('count')) {
@@ -295,7 +311,11 @@ GeneratedCount<A, B> _$GeneratedCountDeserialize<A, B extends List<A>>(Map<Strin
       : JsonHelper.as<int>(json['fallback'], 'fallback', 'int')
       : 7;
 
-  return GeneratedCount<A, B>(count: countValue, fallback: fallbackValue);
+  return GeneratedCount<A, B>(
+    requested: requestedValue,
+    count: countValue,
+    fallback: fallbackValue,
+  );
 }
 
 GeneratedCount<A, B> _$GeneratedCountFromJson<A, B extends List<A>>(Map<String, Object?> json) =>

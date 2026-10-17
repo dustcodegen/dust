@@ -58,7 +58,10 @@ pub(super) fn shape_event_base() -> ClassIr {
                 tag: "mixed".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Positional),
-                    constructor_param("note", TypeIr::string().nullable(), ParamKind::Named),
+                    ConstructorParamIr {
+                        is_required: false,
+                        ..constructor_param("note", TypeIr::string().nullable(), ParamKind::Named)
+                    },
                     defaulted_constructor_param("retryCount", TypeIr::int(), "3"),
                 ],
             },
@@ -89,6 +92,7 @@ pub(super) fn defaulted_constructor_param(
         ty,
         span: span(30, 35),
         kind: ParamKind::Named,
+        is_required: false,
         has_default: true,
         default_value_source: Some(default.to_owned()),
     }
@@ -178,7 +182,7 @@ final class MixedVariant extends VariantShapeEvent {
     {
       this.note,
       this.retryCount = 3,
-    },
+    }
   ) : super();
 
   factory MixedVariant.fromJson(Map<String, Object?> json) =>

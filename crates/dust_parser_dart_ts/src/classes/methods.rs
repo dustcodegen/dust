@@ -158,7 +158,7 @@ fn collect_method_optional_formal_parameters(
     out: &mut Vec<ParsedMethodParamSurface>,
     pending_annotations: &mut Vec<ParsedAnnotation>,
 ) {
-    let kind = optional_parameter_kind(node, source);
+    let kind = optional_parameter_kind(node);
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
         match child.kind() {
@@ -209,7 +209,7 @@ fn extract_method_formal_parameter(
         type_source,
         parsed_type,
         kind,
-        is_required: is_required_parameter(node, source),
+        is_required: is_required_parameter(node),
         has_default: default_value_source.is_some(),
         default_value_source,
         span: text_range(node),

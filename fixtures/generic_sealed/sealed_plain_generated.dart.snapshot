@@ -41,6 +41,32 @@ final class PlainDone extends PlainEvent {
 
   final int value;
 }
+
+final class PlainNamed extends PlainEvent {
+  const PlainNamed({
+    required this.value,
+    this.note,
+  }) : super();
+
+  factory PlainNamed.fromJson(Map<String, Object?> json) =>
+      _$PlainNamedFromJson(json);
+
+  final int? value;
+  final int? note;
+}
+
+final class PlainOptional extends PlainEvent {
+  const PlainOptional([
+    this.value,
+    this.note,
+  ]) : super();
+
+  factory PlainOptional.fromJson(Map<String, Object?> json) =>
+      _$PlainOptionalFromJson(json);
+
+  final int? value;
+  final int? note;
+}
 final class $PlainDoneSerializer implements Serializer<PlainDone, Map<String, Object?>> {
   const $PlainDoneSerializer();
 
@@ -53,12 +79,44 @@ final class $PlainDoneDeserializer implements Deserializer<PlainDone, Map<String
   @override
   PlainDone deserialize(Map<String, Object?> json) => _$PlainDoneDeserialize(json);
 }
+final class $PlainNamedSerializer implements Serializer<PlainNamed, Map<String, Object?>> {
+  const $PlainNamedSerializer();
+
+  @override
+  Map<String, Object?> serialize(PlainNamed value) => _$PlainNamedSerialize(value);
+}
+final class $PlainNamedDeserializer implements Deserializer<PlainNamed, Map<String, Object?>> {
+  const $PlainNamedDeserializer();
+
+  @override
+  PlainNamed deserialize(Map<String, Object?> json) => _$PlainNamedDeserialize(json);
+}
+final class $PlainOptionalSerializer implements Serializer<PlainOptional, Map<String, Object?>> {
+  const $PlainOptionalSerializer();
+
+  @override
+  Map<String, Object?> serialize(PlainOptional value) => _$PlainOptionalSerialize(value);
+}
+final class $PlainOptionalDeserializer implements Deserializer<PlainOptional, Map<String, Object?>> {
+  const $PlainOptionalDeserializer();
+
+  @override
+  PlainOptional deserialize(Map<String, Object?> json) => _$PlainOptionalDeserialize(json);
+}
 
 Map<String, Object?> _$PlainEventSerialize(PlainEvent instance) {
   return switch (instance) {
     PlainDone value => <String, Object?>{
       ..._$PlainDoneSerialize(value),
       'type': 'done',
+    },
+    PlainNamed value => <String, Object?>{
+      ..._$PlainNamedSerialize(value),
+      'type': 'named',
+    },
+    PlainOptional value => <String, Object?>{
+      ..._$PlainOptionalSerialize(value),
+      'type': 'optional',
     },
   };
 }
@@ -73,6 +131,8 @@ PlainEvent _$PlainEventDeserialize(Map<String, Object?> json) {
 
   return switch (tagValue) {
     'done' => _$PlainDoneDeserialize(variantJson),
+    'named' => _$PlainNamedDeserialize(variantJson),
+    'optional' => _$PlainOptionalDeserialize(variantJson),
     _ => throw ArgumentError('Unknown SerDe variant tag: $tagValue'),
   };
 }
@@ -98,3 +158,53 @@ PlainDone _$PlainDoneDeserialize(Map<String, Object?> json) {
 
 PlainDone _$PlainDoneFromJson(Map<String, Object?> json) =>
     _$PlainDoneDeserialize(json);
+
+Map<String, Object?> _$PlainNamedSerialize(PlainNamed instance) {
+  return <String, Object?>{
+    'value': instance.value,
+    'note': instance.note,
+  };
+}
+
+Map<String, Object?> _$PlainNamedToJson(PlainNamed instance) =>
+    _$PlainNamedSerialize(instance);
+
+// factory PlainNamed.fromJson(Map<String, Object?> json) => _$PlainNamedFromJson(json);
+PlainNamed _$PlainNamedDeserialize(Map<String, Object?> json) {
+  final valueValue = json['value'] == null
+      ? null
+      : JsonHelper.as<int>(json['value'], 'value', 'int');
+  final noteValue = json['note'] == null
+      ? null
+      : JsonHelper.as<int>(json['note'], 'note', 'int');
+
+  return PlainNamed(value: valueValue, note: noteValue);
+}
+
+PlainNamed _$PlainNamedFromJson(Map<String, Object?> json) =>
+    _$PlainNamedDeserialize(json);
+
+Map<String, Object?> _$PlainOptionalSerialize(PlainOptional instance) {
+  return <String, Object?>{
+    'value': instance.value,
+    'note': instance.note,
+  };
+}
+
+Map<String, Object?> _$PlainOptionalToJson(PlainOptional instance) =>
+    _$PlainOptionalSerialize(instance);
+
+// factory PlainOptional.fromJson(Map<String, Object?> json) => _$PlainOptionalFromJson(json);
+PlainOptional _$PlainOptionalDeserialize(Map<String, Object?> json) {
+  final valueValue = json['value'] == null
+      ? null
+      : JsonHelper.as<int>(json['value'], 'value', 'int');
+  final noteValue = json['note'] == null
+      ? null
+      : JsonHelper.as<int>(json['note'], 'note', 'int');
+
+  return PlainOptional(valueValue, noteValue);
+}
+
+PlainOptional _$PlainOptionalFromJson(Map<String, Object?> json) =>
+    _$PlainOptionalDeserialize(json);

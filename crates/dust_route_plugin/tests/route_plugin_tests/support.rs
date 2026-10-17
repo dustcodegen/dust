@@ -166,6 +166,7 @@ pub(crate) fn constructor_param(name: &str, ty: TypeIr) -> ConstructorParamIr {
         ty,
         span: span(20, 30),
         kind: ParamKind::Named,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }
@@ -193,6 +194,7 @@ pub(crate) fn defaulted_param_source(
 ) -> ConstructorParamIr {
     ConstructorParamIr {
         has_default: true,
+        is_required: false,
         default_value_source: Some(default_value.to_owned()),
         ..constructor_param(name, ty)
     }

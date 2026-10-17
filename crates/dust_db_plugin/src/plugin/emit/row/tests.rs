@@ -79,6 +79,7 @@ fn emits_basic_from_row_extension() {
             ty: TypeIr::int(),
             span: span(),
             kind: ParamKind::Named,
+            is_required: true,
             has_default: false,
             default_value_source: None,
         }],

@@ -9,7 +9,11 @@ void main() {
       const none = generated.Command<int, List<int>>.none();
       expect(done, isA<generated.GeneratedDone<List<int>, int>>());
       expect(none, isA<generated.GeneratedNone<int, List<int>>>());
-      expect(done.serialize(), {'label': 'ready', 'kind': 'done'});
+      expect(done.serialize(), {
+        'label': 'ready',
+        'note': null,
+        'kind': 'done',
+      });
       expect(done.toJson(), done.serialize());
       expect(done.aliasJson(), done.serialize());
       expect(none.serialize(), {'kind': 'none'});
@@ -25,6 +29,20 @@ void main() {
         generated.GeneratedDone<List<int>, int>.fromJson({'label': 'again'})
             .label,
         'again',
+      );
+      expect(
+        generated.GeneratedDone<List<int>, int>.fromJson({
+          'label': 'again',
+          'note': 2,
+        }).note,
+        2,
+      );
+      expect(
+        (const generated.Command<int, List<int>>.done(
+          'ready',
+          3,
+        ) as generated.GeneratedDone<List<int>, int>).note,
+        3,
       );
       expect(
         generated.GeneratedNone<int, List<int>>.fromJson({}),
@@ -44,7 +62,7 @@ void main() {
         const generated.$GeneratedDoneSerializer<List<int>, int>().serialize(
           restored,
         ),
-        {'label': 'ready'},
+        {'label': 'ready', 'note': null},
       );
       expect(
         const generated.$GeneratedDoneDeserializer<List<int>, int>()
@@ -67,7 +85,7 @@ void main() {
         generated.donePayload<int, List<int>>(
           done as generated.GeneratedDone<List<int>, int>,
         ),
-        {'label': 'ready'},
+        {'label': 'ready', 'note': null},
       );
       expect(generated.nonePayload<int, List<int>>(none), isEmpty);
       expect(
@@ -121,8 +139,9 @@ void main() {
         throwsArgumentError,
       );
 
-      const defaults = generated.Command<int, List<int>>.count();
+      const defaults = generated.Command<int, List<int>>.count(requested: null);
       expect(defaults.serialize(), {
+        'requested': null,
         'count': null,
         'fallback': null,
         'kind': 'count',
@@ -130,15 +149,17 @@ void main() {
       final decoded = generated.GeneratedCount<int, List<int>>.fromJson({});
       expect((decoded.count, decoded.fallback), (null, 7));
       final alias = generated.GeneratedCount<int, List<int>>.fromJson({
+        'requested': 10,
         'oldCount': 8,
         'fallback': 9,
       });
       expect((alias.count, alias.fallback), (8, 9));
+      expect(alias.requested, 10);
       expect(
         const generated.$GeneratedCountSerializer<int, List<int>>().serialize(
           decoded,
         ),
-        {'count': null, 'fallback': 7},
+        {'requested': null, 'count': null, 'fallback': 7},
       );
       expect(
         const generated.$GeneratedCountDeserializer<int, List<int>>()
@@ -151,6 +172,7 @@ void main() {
         isA<generated.GeneratedCount<int, List<int>>>(),
       );
       expect(generated.countPayload<int, List<int>>(decoded), {
+        'requested': null,
         'count': null,
         'fallback': 7,
       });

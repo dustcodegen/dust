@@ -78,6 +78,7 @@ fn constructor_param(name: &str, ty: TypeIr, kind: ParamKind) -> ConstructorPara
         ty,
         span: span(30, 35),
         kind,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }

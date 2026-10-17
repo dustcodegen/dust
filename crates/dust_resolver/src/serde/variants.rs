@@ -82,6 +82,7 @@ pub(super) fn variant_constructor_params(
                     ParameterKind::Positional => ParamKind::Positional,
                     ParameterKind::Named => ParamKind::Named,
                 },
+                is_required: param.is_required,
                 has_default: param.has_default,
                 default_value_source: param.default_value_source.clone(),
             }

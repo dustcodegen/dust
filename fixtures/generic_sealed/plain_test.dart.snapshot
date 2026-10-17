@@ -22,4 +22,54 @@ void main() {
     expect(() => PlainEvent.fromJson({'type': 'other'}), throwsArgumentError);
     expect(() => PlainEvent.fromJson({'type': 1}), throwsArgumentError);
   });
+
+  test(
+    'generated constructors preserve presence independently of nullable values',
+    () {
+      const required = PlainNamed(value: null);
+      const factoryRequired = PlainEvent.named(value: 3, note: 4);
+      const empty = PlainOptional();
+      const first = PlainEvent.optional(5);
+      const both = PlainOptional(6, 7);
+      expect(required.value, isNull);
+      expect(required.note, isNull);
+      expect(factoryRequired.serialize(), {
+        'type': 'named',
+        'value': 3,
+        'note': 4,
+      });
+      expect(empty.serialize(), {
+        'type': 'optional',
+        'value': null,
+        'note': null,
+      });
+      expect(first.serialize(), {'type': 'optional', 'value': 5, 'note': null});
+      expect(both.serialize(), {'type': 'optional', 'value': 6, 'note': 7});
+      for (final value in <PlainEvent>[required, empty, both]) {
+        final decoded = PlainEvent.fromJson(value.serialize());
+        expect(decoded.serialize(), value.serialize());
+      }
+      expect(PlainNamed.fromJson({'value': 8}).value, 8);
+      expect(PlainNamed.fromJson({'value': 8, 'note': 9}).note, 9);
+      expect(PlainOptional.fromJson({'value': 9}).value, 9);
+      expect(const $PlainNamedSerializer().serialize(required), {
+        'value': null,
+        'note': null,
+      });
+      expect(
+        const $PlainNamedDeserializer().deserialize({'value': 10}).value,
+        10,
+      );
+      expect(const $PlainOptionalSerializer().serialize(both), {
+        'value': 6,
+        'note': 7,
+      });
+      expect(
+        const $PlainOptionalDeserializer().deserialize({'value': 11}).value,
+        11,
+      );
+      expect(namedPayload(required), {'value': null, 'note': null});
+      expect(optionalPayload(both), {'value': 6, 'note': 7});
+    },
+  );
 }

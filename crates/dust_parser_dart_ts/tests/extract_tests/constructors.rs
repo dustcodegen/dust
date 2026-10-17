@@ -6,6 +6,9 @@ use crate::support::parse;
 #[path = "constructors/redirecting.rs"]
 mod redirecting;
 
+#[path = "constructors/presence.rs"]
+mod presence;
+
 #[test]
 fn extracts_named_constructor_and_named_parameters() {
     let result = parse(
