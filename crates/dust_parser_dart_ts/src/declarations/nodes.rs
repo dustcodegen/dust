@@ -14,13 +14,6 @@ pub(super) fn direct_annotations(node: Node<'_>, source: &SourceText) -> Vec<Par
     annotations
 }
 
-/// Finds a direct child with the requested tree-sitter kind.
-pub(super) fn direct_child<'tree>(node: Node<'tree>, kind: &str) -> Option<Node<'tree>> {
-    let mut cursor = node.walk();
-    node.children(&mut cursor)
-        .find(|child| child.kind() == kind)
-}
-
 /// Finds a direct named child with the requested kind before deeper traversal.
 pub(super) fn direct_named_child_before<'tree>(
     node: Node<'tree>,

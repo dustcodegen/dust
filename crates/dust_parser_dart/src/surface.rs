@@ -10,11 +10,14 @@ mod declarations;
 mod directives;
 /// Generic class-header facts.
 mod generics;
+/// Lexical scope and constant-identity facts for metadata ownership.
+mod lexical;
 /// Surface types for fields, constructors and parameters.
 mod members;
 
 pub use self::directives::*;
 pub use self::generics::ParsedTypeParamSurface;
+pub use self::lexical::*;
 pub use self::{annotations::*, declarations::*, members::*};
 
 /// A generation-relevant view of one parsed Dart file.
@@ -25,6 +28,8 @@ pub use self::{annotations::*, declarations::*, members::*};
 pub struct ParsedDartFileSurface {
     /// The full source span for the parsed file.
     pub span: TextRange,
+    /// Source-owned lexical scopes; synthetic legacy backends may omit them.
+    pub lexical_scopes: Vec<ParsedLexicalScope>,
     /// Top-level directives such as imports and parts.
     pub directives: Vec<ParsedDirective>,
     /// Top-level classes that were extracted from the source.

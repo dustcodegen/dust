@@ -84,8 +84,11 @@ Whitespace and comments between identifiers/dots therefore do not change their
 owner. The exact written qualified name, arguments and span remain in parser
 facts and raw IR; failure labels retain that source spelling. This also fixes
 context-free prefix validation without changing its unique legacy lookup. It
-does not yet resolve named-constructor ambiguity or change nested constructor-
-value extraction; those and lexical-shadowing audits remain production gates.
+does not yet resolve all named-constructor ambiguity or change nested constructor-
+value extraction. The approved [lexical scope stage](annotation-lexical-scopes.md)
+now adds use-site lookup before imported names, with structured constant
+provenance and fail-closed opaque shadows. Its full acceptance remains a
+production gate.
 Traditional/primary generic-name consumer fixtures also exercise qualifier trivia
 through cold build, check, warm cache and exact generated snapshots. The imported
 generic model in the product showcase retains it as a real example; minimum/latest

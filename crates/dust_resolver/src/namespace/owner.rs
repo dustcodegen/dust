@@ -37,25 +37,17 @@ impl NamespaceGraph {
             .iter()
             .map(|world| self.bind_world(world, short, catalog, active))
             .collect::<Vec<_>>();
-        if let Some(failure) = bindings.iter().find(|binding| matches!(binding, NamespaceBinding::Rejected { kind, .. } if *kind != NamespaceFailureKind::Hidden)) { return failure.clone(); }
-        let first = bindings
-            .first()
-            .expect("a namespace has at least one alternative");
-        if bindings.iter().all(|binding| binding == first) {
-            return first.clone();
-        }
-        rejected(
-            NamespaceFailureKind::Conditional,
-            format!("annotation `{name}` has target-dependent conditional ownership"),
+        agree(name, &bindings, || {
             worlds
                 .iter()
                 .flat_map(|world| world.declarations.iter().map(Declaration::label))
-                .collect(),
-        )
+                .collect()
+        })
+        .expect("a namespace has at least one alternative")
     }
 
     /// One possible world can contain a real ambiguity, not just a branch choice.
-    fn bind_world(
+    pub(super) fn bind_world(
         &self,
         world: &World,
         name: &str,

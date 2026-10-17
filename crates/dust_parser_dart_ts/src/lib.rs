@@ -18,6 +18,8 @@ mod enums;
 mod i18n;
 /// Dart language-version diagnostics.
 mod language_gates;
+/// Lexical scope and initializer identities for metadata binding.
+mod lexical;
 /// Query helper extraction.
 mod queries;
 /// Tree-sitter utility helpers.
@@ -31,6 +33,9 @@ mod parity_tests;
 /// Backend failure keeps both error views complete without timer-based tests.
 #[cfg(test)]
 mod tests_diagnostics;
+/// Exact lexical scope/declaration contracts before namespace consumption.
+#[cfg(test)]
+mod tests_lexical;
 
 use dust_diagnostics::Diagnostic;
 use dust_parser_dart::{ParseBackend, ParseOptions, ParseResult, ParsedDartFileSurface};
@@ -112,6 +117,7 @@ fn extract_parse_result(
     };
     let library = ParsedDartFileSurface {
         span: text_range(root),
+        lexical_scopes: lexical::extract(root, source),
         directives: extract_directives(root, source),
         classes: extract_classes(root, source),
         enums: extract_enums(root, source),
@@ -149,6 +155,7 @@ fn extract_parse_result(
 fn empty_library(source: &SourceText) -> ParsedDartFileSurface {
     ParsedDartFileSurface {
         span: source.full_range(),
+        lexical_scopes: Vec::new(),
         directives: Vec::new(),
         classes: Vec::new(),
         enums: Vec::new(),

@@ -202,7 +202,7 @@ impl<'a> BindingContext<'a> {
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<SymbolId> {
         let binding = self.namespace.map_or(NamespaceBinding::Unknown, |scope| {
-            scope.bind(lookup, self.catalog)
+            scope.bind_at(lookup, self.catalog, span)
         });
         match binding {
             NamespaceBinding::Owned(owner) => Some(owner),

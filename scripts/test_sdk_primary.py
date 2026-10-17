@@ -62,12 +62,16 @@ class PrimarySdkTests(unittest.TestCase):
                     patch("sdk_compat.check_generic_validation") as validation, \
                     patch("sdk_compat.check_generic_serde") as serde, \
                     patch("sdk_compat.check_generic_inheritance") as inheritance, \
-                    patch("sdk_compat.check_generic_sealed") as sealed:
+                    patch("sdk_compat.check_generic_sealed") as sealed, \
+                    patch("sdk_compat.check_lexical_scopes", return_value={"generated": "verified"}) as lexical:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
             negatives.assert_called_once()
             strict.assert_called_once()
             names.assert_called_once()
+            lexical.assert_called_once()
+            self.assertEqual(lexical.call_args.kwargs, {"primary": True})
+            self.assertEqual(json.loads((output / "primary-lexical-scopes.json").read_text()), {"generated": "verified"})
             validation.assert_called_once()
             serde.assert_called_once()
             inheritance.assert_called_once()

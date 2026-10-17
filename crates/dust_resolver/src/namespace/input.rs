@@ -11,6 +11,7 @@ pub(super) fn unit(
 ) -> Unit {
     let mut unit = Unit {
         file_id,
+        lexical_scopes: parsed.lexical_scopes.clone(),
         library_name: None,
         declarations: BTreeMap::new(),
         imports: Vec::new(),

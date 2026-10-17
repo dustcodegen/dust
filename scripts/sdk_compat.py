@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 
 from sqlite_sdk_consumer import ROOT, compatible_lints, validate_sdk_pair
-from sdk_codegen_fixtures import generated_files, generated_hashes, stage_example
+from sdk_codegen_fixtures import generated_files, generated_hashes, stage_example, require_deterministic_generation
 from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import check_generic_names
@@ -25,6 +25,7 @@ from sdk_inheritance import check_generic_inheritance, require_inheritance_parit
 from sdk_sealed import check_generic_sealed, require_sealed_parity
 from sdk_unsupported import check_unsupported
 from sdk_static_strings import check_static_strings
+from sdk_lexical_scopes import check_lexical_scopes
 
 
 def stable_dart_version(output: str) -> str:
@@ -71,14 +72,6 @@ def core_lints(version: str) -> str:
     if tuple(map(int, actual.split("."))) < (3, 6, 0):
         raise ValueError("Core Dust consumers require Dart >=3.6.0")
     return "7.0.0" if tuple(map(int, actual.split("."))) < (3, 10, 0) else compatible_lints(version)
-
-
-def require_deterministic_generation(rows: list[dict[str, object]]) -> None:
-    """The same supported source must produce identical bytes on both SDK ends."""
-    for target in ("dart", "flutter"):
-        generated = [row["generated"] for row in rows if row["target"] == target]
-        if len(generated) != 2 or generated[0] != generated[1]:
-            raise ValueError(f"Missing or different minimum/latest {target} generated output")
 
 
 def run_command(command: list[str], cwd: Path, log: Path, expected: int = 0,
@@ -139,6 +132,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         names = check_generic_names(run, dust, dart, app, output / role / "generic-names",
                                     output / role / "dart/analysis_options.yaml", "product_showcase", env)
         strings = check_static_strings(run, dart, app, output / role / "static-strings", env)
+        lexical = check_lexical_scopes(run, dust, dart, app, output / role / "lexical-scopes",
+                                     output / role / "dart/analysis_options.yaml", "product_showcase", env)
         validation = check_generic_validation(run, dust, dart, app, output / role / "generic-validation",
                                              output / role / "dart/analysis_options.yaml", "product_showcase", env)
         serde = check_generic_serde(run, dust, dart, app, output / role / "generic-serde",
@@ -149,7 +144,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                       output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
                      "generated": hashes, "genericNegative": negatives, "genericNames": names,
-                     "staticStrings": strings, "genericValidation": validation, "genericSerde": serde,
+                     "staticStrings": strings, "lexicalScopes": lexical,
+                     "genericValidation": validation, "genericSerde": serde,
                      "genericInheritance": inheritance, "genericSealed": sealed})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
@@ -211,6 +207,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         "primaryGenericSerde": serde,
         "primaryGenericInheritance": inheritance,
         "primaryGenericSealed": sealed,
+        "primaryLexicalScopes": json.loads((output / "primary-lexical-scopes.json").read_text()),
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
@@ -262,6 +259,9 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
                             "primary_sdk_consumer", env)
         check_generic_names(run, dust, dart, app, output / "primary-generic-names",
                             output / "primary/analysis_options.yaml", "primary_sdk_consumer", env, primary=True)
+        lexical = check_lexical_scopes(run, dust, dart, app, output / "primary-lexical-scopes",
+                                     output / "primary/analysis_options.yaml", "primary_sdk_consumer", env, primary=True)
+        (output / "primary-lexical-scopes.json").write_text(json.dumps(lexical, indent=2) + "\n")
     check_generic_validation(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-validation",
                              output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
                              "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env,

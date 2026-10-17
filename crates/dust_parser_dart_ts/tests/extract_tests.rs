@@ -22,6 +22,8 @@ mod fields;
 mod generic_headers;
 #[path = "extract_tests/language_occurrences.rs"]
 mod language_occurrences;
+#[path = "extract_tests/lexical_primary.rs"]
+mod lexical_primary;
 #[path = "extract_tests/library_surface.rs"]
 mod library_surface;
 #[path = "extract_tests/methods.rs"]

@@ -16,6 +16,7 @@ impl ParseBackend for FakeBackend {
         ParseResult {
             library: ParsedDartFileSurface {
                 span: TextRange::new(0_u32, 32_u32),
+                lexical_scopes: Vec::new(),
                 directives: vec![ParsedDirective::Part {
                     uri_literal: None,
                     uri: "user.g.dart".to_owned(),
@@ -104,6 +105,7 @@ fn parse_result_reports_presence_of_diagnostics() {
     let result = ParseResult {
         library: ParsedDartFileSurface {
             span: TextRange::new(0_u32, 0_u32),
+            lexical_scopes: Vec::new(),
             directives: Vec::new(),
             classes: Vec::new(),
             enums: Vec::new(),
@@ -169,6 +171,7 @@ fn directive_span_accessor_returns_stored_span() {
 fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
     let library = ParsedDartFileSurface {
         span: TextRange::new(0_u32, 0_u32),
+        lexical_scopes: Vec::new(),
         directives: Vec::new(),
         classes: Vec::new(),
         enums: Vec::new(),

@@ -14,7 +14,7 @@ fn unknown_nested_alias_considers_only_eligible_trait_aliases() {
     let source = format!(
         "import '{base}'; part 'package:app/main.g.dart'; const GET = unknown; @Derive([GET()]) class Api {{}}"
     );
-    add(&mut graph, 4, APP, &source);
+    add_without_lexical_facts(&mut graph, 4, APP, &source);
     add(
         &mut graph,
         5,
@@ -49,7 +49,7 @@ fn unknown_nested_alias_considers_only_eligible_trait_aliases() {
 fn opaque_group_uses_intrinsic_only_when_its_owner_is_unique() {
     let mut graph = graph();
     let source = "const Derive = unknown; @Derive([]) class Api {}";
-    add(&mut graph, 3, APP, source);
+    add_without_lexical_facts(&mut graph, 3, APP, source);
     let parsed = parse(3, source);
     let annotation = &parsed.classes[0].annotations[0];
     let mut diagnostics = Vec::new();
@@ -86,7 +86,7 @@ fn opaque_group_uses_intrinsic_only_when_its_owner_is_unique() {
 fn unknown_unregistered_marker_stays_unowned_without_a_warning() {
     let mut graph = graph();
     let source = "const Other = unknown; @Other() class Api {}";
-    add(&mut graph, 3, APP, source);
+    add_without_lexical_facts(&mut graph, 3, APP, source);
     let parsed = parse(3, source);
     let mut diagnostics = Vec::new();
     let ir = resolve_annotation_ir_in_namespace(

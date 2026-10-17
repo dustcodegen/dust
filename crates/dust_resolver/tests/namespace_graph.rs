@@ -36,6 +36,17 @@ fn add(graph: &mut NamespaceGraph, id: u32, uri: &str, source: &str) {
         .unwrap();
 }
 
+/// Legacy backends can provide declarations without newer lexical/value facts.
+fn add_without_lexical_facts(graph: &mut NamespaceGraph, id: u32, uri: &str, source: &str) {
+    let mut parsed = parse(id, source);
+    parsed.lexical_scopes.clear();
+    graph
+        .insert_library(uri, FileId::new(id), &parsed, |_, value| {
+            Ok(value.to_owned())
+        })
+        .unwrap();
+}
+
 /// Use actual runtime class definitions in the ownership regression.
 fn graph() -> NamespaceGraph {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))

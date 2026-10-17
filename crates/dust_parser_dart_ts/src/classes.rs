@@ -20,6 +20,7 @@ mod primary;
 mod parity_tests;
 
 pub(crate) use members::annotated_members;
+pub(crate) use parse_text::parameter_name_node;
 
 use dust_parser_dart::ParsedClassSurface;
 use dust_text::SourceText;

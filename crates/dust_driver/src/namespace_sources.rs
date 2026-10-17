@@ -65,19 +65,14 @@ impl NamespaceSources {
             .map_err(Diagnostic::error)?;
         let claims = outputs::plan(&roots, registry)?;
         let potential = claims.keys().cloned().collect();
-        let mut loader = loader::Loader::load(
-            &index,
-            &roots,
-            &workspace.dust_config.outputs.primary_suffix,
-            &potential,
-        )
-        .map_err(Diagnostic::error)?;
+        let primary_suffix = workspace.dust_config.outputs.primary_suffix.clone();
+        let mut loader = loader::Loader::load(&index, &roots, &primary_suffix, &potential)
+            .map_err(Diagnostic::error)?;
         for root in &roots {
             if let Some(Err(error)) = loader.units.get(&root.uri) {
                 return Err(Diagnostic::error(error));
             }
         }
-        let graph = outputs::verify(&mut loader.units, &claims, catalog)?;
         let mut metadata = String::new();
         for (path, text) in &index.inputs {
             metadata.push_str(&path.to_string_lossy());
@@ -85,18 +80,30 @@ impl NamespaceSources {
             metadata.push_str(text);
             metadata.push('\0');
         }
-        let mut sources = Self {
-            graph,
-            units: loader.units,
-            roots: roots
-                .into_iter()
-                .map(|root| (root.path, root.uri))
-                .collect(),
-            metadata_hash: hash_text(&metadata),
-            binding_errors: BTreeMap::new(),
-        };
-        discovery::select_libraries(&mut sources, workspace, catalog, include_unannotated);
-        Ok(sources)
+        loop {
+            let graph = outputs::verify(&mut loader.units, &claims, catalog)?;
+            let mut sources = Self {
+                graph,
+                units: std::mem::take(&mut loader.units),
+                roots: roots
+                    .iter()
+                    .map(|root| (root.path.clone(), root.uri.clone()))
+                    .collect(),
+                metadata_hash: hash_text(&metadata),
+                binding_errors: BTreeMap::new(),
+            };
+            discovery::select_libraries(&mut sources, workspace, catalog, include_unannotated);
+            let required = sources.graph.required_lexical_imports();
+            loader.units = std::mem::take(&mut sources.units);
+            if loader
+                .require_lexical_imports(&required)
+                .map_err(Diagnostic::error)?
+            {
+                continue;
+            }
+            sources.units = std::mem::take(&mut loader.units);
+            return Ok(sources);
+        }
     }
 
     /// Looks up the retained source unit for one workspace entrypoint.
@@ -127,7 +134,7 @@ impl NamespaceSources {
         metadata::annotations(&unit.parsed).into_iter().any(|annotation| {
             let name = annotation.prefix.as_ref().map_or_else(|| annotation.name.clone(),
                 |prefix| format!("{prefix}.{}", annotation.name));
-            matches!(scope.bind(&name, catalog), NamespaceBinding::Owned(owner) if owner.0 == symbol)
+            matches!(scope.bind_at(&name, catalog, dust_ir::SpanIr::new(unit.file_id, annotation.span)), NamespaceBinding::Owned(owner) if owner.0 == symbol)
         })
     }
 

@@ -1,0 +1,27 @@
+import 'package:dust_dart/derive.dart' as dust;
+
+part 'lexical_probe.g.dart';
+
+/// Outer metadata sees the import, while header/body metadata sees the constant.
+@dust.Derive([dust.ToString()])
+class const LexicalProbe(
+  /// A value with foreign declaring-parameter metadata.
+  @dust final int value,
+) with _$LexicalProbe {
+  /// Creates a value with foreign constructor metadata.
+  @dust
+  this;
+
+  /// A foreign annotation shadows the import only inside this class.
+  static const dust = ForeignMarker();
+
+  /// Foreign method and parameter metadata must not become Dust annotations.
+  @dust
+  int inspect(@dust int other) => value + other;
+}
+
+/// Not a Dust annotation, despite the shadowed prefix spelling.
+class ForeignMarker {
+  /// Creates the marker.
+  const ForeignMarker();
+}

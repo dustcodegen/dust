@@ -53,6 +53,14 @@ def generated_hashes(app: Path) -> dict[str, str]:
     return result
 
 
+def require_deterministic_generation(rows: list[dict[str, object]]) -> None:
+    """The same supported source must produce identical bytes on both SDK ends."""
+    for target in ("dart", "flutter"):
+        generated = [row["generated"] for row in rows if row["target"] == target]
+        if len(generated) != 2 or generated[0] != generated[1]:
+            raise ValueError(f"Missing or different minimum/latest {target} generated output")
+
+
 def generated_library_coverage(report: Path, stems: tuple[str, ...]) -> dict[str, dict[str, int]]:
     """Require each expected generated library once, nonempty and completely hit."""
     result = {}

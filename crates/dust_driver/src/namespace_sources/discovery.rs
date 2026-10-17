@@ -35,7 +35,11 @@ pub(super) fn select_libraries(
                     || annotation.name.clone(),
                     |prefix| format!("{prefix}.{}", annotation.name),
                 );
-                match sources.graph.scope(uri).bind(&name, catalog) {
+                match sources.graph.scope(uri).bind_at(
+                    &name,
+                    catalog,
+                    dust_ir::SpanIr::new(unit.file_id, annotation.span),
+                ) {
                     NamespaceBinding::Owned(_) => owned = true,
                     NamespaceBinding::Rejected { kind, .. }
                         if kind != dust_resolver::NamespaceFailureKind::Hidden =>
