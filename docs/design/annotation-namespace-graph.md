@@ -76,6 +76,19 @@ ownership validation only when the group is the actual intrinsic declaration.
 Ignored groups on methods and parameters still validate nested ownership; valid
 groups at those unsupported sites do not enable derivation.
 
+Outer annotation qualifiers use AST identifier components for semantic lookup,
+not the raw source slice ([#119](https://github.com/dustcodegen/dust/issues/119)).
+Whitespace and comments between identifiers/dots therefore do not change their
+owner. The exact written qualified name, arguments and span remain in parser
+facts and raw IR; failure labels retain that source spelling. This also fixes
+context-free prefix validation without changing its unique legacy lookup. It
+does not yet resolve named-constructor ambiguity or change nested constructor-
+value extraction; those and lexical-shadowing audits remain production gates.
+Traditional/primary generic-name consumer fixtures also exercise qualifier trivia
+through cold build, check, warm cache and exact generated snapshots. The imported
+generic model in the product showcase retains it as a real example; minimum/latest
+SDK gates compile and execute fresh generation rather than trusting copied output.
+
 These are tests of retained parser surfaces, not a claim to full Dart metadata
 extraction. Missing mixin/extension member facts and the unapproved #92 design
 remain separate limitations; this change does not bypass that design boundary.

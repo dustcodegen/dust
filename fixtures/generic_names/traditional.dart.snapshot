@@ -1,9 +1,10 @@
 import 'package:dust_dart/derive.dart';
+import 'package:dust_dart/derive.dart' as d;
 
 part 'generic_names.g.dart';
 
 /// Names valid in Dart that generated implementation details must not capture.
-@Derive([CopyWith(), ToString(), Eq()])
+@d /* annotation qualifier trivia */ .Derive([d.CopyWith(), d.ToString(), d.Eq()])
 class CoreNames<String, Object, bool, int, identical, pragma, self, other, runtimeType>
     with _$CoreNames<String, Object, bool, int, identical, pragma, self, other, runtimeType> {
   /// Creates collision values.
@@ -33,7 +34,7 @@ class CoreNames<String, Object, bool, int, identical, pragma, self, other, runti
 }
 
 /// Empty paths still need core return types and equality identity.
-@Derive([CopyWith(), ToString(), Eq()])
+@d.Derive([d.CopyWith(), d.ToString(), d.Eq()])
 class EmptyNames<String, Object, bool, int, identical, pragma>
     with _$EmptyNames<String, Object, bool, int, identical, pragma> {
   /// Creates an empty collision model.
@@ -41,7 +42,7 @@ class EmptyNames<String, Object, bool, int, identical, pragma>
 }
 
 /// A user binder must not capture the deep-equality helper.
-@Derive([CopyWith(), Eq()])
+@d.Derive([d.CopyWith(), d.Eq()])
 class _CollectionNames<_collectionNamesValuesEquality>
     with _$_CollectionNames<_collectionNamesValuesEquality> {
   /// Creates a collection.
@@ -51,7 +52,7 @@ class _CollectionNames<_collectionNamesValuesEquality>
 }
 
 /// Nested getters use the protected core annotation in both nullable paths.
-@Derive([CopyWith()])
+@d.Derive([d.CopyWith()])
 class NestedNames<pragma> with _$NestedNames<pragma> {
   /// Creates nested values.
   const NestedNames(this.child, this.optional);

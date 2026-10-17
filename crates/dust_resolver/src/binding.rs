@@ -39,13 +39,7 @@ impl<'a> BindingContext<'a> {
         diagnostics: &mut Vec<Diagnostic>,
     ) -> AnnotationIr {
         let owner = if self.namespace.is_some() {
-            self.owner(
-                &annotation.qualified_name,
-                &annotation.name,
-                SpanIr::new(file_id, annotation.span),
-                false,
-                diagnostics,
-            )
+            self.annotation_owner(file_id, annotation, diagnostics)
         } else {
             self.catalog
                 .resolve_qualified(&annotation.qualified_name)
@@ -96,13 +90,7 @@ impl<'a> BindingContext<'a> {
                 .or_else(|| self.catalog.resolve_trait(&annotation.name))
                 .map_or(Application::Unowned, Application::Symbol);
         }
-        let owner = self.owner(
-            &annotation.qualified_name,
-            &annotation.name,
-            SpanIr::new(file_id, annotation.span),
-            false,
-            diagnostics,
-        );
+        let owner = self.annotation_owner(file_id, annotation, diagnostics);
         match owner.as_ref().map(|id| id.0.as_str()) {
             Some("dust_dart::Derive") => {
                 let (values, _) =
@@ -167,21 +155,50 @@ impl<'a> BindingContext<'a> {
         if self.namespace.is_none() {
             return self.catalog.resolve_trait(&name.short);
         }
-        let owner = self.owner(&name.source, &name.short, name.span, true, diagnostics)?;
+        let owner = self.owner(
+            &name.source,
+            &name.source,
+            &name.short,
+            name.span,
+            true,
+            diagnostics,
+        )?;
         self.catalog.resolve_qualified_trait(&owner.0)
+    }
+
+    /// Bind semantic identifiers without rewriting source spelling or spans.
+    fn annotation_owner(
+        &self,
+        file_id: FileId,
+        annotation: &ParsedAnnotation,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) -> Option<SymbolId> {
+        let lookup = annotation.prefix.as_ref().map_or_else(
+            || annotation.name.clone(),
+            |prefix| format!("{prefix}.{}", annotation.name),
+        );
+        self.owner(
+            &annotation.qualified_name,
+            &lookup,
+            &annotation.name,
+            SpanIr::new(file_id, annotation.span),
+            false,
+            diagnostics,
+        )
     }
 
     /// Unknown provenance alone permits unique-owner legacy compatibility.
     pub(crate) fn owner(
         &self,
         written: &str,
+        lookup: &str,
         short: &str,
         span: SpanIr,
         trait_only: bool,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Option<SymbolId> {
         let binding = self.namespace.map_or(NamespaceBinding::Unknown, |scope| {
-            scope.bind(written, self.catalog)
+            scope.bind(lookup, self.catalog)
         });
         match binding {
             NamespaceBinding::Owned(owner) => Some(owner),
