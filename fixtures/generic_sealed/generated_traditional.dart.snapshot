@@ -29,7 +29,8 @@ sealed class Command<A, B extends List<A>> with _$Command<A, B> {
   const Command();
 
   /// Carries all owning binders in a different order.
-  const factory Command.done(String label) = GeneratedDone<B, A>.create;
+  const factory Command.done(String label, [int? note]) =
+      GeneratedDone<B, A>.create;
 
   /// Uses Dart's explicit unnamed-constructor suffix.
   const factory Command.none() = GeneratedNone<A, B>.new;
@@ -41,6 +42,7 @@ sealed class Command<A, B extends List<A>> with _$Command<A, B> {
 
   /// Keeps implicit nullable defaults distinct from explicit wire defaults.
   const factory Command.count({
+    required int? requested,
     @SerDe(aliases: ['oldCount']) int? count,
     @SerDe(defaultValue: 7) int? fallback,
   }) = GeneratedCount<A, B>;

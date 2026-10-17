@@ -66,6 +66,7 @@ impl ParseBackend for FakeBackend {
                             type_source: None,
                             parsed_type: None,
                             kind: ParameterKind::Positional,
+                            is_required: true,
                             has_default: false,
                             default_value_source: None,
                             span: TextRange::new(80_u32, 89_u32),

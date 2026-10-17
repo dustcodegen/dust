@@ -9,8 +9,8 @@ from pathlib import Path
 from sdk_sealed import ROOT, STEMS, check_generic_sealed, require_sealed_infos, require_sealed_parity
 from sdk_sealed_types import check_sealed_types
 
-ERROR = "Error: can't be assigned doesn't conform Event<num Event<int Done<List<num> List<String> List<A> Done<List<int> Done<List<String> GeneratedDone<List<int> GeneratedDone<List<String> GeneratedAt<List<int> GeneratedAt<List<String> String int? Envelope<int> Envelope<String> Choice<int> Choice<String> Map<int Map<String"
-CASES = ["result", "receiver", "bound", "selected", "generated-bound", "generated-result", "codec", "nullable", "adjacent", "untagged", "json-key"]
+ERROR = "Error: can't be assigned doesn't conform Event<num Event<int Done<List<num> List<String> List<A> Done<List<int> Done<List<String> GeneratedDone<List<int> GeneratedDone<List<String> GeneratedAt<List<int> GeneratedAt<List<String> String int? Envelope<int> Envelope<String> Choice<int> Choice<String> Map<int Map<String Required named parameter 'value' Required named parameter 'requested' must be provided"
+CASES = ["result", "receiver", "bound", "selected", "generated-bound", "generated-result", "codec", "nullable", "required-nullable", "required-factory", "generic-required", "adjacent", "untagged", "json-key"]
 
 
 class SealedSdkTests(unittest.TestCase):
@@ -60,7 +60,7 @@ class SealedSdkTests(unittest.TestCase):
                         check_sealed_types(run, Path("dart"), app, app, {"SDK": "selected"})
                 else:
                     self.assertEqual(check_sealed_types(run, Path("dart"), app, app, {"SDK": "selected"}), CASES)
-                    self.assertEqual(len(calls), 11)
+                    self.assertEqual(len(calls), len(CASES))
                 self.assertEqual({path: path.read_bytes() for path in originals}, originals)
 
     def test_proof_gates_restore_bytes_clean_owned_files_and_invalidate_stale_results(self):

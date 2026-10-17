@@ -30,6 +30,7 @@ pub(crate) fn field(name: &str, ty: TypeIr) -> FieldIr {
 pub(crate) fn constructor_param(name: &str, ty: TypeIr, kind: ParamKind) -> ConstructorParamIr {
     ConstructorParamIr {
         name: name.to_owned(),
+        is_required: true,
         ty,
         span: span(30, 35),
         kind,

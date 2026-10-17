@@ -127,6 +127,7 @@ pub(crate) fn dao_class() -> ClassIr {
                 ty: TypeIr::named("Executor"),
                 span: span(),
                 kind: ParamKind::Positional,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             }],

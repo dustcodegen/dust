@@ -36,6 +36,7 @@ pub(crate) fn named_param(name: &str, ty: TypeIr, has_default: bool) -> Construc
         ty,
         span: span(),
         kind: ParamKind::Named,
+        is_required: !has_default,
         has_default,
         default_value_source: None,
     }

@@ -11,7 +11,8 @@ use crate::syntax::{
 use crate::types::extract_type_before;
 
 use super::parse_text::{
-    default_value_source, is_field_formal_parameter, optional_parameter_kind, parameter_name_node,
+    default_value_source, is_field_formal_parameter, is_required_parameter,
+    optional_parameter_kind, parameter_name_node,
 };
 
 /// Structured redirect targets without parsing their written source.
@@ -196,7 +197,7 @@ fn collect_optional_formal_parameters(
     source: &SourceText,
     out: &mut Vec<ParsedConstructorParamSurface>,
 ) {
-    let kind = optional_parameter_kind(node, source);
+    let kind = optional_parameter_kind(node);
     collect_formal_parameters(node, source, out, kind);
 }
 
@@ -225,6 +226,11 @@ fn extract_formal_parameter(
         type_source,
         parsed_type,
         kind,
+        is_required: is_required_parameter(node, source)
+            || (kind == ParameterKind::Positional
+                && node
+                    .parent()
+                    .is_some_and(|parent| parent.kind() == "formal_parameter_list")),
         has_default: default_value_source.is_some(),
         default_value_source,
         span: text_range(node),

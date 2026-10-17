@@ -197,6 +197,7 @@ pub(super) fn lower_resolved_constructors(
                         ty: ty.value,
                         span: SpanIr::new(file_id, param.span),
                         kind: lower_parameter_kind(param.kind),
+                        is_required: param.is_required,
                         has_default: param.has_default,
                         default_value_source: param.default_value_source.clone(),
                     }

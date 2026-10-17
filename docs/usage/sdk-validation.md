@@ -151,21 +151,25 @@ the repository lock running on every SDK.
     invalidate an earlier result record before a rerun. These are local-parent
     proofs, not imported/aliased inheritance or generic sealed support.
 12. Generate the five `fixtures/generic_sealed` libraries on all six targets and
-    compare their complete raw snapshots. Five test files execute seven contracts
+    compare their complete raw snapshots. Five test files execute eight contracts
     for declared/generated variants, dependent/reordered/phantom arguments,
     named/`.new` targets, selected versus ordinary constructors, all three wire
     representations, codecs/aliases/nullable wire defaults, strict keys and
-    captured runtime/local names. Require 338/338 reported generated executable
-    lines for the four generic parts plus 41/41 for an unapplied named-target
-    regression, with no coverage exclusions and eleven intended kernel failures per
+    captured runtime/local names, required nullable named parameters and optional
+    positional groups. Require 344/344 reported generated executable
+    lines for the four generic parts plus 97/97 for non-generic named-target and
+    parameter-presence regressions, with no coverage exclusions and fourteen intended kernel failures per
     target. Strictly analyze source/parts/tests without broad lint suppression;
     record name-style infos only from the collision fixture. The non-generic
     regression retains its existing lint header; strict language checks stay on.
     All SDK/header and
     Dart/Flutter output hashes must match. Preserve baseline/caller bytes,
     invalidate stale results, collect Dart coverage in a fresh directory, and
-    clean only owned files after success or failure. This does not certify the
-    parameter-presence forms tracked in #138 or every generic integration.
+    clean only owned files after success or failure. Three compiler failures
+    specifically reject omitted required nullable arguments through generated,
+    factory and generic generated calls. Declared targets also exercise an extra
+    optional constructor argument that is not a serialized field. This does not
+    certify every constructor form or generic integration.
 
 Lint-tool selection is 7.0.0 on the core floor, 10.1.0 on Dart 3.10/3.11 and
 10.3.0 on 3.12+. The staged floor options omit only the already-disabled

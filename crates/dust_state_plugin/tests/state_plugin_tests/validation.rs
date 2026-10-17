@@ -164,6 +164,7 @@ fn rejects_state_constructor_with_required_params() {
             ty: TypeIr::named("int"),
             span: super::support::span(31, 40),
             kind: ParamKind::Named,
+            is_required: true,
             has_default: false,
             default_value_source: None,
         }],

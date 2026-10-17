@@ -5,15 +5,9 @@ use tree_sitter::Node;
 use crate::syntax::{direct_named_child, node_text};
 
 /// Determines whether an optional parameter group is named or positional.
-pub(super) fn optional_parameter_kind(node: Node<'_>, source: &SourceText) -> ParameterKind {
-    let bytes = source.as_str().as_bytes();
-    let mut index = node.start_byte();
-    let end = node.end_byte();
-    while index < end && bytes.get(index).is_some_and(u8::is_ascii_whitespace) {
-        index += 1;
-    }
-
-    if bytes.get(index) == Some(&b'{') {
+pub(super) fn optional_parameter_kind(node: Node<'_>) -> ParameterKind {
+    let mut cursor = node.walk();
+    if node.children(&mut cursor).any(|child| child.kind() == "{") {
         ParameterKind::Named
     } else {
         ParameterKind::Positional
@@ -54,17 +48,15 @@ pub(super) fn is_field_formal_parameter(node: Node<'_>) -> bool {
 
 /// Returns whether a parameter has the explicit Dart `required` modifier.
 pub(super) fn is_required_parameter(node: Node<'_>, source: &SourceText) -> bool {
-    let Some(name) = parameter_name_node(node) else {
-        return false;
-    };
-    let before_name = &source.as_str()[node.start_byte()..name.start_byte()];
-    if before_name
-        .split(|ch: char| !ch.is_ascii_alphanumeric() && ch != '_')
-        .any(|word| word == "required")
+    // The legacy grammar represents a field/super modifier as a type identifier.
+    let field_formal = direct_named_child(node, "constructor_param")
+        .or_else(|| direct_named_child(node, "super_formal_parameter"));
+    if field_formal
+        .and_then(|formal| direct_named_child(formal, "type_identifier"))
+        .is_some_and(|identifier| node_text(identifier, source) == "required")
     {
         return true;
     }
-
     let Some(parent) = node.parent() else {
         return false;
     };
@@ -78,7 +70,7 @@ pub(super) fn is_required_parameter(node: Node<'_>, source: &SourceText) -> bool
             required_since_separator = false;
             continue;
         }
-        if child.kind() == "required" || node_text(child, source).trim() == "required" {
+        if child.kind() == "required" {
             required_since_separator = true;
         }
     }

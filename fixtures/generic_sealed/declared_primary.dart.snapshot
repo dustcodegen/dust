@@ -49,7 +49,8 @@ final class const Done<Y extends List<X>, X>.normalized(
   this : label = raw ? label : 'first:$label';
 
   /// Creates a completed value.
-  const Done.create(String label) : this.normalized(label, raw: true);
+  const Done.create(String label, {int? ignored})
+    : this.normalized(ignored == null ? label : 'ignored', raw: true);
 
   /// The concrete payload requires no generic decoder callback.
   final String label;

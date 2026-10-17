@@ -241,10 +241,25 @@ nullable optional parameters still default to `null`. When source binders captur
 runtime JSON names, a generated public factory uses an allocated public payload
 typedef such as `$CaptureDoneJson`, not private aliases in its public signature.
 
-All constructor forms are **not** production-ready: required nullable named and
-optional positional parameters need the separate
-[#138](https://github.com/dustcodegen/dust/issues/138) fix. Do not use those omitted
-variant forms yet. See the [generic-model design](../design/generic-models.md),
+The development fix under [#138](https://github.com/dustcodegen/dust/issues/138)
+preserves argument presence independently of nullability. For example:
+
+```dart
+const factory Event.named({required int? value, int? note}) = NamedEvent;
+const factory Event.optional([int? value, int? note]) = OptionalEvent.new;
+
+const named = NamedEvent(value: null); // `value` must be supplied, even if null.
+const optional = OptionalEvent(); // Both positional values may be omitted.
+```
+
+These factories belong inside an annotated sealed base such as the example
+below. Generated constructors retain required positional arguments, optional
+`[...]` groups and explicit named `required` modifiers. This does not add JSON
+key-presence validation: nullable wire values retain the existing decoding rules.
+Declared target constructors may have extra optional arguments not backed by
+fields; decoding omits them and retains their Dart defaults. Source spans and
+binders are unchanged. This is unreleased scope, not all-constructor production
+certification. See the [generic-model design](../design/generic-models.md),
 [sealed fixtures](../../fixtures/generic_sealed) and
 [ordinary generic JSON fixtures](../../fixtures/generic_serde).
 
