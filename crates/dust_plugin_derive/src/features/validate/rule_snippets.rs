@@ -16,29 +16,33 @@ pub(crate) fn rule_line(field: Value, rule: Value, indent: String) -> String {
     let literal = field.get_attr("literal").unwrap().to_string();
     let kind = rule.get_attr("kind").unwrap().to_string();
     let message = rule.get_attr("message").unwrap().to_string();
+    let runtime = field.get_attr("runtime").unwrap();
+    let error_type = runtime.get_attr("ValidationError").unwrap().to_string();
+    let error = format!("{error_type}(field: {literal}, message: {message})");
+    let helper_type = runtime.get_attr("ValidationHelper").unwrap().to_string();
+    let regexp_type = runtime.get_attr("RegExp").unwrap().to_string();
     match kind.as_str() {
         "email" => simple_helper(
             &indent,
             &value_name,
             &errors_name,
-            &literal,
-            &message,
+            &error,
             "isEmail",
+            &helper_type,
         ),
         "url" => simple_helper(
             &indent,
             &value_name,
             &errors_name,
-            &literal,
-            &message,
+            &error,
             "isUrl",
+            &helper_type,
         ),
         "length_equal" => compare(
             &indent,
             format!("{value_name}.length != {}", rule.get_attr("equal").unwrap()),
             &errors_name,
-            &literal,
-            &message,
+            &error,
         ),
         "length_min" => compare(
             &indent,
@@ -47,8 +51,7 @@ pub(crate) fn rule_line(field: Value, rule: Value, indent: String) -> String {
                 rule.get_attr("int_value").unwrap()
             ),
             &errors_name,
-            &literal,
-            &message,
+            &error,
         ),
         "length_max" => compare(
             &indent,
@@ -57,48 +60,31 @@ pub(crate) fn rule_line(field: Value, rule: Value, indent: String) -> String {
                 rule.get_attr("int_value").unwrap()
             ),
             &errors_name,
-            &literal,
-            &message,
+            &error,
         ),
         "range_min" => compare(
             &indent,
             format!("{value_name} < {}", rule.get_attr("number_value").unwrap()),
             &errors_name,
-            &literal,
-            &message,
+            &error,
         ),
         "range_max" => compare(
             &indent,
             format!("{value_name} > {}", rule.get_attr("number_value").unwrap()),
             &errors_name,
-            &literal,
-            &message,
+            &error,
         ),
-        "contains" => string_contains(
-            &indent,
-            &value_name,
-            &errors_name,
-            &rule,
-            false,
-            &literal,
-            &message,
-        ),
-        "does_not_contain" => string_contains(
-            &indent,
-            &value_name,
-            &errors_name,
-            &rule,
-            true,
-            &literal,
-            &message,
-        ),
+        "contains" => string_contains(&indent, &value_name, &errors_name, &rule, false, &error),
+        "does_not_contain" => {
+            string_contains(&indent, &value_name, &errors_name, &rule, true, &error)
+        }
         "regex" => regex(
             &indent,
             &value_name,
             &errors_name,
             &rule,
-            &literal,
-            &message,
+            &error,
+            &regexp_type,
         ),
         "must_match" => must_match(
             &indent,
@@ -106,17 +92,23 @@ pub(crate) fn rule_line(field: Value, rule: Value, indent: String) -> String {
             &self_name,
             &errors_name,
             &rule,
-            &literal,
-            &message,
+            &error,
         ),
-        "nested" => nested(
+        "nested" => block(
             &indent,
-            &name,
-            &value_name,
-            &errors_name,
-            &nested_validation_name,
-            &nested_errors_name,
-            &nested_error_name,
+            [
+                format!("final {nested_validation_name} = {value_name}.validate();"),
+                format!(
+                    "if ({nested_validation_name} case {}(errors: final {nested_errors_name})) {{",
+                    runtime.get_attr("Invalid").unwrap()
+                ),
+                format!("  for (final {nested_error_name} in {nested_errors_name}) {{"),
+                format!(
+                    "    {errors_name}.add({error_type}(field: '{name}.${{{nested_error_name}.field}}', message: {nested_error_name}.message));"
+                ),
+                "  }".to_owned(),
+                "}".to_owned(),
+            ],
         ),
         "custom" => custom(
             &indent,
@@ -134,33 +126,27 @@ fn simple_helper(
     indent: &str,
     name: &str,
     errors_name: &str,
-    literal: &str,
-    message: &str,
+    error: &str,
     helper: &str,
+    helper_type: &str,
 ) -> String {
     block(
         indent,
         [
-            format!("if (!ValidationHelper.{helper}({name})) {{"),
-            format!("  {errors_name}.add(ValidationError(field: {literal}, message: {message}));"),
+            format!("if (!{helper_type}.{helper}({name})) {{"),
+            format!("  {errors_name}.add({error});"),
             "}".to_owned(),
         ],
     )
 }
 
 /// Renders a comparison-based validation rule.
-fn compare(
-    indent: &str,
-    expression: String,
-    errors_name: &str,
-    literal: &str,
-    message: &str,
-) -> String {
+fn compare(indent: &str, expression: String, errors_name: &str, error: &str) -> String {
     block(
         indent,
         [
             format!("if ({expression}) {{"),
-            format!("  {errors_name}.add(ValidationError(field: {literal}, message: {message}));"),
+            format!("  {errors_name}.add({error});"),
             "}".to_owned(),
         ],
     )
@@ -173,8 +159,7 @@ fn string_contains(
     errors_name: &str,
     rule: &Value,
     positive: bool,
-    literal: &str,
-    message: &str,
+    error: &str,
 ) -> String {
     let pattern = rule.get_attr("pattern").unwrap().to_string();
     let prefix = if positive { "" } else { "!" };
@@ -182,7 +167,7 @@ fn string_contains(
         indent,
         [
             format!("if ({prefix}{name}.contains({pattern})) {{"),
-            format!("  {errors_name}.add(ValidationError(field: {literal}, message: {message}));"),
+            format!("  {errors_name}.add({error});"),
             "}".to_owned(),
         ],
     )
@@ -194,15 +179,15 @@ fn regex(
     name: &str,
     errors_name: &str,
     rule: &Value,
-    literal: &str,
-    message: &str,
+    error: &str,
+    regexp_type: &str,
 ) -> String {
     let pattern = rule.get_attr("pattern").unwrap().to_string();
     block(
         indent,
         [
-            format!("if (!RegExp({pattern}).hasMatch({name})) {{"),
-            format!("  {errors_name}.add(ValidationError(field: {literal}, message: {message}));"),
+            format!("if (!{regexp_type}({pattern}).hasMatch({name})) {{"),
+            format!("  {errors_name}.add({error});"),
             "}".to_owned(),
         ],
     )
@@ -215,40 +200,14 @@ fn must_match(
     self_name: &str,
     errors_name: &str,
     rule: &Value,
-    literal: &str,
-    message: &str,
+    error: &str,
 ) -> String {
     let other = rule.get_attr("other").unwrap().to_string();
     block(
         indent,
         [
             format!("if ({name} != {self_name}.{other}) {{"),
-            format!("  {errors_name}.add(ValidationError(field: {literal}, message: {message}));"),
-            "}".to_owned(),
-        ],
-    )
-}
-
-/// Renders nested validation forwarding.
-fn nested(
-    indent: &str,
-    field_name: &str,
-    value_name: &str,
-    errors_name: &str,
-    validation_name: &str,
-    nested_errors_name: &str,
-    nested_error_name: &str,
-) -> String {
-    block(
-        indent,
-        [
-            format!("final {validation_name} = {value_name}.validate();"),
-            format!("if ({validation_name} case Invalid(errors: final {nested_errors_name})) {{"),
-            format!("  for (final {nested_error_name} in {nested_errors_name}) {{"),
-            format!(
-                "    {errors_name}.add(ValidationError(field: '{field_name}.${{{nested_error_name}.field}}', message: {nested_error_name}.message));"
-            ),
-            "  }".to_owned(),
+            format!("  {errors_name}.add({error});"),
             "}".to_owned(),
         ],
     )

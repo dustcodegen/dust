@@ -1,12 +1,18 @@
-use dust_dart_emit::dart_string_literal;
+use std::collections::BTreeMap;
+
+use dust_dart_emit::{
+    dart_string_literal, render_class_type, render_type_arguments, render_type_parameters,
+};
 use dust_ir::{ClassIr, DartFileIr, FieldIr};
 use minijinja::Environment;
-use serde::Serialize;
 
 use super::model::{ValidateConfig, field_validations, has_validate_trait};
 use super::rule_snippets::rule_line;
-use super::type_source::{input_kind, render_type};
-use crate::features::names::{NameAllocator, library_declaration_names, upper_first};
+use super::type_source::{class_input_kind, render_type};
+use crate::features::{
+    core_names::CoreNames,
+    names::{NameAllocator, library_declaration_names, library_reference_names, upper_first},
+};
 
 /// Turning one validation config into the rules a generated validator runs.
 mod rules;
@@ -16,107 +22,9 @@ use self::rules::*;
 mod fields;
 use self::fields::*;
 
-/// Template context for a class validation extension.
-#[derive(Serialize)]
-struct ValidateContext<'a> {
-    /// Source class name.
-    class_name: &'a str,
-    /// Generated private validation extension name.
-    extension_name: String,
-    /// Local receiver variable name.
-    self_name: String,
-    /// Local validation error list variable name.
-    errors_name: String,
-    /// Local validation result variable name.
-    result_name: String,
-    /// Local error list name used by `validateOrThrow`.
-    invalid_errors_name: String,
-    /// Field validation contexts.
-    fields: Vec<FieldContext>,
-}
-
-/// Template context for one validated field.
-#[derive(Clone, Serialize)]
-struct FieldContext {
-    /// Field name.
-    name: String,
-    /// Dart string literal for the field name.
-    literal: String,
-    /// Local field value variable name.
-    value_name: String,
-    /// Local receiver variable name.
-    self_name: String,
-    /// Local validation error list variable name.
-    errors_name: String,
-    /// Local parsed Flutter form input variable name.
-    parsed_name: String,
-    /// Local nested validation result variable name.
-    nested_validation_name: String,
-    /// Local nested errors variable name.
-    nested_errors_name: String,
-    /// Local nested error loop variable name.
-    nested_error_name: String,
-    /// Local custom validator result variable name.
-    custom_error_name: String,
-    /// Private validation helper method name.
-    helper_name: String,
-    /// Private Flutter form input helper method name.
-    input_helper_name: String,
-    /// Public top-level Flutter form validator helper name.
-    public_input_helper_name: String,
-    /// Private validation helper signature.
-    helper_signature: String,
-    /// Private input helper signature.
-    input_signature: String,
-    /// Public input helper signature.
-    public_input_signature: String,
-    /// Rendered Dart field type source.
-    type_source: String,
-    /// Whether the field type is nullable.
-    nullable: bool,
-    /// Whether Flutter form input validation can be generated.
-    can_validate_input: bool,
-    /// Parser kind for Flutter form input validation.
-    input_kind: Option<&'static str>,
-    /// Error message used when parsing input fails.
-    parse_error_message: String,
-    /// Whether validation rules need the receiver.
-    uses_self: bool,
-    /// Parsed validation configs for the field.
-    configs: Vec<ConfigContext>,
-}
-
-/// Template context for one `@Validate` config.
-#[derive(Clone, Serialize)]
-struct ConfigContext {
-    /// Whether the field is nullable.
-    nullable: bool,
-    /// Optional required-field error message.
-    required_message: Option<String>,
-    /// Rule contexts rendered for this config.
-    rules: Vec<RuleContext>,
-}
-
-/// Template context for one validation rule.
-#[derive(Clone, Serialize)]
-struct RuleContext {
-    /// Rule kind consumed by the rule snippet renderer.
-    kind: &'static str,
-    /// Dart string literal for the error message.
-    message: String,
-    /// Integer rule value.
-    int_value: Option<i64>,
-    /// Numeric rule value source.
-    number_value: Option<String>,
-    /// Exact length value.
-    equal: Option<i64>,
-    /// Dart string literal pattern.
-    pattern: Option<String>,
-    /// Other field name for must-match rules.
-    other: Option<String>,
-    /// Custom validator function source.
-    custom: Option<String>,
-}
+/// Serializable data passed to validation templates.
+mod context;
+use self::context::*;
 
 /// Generated validation mixin member and support type source.
 pub(crate) struct ValidateEmission {
@@ -131,22 +39,54 @@ pub(crate) fn emit_validate(
     library: &DartFileIr,
     class: &ClassIr,
     emit_form_helpers: bool,
+    core: &CoreNames,
 ) -> Option<ValidateEmission> {
     if !has_validate_trait(class) {
         return None;
     }
 
-    let mut allocator = NameAllocator::new(library_declaration_names(library));
+    let generic = !class.type_parameters.is_empty();
+    let mut allocator = NameAllocator::new(if generic {
+        library_reference_names(library)
+    } else {
+        library_declaration_names(library)
+    });
     let extension_name = allocator.allocate(format!("_{}Validation", class.name));
-    let mut method_allocator = NameAllocator::new(std::iter::empty::<&str>());
+    let nullable_name = allocator.allocate(format!("{extension_name}Value"));
+    let mut method_allocator =
+        NameAllocator::new(class.type_parameters.iter().map(|p| p.name.source.as_str()));
     let self_name = method_allocator.allocate("self");
     let errors_name = method_allocator.allocate("errors");
     let result_name = method_allocator.allocate("result");
-    let mut throw_allocator = NameAllocator::new(std::iter::empty::<&str>());
+    let mut throw_allocator =
+        NameAllocator::new(class.type_parameters.iter().map(|p| p.name.source.as_str()));
     let invalid_errors_name = throw_allocator.allocate("errors");
-    let fields = render_fields(library, class, emit_form_helpers);
+    let runtime = [
+        "String",
+        "List",
+        "RegExp",
+        "ValidationResult",
+        "ValidationError",
+        "Valid",
+        "Invalid",
+        "ValidationException",
+        "ValidationHelper",
+    ]
+    .into_iter()
+    .map(|name| (name, core.get(name).to_owned()))
+    .collect();
+    let (fields, needs_nullable_alias) =
+        render_fields(library, class, emit_form_helpers, &runtime, &nullable_name);
+    let nullable_alias = needs_nullable_alias.then(|| {
+        let item = allocator.allocate("T");
+        format!("typedef {nullable_name}<{item}> = {item}?;")
+    });
     let context = ValidateContext {
         class_name: &class.name,
+        class_type: render_class_type(class),
+        generic,
+        runtime,
+        nullable_alias,
         extension_name,
         self_name,
         errors_name,
@@ -204,18 +144,16 @@ fn helper_signature(
     class_name: &str,
     self_name: &str,
     value_name: &str,
-    errors_name: &str,
+    errors_parameter: &str,
     field_type: &str,
     uses_self: bool,
 ) -> String {
     if uses_self {
         format!(
-            "static void {helper_name}(\n    {class_name} {self_name},\n    {field_type} {value_name},\n    List<ValidationError> {errors_name},\n  )"
+            "static void {helper_name}(\n    {class_name} {self_name},\n    {field_type} {value_name},\n    {errors_parameter},\n  )"
         )
     } else {
-        format!(
-            "static void {helper_name}({field_type} {value_name}, List<ValidationError> {errors_name})"
-        )
+        format!("static void {helper_name}({field_type} {value_name}, {errors_parameter})")
     }
 }
 
@@ -225,13 +163,15 @@ fn input_signature(
     class_name: &str,
     self_name: &str,
     uses_self: bool,
+    string_type: &str,
+    value_name: &str,
 ) -> String {
     if uses_self {
         format!(
-            "static String? {input_helper_name}(\n    {class_name} {self_name},\n    String? value,\n  )"
+            "static {string_type}? {input_helper_name}(\n    {class_name} {self_name},\n    {string_type}? {value_name},\n  )"
         )
     } else {
-        format!("static String? {input_helper_name}(String? value)")
+        format!("static {string_type}? {input_helper_name}({string_type}? {value_name})")
     }
 }
 
@@ -240,11 +180,16 @@ fn public_input_signature(
     public_input_helper_name: &str,
     class_name: &str,
     uses_self: bool,
+    self_name: &str,
+    string_type: &str,
+    value_name: &str,
 ) -> String {
     if uses_self {
-        format!("String? {public_input_helper_name}(\n  {class_name} self,\n  String? value,\n)")
+        format!(
+            "{string_type}? {public_input_helper_name}(\n  {class_name} {self_name},\n  {string_type}? {value_name},\n)"
+        )
     } else {
-        format!("String? {public_input_helper_name}(String? value)")
+        format!("{string_type}? {public_input_helper_name}({string_type}? {value_name})")
     }
 }
 

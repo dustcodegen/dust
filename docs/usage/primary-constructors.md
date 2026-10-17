@@ -87,8 +87,9 @@ Remaining gaps in this draft:
   nested helpers, equality/debug output and typed imported replacements.
   Core-name/local collisions have separate traditional/primary executable
   probes. The [approved design](../design/generic-models.md) still requires
-  generated-member collisions (#103), generic validation helpers and integration
-  capability checks. Passing the copy cases does not establish all generic derives.
+  generated-member collisions (#103) and integration capability checks. Scoped
+  generic validation tests now cover typed helpers, nested errors, effective
+  nullability and Flutter form validators. These do not establish all generic derives.
 
 For these cases, a successful `dust build` does not establish that the generated
 Dart compiles. Do not use the draft feature as production-readiness evidence.

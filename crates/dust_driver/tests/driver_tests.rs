@@ -50,6 +50,8 @@ mod generic_copy_outputs;
 
 #[path = "driver_tests/generic_name_outputs.rs"]
 mod generic_name_outputs;
+#[path = "driver_tests/generic_validation.rs"]
+mod generic_validation;
 
 #[path = "driver_tests/build_validation.rs"]
 mod build_validation;

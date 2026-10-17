@@ -164,7 +164,7 @@ fn nested_target_type<'a>(class: &ClassIr, ty: &'a TypeIr) -> Option<(&'a str, b
 }
 
 /// Distinguishes a class binder from an unrelated same-spelled local model.
-fn is_class_parameter(class: &ClassIr, ty: &TypeIr) -> bool {
+pub(crate) fn is_class_parameter(class: &ClassIr, ty: &TypeIr) -> bool {
     matches!(ty, TypeIr::Named { name, args, .. } if args.is_empty()
         && class.type_parameters.iter().any(|parameter| parameter.name.source == name.as_ref()))
 }

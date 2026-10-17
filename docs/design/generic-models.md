@@ -6,8 +6,8 @@ and parser migration [#68](https://github.com/dustcodegen/dust/issues/68).
 
 Grammar acceptance is not generator support. The draft now generates typed
 `CopyWith` helpers for the scoped traditional and primary consumers below.
-Scoped core-name/local collisions are covered, but generated-member collisions,
-validation helpers and integration capability checks remain unfinished.
+Scoped core-name/local collisions and generic validation helpers are covered,
+but generated-member collisions and integration capability checks remain unfinished.
 Do not use this draft as production guidance.
 
 ## Approved decision
@@ -234,9 +234,25 @@ still conflict with declarations in the generated mixin. This was reproduced
 with real generation/kernel compilation and is tracked in
 [#103](https://github.com/dustcodegen/dust/issues/103). Safely renaming a generated
 binder may need additional structured substitution facts, not rewriting opaque
-source. Capability checks and generic validation helpers also remain unfinished
-under #93. Neither design approval nor
+source. Integration capability checks also remain unfinished under #93. Neither design approval nor
 the scoped copy tests establish general generic model support.
+
+Generic validation now uses typed receivers and private static helper methods
+that declare the owning parameters and bounds. Generic candidate nullability is
+normalized by a private nullable typedef, not guessed from a field's spelling.
+Required/null/custom/nested rules retain actual arguments, including aliases,
+`FutureOr<T>`, records and generic function values. Runtime/core references and
+helper locals avoid captured class binders. Receiver-free concrete Flutter input
+validators keep their ordinary tearoff API; must-match helpers infer parameters
+from a typed model receiver. Ordinary non-generic output stays unchanged.
+The isolated [validation fixtures](../../fixtures/generic_validation) exercise
+traditional and primary headers, runtime behavior and expected compiler errors
+for a wrong private-helper receiver/candidate. These are scoped tests, not
+general bound/interface resolution or generic support in every plugin.
+Typed nested trait constructors such as `Validate<Object?>()` inside a derive
+list have a separate parser limitation tracked in
+[#125](https://github.com/dustcodegen/dust/issues/125); the strict fixtures supply
+inference context with `@Derive(<Validate<Object?>>[Validate()])` instead.
 
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /
