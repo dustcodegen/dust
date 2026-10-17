@@ -88,3 +88,30 @@ fn resolved_missing_part_does_not_change_partless_consumers() {
     assert_eq!(result.diagnostics, []);
     assert_eq!(result.library.part_uri, None);
 }
+
+#[test]
+fn context_free_adapter_keeps_basename_mismatch_diagnostics() {
+    let source = SourceText::new(
+        FileId::new(147),
+        "part 'foreign.g.dart'; @Derive([ToString()]) class Model {}",
+    );
+    let parsed = TreeSitterDartBackend::new().parse_file(&source, ParseOptions::default());
+    assert_eq!(parsed.diagnostics, []);
+    let mut catalog = SymbolCatalog::new();
+    catalog.register_trait("ToString", "dust_dart::ToString");
+    let result = dust_resolver::resolve_library(
+        FileId::new(147),
+        "lib/model.dart",
+        "lib/model.g.dart",
+        &parsed.library,
+        &catalog,
+    );
+    assert_eq!(result.library.part_uri.as_deref(), Some("foreign.g.dart"));
+    assert_eq!(
+        result.diagnostics,
+        [
+            dust_resolver::validate_generated_part_uri("lib/model.g.dart", "foreign.g.dart")
+                .unwrap_err()
+        ]
+    );
+}
