@@ -25,6 +25,7 @@ fn generic_validation_has_the_same_typed_contract_for_both_headers() {
         );
         write_file(&root.join("lib/model.dart"), source);
         let request = BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,
@@ -38,6 +39,7 @@ fn generic_validation_has_the_same_typed_contract_for_both_headers() {
             expected
         );
         let checked = run_check(CheckRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,
@@ -99,6 +101,7 @@ fn generic_validation_shapes_retain_exact_parity_with_and_without_flutter() {
                 );
             }
             let result = run_build(BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: false,
                 jobs: None,
@@ -157,6 +160,7 @@ class Box<{binder}> with _$Box<{binder}> {{
             ),
         );
         let result = run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: false,
             jobs: None,
@@ -198,6 +202,7 @@ fn typed_traits_preserve_good_outputs_and_cache_when_mixin_validation_fails() {
             let cache = root.join(".dart_tool/dust/build_cache_v1.json");
             write_file(&path, source);
             let request = BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast,
                 jobs: None,
@@ -215,6 +220,7 @@ fn typed_traits_preserve_good_outputs_and_cache_when_mixin_validation_fails() {
                     run_build(request.clone())
                 } else {
                     run_check(CheckRequest {
+                        sdk_source_root: Some(crate::support::sdk_source_root(root)),
                         cwd: root.to_path_buf(),
                         fail_fast,
                         jobs: None,

@@ -18,6 +18,8 @@ pub mod inspect;
 /// Deep-link fixture output built from route analysis facts.
 /// Internal route plugin model used by validation and emission.
 mod model;
+/// Shared potential and actual standalone output paths.
+mod outputs;
 /// Parses route annotations from lowered IR and source-surface facts.
 mod parse;
 /// Validates route pages and router configuration.
@@ -83,6 +85,19 @@ impl DustPlugin for RoutePlugin {
 
     fn partless_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn potential_generated_libraries(
+        &self,
+        source: &std::path::Path,
+    ) -> Vec<dust_plugin_api::GeneratedLibrary> {
+        outputs::route_output_paths(&source.with_extension(""))
+            .into_iter()
+            .map(|path| dust_plugin_api::GeneratedLibrary {
+                path,
+                producer: dust_ir::SymbolId::new("dust_flutter::AppRouter"),
+            })
+            .collect()
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {

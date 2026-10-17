@@ -48,6 +48,7 @@ pub(super) fn load_library_inputs(
                             cache_fingerprint,
                             config.package_config_hash,
                             config.tool_hash,
+                            config.namespaces,
                         );
                         (index, input)
                     })

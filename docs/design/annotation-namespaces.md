@@ -10,8 +10,10 @@ retains canonical owners and adds unique-only context-free lookup. The two
 canonical-retention regressions from [#85](https://github.com/dustcodegen/dust/pull/85)
 are covered by permanent passing tests in that implementation. The source-fact
 graph and opt-in scoped resolver are implemented in
-[#112](https://github.com/dustcodegen/dust/issues/112); production driver loading,
-all-site lowering and dependency/cache acceptance gates remain unfinished.
+[#112](https://github.com/dustcodegen/dust/issues/112). Shared lowering and real
+production source loading are connected on the in-progress #114 stack; fixture
+migration, full regression/coverage and dependency/cache acceptance remain
+unfinished. See [the integration status](annotation-namespace-graph.md).
 Do not enable the server plugin in the default registry or claim server codegen
 works on the strength of this document or the catalog layer alone.
 

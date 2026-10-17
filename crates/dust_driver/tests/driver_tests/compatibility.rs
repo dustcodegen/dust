@@ -20,6 +20,7 @@ fn build_allows_compatible_dust_package_versions() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -46,6 +47,7 @@ fn build_rejects_too_old_dust_package_before_writing_outputs() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -83,6 +85,7 @@ fn check_rejects_too_new_dust_package_before_processing_libraries() {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -117,6 +120,7 @@ fn build_ignores_resolved_dust_package_that_source_does_not_use() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -142,6 +146,7 @@ fn build_requires_visible_dust_import_for_annotation_discovery() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -172,6 +177,7 @@ fn build_rejects_too_old_dust_db_postgres() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,

@@ -84,6 +84,7 @@ fn run_command(parsed: ParsedCli, progress: Option<&ProgressHandle>) -> CommandR
                 }
             }
             let request = BuildRequest {
+                sdk_source_root: None,
                 cwd,
                 fail_fast: parsed.options.fail_fast,
                 jobs: parsed.options.jobs,
@@ -97,13 +98,17 @@ fn run_command(parsed: ParsedCli, progress: Option<&ProgressHandle>) -> CommandR
         }
         CliCommand::Clean => run(CommandRequest::Clean(CleanRequest { cwd })),
         CliCommand::Check => run(CommandRequest::Check(CheckRequest {
+            sdk_source_root: None,
             cwd,
             fail_fast: parsed.options.fail_fast,
             jobs: parsed.options.jobs,
             db: db_options(&parsed),
         })),
         CliCommand::Doctor => run(CommandRequest::Doctor(DoctorRequest { cwd })),
-        CliCommand::RouteTable => run(CommandRequest::RouteTable(RouteTableRequest { cwd })),
+        CliCommand::RouteTable => run(CommandRequest::RouteTable(RouteTableRequest {
+            sdk_source_root: None,
+            cwd,
+        })),
         CliCommand::I18nBuild => run(CommandRequest::I18nBuild(I18nBuildRequest {
             cwd,
             sync_source: parsed.options.i18n_sync_source,
@@ -113,6 +118,7 @@ fn run_command(parsed: ParsedCli, progress: Option<&ProgressHandle>) -> CommandR
         CliCommand::I18nScan => run(CommandRequest::I18nScan(I18nScanRequest { cwd })),
         CliCommand::Watch => {
             let request = WatchRequest {
+                sdk_source_root: None,
                 cwd,
                 fail_fast: parsed.options.fail_fast,
                 jobs: parsed.options.jobs,

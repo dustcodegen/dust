@@ -6,6 +6,8 @@ use dust_ir::{DartFileIr, SymbolId};
 
 /// Explicit declaration metadata follows effective symbol ownership.
 mod origins;
+/// Output declarations retain effective ownership in focused modes.
+mod outputs;
 
 /// One plugin registration plus its claimed symbols.
 struct RegisteredPlugin {

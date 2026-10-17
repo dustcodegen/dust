@@ -8,6 +8,10 @@ use std::{
 use dust_plugin_api::GENERATED_HEADER;
 use tempfile::tempdir;
 
+#[path = "../../../../fixtures/namespace_sources/workspace.rs"]
+mod namespace_fixture;
+pub(crate) use namespace_fixture::{sdk_source_root, set_language_version};
+
 pub(crate) enum DustImport {
     Derive,
     Http,
@@ -25,7 +29,7 @@ fn dust_source(imports: &[DustImport], contents: &str) -> String {
     let import_block = imports
         .iter()
         .map(|import| match import {
-            DustImport::Derive => "import 'package:dust_dart/derive.dart';\n",
+            DustImport::Derive => "import 'package:dust_dart/serde.dart';\n",
             DustImport::Http => "import 'package:dust_dart/http.dart';\n",
             DustImport::Route => "import 'package:dust_flutter/route.dart';\n",
             DustImport::State => "import 'package:dust_flutter/state.dart';\n",
@@ -90,7 +94,7 @@ pub(crate) fn replace_file_atomically(path: &Path, contents: &str) {
 pub(crate) fn make_workspace() -> tempfile::TempDir {
     let root = tempdir().unwrap();
     write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
-    write_file(&root.path().join(".dart_tool/package_config.json"), "{}\n");
+    namespace_fixture::prepare(root.path(), root.path(), "dust_test");
     root
 }
 
@@ -113,6 +117,7 @@ pub(crate) fn make_pub_workspace_member() -> (tempfile::TempDir, std::path::Path
         &package_root.join(".dart_tool/package_graph.json"),
         "{\"configVersion\":1,\"roots\":[\"product_showcase\"],\"packages\":[]}\n",
     );
+    namespace_fixture::prepare(root.path(), &package_root, "product_showcase");
     (root, package_root)
 }
 

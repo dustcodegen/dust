@@ -13,12 +13,14 @@ fn build_and_check_reject_pub_workspace_root_without_libraries() {
     let (workspace, _) = make_pub_workspace_member();
 
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
         db: Default::default(),
     });
     let check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -51,12 +53,14 @@ fn build_uses_member_cache_root_and_shared_package_config_for_pub_workspace() {
     );
 
     let first = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&package_root)),
         cwd: package_root.clone(),
         fail_fast: false,
         jobs: None,
         db: Default::default(),
     });
     let second = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&package_root)),
         cwd: package_root.clone(),
         fail_fast: false,
         jobs: None,
@@ -112,10 +116,15 @@ fn watch_rebuilds_member_package_when_shared_workspace_config_changes() {
     let shared_package_config = workspace.path().join(".dart_tool/package_config.json");
     let modifier = std::thread::spawn(move || {
         wait_for_path(&initial_output);
-        replace_file_atomically(&shared_package_config, "{\"configVersion\":3}\n");
+        let mut config: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&shared_package_config).unwrap())
+                .unwrap();
+        config["generator"] = "fixture-change".into();
+        replace_file_atomically(&shared_package_config, &config.to_string());
     });
 
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&package_root)),
         cwd: package_root.clone(),
         fail_fast: false,
         jobs: None,
@@ -158,6 +167,7 @@ fn clean_only_clears_member_package_outputs_and_cache_in_pub_workspace() {
     );
 
     let built = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&package_root)),
         cwd: package_root.clone(),
         fail_fast: false,
         jobs: None,

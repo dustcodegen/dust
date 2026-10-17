@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 use serde_json::Value;
 
 use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};

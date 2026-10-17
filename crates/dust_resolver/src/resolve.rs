@@ -112,7 +112,18 @@ pub fn resolve_library_with_bindings(
     if context.namespace.is_none() {
         validate_annotation_prefixes(file_id, library, &mut diagnostics);
     }
-    let part_uri = first_part_uri(&library.directives);
+    let part_uri = library
+        .directives
+        .iter()
+        .find_map(|directive| match directive {
+            ParsedDirective::Part { uri, .. }
+                if validate_generated_part_uri(output_path, uri).is_ok() =>
+            {
+                Some(uri.clone())
+            }
+            _ => None,
+        })
+        .or_else(|| first_part_uri(&library.directives));
     let mut enums: Vec<ResolvedEnum> = Vec::new();
     let mut classes = Vec::new();
     let mut saw_dust_symbol = false;

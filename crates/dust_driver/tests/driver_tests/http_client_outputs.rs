@@ -24,6 +24,7 @@ fn build_writes_http_client_auxiliary_test_output() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -67,6 +68,7 @@ fn check_marks_http_client_output_stale_when_auxiliary_file_is_missing() {
     );
 
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -76,6 +78,7 @@ fn check_marks_http_client_output_stale_when_auxiliary_file_is_missing() {
 
     fs::remove_file(workspace.path().join("test/generated/api_test.dart")).unwrap();
     let check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -110,6 +113,7 @@ fn clean_removes_http_client_auxiliary_test_output() {
     );
 
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -152,6 +156,7 @@ fn build_writes_dart_target_isolate_decode_output() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -188,6 +193,7 @@ fn build_writes_flutter_target_compute_decode_output() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -223,6 +229,7 @@ fn build_rejects_flutter_target_isolate_decode_without_compute_import() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -264,6 +271,7 @@ fn build_rejects_imported_http_models_without_json_support() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,

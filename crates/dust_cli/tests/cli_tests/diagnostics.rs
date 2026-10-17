@@ -1,4 +1,4 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};
 
@@ -13,7 +13,8 @@ fn cli_build_renders_warning_details() {
          class User {\n\
            final String id;\n\
            const User(this.id);\n\
-         }\n",
+         }\n\
+         final class UnknownTrait extends DeriveTrait { const UnknownTrait(); }\n",
     );
 
     let run = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);

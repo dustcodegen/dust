@@ -22,8 +22,8 @@ use crate::{
 pub(crate) use apply::{ApplyOutcomeConfig, apply_indexed_outcomes, flush_cache_into_result};
 pub(crate) use batch::{BatchConfig, prepare_and_process_batch};
 pub(crate) use support::{
-    CodegenToolHash, RegistrySelection, codegen_tool_hash_for_selection, default_registry,
-    hash_text, read_workspace_config_hash, registry_for_selection,
+    CodegenToolHash, RegistrySelection, codegen_tool_hash_for_selection, hash_text,
+    read_workspace_config_hash, registry_for_selection,
 };
 
 /// Runs one writing build across the discovered workspace.
@@ -51,11 +51,16 @@ fn run_build_inner(
         workspace,
         registry,
         catalog,
+        namespaces,
         tool_hash,
         package_config_hash,
         mut cache,
         mut cache_report,
-    } = match CachedDriverContext::load(&request.cwd, RegistrySelection::for_build(request.db)) {
+    } = match CachedDriverContext::load(
+        &request.cwd,
+        RegistrySelection::for_build(request.db),
+        request.sdk_source_root.as_deref(),
+    ) {
         Ok(context) => context,
         Err(diagnostic) => {
             result.diagnostics.push(diagnostic);
@@ -65,11 +70,12 @@ fn run_build_inner(
     };
     let batch = prepare_and_process_batch(
         BatchConfig {
+            analysis_libraries: &workspace.libraries,
+            namespaces: &namespaces,
             cache_root: &workspace.cache_root,
             package_root: &workspace.package_root,
             package_name: &workspace.package_name,
             is_flutter_package: workspace.is_flutter_package,
-            dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
             package_config_hash,
             tool_hash,
             cache: &cache,
@@ -78,7 +84,6 @@ fn run_build_inner(
             write_output: true,
             fail_fast: request.fail_fast,
             jobs: request.jobs,
-            file_id_base: 1,
             phase: ProgressPhase::Build,
             progress,
         },
@@ -86,6 +91,7 @@ fn run_build_inner(
         &mut cache_report,
     );
 
+    result.diagnostic_files.extend(batch.diagnostic_files);
     apply_indexed_outcomes(
         batch.outcomes,
         ApplyOutcomeConfig {

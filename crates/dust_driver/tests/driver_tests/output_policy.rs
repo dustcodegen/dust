@@ -21,6 +21,7 @@ fn build_uses_configured_primary_suffix() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -51,6 +52,7 @@ fn build_reports_part_suffix_mismatches_from_dust_config() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -59,9 +61,10 @@ fn build_reports_part_suffix_mismatches_from_dust_config() {
 
     assert!(result.has_errors());
     assert!(result.diagnostics.iter().any(|diagnostic| {
-        diagnostic
-            .message
-            .contains("does not match expected `user.d.dart`")
-    }));
+        diagnostic.message.contains("cannot read namespace source")
+            && diagnostic.message.contains("user.g.dart")
+            && diagnostic.notes == ["Dust's configured primary output for this library is `user.d.dart`; other parts must already exist"]
+    }), "{:?}", result.diagnostics);
     assert!(!workspace.path().join("lib/user.d.dart").exists());
+    assert!(!workspace.path().join("lib/user.g.dart").exists());
 }

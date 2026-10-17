@@ -54,6 +54,7 @@ fn primary_queries_validate_required_columns_and_preserve_outputs_on_error() {
         write_primary_consumer(root);
         for only_db in [false, true] {
             let built = run_build(BuildRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast: true,
                 jobs: None,
@@ -96,6 +97,7 @@ fn primary_queries_validate_required_columns_and_preserve_outputs_on_error() {
             write_file(&source, &changed);
             for offline in [false, true] {
                 let checked = run_check(CheckRequest {
+                    sdk_source_root: Some(crate::support::sdk_source_root(root)),
                     cwd: root.to_path_buf(),
                     fail_fast: true,
                     jobs: None,

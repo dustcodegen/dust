@@ -40,6 +40,7 @@ fn build_writes_real_outputs_for_multiple_libraries_and_classes() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,

@@ -11,6 +11,7 @@ fn offline_db_check_fails_when_query_metadata_is_missing() {
     write_db_workspace(workspace.path(), false);
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -36,6 +37,7 @@ fn online_db_build_writes_query_metadata_for_offline_check() {
     write_db_workspace(workspace.path(), false);
 
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -50,6 +52,7 @@ fn online_db_build_writes_query_metadata_for_offline_check() {
     assert!(cache_source.contains("SELECT id, display_name, bio FROM users WHERE id = $1"));
 
     let check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -68,6 +71,7 @@ fn online_db_check_does_not_write_query_metadata() {
     write_db_workspace(workspace.path(), false);
 
     let check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -87,6 +91,7 @@ fn offline_db_check_rejects_unsupported_query_metadata_version() {
     // Build online first so the cache exists at the path the library reads,
     // then leave a version the current format does not accept.
     run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -100,6 +105,7 @@ fn offline_db_check_rejects_unsupported_query_metadata_version() {
     }
 
     let check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

@@ -59,58 +59,9 @@ fn resolve_package_root_uri(
     package_config_path: &Path,
     root_uri: &str,
 ) -> Result<PathBuf, Diagnostic> {
-    if let Some(file_uri) = root_uri.strip_prefix("file://") {
-        let local_path = file_uri
-            .strip_prefix("localhost/")
-            .map_or_else(|| file_uri.to_owned(), |path| format!("/{path}"));
-        return Ok(PathBuf::from(percent_decode(&local_path)?));
-    }
-
-    let base = package_config_path
-        .parent()
-        .unwrap_or_else(|| Path::new(""));
-    Ok(base.join(percent_decode(root_uri)?))
-}
-
-/// Percent-decodes a package configuration URI path.
-fn percent_decode(value: &str) -> Result<String, Diagnostic> {
-    let bytes = value.as_bytes();
-    let mut decoded = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            let hi = bytes.get(index + 1).copied();
-            let lo = bytes.get(index + 2).copied();
-            let Some(byte) = hi.zip(lo).and_then(|(hi, lo)| decode_hex_byte(hi, lo)) else {
-                return Err(Diagnostic::error(format!(
-                    "invalid percent escape in package root URI `{value}`"
-                )));
-            };
-            decoded.push(byte);
-            index += 3;
-        } else {
-            decoded.push(bytes[index]);
-            index += 1;
-        }
-    }
-
-    String::from_utf8(decoded)
-        .map_err(|error| Diagnostic::error(format!("package root URI is not valid UTF-8: {error}")))
-}
-
-/// Decodes one `%XX` byte from ASCII hex digits.
-fn decode_hex_byte(hi: u8, lo: u8) -> Option<u8> {
-    Some(hex_value(hi)? << 4 | hex_value(lo)?)
-}
-
-/// Converts one ASCII hex digit to its integer value.
-fn hex_value(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    }
+    crate::source_uri::resolve_file_reference(package_config_path, root_uri).map_err(|error| {
+        Diagnostic::error(format!("invalid package root URI `{root_uri}`: {error}"))
+    })
 }
 
 /// Reads and parses one resolved Dust package pubspec version.
@@ -166,5 +117,41 @@ mod tests {
         .unwrap();
 
         assert_eq!(path, PathBuf::from("/tmp/dust pkg"));
+    }
+
+    #[test]
+    fn package_roots_resolve_uri_segments_before_becoming_paths() {
+        let base = Path::new("/workspace/.dart_tool/package_config.json");
+        for (uri, expected) in [
+            ("../deps/./pkg/../real%20pkg", "/workspace/deps/real pkg"),
+            ("../deps/%2e%2e/real", "/workspace/real"),
+            ("file:///tmp/%E2%98%83%23name", "/tmp/☃#name"),
+            ("file:relative", "/relative"),
+        ] {
+            assert_eq!(
+                resolve_package_root_uri(base, uri).unwrap(),
+                PathBuf::from(expected),
+                "{uri}"
+            );
+        }
+    }
+
+    #[test]
+    fn non_file_or_unrepresentable_roots_are_not_local_paths() {
+        let base = Path::new("/workspace/.dart_tool/package_config.json");
+        for uri in [
+            "https://example.invalid/pkg",
+            "package:foreign/root",
+            "file://user@remote.invalid/root",
+            "../root?query",
+            "../root#fragment",
+            "../a%2Fb",
+            "../%00bad",
+            "../%FF",
+            "../%2",
+            "../%GG",
+        ] {
+            assert!(resolve_package_root_uri(base, uri).is_err(), "{uri}");
+        }
     }
 }

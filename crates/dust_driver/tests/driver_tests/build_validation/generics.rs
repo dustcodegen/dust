@@ -22,6 +22,7 @@ fn invalid_generic_mixins_preserve_previous_outputs_and_cache_in_build_and_check
             "part 'box.g.dart';\n@Derive([ToString()])\nclass Box with _$Box { const Box(); }\n",
         );
         let request = BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast,
             jobs: None,
@@ -44,6 +45,7 @@ fn invalid_generic_mixins_preserve_previous_outputs_and_cache_in_build_and_check
                 &format!("part 'box.g.dart';\n@Derive([ToString()])\n{declaration}\n"),
             );
             let checked = run_check(CheckRequest {
+                sdk_source_root: Some(crate::support::sdk_source_root(root)),
                 cwd: root.to_path_buf(),
                 fail_fast,
                 jobs: None,

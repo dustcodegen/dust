@@ -66,6 +66,7 @@ fn route_table_returns_effective_routes() {
     );
 
     let result = run_route_table(RouteTableRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
     });
 
@@ -159,6 +160,7 @@ fn route_table_marks_router_not_found_route_public() {
     );
 
     let result = run_route_table(RouteTableRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
     });
 

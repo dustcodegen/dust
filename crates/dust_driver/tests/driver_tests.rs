@@ -3,6 +3,9 @@
 #[path = "driver_tests/support.rs"]
 mod support;
 
+#[path = "driver_tests/production_namespaces.rs"]
+mod production_namespaces;
+
 #[path = "driver_tests/build_outputs.rs"]
 mod build_outputs;
 

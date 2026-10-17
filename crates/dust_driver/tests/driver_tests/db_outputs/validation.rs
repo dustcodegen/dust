@@ -44,6 +44,7 @@ fn db_check_rejects_non_list_query_parameters() {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -72,6 +73,7 @@ fn db_check_accepts_runtime_values_inside_parameter_list_literal() {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -93,6 +95,7 @@ fn db_check_accepts_raw_multiline_sql_literal() {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -140,6 +143,7 @@ fn db_check_rejects_from_row_query_missing_required_column() {
     );
 
     let result = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

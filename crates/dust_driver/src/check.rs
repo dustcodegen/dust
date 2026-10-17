@@ -21,11 +21,16 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
         workspace,
         registry,
         catalog,
+        namespaces,
         tool_hash,
         package_config_hash,
         mut cache,
         mut cache_report,
-    } = match CachedDriverContext::load(&request.cwd, RegistrySelection::for_check(request.db)) {
+    } = match CachedDriverContext::load(
+        &request.cwd,
+        RegistrySelection::for_check(request.db),
+        request.sdk_source_root.as_deref(),
+    ) {
         Ok(context) => context,
         Err(diagnostic) => {
             result.diagnostics.push(diagnostic);
@@ -36,11 +41,12 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
 
     let batch = prepare_and_process_batch(
         BatchConfig {
+            analysis_libraries: &workspace.libraries,
+            namespaces: &namespaces,
             cache_root: &workspace.cache_root,
             package_root: &workspace.package_root,
             package_name: &workspace.package_name,
             is_flutter_package: workspace.is_flutter_package,
-            dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
             package_config_hash,
             tool_hash,
             cache: &cache,
@@ -49,7 +55,6 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
             write_output: false,
             fail_fast: request.fail_fast,
             jobs: request.jobs,
-            file_id_base: 1,
             phase: ProgressPhase::Build,
             progress: None,
         },
@@ -57,6 +62,7 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
         &mut cache_report,
     );
 
+    result.diagnostic_files.extend(batch.diagnostic_files);
     let apply_config = ApplyOutcomeConfig {
         cache_root: &workspace.cache_root,
         package_config_hash,

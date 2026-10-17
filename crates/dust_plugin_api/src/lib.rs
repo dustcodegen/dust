@@ -6,6 +6,8 @@
 mod analysis;
 /// Plugin output contributions.
 mod contribution;
+/// Producer-owned standalone output declarations.
+mod generated_library;
 /// Shared execution modes for validating plugins.
 mod mode;
 /// Plugin trait and context types.
@@ -21,6 +23,7 @@ pub use analysis::{
 };
 pub use contribution::{AuxiliaryOutputContribution, ClassMixinContribution, PluginContribution};
 pub use dust_ir::AnnotationOrigin;
+pub use generated_library::GeneratedLibrary;
 pub use mode::{MetadataOutput, PluginExecutionMode, ValidationAccess};
 pub use plugin::{DustPlugin, PluginContext};
 pub use registry::PluginRegistry;

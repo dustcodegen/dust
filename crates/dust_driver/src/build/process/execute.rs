@@ -3,10 +3,9 @@ use std::{sync::Arc, time::Instant};
 use dust_diagnostics::Diagnostic;
 use dust_emitter::WriteResult;
 use dust_ir::LoweringOutcome;
-use dust_parser_dart::{ParsedDartFileSurface, parse_file_with_backend};
-use dust_parser_dart_ts::TreeSitterDartBackend;
+use dust_parser_dart::ParsedDartFileSurface;
 use dust_resolver::ResolveResult;
-use dust_text::{FileId, SourceText};
+use dust_text::FileId;
 use dust_workspace::SourceLibrary;
 
 use crate::lower::lower_library_with_bindings;
@@ -39,7 +38,6 @@ pub(crate) fn process_pending_library(
         checked_output_hash: _,
         previous_output_hash,
     } = input;
-    let backend = TreeSitterDartBackend::new();
     let started = Instant::now();
     let mut outcome = process_library_from_source(
         file_id,
@@ -51,7 +49,6 @@ pub(crate) fn process_pending_library(
             lowered: pre_lowered,
         },
         previous_output_hash,
-        &backend,
         processing,
     );
     let routed = crate::build::support::route_only_analysis(&analysis_snapshot);
@@ -88,7 +85,6 @@ pub(crate) fn process_library_from_source(
     source: Arc<str>,
     preprocessed: PreprocessedLibrary,
     previous_output_hash: Option<Option<u64>>,
-    backend: &TreeSitterDartBackend,
     processing: &ProcessingConfig<'_>,
 ) -> BuildOutcome {
     let mut diagnostics = Vec::new();
@@ -106,14 +102,12 @@ pub(crate) fn process_library_from_source(
         lowered
     } else {
         let parsed = preprocessed.parsed.unwrap_or_else(|| {
-            let source_text = SourceText::new(file_id, Arc::clone(&source));
-            let parsed = parse_file_with_backend(
-                backend,
-                &source_text,
-                super::parse_options(processing.dart_language_version),
-            );
-            diagnostics.extend(parsed.diagnostics);
-            parsed.library
+            let (parsed, parse_diagnostics) = processing
+                .namespaces
+                .parsed(&library.source_path)
+                .expect("discovered namespace root has parser facts");
+            diagnostics.extend_from_slice(parse_diagnostics);
+            parsed.clone()
         });
         diagnostics.extend(preprocessed.diagnostics);
         if diagnostics.iter().any(|diagnostic| diagnostic.is_error()) {
@@ -137,7 +131,7 @@ pub(crate) fn process_library_from_source(
             library,
             &parsed,
             &lowering,
-            None,
+            processing.namespaces.scope(&library.source_path),
             &mut diagnostics,
         ) {
             Some(library) => library,

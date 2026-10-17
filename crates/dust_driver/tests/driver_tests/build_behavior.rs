@@ -17,12 +17,14 @@ fn second_build_uses_persistent_cache_under_dot_dart_tool() {
     );
 
     let first = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
         db: Default::default(),
     });
     let second = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
@@ -59,6 +61,7 @@ fn clean_removes_dust_outputs_and_cache_but_keeps_foreign_generated_files() {
     );
 
     let built = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -122,6 +125,7 @@ fn parallel_build_keeps_artifact_order_deterministic() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
@@ -169,6 +173,7 @@ fn build_skips_invalid_library_and_continues_when_fail_fast_is_false() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -211,6 +216,7 @@ fn build_stops_after_first_error_when_fail_fast_is_true() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
