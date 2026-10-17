@@ -15,15 +15,24 @@ fn dependency_body_limit_does_not_change_generation_or_warm_check() {
     assert_eq!(build(root).diagnostics, []);
     let output_path = root.join("lib/model.g.dart");
     let output = fs::read(&output_path).unwrap();
-    write_file(
-        &root.join("deps/bridge/lib/bridge.dart"),
-        "// @dart=3.13\nexport 'package:dust_dart/derive.dart';\nenum Kind { ready }\nKind choose() => .ready;",
-    );
-    let rebuilt = build(root);
-    assert_eq!(rebuilt.diagnostics, []);
-    assert_eq!(fs::read(&output_path).unwrap(), output);
-    assert_eq!(check(root).diagnostics, []);
-    assert_eq!(build(root).cache.unwrap().hits, 1);
+    for declaration in [
+        "Kind choose() => .ready;",
+        "class AnimationState { Kind direction = .ready; }",
+        "class AnimationState { final direction = choose(.ready); }",
+        "class AnimationState { final callback = () => .ready; }",
+    ] {
+        write_file(
+            &root.join("deps/bridge/lib/bridge.dart"),
+            &format!(
+                "// @dart=3.13\nexport 'package:dust_dart/derive.dart';\nenum Kind {{ ready }}\n{declaration}"
+            ),
+        );
+        let rebuilt = build(root);
+        assert_eq!(rebuilt.diagnostics, [], "{declaration}");
+        assert_eq!(fs::read(&output_path).unwrap(), output);
+        assert_eq!(check(root).diagnostics, []);
+        assert_eq!(build(root).cache.unwrap().hits, 1);
+    }
 }
 
 #[test]
@@ -41,6 +50,31 @@ fn namespace_projection_cannot_hide_invalid_interfaces_or_root_generation_errors
     let cache = fs::read(&cache_path).unwrap();
     for (version, declaration, expected) in [
         ("3.6", "Kind choose() => .ready;", "require Dart 3.10"),
+        (
+            "3.6",
+            "class C { Kind value = .ready; }",
+            "require Dart 3.10",
+        ),
+        (
+            "3.13",
+            "class C { static Kind value = .ready; }",
+            "does not support dot shorthands",
+        ),
+        (
+            "3.13",
+            "class C { @Marker(.ready) Kind value = Kind.ready; }",
+            "does not support dot shorthands",
+        ),
+        (
+            "3.13",
+            "class C { final callback = ([Kind value = .ready]) => value; }",
+            "does not support dot shorthands",
+        ),
+        (
+            "3.13",
+            "class C { Kind value = .ready(,); }",
+            "syntax error",
+        ),
         (
             "3.13",
             "Kind choose([Kind value = .ready]) => value;",
@@ -83,19 +117,24 @@ fn namespace_projection_cannot_hide_invalid_interfaces_or_root_generation_errors
         }
     }
     write_file(&dependency, "export 'package:dust_dart/derive.dart';");
-    write_file(
-        &model,
-        &format!("// @dart=3.13\n{initial}\nenum Kind {{ ready }}\nKind choose() => .ready;"),
-    );
-    for result in [build(root), check(root)] {
-        assert!(result.has_errors());
-        assert_eq!(result.diagnostics.len(), 1);
-        assert_eq!(
-            result.diagnostics[0].message,
-            "Dust does not support dot shorthands yet"
+    for declaration in [
+        "Kind choose() => .ready;",
+        "class C { Kind value = .ready; }",
+    ] {
+        write_file(
+            &model,
+            &format!("// @dart=3.13\n{initial}\nenum Kind {{ ready }}\n{declaration}"),
         );
-        assert_eq!(fs::read(&output_path).unwrap(), output);
-        assert_eq!(fs::read(&cache_path).unwrap(), cache);
+        for result in [build(root), check(root)] {
+            assert!(result.has_errors());
+            assert_eq!(result.diagnostics.len(), 1);
+            assert_eq!(
+                result.diagnostics[0].message,
+                "Dust does not support dot shorthands yet"
+            );
+            assert_eq!(fs::read(&output_path).unwrap(), output);
+            assert_eq!(fs::read(&cache_path).unwrap(), cache);
+        }
     }
 }
 
