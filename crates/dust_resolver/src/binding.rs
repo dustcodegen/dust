@@ -3,7 +3,7 @@ use dust_ir::{AnnotationIr, AnnotationValueIr, NameIr, SpanIr, SymbolId, TraitAp
 use dust_parser_dart::{ParsedAnnotation, ParsedMethodParamSurface};
 use dust_text::FileId;
 
-use crate::{NamespaceBinding, NamespaceScope, ResolvedSymbol, SymbolCatalog};
+use crate::{NamespaceBinding, NamespaceScope, PrimaryPart, ResolvedSymbol, SymbolCatalog};
 
 /// Shared ownership decision before selecting a semantic role or normalizing.
 pub struct BindingContext<'a> {
@@ -11,6 +11,8 @@ pub struct BindingContext<'a> {
     pub(crate) catalog: &'a SymbolCatalog,
     /// Absent only for the explicit context-free compatibility adapter.
     pub(crate) namespace: Option<NamespaceScope<'a>>,
+    /// `None` preserves context-free part matching; `Some` is a resolved decision.
+    pub(crate) primary_part: Option<PrimaryPart<'a>>,
 }
 
 /// The intrinsic grouping marker is not a plugin trait/config claim.
@@ -28,7 +30,22 @@ impl<'a> BindingContext<'a> {
     ///
     /// `None` selects the context-free compatibility adapter, not an error fallback.
     pub fn new(catalog: &'a SymbolCatalog, namespace: Option<NamespaceScope<'a>>) -> Self {
-        Self { catalog, namespace }
+        Self {
+            catalog,
+            namespace,
+            primary_part: None,
+        }
+    }
+
+    /// Carries the source loader's primary-target proof into shared resolution.
+    pub fn with_primary_part(mut self, primary_part: PrimaryPart<'a>) -> Self {
+        self.primary_part = Some(primary_part);
+        self
+    }
+
+    /// Whether source namespace ownership is enforced rather than inferred.
+    pub fn has_namespace(&self) -> bool {
+        self.namespace.is_some()
     }
 
     /// Retains raw annotation metadata while applying this context's owner policy.

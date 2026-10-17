@@ -16,6 +16,8 @@ mod function_formals;
 mod http;
 /// Source-fact-driven annotation namespace binding.
 mod namespace;
+/// Resolved generated-part selection without URI re-parsing.
+mod primary_part;
 /// Resolver-owned DB query-call normalization.
 mod query_calls;
 /// Redirect constructor/type-path disambiguation using shared source facts.
@@ -42,6 +44,7 @@ pub use binding::BindingContext;
 pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
 pub use function_formals::lower_parameter_type_ir;
 pub use namespace::{NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope};
+pub use primary_part::PrimaryPart;
 pub use resolve::{
     resolve_library, resolve_library_in_namespace, resolve_library_with_bindings,
     resolve_library_with_partless_configs, validate_generated_part_uri,

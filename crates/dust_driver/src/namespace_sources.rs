@@ -24,6 +24,8 @@ mod loader;
 mod metadata;
 /// Verification of standalone generated library producers.
 mod outputs;
+/// Source-preserving primary-part decisions for the resolver.
+mod primary_part;
 /// Active SDK discovery and target-independent source maps.
 mod sdk;
 /// URI identity normalization, separate from filesystem paths.
