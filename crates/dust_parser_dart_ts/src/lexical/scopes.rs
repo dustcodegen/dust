@@ -8,11 +8,13 @@ pub(super) fn type_scope(
     source: &SourceText,
     scopes: &mut Vec<ParsedLexicalScope>,
 ) {
+    let header = crate::classes::class_header(node);
     let body = node
         .child_by_field_name("body")
         .or_else(|| direct_named_child(node, "class_body"));
-    let parameters = direct_named_child(node, "type_parameters").or_else(|| {
-        node.child_by_field_name("name")
+    let parameters = direct_named_child(header, "type_parameters").or_else(|| {
+        header
+            .child_by_field_name("name")
             .and_then(|name| direct_named_child(name, "type_parameters"))
     });
     let primary = node
@@ -27,9 +29,9 @@ pub(super) fn type_scope(
     let Some(first) = parameters.or(primary_visibility).or(body) else {
         return;
     };
-    let owner = node
+    let owner = header
         .child_by_field_name("name")
-        .or_else(|| direct_named_child(node, "identifier"))
+        .or_else(|| direct_named_child(header, "identifier"))
         .map(|name| direct_named_child(name, "identifier").unwrap_or(name));
     let index = scopes.len();
     scopes.push(ParsedLexicalScope {

@@ -56,10 +56,17 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
             continue;
         }
 
-        // Dust SerDe generation doesn't yet support mixin classes.
-        if matches!(class.kind, ClassKindIr::MixinClass) {
+        if matches!(
+            class.kind,
+            ClassKindIr::MixinClass | ClassKindIr::MixinApplicationClass
+        ) {
+            let kind = if class.kind == ClassKindIr::MixinClass {
+                "mixin class"
+            } else {
+                "named mixin-application class"
+            };
             diagnostics.push(Diagnostic::error(format!(
-                "Dust serde generation does not support `mixin class` targets like `{}`",
+                "Dust serde generation does not support `{kind}` targets like `{}`",
                 class.name
             )));
             continue;

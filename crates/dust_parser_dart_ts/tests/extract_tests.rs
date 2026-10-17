@@ -28,6 +28,8 @@ mod lexical_primary;
 mod library_surface;
 #[path = "extract_tests/methods.rs"]
 mod methods;
+#[path = "extract_tests/mixin_applications.rs"]
+mod mixin_applications;
 #[path = "extract_tests/namespace_defaults.rs"]
 mod namespace_defaults;
 #[path = "extract_tests/namespace_diagnostics.rs"]

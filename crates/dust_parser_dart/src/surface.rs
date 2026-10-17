@@ -150,6 +150,8 @@ pub enum ParsedClassKind {
     SealedClass,
     /// A Dart `mixin class` declaration.
     MixinClass,
+    /// A named mixin application with implicit forwarding constructors.
+    MixinApplicationClass,
 }
 
 /// A parsed class declaration relevant to Dust generation.
@@ -167,7 +169,7 @@ pub struct ParsedClassSurface {
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.
     pub is_interface: bool,
-    /// The immediate superclass name, if the declaration has an `extends` clause.
+    /// The immediate superclass name from `extends` or a named mixin application.
     pub superclass_name: Option<String>,
     /// Written superclass application, including arguments and source locations.
     pub superclass: Option<ParsedTypeSurface>,

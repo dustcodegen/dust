@@ -7,6 +7,7 @@ mod inputs;
 mod lexical_boundaries;
 mod lexical_conditionals;
 mod lexical_shadowing;
+mod mixin_applications;
 mod parts;
 mod roles;
 mod scoped;

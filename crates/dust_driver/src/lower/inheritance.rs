@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, FieldIr, LoweringOutcome, TypeIr};
+use dust_diagnostics::{Diagnostic, SourceLabel};
+use dust_ir::{ClassIr, ClassKindIr, FieldIr, LoweringOutcome, TypeIr};
 
 /// Binder-aware substitution of proven local superclass applications.
 mod substitution;
@@ -75,6 +75,20 @@ pub(crate) fn merged_fields_for_class(
         } else {
             inherited.value.push(field.clone());
         }
+    }
+
+    if class.kind == ClassKindIr::MixinApplicationClass {
+        inherited.diagnostics.push(
+            Diagnostic::error(format!(
+                "Dust generation does not support named mixin-application class `{}`; implicit forwarding constructors are unsupported",
+                class.name
+            ))
+            .with_label(SourceLabel::new(
+                class.span.file_id,
+                class.span.range,
+                "named mixin application declared here",
+            )),
+        );
     }
 
     active_stack.pop();

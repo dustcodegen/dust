@@ -4,7 +4,7 @@ use tree_sitter::Node;
 
 use crate::{
     annotations::extract_annotation,
-    syntax::{has_direct_child_kind, node_text, text_range},
+    syntax::{direct_named_child, has_direct_child_kind, node_text, text_range},
 };
 
 use super::{
@@ -16,10 +16,18 @@ use super::{
     primary::extract_declaring_fields,
 };
 
+/// The named-mixin form keeps its name and applications in a nested header.
+pub(crate) fn class_header(node: Node<'_>) -> Node<'_> {
+    direct_named_child(node, "mixin_application_class").unwrap_or(node)
+}
+
 /// Extracts a Dust class surface from one tree-sitter class declaration.
 pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassSurface {
+    let header = class_header(node);
     let is_sealed = has_direct_child_kind(node, "sealed");
-    let kind = if has_direct_child_kind(node, "mixin") {
+    let kind = if header.kind() == "mixin_application_class" {
+        ParsedClassKind::MixinApplicationClass
+    } else if has_direct_child_kind(node, "mixin") {
         ParsedClassKind::MixinClass
     } else if is_sealed {
         ParsedClassKind::SealedClass
@@ -28,11 +36,12 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     };
     let is_abstract = has_direct_child_kind(node, "abstract");
     let is_interface = has_direct_child_kind(node, "interface");
-    let class_name = node
+    let class_name = header
         .child_by_field_name("name")
+        .or_else(|| direct_named_child(header, "identifier"))
         .map(|name| node_text(name, source))
         .unwrap_or_default();
-    let superclass = extract_class_superclass(node, source);
+    let superclass = extract_class_superclass(header, source);
     let superclass_name = superclass
         .as_ref()
         .and_then(|superclass| match &superclass.kind {
@@ -90,8 +99,8 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     ParsedClassSurface {
         kind,
         name: class_name,
-        type_parameters: extract_class_type_parameters(node, source),
-        mixins: extract_class_mixins(node, source),
+        type_parameters: extract_class_type_parameters(header, source),
+        mixins: extract_class_mixins(header, source),
         is_abstract,
         is_interface,
         superclass_name,

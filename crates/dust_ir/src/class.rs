@@ -12,6 +12,8 @@ pub enum ClassKindIr {
     SealedClass,
     /// A `mixin class` declaration.
     MixinClass,
+    /// A named mixin application, not an ordinary class with explicit constructors.
+    MixinApplicationClass,
 }
 
 /// One lowered class declaration.
