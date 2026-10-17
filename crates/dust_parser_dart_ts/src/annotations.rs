@@ -68,7 +68,10 @@ fn annotation_identifiers(node: Node<'_>, source: &SourceText, identifiers: &mut
 }
 
 /// Extracts positional and named arguments from an annotation argument list.
-fn extract_annotation_arguments(node: Node<'_>, source: &SourceText) -> ParsedAnnotationArguments {
+pub(crate) fn extract_annotation_arguments(
+    node: Node<'_>,
+    source: &SourceText,
+) -> ParsedAnnotationArguments {
     let mut arguments = ParsedAnnotationArguments::default();
     let mut cursor = node.walk();
     for child in node

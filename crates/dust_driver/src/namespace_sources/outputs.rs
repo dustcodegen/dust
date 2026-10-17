@@ -114,6 +114,6 @@ fn owned(
     }
     unit.parsed.classes.iter().flat_map(|class| &class.annotations).any(|annotation| {
         let name = annotation.prefix.as_ref().map_or_else(|| annotation.name.clone(), |prefix| format!("{prefix}.{}", annotation.name));
-        matches!(graph.scope(&claim.source).bind(&name, catalog), NamespaceBinding::Owned(owner) if owner == claim.producer)
+        matches!(graph.scope(&claim.source).bind_at(&name, catalog, dust_ir::SpanIr::new(unit.file_id, annotation.span)), NamespaceBinding::Owned(owner) if owner == claim.producer)
     })
 }

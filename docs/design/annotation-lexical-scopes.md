@@ -1,6 +1,6 @@
 # Lexical annotation ownership
 
-Status: **proposal, not approved or implemented**. Tracks
+Status: **approved design; implementation in progress**. Tracks
 [#152](https://github.com/dustcodegen/dust/issues/152) under production namespace
 loading #114, namespace ownership #84 and server epic #81. This is independent
 of the upstream grammar submission for #143; the grammar pin stays unchanged.
@@ -22,14 +22,14 @@ class Api {
 }
 ```
 
-Dart attaches the foreign constant to `call`. Dust currently assigns
+Dart attaches the foreign constant to `call`. Before #152, Dust assigned
 `dust_dart::GET`. A constant named `d` also shadows an import prefix `d` at class
 member metadata, but Dust reports that `d` is an import prefix rather than an
 annotation. Outer metadata on the class still sees the import, not that member.
 The standalone [compiler probes](../../fixtures/namespace_lexical_shadowing/README.md)
 verify actual metadata instances, including a primary class on Dart 3.13.
 
-## Proposed contract for review
+## Approved contract
 
 1. Add parser-owned lexical scope/declaration facts with exact names and spans,
    parent relationships and explicit visibility regions. Include relevant static
@@ -57,7 +57,7 @@ verify actual metadata instances, including a primary class on Dart 3.13.
    rather than using short-name fallback. Resolving a constant to an actual Dust
    annotation must not silently drop its constructor arguments: either carry
    supported structured values into the existing normalizer or reject that form
-   clearly. Review this boundary before implementation; existing unique-owner
+   clearly. The user approved this boundary; existing unique-owner
    legacy behavior for genuinely unavailable provenance stays unchanged.
 6. Share the operation across discovery, ownership preflight, producer-output
    verification, resolver normalization and every metadata-lowering path. Retain
@@ -86,6 +86,26 @@ changes. No server registry enablement is authorized by this proposal.
 - Exact parser/IR/output contracts, scoped changed-line coverage, minimum/latest
   Dart evidence and full local gates pass. The independent #143 full-Flutter
   failure is not waived by this work.
+
+The current implementation retains source scopes/initializers and routes metadata
+ownership through a use-site operation. Foreign class constants, direct alias
+chains and class/type-alias-qualified references have focused regressions. Opaque
+lexical constants, cycles, type-variable shadows and constants containing actual
+Dust annotation objects fail clearly; the latter are not normalized without their
+arguments. Complete retained library constants (including imports/re-exports) use
+the same provenance decision. Library-only/context-free lookup and adapters which
+explicitly omit lexical facts retain their legacy behavior; known opaque values
+do not use that escape hatch. Demand-driven initializer imports share existing
+source read sets and cache/watch invalidation, including constants defined in
+handwritten parts. No general constant evaluator or generated-source provenance
+is introduced.
+
+Generated consumer probes compile and execute on minimum/latest Dart and latest
+primary syntax with identical expected output and complete generated-line
+coverage. Build/check/watch regressions preserve prior successful output/cache
+bytes after dependency ownership fails and recover after it is restored. These
+scoped checks do not complete Rust changed-line coverage or the full acceptance
+requirements above. No server plugin is enabled.
 
 No versions, dependencies, SDK floors, grammar pin or workflow changes. Validation
 is local only; keep only manual Rust release CI enabled. No merge or release.

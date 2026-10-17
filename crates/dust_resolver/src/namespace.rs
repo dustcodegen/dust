@@ -12,6 +12,8 @@ use crate::SymbolCatalog;
 
 /// Parser facts become immutable graph inputs with caller-resolved identities.
 mod input;
+/// Source-position-aware lexical shadows and constant identity.
+mod lexical;
 /// Terminating export computation, visibility, imports and part ownership.
 mod lookup;
 /// Namespace declarations, alternatives and source-attached input failures.
@@ -63,6 +65,8 @@ pub struct NamespaceGraph {
     units: BTreeMap<String, Unit>,
     /// Name-specific export results are shared safely across resolver workers.
     exports: Mutex<BTreeMap<String, Arc<ExportWorlds>>>,
+    /// Library/part import namespaces required by queried lexical initializers.
+    lexical_imports: Mutex<BTreeSet<String>>,
 }
 
 /// A library-scoped view of the same graph and catalog ownership policy.
@@ -112,6 +116,14 @@ impl NamespaceGraph {
     pub fn scope<'a>(&'a self, uri: &'a str) -> NamespaceScope<'a> {
         NamespaceScope { graph: self, uri }
     }
+
+    /// Actual initializer namespaces needed before a production binding is final.
+    pub fn required_lexical_imports(&self) -> BTreeSet<String> {
+        self.lexical_imports
+            .lock()
+            .expect("lexical import requests are not poisoned")
+            .clone()
+    }
 }
 
 impl NamespaceScope<'_> {
@@ -119,6 +131,17 @@ impl NamespaceScope<'_> {
     pub fn bind(&self, name: &str, catalog: &SymbolCatalog) -> NamespaceBinding {
         self.graph
             .bind_name(self.uri, name, catalog, &mut BTreeSet::new())
+    }
+
+    /// Binds metadata at its actual source use, before consulting imported names.
+    pub fn bind_at(
+        &self,
+        name: &str,
+        catalog: &SymbolCatalog,
+        span: dust_ir::SpanIr,
+    ) -> NamespaceBinding {
+        self.graph
+            .bind_at(self.uri, name, catalog, span, &mut BTreeSet::new())
     }
 }
 

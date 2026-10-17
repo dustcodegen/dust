@@ -16,6 +16,8 @@ use super::index::{Source, SourceIndex};
 
 /// Graph-only implicit imports and exact directive URI extraction.
 mod directives;
+/// Demand-driven import expansion for aliases and actual lexical initializers.
+mod imports;
 use directives::literals;
 pub(super) use directives::namespace_surface;
 
@@ -91,43 +93,7 @@ impl<'a> Loader<'a> {
             loader.imports.insert(root.uri.clone());
             loader.queue.insert(root.uri.clone(), root.clone());
         }
-        loop {
-            while let Some((uri, source)) = loader.queue.pop_first() {
-                let id = loader.file_id(&uri)?;
-                let unit = loader.read(source, id);
-                loader.units.insert(uri.clone(), unit);
-                loader.expand(&uri)?;
-            }
-            let mut promote = BTreeSet::new();
-            for (uri, unit) in &loader.units {
-                let Ok(unit) = unit else {
-                    continue;
-                };
-                if !unit.parsed.typedefs.iter().any(|alias| {
-                    alias
-                        .parsed_aliased_type
-                        .as_ref()
-                        .is_some_and(|ty| matches!(ty.kind, ParsedTypeKind::Named { .. }))
-                }) {
-                    continue;
-                }
-                if let Some(owners) = loader.part_owners.get(uri) {
-                    promote.extend(owners.clone());
-                } else {
-                    promote.insert(uri.clone());
-                }
-            }
-            let mut promoted = false;
-            for uri in promote {
-                if loader.imports.insert(uri.clone()) {
-                    loader.expand(&uri)?;
-                    promoted = true;
-                }
-            }
-            if !promoted {
-                break;
-            }
-        }
+        loader.drain()?;
         Ok(loader)
     }
 

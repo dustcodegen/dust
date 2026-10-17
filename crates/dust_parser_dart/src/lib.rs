@@ -32,6 +32,8 @@ pub use surface::{
     ParsedConditionalUri, ParsedConstructorParamSurface, ParsedConstructorSurface,
     ParsedDartFileSurface, ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface,
     ParsedExtensionSurface, ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
+    ParsedLexicalDeclaration, ParsedLexicalDeclarationKind, ParsedLexicalInitializer,
+    ParsedLexicalInitializerKind, ParsedLexicalName, ParsedLexicalScope, ParsedLexicalScopeKind,
     ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface, ParsedNamespaceDirective,
     ParsedRedirectIdentifierSurface, ParsedRedirectTargetSurface, ParsedTopLevelVariableSurface,
     ParsedTypeParamSurface, ParsedTypedefSurface, ParsedUriLiteral, ParsedVisibilityCombinator,

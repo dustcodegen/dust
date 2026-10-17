@@ -4,6 +4,7 @@ use dust_resolver::NamespaceFailureKind as Failure;
 mod aliases;
 mod exports;
 mod inputs;
+mod lexical_boundaries;
 mod lexical_shadowing;
 mod parts;
 mod roles;

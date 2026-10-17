@@ -15,7 +15,7 @@ pub(super) fn optional_parameter_kind(node: Node<'_>) -> ParameterKind {
 }
 
 /// Finds the identifier node that names a formal parameter.
-pub(super) fn parameter_name_node<'tree>(node: Node<'tree>) -> Option<Node<'tree>> {
+pub(crate) fn parameter_name_node<'tree>(node: Node<'tree>) -> Option<Node<'tree>> {
     if let Some(name) = node.child_by_field_name("name") {
         return Some(name);
     }

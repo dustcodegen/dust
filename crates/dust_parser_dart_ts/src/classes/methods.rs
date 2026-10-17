@@ -72,7 +72,7 @@ pub(super) fn extract_method(
 }
 
 /// Resolves a wrapper node to the callable signature that carries the name.
-fn callable_signature(node: Node<'_>) -> Node<'_> {
+pub(crate) fn callable_signature(node: Node<'_>) -> Node<'_> {
     if node.kind() != "method_signature" {
         return node;
     }

@@ -1,0 +1,12 @@
+import 'package:lexical_probe/lexical_probe.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('class metadata keeps its real owner despite member prefix shadows', () {
+    const value = LexicalProbe(7);
+    expect(value.value, 7);
+    expect(value.inspect(5), 12);
+    expect(value.toString(), 'LexicalProbe(value: 7)');
+    expect(LexicalProbe.dust, isA<ForeignMarker>());
+  });
+}

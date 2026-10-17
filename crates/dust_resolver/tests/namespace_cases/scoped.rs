@@ -101,7 +101,7 @@ fn foreign_and_hidden_annotations_cannot_reach_normalization() {
 fn unknown_provenance_uses_unique_legacy_owner_but_never_overlapping_owners() {
     let mut graph = graph();
     let source = "const GET = unknown; @GET('/a') class Api {}";
-    add(&mut graph, 3, APP, source);
+    add_without_lexical_facts(&mut graph, 3, APP, source);
     let parsed = parse(3, source);
     let annotation = &parsed.classes[0].annotations[0];
     let mut unique = SymbolCatalog::new();

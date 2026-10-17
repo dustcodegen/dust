@@ -11,6 +11,7 @@ use dust_text::TextRange;
 fn parse_surface_can_model_real_dart_library_shapes() {
     let library = ParsedDartFileSurface {
         span: TextRange::new(0_u32, 180_u32),
+        lexical_scopes: Vec::new(),
         directives: vec![
             ParsedDirective::Import {
                 namespace: None,

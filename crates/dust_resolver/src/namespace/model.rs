@@ -109,6 +109,8 @@ pub(super) enum PartOwner {
 pub(super) struct Unit {
     /// Source file identity.
     pub(super) file_id: FileId,
+    /// Parser-owned source scopes, never reconstructed from annotation text.
+    pub(super) lexical_scopes: Vec<dust_parser_dart::ParsedLexicalScope>,
     /// Optional Dart library name for named part headers.
     pub(super) library_name: Option<String>,
     /// Declaration identities and alias facts in this unit.

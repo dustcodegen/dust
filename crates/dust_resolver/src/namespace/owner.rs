@@ -55,7 +55,7 @@ impl NamespaceGraph {
     }
 
     /// One possible world can contain a real ambiguity, not just a branch choice.
-    fn bind_world(
+    pub(super) fn bind_world(
         &self,
         world: &World,
         name: &str,
