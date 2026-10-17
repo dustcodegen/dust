@@ -18,6 +18,8 @@ pub struct ResolvedField {
     pub type_source: Option<String>,
     /// Parsed type facts, when provided by the parser backend.
     pub parsed_type: Option<ParsedTypeSurface>,
+    /// Original declaring callback facts for a primary-induced field.
+    pub function_formal: Option<dust_parser_dart::ParsedFunctionFormalTypeSurface>,
     /// Whether the field has a default initializer in the declaration.
     pub has_default: bool,
     /// The field source span.

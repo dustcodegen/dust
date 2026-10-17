@@ -63,6 +63,7 @@ class PrimarySdkTests(unittest.TestCase):
                     patch("sdk_compat.check_generic_serde") as serde, \
                     patch("sdk_compat.check_generic_inheritance") as inheritance, \
                     patch("sdk_compat.check_generic_sealed") as sealed, \
+                    patch("sdk_compat.check_callback_formals") as callbacks, \
                     patch("sdk_compat.check_lexical_scopes", return_value={"generated": "verified"}) as lexical:
                 generated = check_primary(run, Path("dust"), Path("/sdk/bin/dart"), output)
                 self.assertEqual(os.environ["DUST_DATABASE_URL"], "sqlite:/must-not-open")
@@ -76,6 +77,8 @@ class PrimarySdkTests(unittest.TestCase):
             serde.assert_called_once()
             inheritance.assert_called_once()
             sealed.assert_called_once()
+            callbacks.assert_called_once()
+            self.assertEqual(callbacks.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(sealed.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(inheritance.call_args.kwargs, {"primary": True, "flutter": None})
             self.assertEqual(serde.call_args.kwargs, {"primary": True, "flutter": None})
@@ -198,7 +201,8 @@ class PrimarySdkTests(unittest.TestCase):
                 with patch("sdk_compat.check_generic_validation") as validation, \
                         patch("sdk_compat.check_generic_serde") as serde, \
                         patch("sdk_compat.check_generic_inheritance") as inheritance, \
-                        patch("sdk_compat.check_generic_sealed") as sealed:
+                        patch("sdk_compat.check_generic_sealed") as sealed, \
+                        patch("sdk_compat.check_callback_formals") as callbacks:
                     generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
                 validation.assert_called_once()
                 serde.assert_called_once()

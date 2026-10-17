@@ -2,7 +2,7 @@
 
 use dust_text::TextRange;
 
-use crate::{ParsedTypeSurface, surface::ParsedAnnotation};
+use crate::{ParsedFunctionFormalTypeSurface, ParsedTypeSurface, surface::ParsedAnnotation};
 
 /// One field declaration extracted from a class.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,6 +15,8 @@ pub struct ParsedFieldSurface {
     pub type_source: Option<String>,
     /// Parsed type facts, when provided by the parser backend.
     pub parsed_type: Option<ParsedTypeSurface>,
+    /// A primary-induced declaring callback, separate from its raw return type.
+    pub function_formal: Option<ParsedFunctionFormalTypeSurface>,
     /// Whether the field declaration contains an initializer.
     pub has_default: bool,
     /// The source span for the field.
@@ -93,6 +95,8 @@ pub struct ParsedConstructorParamSurface {
     pub type_source: Option<String>,
     /// Parsed type facts, when provided by the parser backend.
     pub parsed_type: Option<ParsedTypeSurface>,
+    /// Declaring callback facts, without rewriting the original type source.
+    pub function_formal: Option<ParsedFunctionFormalTypeSurface>,
     /// The parameter kind.
     pub kind: ParameterKind,
     /// Whether callers must supply this argument, independently of nullability.

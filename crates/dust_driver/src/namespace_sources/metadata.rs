@@ -21,12 +21,18 @@ pub(super) fn annotations(parsed: &ParsedDartFileSurface) -> Vec<&ParsedAnnotati
             annotations.extend(&constructor.annotations);
             for parameter in &constructor.params {
                 annotations.extend(&parameter.annotations);
+                if let Some(formal) = &parameter.function_formal {
+                    annotations.extend(formal.annotations());
+                }
             }
         }
         for method in &class.methods {
             annotations.extend(&method.annotations);
             for parameter in &method.params {
                 annotations.extend(&parameter.annotations);
+                if let Some(formal) = &parameter.function_formal {
+                    annotations.extend(formal.annotations());
+                }
             }
         }
     }
@@ -58,6 +64,9 @@ pub(super) fn annotations(parsed: &ParsedDartFileSurface) -> Vec<&ParsedAnnotati
         annotations.extend(&item.annotations);
         for parameter in &item.params {
             annotations.extend(&parameter.annotations);
+            if let Some(formal) = &parameter.function_formal {
+                annotations.extend(formal.annotations());
+            }
         }
     }
     annotations

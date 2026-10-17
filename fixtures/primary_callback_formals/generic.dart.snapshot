@@ -1,0 +1,7 @@
+// @dart = 3.13
+class const Probe(final T echo<T extends Object>(T value));
+
+void main() {
+  final probe = Probe(<T extends Object>(T value) => value);
+  assert(probe.echo<int>(7) == 7);
+}

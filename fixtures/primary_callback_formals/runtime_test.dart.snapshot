@@ -1,0 +1,54 @@
+import 'package:callback_probe/callback_probe.dart';
+import 'package:test/test.dart';
+
+bool accepts(String value) => value == 'yes';
+bool rejects(String value) => !accepts(value);
+bool? maybe(String value) => value == 'unknown' ? null : accepts(value);
+T echo<T extends Object>(T value) => value;
+bool nested(bool Function(String value) next, [int? count]) =>
+    next('yes') && (count == null || count > 0);
+bool named({required String value, int? count}) =>
+    accepts(value) && (count == null || count > 0);
+
+void main() {
+  test('callbacks retain their invocation types and copy semantics', () {
+    final original = CallbackProbe(
+      accepts,
+      maybe,
+      accepts,
+      echo,
+      nested,
+      named,
+    );
+    final retained = original.copyWith();
+    expect(retained.predicate, same(accepts));
+    expect(retained.maybe, same(maybe));
+    expect(retained.nullable, same(accepts));
+    expect(retained.echo<int>(42), 42);
+    expect(retained.echo<String>('value'), 'value');
+    expect(retained.nested(accepts), isTrue);
+    expect(retained.nested(accepts, 0), isFalse);
+    expect(retained.named(value: 'yes'), isTrue);
+    expect(retained.named(value: 'yes', count: 0), isFalse);
+    expect(retained.maybe('unknown'), isNull);
+    final replaced = original.copyWith(
+      predicate: rejects,
+      maybe: rejects,
+      nullable: rejects,
+      echo: echo,
+      nested: nested,
+      named: named,
+    );
+    expect(replaced.predicate('yes'), isFalse);
+    expect(replaced.maybe('yes'), isFalse);
+    expect(replaced.nullable!('yes'), isFalse);
+    expect(replaced.echo<double>(1.5), 1.5);
+    expect(replaced.nested(rejects), isFalse);
+    expect(replaced.named(value: 'no'), isFalse);
+    final cleared = replaced.copyWith(nullable: null);
+    expect(cleared.nullable, isNull);
+    expect(cleared.copyWith().nullable, isNull);
+    expect(cleared.toString(), startsWith('CallbackProbe('));
+    expect(original.predicate('yes'), isTrue);
+  });
+}

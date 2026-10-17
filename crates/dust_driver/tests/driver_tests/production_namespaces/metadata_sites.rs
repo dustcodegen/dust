@@ -41,6 +41,22 @@ fn ownership_preflight_covers_every_represented_metadata_site_and_nested_group()
         ("variable", "MARKER final int other=0;"),
         ("function", "MARKER void other() {}"),
         ("function parameter", "void other(MARKER int value) {}"),
+        (
+            "constructor callback",
+            "class Other { Other(bool predicate(MARKER String value)); }",
+        ),
+        (
+            "method callback",
+            "class Other { void call(bool predicate(MARKER String value)) {} }",
+        ),
+        (
+            "function callback",
+            "void other(bool predicate(MARKER String value)) {}",
+        ),
+        (
+            "nested callback",
+            "void other(bool predicate(bool nested(MARKER String value))) {}",
+        ),
     ];
     for annotation in ["@Ghost()", "@Derive([Ghost()])"] {
         for (site, declaration) in sites {

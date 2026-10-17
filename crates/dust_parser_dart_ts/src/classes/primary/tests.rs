@@ -31,6 +31,7 @@ fn malformed_declaring_parameters_do_not_invent_field_names() {
         annotations: Vec::new(),
         type_source: None,
         parsed_type: None,
+        function_formal: None,
         kind: ParameterKind::Positional,
         is_required: true,
         has_default: false,

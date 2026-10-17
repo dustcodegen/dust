@@ -4,7 +4,7 @@
 use dust_text::TextRange;
 
 use crate::{
-    ParsedTypeSurface,
+    ParsedFunctionFormalTypeSurface, ParsedTypeSurface,
     surface::{
         ParameterKind, ParsedAnnotation, ParsedClassKind, ParsedClassSurface, ParsedFieldSurface,
     },
@@ -46,6 +46,8 @@ pub struct ParsedMethodParamSurface {
     pub type_source: Option<String>,
     /// Parsed type facts, when provided by the parser backend.
     pub parsed_type: Option<ParsedTypeSurface>,
+    /// Declaring callback facts, without rewriting the original type source.
+    pub function_formal: Option<ParsedFunctionFormalTypeSurface>,
     /// The parameter kind.
     pub kind: ParameterKind,
     /// Whether the parameter uses Dart's explicit `required` modifier.

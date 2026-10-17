@@ -1,0 +1,4 @@
+// @dart = 3.13
+class const Probe(final bool predicate([String value = 'yes']));
+
+void main() {}

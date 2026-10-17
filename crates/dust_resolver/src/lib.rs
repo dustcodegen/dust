@@ -10,6 +10,8 @@ mod binding;
 mod catalog;
 /// Resolver-owned database configuration normalization.
 mod db;
+/// Source-owned declaring callback type lowering.
+mod function_formals;
 /// Resolver-owned HTTP configuration normalization.
 mod http;
 /// Source-fact-driven annotation namespace binding.
@@ -38,6 +40,7 @@ pub use annotations::{
 };
 pub use binding::BindingContext;
 pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
+pub use function_formals::lower_parameter_type_ir;
 pub use namespace::{NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope};
 pub use resolve::{
     resolve_library, resolve_library_in_namespace, resolve_library_with_bindings,

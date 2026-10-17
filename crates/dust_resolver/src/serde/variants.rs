@@ -62,17 +62,13 @@ pub(super) fn variant_constructor_params(
         .params
         .iter()
         .map(|param| {
-            let outcome = param
-                .type_source
-                .as_deref()
-                .map(|source| {
-                    crate::lower_type_ir_in_scope(
-                        param.parsed_type.as_ref(),
-                        Some(source),
-                        type_parameters,
-                    )
-                })
-                .unwrap_or_else(|| dust_ir::LoweringOutcome::new(TypeIr::unknown()));
+            let outcome = crate::lower_parameter_type_ir(
+                file_id,
+                param.parsed_type.as_ref(),
+                param.type_source.as_deref(),
+                param.function_formal.as_ref(),
+                type_parameters,
+            );
             diagnostics.extend(outcome.diagnostics);
             ConstructorParamIr {
                 name: param.name.clone(),
@@ -107,6 +103,7 @@ pub(super) fn variant_field_serde(
                 annotations: param.annotations.clone(),
                 type_source: param.type_source.clone(),
                 parsed_type: param.parsed_type.clone(),
+                function_formal: param.function_formal.clone(),
                 has_default: param.has_default,
                 span: param.span,
             };

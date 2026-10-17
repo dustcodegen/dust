@@ -81,6 +81,12 @@ pub(super) fn is_required_parameter(node: Node<'_>, source: &SourceText) -> bool
 pub(super) fn default_value_source(node: Node<'_>, source: &SourceText) -> Option<String> {
     let mut candidate = Some(node);
     while let Some(current) = candidate {
+        if matches!(
+            current.kind(),
+            "formal_parameter_list" | "optional_formal_parameters"
+        ) {
+            break;
+        }
         if current.kind() == "default_formal_parameter" {
             let mut value_start = None;
             let mut cursor = current.walk();

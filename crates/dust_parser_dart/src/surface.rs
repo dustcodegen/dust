@@ -8,6 +8,8 @@ mod annotations;
 mod declarations;
 /// Source-preserving namespace directive facts.
 mod directives;
+/// Declaring callback signatures, separate from their written return types.
+mod function_formals;
 /// Generic class-header facts.
 mod generics;
 /// Lexical scope and constant-identity facts for metadata ownership.
@@ -16,6 +18,7 @@ mod lexical;
 mod members;
 
 pub use self::directives::*;
+pub use self::function_formals::*;
 pub use self::generics::ParsedTypeParamSurface;
 pub use self::lexical::*;
 pub use self::{annotations::*, declarations::*, members::*};

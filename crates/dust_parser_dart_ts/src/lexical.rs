@@ -9,6 +9,8 @@ use tree_sitter::Node;
 
 use crate::syntax::{direct_named_child, node_text, text_range};
 
+/// Callback-local generic scopes from shared declaring-signature facts.
+mod callbacks;
 /// Original initializer values and exact callee/reference identifiers.
 mod initializers;
 /// Type/header visibility and callable binder scopes.
@@ -74,6 +76,12 @@ fn members(
             }
             "method_signature" | "function_signature" | "getter_signature" | "setter_signature" => {
                 scopes::callable(child, parent, source, scopes);
+            }
+            "constructor_signature"
+            | "constant_constructor_signature"
+            | "factory_constructor_signature"
+            | "redirecting_factory_constructor_signature" => {
+                callbacks::extract(child, parent, source, scopes);
             }
             "enum_constant" => {
                 if let Some(name) = child.child_by_field_name("name") {

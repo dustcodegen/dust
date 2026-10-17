@@ -208,6 +208,7 @@ fn extract_method_formal_parameter(
         annotations: extract_direct_annotations(node, source),
         type_source,
         parsed_type,
+        function_formal: super::function_formals::extract(node, source),
         kind,
         is_required: is_required_parameter(node, source),
         has_default: default_value_source.is_some(),

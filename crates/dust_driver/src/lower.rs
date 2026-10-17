@@ -36,7 +36,8 @@ use dust_parser_dart::{
 };
 use dust_resolver::{
     BindingContext, ResolvedConstructor, ResolvedField, ResolvedLibrary, ResolvedMethod,
-    lower_type_ir as lower_type, lower_type_ir_in_scope as lower_type_in_scope,
+    lower_parameter_type_ir, lower_type_ir as lower_type,
+    lower_type_ir_in_scope as lower_type_in_scope,
 };
 
 #[cfg(test)]
@@ -80,6 +81,15 @@ pub(crate) fn lower_library_with_bindings(
         .map(|(index, class)| {
             for constructor in &class.constructors {
                 for parameter in &constructor.surface.params {
+                    if let Some(formal) = &parameter.function_formal {
+                        for annotation in formal.annotations() {
+                            let _ = bindings.annotation_ir(
+                                class.span.file_id,
+                                annotation,
+                                &mut diagnostics,
+                            );
+                        }
+                    }
                     for annotation in &parameter.annotations {
                         let _ = bindings.annotation_ir(
                             class.span.file_id,
