@@ -40,7 +40,8 @@ def check_callback_formals(run, dust: Path, dart: Path, app: Path, output: Path,
         generated.write_text(snapshot.decode().replace("// ignore_for_file: type=lint\n", ""), encoding="utf-8")
         analysis = run([str(dart), "analyze", "--format=machine", str(source), str(generated), str(test)], app, env=env)
         infos = expected_style_infos(analysis.stdout + analysis.stderr, source, primary=primary)
-        generated.write_bytes(snapshot)
+        # Flutter honors the generated coverage marker; strip it only in staging.
+        generated.write_bytes(snapshot.replace(b"// coverage:ignore-file\n", b"") if flutter else snapshot)
         runner = [*flutter, "test", "--no-pub", "--coverage"] if flutter else [str(dart), "test"]
         coverage_arg = f"--coverage-path={output / 'generated.lcov'}" if flutter else f"--coverage={output / 'coverage'}"
         run([*runner, coverage_arg, "--reporter=expanded", "test/callback_probe_test.dart"], app, env=env)
@@ -50,6 +51,7 @@ def check_callback_formals(run, dust: Path, dart: Path, app: Path, output: Path,
                  "-i", str(output / "coverage"), "-o", str(report),
                  "--report-on=lib/callback_probe.g.dart"], app, env=env)
         coverage = generated_library_coverage(report, ("callback_probe",))
+        generated.write_bytes(snapshot)
         for path in (source, generated, test):
             (output / path.name).write_bytes(path.read_bytes())
         return {"generated": hashlib.sha256(snapshot).hexdigest(),

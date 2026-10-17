@@ -42,7 +42,7 @@ class CallbackTests(unittest.TestCase):
                             if verb == failure:
                                 raise RuntimeError("controlled failure")
                             if verb == "build":
-                                (app / "lib/callback_probe.g.dart").write_text("// ignore_for_file: type=lint\noutput\n")
+                                (app / "lib/callback_probe.g.dart").write_text("// ignore_for_file: type=lint\n// coverage:ignore-file\noutput\n")
                             if verb == "analyze":
                                 self.assertIn("strict-casts: true", config.read_text())
                                 self.assertNotIn("type=lint", (app / "lib/callback_probe.g.dart").read_text())
@@ -53,6 +53,7 @@ class CallbackTests(unittest.TestCase):
                             if verb == "run" or (flutter and verb == "test"):
                                 if flutter:
                                     self.assertIn("--coverage", command)
+                                    self.assertNotIn("coverage:ignore-file", (app / "lib/callback_probe.g.dart").read_text())
                                 (output / "generated.lcov").write_text(f"SF:{app}/lib/callback_probe.g.dart\nDA:1,{0 if failure == 'coverage' else 1}\nend_of_record\n")
                             return subprocess.CompletedProcess(command, 0, "", "")
 
@@ -65,6 +66,7 @@ class CallbackTests(unittest.TestCase):
                                 probe()
                         else:
                             self.assertEqual(probe()["generatedLineCoverage"], {"callback_probe": {"hit": 1, "found": 1}})
+                            self.assertIn("// coverage:ignore-file", (output / "callback_probe.g.dart").read_text())
                         self.assertEqual(config.read_bytes(), b"original config\r\n")
                         self.assertEqual(list((app / "lib").iterdir()), [])
                         self.assertEqual(list((app / "test").iterdir()), [])
