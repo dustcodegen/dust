@@ -69,7 +69,11 @@ pub(crate) fn collect_workspace_analysis(
                         parsed,
                         parse_diagnostics,
                         lowering,
-                        namespaces.scope(&pending.library.source_path),
+                        namespaces.bindings(
+                            &pending.library.source_path,
+                            &pending.library.output_path,
+                            catalog,
+                        ),
                     );
                     if let Some(lowered) = lowered.as_ref() {
                         registry.collect_workspace_analysis_ir(lowered, &mut library_analysis);
@@ -143,7 +147,7 @@ pub(crate) fn collect_remaining_workspace_analysis(
             parsed,
             diagnostics,
             lowering,
-            namespaces.scope(&library.source_path),
+            namespaces.bindings(&library.source_path, &library.output_path, lowering.catalog),
         ) {
             lowering
                 .registry
@@ -160,7 +164,7 @@ fn lower_for_workspace_analysis(
     parsed: &ParsedDartFileSurface,
     parse_diagnostics: &[Diagnostic],
     lowering: &LoweringConfig<'_>,
-    namespace: Option<dust_resolver::NamespaceScope<'_>>,
+    bindings: dust_resolver::BindingContext<'_>,
 ) -> Option<DartFileIr> {
     if !parse_diagnostics.is_empty() {
         return None;
@@ -172,7 +176,7 @@ fn lower_for_workspace_analysis(
         library,
         parsed,
         lowering,
-        namespace,
+        bindings,
         &mut diagnostics,
     )?;
     diagnostics.is_empty().then_some(lowered)

@@ -131,7 +131,11 @@ pub(crate) fn process_library_from_source(
             library,
             &parsed,
             &lowering,
-            processing.namespaces.scope(&library.source_path),
+            processing.namespaces.bindings(
+                &library.source_path,
+                &library.output_path,
+                lowering.catalog,
+            ),
             &mut diagnostics,
         ) {
             Some(library) => library,
@@ -188,11 +192,10 @@ pub(crate) fn resolve_and_lower_library(
     library: &SourceLibrary,
     parsed: &ParsedDartFileSurface,
     lowering: &LoweringConfig<'_>,
-    namespace: Option<dust_resolver::NamespaceScope<'_>>,
+    bindings: dust_resolver::BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<dust_ir::DartFileIr> {
     let partless_configs = lowering.registry.all_partless_configs();
-    let bindings = dust_resolver::BindingContext::new(lowering.catalog, namespace);
     let ResolveResult {
         library: mut resolved_library,
         diagnostics: resolve_diagnostics,
@@ -205,7 +208,7 @@ pub(crate) fn resolve_and_lower_library(
         &partless_configs,
     );
     diagnostics.extend(resolve_diagnostics);
-    if namespace.is_some() && diagnostics.iter().any(Diagnostic::is_error) {
+    if bindings.has_namespace() && diagnostics.iter().any(Diagnostic::is_error) {
         return None;
     }
 

@@ -65,10 +65,7 @@ pub fn resolve_library_with_partless_configs(
         source_path,
         output_path,
         library,
-        &BindingContext {
-            catalog,
-            namespace: None,
-        },
+        &BindingContext::new(catalog, None),
         partless_config_symbols,
     )
 }
@@ -91,10 +88,7 @@ pub fn resolve_library_in_namespace(
         source_path,
         output_path,
         library,
-        &BindingContext {
-            catalog,
-            namespace: Some(namespace),
-        },
+        &BindingContext::new(catalog, Some(namespace)),
         partless_config_symbols,
     )
 }
@@ -112,18 +106,21 @@ pub fn resolve_library_with_bindings(
     if context.namespace.is_none() {
         validate_annotation_prefixes(file_id, library, &mut diagnostics);
     }
-    let part_uri = library
-        .directives
-        .iter()
-        .find_map(|directive| match directive {
-            ParsedDirective::Part { uri, .. }
-                if validate_generated_part_uri(output_path, uri).is_ok() =>
-            {
-                Some(uri.clone())
-            }
-            _ => None,
-        })
-        .or_else(|| first_part_uri(&library.directives));
+    let part_uri = match context.primary_part {
+        Some(primary) => primary.select(&library.directives).map(str::to_owned),
+        None => library
+            .directives
+            .iter()
+            .find_map(|directive| match directive {
+                ParsedDirective::Part { uri, .. }
+                    if validate_generated_part_uri(output_path, uri).is_ok() =>
+                {
+                    Some(uri.clone())
+                }
+                _ => None,
+            })
+            .or_else(|| first_part_uri(&library.directives)),
+    };
     let mut enums: Vec<ResolvedEnum> = Vec::new();
     let mut classes = Vec::new();
     let mut saw_dust_symbol = false;
@@ -157,7 +154,9 @@ pub fn resolve_library_with_bindings(
     if needs_part {
         match part_uri.as_deref() {
             Some(uri) => {
-                if let Err(diagnostic) = validate_generated_part_uri(output_path, uri) {
+                if context.primary_part.is_none()
+                    && let Err(diagnostic) = validate_generated_part_uri(output_path, uri)
+                {
                     diagnostics.push(diagnostic);
                 }
             }
@@ -165,7 +164,15 @@ pub fn resolve_library_with_bindings(
                 Diagnostic::error("missing generated `part` directive for Dust-enabled library")
                     .with_label(SourceLabel::new(
                         file_id,
-                        library.span,
+                        library
+                            .directives
+                            .iter()
+                            .find_map(|directive| match directive {
+                                ParsedDirective::Part { span, .. } => Some(*span),
+                                _ => None,
+                            })
+                            .filter(|_| context.primary_part.is_some())
+                            .unwrap_or(library.span),
                         format!(
                             "expected a matching `part '{}';` directive",
                             expected_part_uri(output_path)

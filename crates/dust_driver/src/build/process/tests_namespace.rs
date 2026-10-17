@@ -111,7 +111,7 @@ fn pipeline(
         &library,
         parsed,
         &lowering,
-        Some(graph.scope(APP)),
+        dust_resolver::BindingContext::new(catalog, Some(graph.scope(APP))),
         &mut diagnostics,
     );
     (ir, diagnostics)
