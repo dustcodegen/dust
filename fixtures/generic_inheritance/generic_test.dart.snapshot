@@ -1,0 +1,24 @@
+import 'package:dust_dart/derive.dart';
+import 'package:inheritance_probe/inheritance_generic.dart';
+import 'package:test/test.dart';
+
+List<int>? _values(GenericChild<int, List<int>> value) => value.values;
+
+void main() {
+  test('dependent generic bounds survive two inheritance edges', () {
+    const original = GenericChild<int, List<int>>([1]);
+    expect(_values(original), [1]);
+    expect(original.copyWith().values, [1]);
+    final replaced = original.copyWith(values: [2]);
+    expect(replaced, isA<GenericChild<int, List<int>>>());
+    expect(replaced.values, [2]);
+    expect(replaced.validate(), const Valid());
+    expect(replaced.validateOrThrow, returnsNormally);
+    final cleared = replaced.copyWith(values: null);
+    expect(cleared.values, isNull);
+    expect(cleared.validate().errors, [
+      const ValidationError(field: 'values', message: 'Required'),
+    ]);
+    expect(cleared.validateOrThrow, throwsA(isA<ValidationException>()));
+  });
+}

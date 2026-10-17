@@ -186,11 +186,33 @@ instead of guessing its conversion. No generic decoder-callback API is added.
 
 This is unreleased, scoped support under
 [#128](https://github.com/dustcodegen/dust/issues/128), not general generic-model
-readiness. Applied inheritance and generic sealed redirects remain open in
-[#133](https://github.com/dustcodegen/dust/issues/133) and
+readiness. Same-library applied inheritance under
+[#133](https://github.com/dustcodegen/dust/issues/133) now retains actual inherited
+types: `Concrete extends ScalarBase<int>` generates integer JSON conversions and
+integer copy parameters, not the parent's `T`. Inherited field annotations remain
+effective. The [complete concrete example](../../fixtures/generic_inheritance/concrete_traditional.dart.snapshot)
+supports normal usage:
+
+```dart
+final count = Concrete.fromJson({'amount': 3});
+final updated = count.copyWith(amount: 7);
+assert(updated.toJson()['amount'] == 7);
+assert(updated.validate().isValid);
+```
+
+The [inheritance fixtures](../../fixtures/generic_inheritance) also exercise named
+super-parameters, nested nullable collections, dependent/reordered bounds,
+callback overrides and primary constructors. Only proven local class parents
+are substituted; imported parents and alias expansion are not inferred. Raw or
+wrong-arity applications and substitutions inside opaque function/record types
+fail clearly. An explicit effective child field can override an opaque parent
+field without rewriting it. A child field that still uses its own parameter
+continues to require explicit JSON mapping; bounds are not decoder functions.
+
+Generic sealed redirects remain pending in
 [#134](https://github.com/dustcodegen/dust/issues/134). Do not use those shapes in
 production yet. See the [generic-model design](../design/generic-models.md) and
-the [executable fixtures](../../fixtures/generic_serde).
+the [ordinary generic JSON fixtures](../../fixtures/generic_serde).
 
 ## Enums
 

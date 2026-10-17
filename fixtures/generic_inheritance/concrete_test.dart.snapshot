@@ -1,0 +1,35 @@
+import 'package:dust_dart/serde.dart';
+import 'package:inheritance_probe/inheritance_concrete.dart';
+import 'package:test/test.dart';
+
+int _amount(Concrete value) => value.amount;
+
+void main() {
+  test(
+    'concrete inherited fields drive copies, validation and public JSON APIs',
+    () {
+      const original = Concrete(3);
+      expect(_amount(original), 3);
+      expect(original.copyWith().amount, 3);
+      expect(original.copyWith(amount: 7).amount, 7);
+      expect(original.validate(), const Valid());
+      expect(original.validateOrThrow, returnsNormally);
+      for (final amount in [0, 10]) {
+        final invalid = original.copyWith(amount: amount);
+        expect(invalid.validate().errors.single.field, 'amount');
+        expect(invalid.validateOrThrow, throwsA(isA<ValidationException>()));
+      }
+      const json = {'amount': 3};
+      expect(original.serialize(), json);
+      expect(original.toJson(), json);
+      expect(original.aliasJson(), json);
+      const Serializer<Concrete, Map<String, Object?>> encoder =
+          $ConcreteSerializer();
+      const Deserializer<Concrete, Map<String, Object?>> decoder =
+          $ConcreteDeserializer();
+      expect(encoder.serialize(original), json);
+      expect(Concrete.fromJson(json).amount, 3);
+      expect(decoder.deserialize(json).amount, 3);
+    },
+  );
+}

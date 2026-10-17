@@ -1,0 +1,26 @@
+import 'package:dust_dart/serde.dart';
+
+part 'inheritance_concrete.g.dart';
+
+/// The field rule must be checked against its applied child type.
+class const ScalarBase<T>(
+  /// An inherited numeric rule, not a rule on the parent's unknown T.
+  @Validate<Object?>(range: Range(min: 1, max: 9)) final T amount,
+) {
+  /// Creates the inherited value.
+  this;
+}
+
+/// A non-generic child must expose int everywhere, never the parent's T.
+@Derive([CopyWith(), Serialize(), Deserialize(), Validate<Object?>()])
+class const Concrete(super.amount) extends ScalarBase<int> with _$Concrete {
+  /// Forwards the concrete inherited parameter.
+  this;
+
+  /// Decodes the effective field type.
+  factory Concrete.fromJson(Map<String, Object?> json) =>
+      _$ConcreteFromJson(json);
+
+  /// Exercises the directional mirror helper too.
+  Map<String, Object?> aliasJson() => _$ConcreteToJson(this);
+}

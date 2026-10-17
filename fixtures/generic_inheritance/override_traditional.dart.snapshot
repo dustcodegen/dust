@@ -1,0 +1,33 @@
+import 'package:dust_dart/derive.dart';
+
+part 'inheritance_override.g.dart';
+
+/// A callback that validation rejects without invoking it.
+int rejectedTransform(int value) => value;
+
+/// Validates the callback value without executing application logic.
+ValidationError? validateTransform(int Function(int) value) =>
+    identical(value, rejectedTransform)
+    ? const ValidationError(field: 'transform', message: 'rejected')
+    : null;
+
+/// An opaque parent type must not be rewritten.
+class CallbackBase<T> {
+  /// Creates a callback value.
+  const CallbackBase(this.transform);
+
+  /// This opaque field is replaced explicitly by the child declaration.
+  final T Function(T) transform;
+}
+
+/// An explicit effective override makes substitution unnecessary.
+@Derive([CopyWith(), Validate<Object?>()])
+class OverrideModel extends CallbackBase<int> with _$OverrideModel {
+  /// The generator must retain this named constructor.
+  const OverrideModel.create(this.transform) : super(transform);
+
+  /// A concrete field, not an inherited source-string rewrite.
+  @override
+  @Validate<int Function(int)>(custom: validateTransform)
+  final int Function(int) transform;
+}

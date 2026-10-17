@@ -53,3 +53,25 @@ class GenericAnalysisTests(unittest.TestCase):
                 else:
                     check_generic_analysis(run, Path("dart"), app, options, "lib", {"SDK": "selected"})
                 self.assertEqual({path: path.read_bytes() for path in originals}, originals)
+
+    def test_legacy_lint_headers_are_retained_only_for_named_stems(self):
+        with tempfile.TemporaryDirectory() as name:
+            app = Path(name)
+            (app / "lib").mkdir()
+            config = app / "analysis_options.yaml"
+            original = b"analyzer:\n  errors:\n    strict_raw_type: ignore\n"
+            config.write_bytes(original)
+            for stem in ("legacy", "new"):
+                (app / f"lib/{stem}.dart").write_text("// source\n")
+                (app / f"lib/{stem}.g.dart").write_text("// ignore_for_file: type=lint\n")
+
+            def run(command, cwd, env=None):
+                self.assertIn("strict-casts: true", config.read_text())
+                self.assertNotIn("ignore", config.read_text())
+                self.assertEqual((app / "lib/legacy.g.dart").read_text(), "// ignore_for_file: type=lint\n")
+                self.assertEqual((app / "lib/new.g.dart").read_text(), "")
+
+            check_generic_analysis(run, Path("dart"), app, config, "lib", {},
+                                   stems=("legacy", "new"), legacy_lint_stems=("legacy",))
+            self.assertEqual(config.read_bytes(), original)
+            self.assertEqual((app / "lib/new.g.dart").read_text(), "// ignore_for_file: type=lint\n")

@@ -130,8 +130,26 @@ the repository lock running on every SDK.
     coverage markers. Four expected kernel failures per target reject wrong
     result/receiver/bound uses and erased deserializer results. Baseline hashes
     must remain unchanged, and owned staging is cleaned even after failure.
-    Applied inheritance and generic sealed redirects are separate pending gates,
-    not established by these ordinary-model tests.
+    Applied inheritance and generic sealed redirects are not established by
+    these ordinary-model tests.
+11. Generate `fixtures/generic_inheritance` on all six targets. Four libraries
+    cover a concrete child of a generic parent, named super-parameters, reordered
+    nested nullable collections, identity/dependent generic bounds, explicit
+    callback overrides and named constructor selection. Require all five complete
+    snapshots (one additional Flutter form-helper variant), equal SDK/header
+    hashes per package kind, and full reported generated line coverage: 115 Dart
+    lines and 123 Flutter lines, with no coverage exclusions. Four runtime tests
+    exercise copy, JSON and inherited/custom validation; Flutter adds a numeric
+    form-validator tearoff test. Seven intended kernel failures per consumer
+    reject wrong scalar/map/container/callback inputs, generated helper bounds,
+    validation candidates and erased copy results. Strict casts/inference/raw
+    types apply to every fixture. Existing non-generic lint headers stay intact
+    to preserve their output contract; the generic part has its broad lint header
+    removed. Record only the explicit-override source's `overridden_fields` and
+    `use_super_parameters` style infos; warnings/errors and unrelated infos fail.
+    Restore all staged bytes, remove owned files on failure and success, and
+    invalidate an earlier result record before a rerun. These are local-parent
+    proofs, not imported/aliased inheritance or generic sealed support.
 
 Lint-tool selection is 7.0.0 on the core floor, 10.1.0 on Dart 3.10/3.11 and
 10.3.0 on 3.12+. The staged floor options omit only the already-disabled

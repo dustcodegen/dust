@@ -1,0 +1,42 @@
+import 'package:dust_dart/derive.dart';
+import 'package:inheritance_probe/inheritance_override.dart';
+import 'package:test/test.dart';
+
+class _InvalidOverride extends OverrideModel {
+  const _InvalidOverride(super.transform) : super.create();
+
+  @override
+  ValidationResult validate() =>
+      const Invalid([ValidationError(field: 'override', message: 'invalid')]);
+}
+
+void main() {
+  test(
+    'explicit callback overrides keep concrete types and named construction',
+    () {
+      var calls = 0;
+      int callback(int value) {
+        calls++;
+        return value + 1;
+      }
+
+      final original = OverrideModel.create(callback);
+      expect(original.validate(), const Valid());
+      expect(original.validateOrThrow, returnsNormally);
+      expect(calls, 0, reason: 'copy and validation must not invoke callbacks');
+      final unchanged = original.copyWith();
+      expect(identical(unchanged.transform, callback), isTrue);
+      expect(unchanged.transform(1), 2);
+      expect(calls, 1);
+      final replaced = original.copyWith(transform: (value) => value * 2);
+      expect(replaced.transform(3), 6);
+      final rejected = OverrideModel.create(rejectedTransform);
+      expect(rejected.validate().errors.single.message, 'rejected');
+      expect(rejected.validateOrThrow, throwsA(isA<ValidationException>()));
+      expect(
+        _InvalidOverride(callback).validateOrThrow,
+        throwsA(isA<ValidationException>()),
+      );
+    },
+  );
+}

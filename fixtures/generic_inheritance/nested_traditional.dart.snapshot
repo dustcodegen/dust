@@ -1,0 +1,32 @@
+import 'package:dust_dart/serde.dart';
+
+part 'inheritance_nested.g.dart';
+
+/// The generic map must be substituted at both inheritance edges.
+class PairBase<K, V> {
+  /// Creates a nullable nested collection.
+  const PairBase({this.items});
+
+  /// Parent metadata and nested nullable elements survive substitution.
+  @SerDe(aliases: ['oldItems'])
+  final Map<K, List<V?>>? items;
+}
+
+/// Reorders the parent binders without changing their ownership.
+class Swap<X, Y> extends PairBase<Y, X> {
+  /// Forwards the nested value.
+  const Swap({super.items});
+}
+
+/// Two edges produce `Map<String, List<int?>>?`, including in copy helpers.
+@Derive([CopyWith(), Serialize(), Deserialize()])
+class Nested extends Swap<int, String> with _$Nested {
+  /// Creates the effective nested collection.
+  const Nested({super.items});
+
+  /// Decodes using inherited alias metadata.
+  factory Nested.fromJson(Map<String, Object?> json) => _$NestedFromJson(json);
+
+  /// Exercises the directional mirror helper too.
+  Map<String, Object?> aliasJson() => _$NestedToJson(this);
+}

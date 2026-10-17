@@ -21,6 +21,7 @@ from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import check_generic_names
 from sdk_generic_validation import check_generic_validation, require_validation_parity
 from sdk_generic_serde import check_generic_serde, require_serde_parity
+from sdk_inheritance import check_generic_inheritance, require_inheritance_parity
 from sdk_unsupported import check_unsupported
 from sdk_static_strings import check_static_strings
 
@@ -141,9 +142,12 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                              output / role / "dart/analysis_options.yaml", "product_showcase", env)
         serde = check_generic_serde(run, dust, dart, app, output / role / "generic-serde",
                                    output / role / "dart/analysis_options.yaml", "product_showcase", env)
+        inheritance = check_generic_inheritance(run, dust, dart, app, output / role / "inheritance",
+                                               output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
                      "generated": hashes, "genericNegative": negatives, "genericNames": names,
-                     "staticStrings": strings, "genericValidation": validation, "genericSerde": serde})
+                     "staticStrings": strings, "genericValidation": validation, "genericSerde": serde,
+                     "genericInheritance": inheritance})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
@@ -172,8 +176,10 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                                              flutter=flutter)
         serde = check_generic_serde(run, dust, flutter_dart, app, output / role / "flutter-serde",
                                    output / role / "flutter/analysis_options.yaml", "dust_benchmark_project", env, flutter=flutter)
+        inheritance = check_generic_inheritance(run, dust, flutter_dart, app, output / role / "flutter-inheritance",
+                                               output / role / "flutter/analysis_options.yaml", "dust_benchmark_project", env, flutter=flutter)
         rows.append({"role": role, "target": "flutter", "sdk": metadata, "generated": hashes,
-                     "genericValidation": validation, "genericSerde": serde})
+                     "genericValidation": validation, "genericSerde": serde, "genericInheritance": inheritance})
 
     require_deterministic_generation(rows)
     primary = {
@@ -186,6 +192,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
     require_validation_parity(rows, validation)
     serde = {target: json.loads((output / f"primary-{target}-serde/results.json").read_text()) for target in ("dart", "flutter")}
     require_serde_parity(rows, serde)
+    inheritance = {target: json.loads((output / f"primary-{target}-inheritance/results.json").read_text()) for target in ("dart", "flutter")}
+    require_inheritance_parity(rows, inheritance)
     proof = {
         "sourceCommit": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
         "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
@@ -194,6 +202,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         "primaryGenericNames": json.loads((output / "primary-generic-names/results.json").read_text()),
         "primaryGenericValidation": validation,
         "primaryGenericSerde": serde,
+        "primaryGenericInheritance": inheritance,
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
@@ -252,6 +261,9 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
     check_generic_serde(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-serde",
                         output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
                         "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env, primary=True, flutter=flutter)
+    check_generic_inheritance(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-inheritance",
+                             output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
+                             "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env, primary=True, flutter=flutter)
     return hashes
 
 
