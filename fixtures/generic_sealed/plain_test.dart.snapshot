@@ -1,0 +1,25 @@
+import 'package:test/test.dart';
+import 'package:sealed_probe/sealed_plain.dart';
+
+void main() {
+  test('unapplied named targets are distinct from import-qualified types', () {
+    const value = PlainEvent.done(3);
+    expect(value.serialize(), {'type': 'done', 'value': 3});
+    expect(value.toJson(), value.serialize());
+    expect(value.aliasJson(), value.serialize());
+    expect((PlainEvent.fromJson(value.serialize()) as PlainDone).value, 3);
+    expect(const $PlainEventSerializer().serialize(value), value.serialize());
+    expect(
+      const $PlainEventDeserializer().deserialize(value.serialize()),
+      isA<PlainDone>(),
+    );
+    expect(PlainDone.fromJson({'value': 3}).value, 3);
+    expect(const $PlainDoneSerializer().serialize(value as PlainDone), {
+      'value': 3,
+    });
+    expect(const $PlainDoneDeserializer().deserialize({'value': 3}).value, 3);
+    expect(payload(value), {'value': 3});
+    expect(() => PlainEvent.fromJson({'type': 'other'}), throwsArgumentError);
+    expect(() => PlainEvent.fromJson({'type': 1}), throwsArgumentError);
+  });
+}

@@ -81,6 +81,10 @@ pub struct SerdeVariantConfigIr {
     pub constructor_name: String,
     /// Redirected target class name, for example `PaymentPaid`.
     pub target_class_name: String,
+    /// Applied redirect target in the sealed base's parameter scope.
+    pub target: Option<crate::RedirectTargetIr>,
+    /// Field SerDe metadata declared on redirecting factory parameters.
+    pub field_serde: std::collections::BTreeMap<String, SerdeFieldConfigIr>,
     /// Resolved tag value after variant rename and class `renameAll`.
     pub tag: String,
     /// Source factory constructor parameters used to synthesize variant classes.

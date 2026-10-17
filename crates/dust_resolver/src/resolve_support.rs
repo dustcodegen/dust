@@ -177,6 +177,7 @@ pub(crate) fn resolve_constructor(
 ) -> ResolvedConstructor {
     ResolvedConstructor {
         surface: constructor.clone(),
+        redirected_target: None,
         configs: resolve_configs(
             file_id,
             &constructor.annotations,

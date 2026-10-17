@@ -207,6 +207,7 @@ pub(super) fn lower_resolved_constructors(
                 is_factory: constructor.surface.is_factory,
                 redirected_target_source: constructor.surface.redirected_target_source.clone(),
                 redirected_target_name: constructor.surface.redirected_target_name.clone(),
+                redirected_target: constructor.redirected_target.clone(),
                 span: SpanIr::new(file_id, constructor.surface.span),
                 params,
             }

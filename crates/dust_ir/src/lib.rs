@@ -40,6 +40,8 @@ mod serde;
 mod state;
 /// Applied plugin traits and configs.
 mod traits;
+/// Structural substitution after the caller establishes binder ownership.
+mod type_substitution;
 /// Type metadata.
 mod types;
 /// Workspace-level IR.
@@ -49,7 +51,7 @@ pub use annotation::{
     AnnotationIr, AnnotationNumberKindIr, AnnotationValueIr, ExprSourceIr, NameIr,
 };
 pub use class::{ClassIr, ClassKindIr, MixinApplicationIr, SuperclassIr};
-pub use constructor::{ConstructorIr, ConstructorParamIr, ParamKind};
+pub use constructor::{ConstructorIr, ConstructorParamIr, ParamKind, RedirectTargetIr};
 pub use db::{
     DbConfigIr, DbDatabaseConfigIr, DbDriverIr, DbQueryConfigIr, DbRenameRuleIr, DbSqlxConfigIr,
 };
@@ -79,5 +81,6 @@ pub use serde::{
 };
 pub use state::{StateConfigIr, StateModeIr};
 pub use traits::{ConfigApplicationIr, NormalizedConfigIr, SymbolId, TraitApplicationIr};
+pub use type_substitution::substitute_type;
 pub use types::{BuiltinType, TypeIr};
 pub use workspace::WorkspaceIr;

@@ -299,11 +299,32 @@ relaxed. Intentional explicit-override style infos are recorded, not suppressed.
 Imported parent/alias expansion and general opaque substitution remain outside
 this proven scope. Empty-rule non-generic validation emits an existing unused
 receiver warning, tracked separately in [#137](https://github.com/dustcodegen/dust/issues/137).
-Structured redirect targets,
-generic sealed dispatch and synthesized variants remain in
-[#134](https://github.com/dustcodegen/dust/issues/134). Their structured-facts design
-is approved: preserve source binders/spans, substitute proven types structurally,
-and reject opaque unsupported substitutions without source-string rewriting.
+Structured redirect targets, generic sealed dispatch and synthesized variants are
+implemented under [#134](https://github.com/dustcodegen/dust/issues/134), with final
+acceptance still in progress. Parser/resolver/IR retain target types, optional
+constructor identifiers and original spans, separately from declaration names.
+Grammar type-path identifiers remain structured too. The resolver distinguishes
+an unapplied `Class.named` target from a declared `prefix.Class` import without
+mutating parser surfaces, using source identifier spans and import-prefix facts.
+Shared structural substitution proves local ancestor applications; missing targets
+retain only a complete permutation of the owner's source binders and bounds.
+No source-string rewriting, imported-owner guessing or generic decoder callbacks
+are added. Typed tagged/adjacent/untagged helpers protect runtime references and
+locals. A named redirect differing from ordinary leaf codec selection receives a
+private constructor-specific payload helper; ordinary selection stays unchanged.
+Generic dispatch has an explicit unknown-subtype guard because Dart's exhaustiveness
+analysis cannot prove every dependent generic pattern. Factory field metadata uses
+the same annotation binding/normalization as handwritten fields. Generated public
+factories allocate a documented public JSON payload alias only when private core
+aliases would otherwise leak through their signatures. Non-generic snapshots remain
+unchanged. Five full [sealed contracts](../../fixtures/generic_sealed) exercise
+traditional and primary source, concrete/custom-codec fields, phantom/reordered/
+dependent arguments, wire defaults/aliases, strict keys, collision binders and
+unapplied non-generic named redirects.
+They do not certify every constructor shape: independent required/optional parameter
+facts and faithful omitted-variant grouping remain in
+[#138](https://github.com/dustcodegen/dust/issues/138). Generic integration and overall
+primary-constructor support remain incomplete until their remaining gates pass.
 
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /

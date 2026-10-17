@@ -24,6 +24,10 @@ mod names;
 mod plugin;
 /// Validates serde-compatible model shapes.
 mod validate;
+/// Constructor-specific sealed decoding without changing ordinary leaf codecs.
+mod variant_decoders;
+/// Structured sealed target applications and binder ownership.
+mod variant_types;
 /// Low-level helpers for generating JSON-related Dart expressions.
 pub mod writer;
 /// Renders JSON encode and decode expressions.

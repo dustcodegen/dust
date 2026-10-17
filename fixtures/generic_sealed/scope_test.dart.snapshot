@@ -1,0 +1,34 @@
+import 'package:test/test.dart';
+import 'package:sealed_probe/sealed_scope.dart' as scope;
+
+void main() {
+  test('sealed and generated factory scopes do not capture runtime references or locals', () {
+    const value = scope.Captured.done(3);
+    final json = {
+      'kind': 'done',
+      'data': {'number': 3},
+    };
+    expect(value.serialize(), json);
+    expect(value.toJson(), json);
+    expect(value.aliasJson(), json);
+    expect(scope.encode(value), json);
+    expect((scope.Captured.fromJson(json) as scope.CapturedDone).number, 3);
+    expect((scope.decode(json) as scope.CapturedDone).number, 3);
+    expect(scope.CapturedDone.fromJson({'number': 3}).number, 3);
+    expect(scope.encodeLeaf(value as scope.CapturedDone), {'number': 3});
+    expect(scope.decodeLeaf({'number': 3}).number, 3);
+    expect(scope.aliasLeafPayload(value), {'number': 3});
+    expect(
+      () => const scope.CapturedUnlisted().serialize(),
+      throwsArgumentError,
+    );
+    expect(
+      () => scope.decode({'kind': 'other', 'data': {}}),
+      throwsArgumentError,
+    );
+    expect(
+      () => scope.decode({'kind': 'done', 'data': []}),
+      throwsArgumentError,
+    );
+  });
+}

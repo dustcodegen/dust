@@ -15,6 +15,7 @@ mod tests_directives;
 mod tests_generics;
 mod tests_inheritance;
 mod tests_namespaces;
+mod tests_redirect_targets;
 mod tests_superclasses;
 mod tests_type_signatures;
 

@@ -66,6 +66,7 @@ fn models_real_dart_data_class_shapes() {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(1, 160, 205),
                 params: vec![
                     ConstructorParamIr {

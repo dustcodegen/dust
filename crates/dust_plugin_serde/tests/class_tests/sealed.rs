@@ -220,12 +220,16 @@ fn sealed_base(content: Option<&str>) -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "success".to_owned(),
                 target_class_name: "JsonPaymentSuccess".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_success".to_owned(),
                 params: Vec::new(),
             },
             SerdeVariantConfigIr {
                 constructor_name: "failed".to_owned(),
                 target_class_name: "JsonPaymentFailed".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_failed".to_owned(),
                 params: Vec::new(),
             },

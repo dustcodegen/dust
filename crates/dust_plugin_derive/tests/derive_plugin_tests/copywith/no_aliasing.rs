@@ -74,6 +74,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                         is_factory: false,
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         span: span(40, 60),
                         params: vec![
                             ConstructorParamIr {

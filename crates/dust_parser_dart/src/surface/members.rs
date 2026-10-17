@@ -52,9 +52,33 @@ pub struct ParsedConstructorSurface {
     pub redirected_target_source: Option<String>,
     /// The redirected target base name, if it could be extracted.
     pub redirected_target_name: Option<String>,
+    /// Structured redirect target, when provided by the parser backend.
+    pub redirected_target: Option<ParsedRedirectTargetSurface>,
     /// The constructor parameters.
     pub params: Vec<ParsedConstructorParamSurface>,
     /// The source span for the constructor declaration.
+    pub span: TextRange,
+}
+
+/// A redirect's applied target type and optional named constructor.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedRedirectTargetSurface {
+    /// The target type, including written arguments and its original span.
+    pub ty: ParsedTypeSurface,
+    /// Grammar type-path identifiers, retained for resolver disambiguation.
+    pub type_name_parts: Vec<ParsedRedirectIdentifierSurface>,
+    /// The optional constructor suffix, distinct from the target type identity.
+    pub constructor: Option<ParsedRedirectIdentifierSurface>,
+    /// The entire redirect target span.
+    pub span: TextRange,
+}
+
+/// One identifier in a redirect's type path or constructor suffix.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedRedirectIdentifierSurface {
+    /// The identifier, or the explicit unnamed-constructor suffix `new`.
+    pub name: String,
+    /// The original identifier span, excluding separating dots and trivia.
     pub span: TextRange,
 }
 

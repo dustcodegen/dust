@@ -1,0 +1,24 @@
+import 'package:dust_dart/serde.dart';
+
+part 'sealed_plain.g.dart';
+
+/// A named target without type arguments is not an import-qualified type.
+@Derive([Serialize(), Deserialize()])
+@SerDe(tag: 'type')
+sealed class PlainEvent with _$PlainEvent {
+  /// Creates the base.
+  const PlainEvent();
+
+  /// Omits the target declaration but names its constructor.
+  const factory PlainEvent.done(int value) = PlainDone.create;
+
+  /// Decodes the tagged value.
+  factory PlainEvent.fromJson(Map<String, Object?> json) =>
+      _$PlainEventFromJson(json);
+
+  /// Exercises the base alias.
+  Map<String, Object?> aliasJson() => _$PlainEventToJson(this);
+}
+
+/// Exercises the leaf's directional alias.
+Map<String, Object?> payload(PlainDone value) => _$PlainDoneToJson(value);

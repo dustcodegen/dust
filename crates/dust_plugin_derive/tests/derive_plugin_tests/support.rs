@@ -43,6 +43,7 @@ pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(40, 60),
             params: vec![
                 ConstructorParamIr {

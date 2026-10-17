@@ -16,6 +16,8 @@ mod http;
 mod namespace;
 /// Resolver-owned DB query-call normalization.
 mod query_calls;
+/// Redirect constructor/type-path disambiguation using shared source facts.
+mod redirects;
 /// Library resolution entry points.
 mod resolve;
 /// Shared declaration resolution helpers.

@@ -131,7 +131,8 @@ pub fn resolve_library_with_bindings(
         }
         enums.push(resolved);
     }
-    normalize_sealed_serde_variants(&mut classes, &mut diagnostics);
+    crate::redirects::resolve_redirect_targets(&mut classes, &library.directives);
+    normalize_sealed_serde_variants(&mut classes, context, &mut diagnostics);
     mark_required_lowering_diagnostics(&mut classes);
 
     let needs_part = saw_dust_symbol

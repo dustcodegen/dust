@@ -1,0 +1,111 @@
+import 'package:dust_dart/serde.dart';
+
+import 'sealed_generated.dart' as wire;
+
+part 'sealed_modes.g.dart';
+
+/// Exercises the adjacent leaf's decoding alias.
+Stamped<T> decodeStamp<T>(Map<String, Object?> json) =>
+    _$StampedFromJson<T>(json);
+
+/// Exercises the adjacent leaf's payload alias.
+Map<String, Object?> stampPayload<T>(Stamped<T> value) =>
+    _$StampedToJson<T>(value);
+
+/// Exercises the first untagged leaf's decoding alias.
+NumberChoice<T> decodeNumber<T>(Map<String, Object?> json) =>
+    _$NumberChoiceFromJson<T>(json);
+
+/// Exercises the first untagged leaf's payload alias.
+Map<String, Object?> numberPayload<T>(NumberChoice<T> value) =>
+    _$NumberChoiceToJson<T>(value);
+
+/// Exercises the fallback leaf's decoding alias.
+TextChoice<T> decodeText<T>(Map<String, Object?> json) =>
+    _$TextChoiceFromJson<T>(json);
+
+/// Exercises the fallback leaf's payload alias.
+Map<String, Object?> textPayload<T>(TextChoice<T> value) =>
+    _$TextChoiceToJson<T>(value);
+
+/// Adjacent representation with a codec-backed declared payload.
+@Derive([Serialize(), Deserialize()])
+@SerDe(tag: 'kind', content: 'data')
+sealed class const Envelope<T>() with _$Envelope<T> {
+  /// Creates the base.
+  this;
+
+  /// Selects the named declared constructor.
+  const factory Envelope.stamped(DateTime value) = Stamped<T>.create;
+
+  /// Decodes the typed envelope.
+  factory Envelope.fromJson(Map<String, Object?> json) =>
+      _$EnvelopeFromJson<T>(json);
+
+  /// Exercises the forwarding alias.
+  Map<String, Object?> aliasJson() => _$EnvelopeToJson<T>(this);
+}
+
+/// A declared leaf keeps its own field codec and strict-key policy.
+@Derive([Serialize(), Deserialize()])
+@SerDe(disallowUnrecognizedKeys: true)
+final class const Stamped<U>.create(
+  /// A custom wire representation, independent of the phantom owner.
+  @SerDe(using: wire.epoch, rename: 'at') final DateTime value,
+) extends Envelope<U> with _$Stamped<U> {
+  /// Creates a stamped payload.
+  this;
+}
+
+/// A subtype deliberately outside the adjacent protocol.
+final class const OtherEnvelope<T>() extends Envelope<T> {
+  /// Creates an unregistered envelope.
+  this;
+}
+
+/// Untagged decoding tries concrete payloads in declaration order.
+@Derive([Serialize(), Deserialize()])
+@SerDe(untagged: true)
+sealed class const Choice<T>() with _$Choice<T> {
+  /// Creates the base.
+  this;
+
+  /// The first candidate.
+  const factory Choice.number(int number) = NumberChoice<T>;
+
+  /// The fallback candidate.
+  const factory Choice.text(String text) = TextChoice<T>.create;
+
+  /// Decodes the typed choice.
+  factory Choice.fromJson(Map<String, Object?> json) =>
+      _$ChoiceFromJson<T>(json);
+
+  /// Exercises the forwarding alias.
+  Map<String, Object?> aliasJson() => _$ChoiceToJson<T>(this);
+}
+
+/// A numeric untagged payload.
+@Derive([Serialize(), Deserialize()])
+final class const NumberChoice<U>(
+  /// The numeric value.
+  final int number,
+) extends Choice<U> with _$NumberChoice<U> {
+  /// Creates the numeric candidate.
+  this;
+}
+
+/// A text untagged payload.
+@Derive([Serialize(), Deserialize()])
+final class const TextChoice<U>.create(
+  /// The text value.
+  final String text,
+) extends Choice<U> with _$TextChoice<U> {
+  /// Creates the text candidate.
+  this;
+}
+
+/// A subtype deliberately outside the untagged protocol.
+final class const OtherChoice<T>() extends Choice<T> {
+  /// Creates an unregistered choice.
+  this;
+}

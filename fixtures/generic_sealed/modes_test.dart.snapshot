@@ -1,0 +1,129 @@
+import 'package:test/test.dart';
+import 'package:sealed_probe/sealed_modes.dart' as modes;
+
+void main() {
+  test('adjacent declared codecs preserve typed payloads and strict keys', () {
+    final date = DateTime.fromMillisecondsSinceEpoch(1234, isUtc: true);
+    final event = modes.Envelope<int>.stamped(date);
+    final json = {
+      'kind': 'stamped',
+      'data': {'at': 1234},
+    };
+    expect(event.serialize(), json);
+    expect(event.toJson(), json);
+    expect(event.aliasJson(), json);
+    expect(
+      (modes.Envelope<int>.fromJson(json) as modes.Stamped<int>).value,
+      date,
+    );
+    expect(const modes.$EnvelopeSerializer<int>().serialize(event), json);
+    expect(
+      const modes.$EnvelopeDeserializer<int>().deserialize(json),
+      isA<modes.Stamped<int>>(),
+    );
+    expect(
+      const modes.$StampedSerializer<int>().serialize(
+        event as modes.Stamped<int>,
+      ),
+      {'at': 1234},
+    );
+    expect(
+      const modes.$StampedDeserializer<int>().deserialize({'at': 1234}).value,
+      date,
+    );
+    expect(modes.decodeStamp<int>({'at': 1234}).value, date);
+    expect(modes.stampPayload<int>(event), {'at': 1234});
+    for (final invalid in <Map<String, Object?>>[
+      {},
+      {'kind': 'other', 'data': {}},
+      {'kind': 'stamped', 'data': []},
+      {
+        'kind': 'stamped',
+        'data': {'at': 1234, 'extra': 1},
+      },
+    ]) {
+      expect(() => modes.Envelope<int>.fromJson(invalid), throwsArgumentError);
+    }
+    expect(
+      () => const modes.OtherEnvelope<int>().serialize(),
+      throwsArgumentError,
+    );
+    expect(
+      () => const modes.OtherEnvelope<int>().toJson(),
+      throwsArgumentError,
+    );
+  });
+  test(
+    'untagged dispatch preserves the owner and tries fallback candidates',
+    () {
+      const number = modes.Choice<int>.number(3);
+      const text = modes.Choice<int>.text('ready');
+      expect(number.serialize(), {'number': 3});
+      expect(number.toJson(), number.serialize());
+      expect(number.aliasJson(), number.serialize());
+      expect(text.serialize(), {'text': 'ready'});
+      expect(text.toJson(), text.serialize());
+      expect(
+        (modes.Choice<int>.fromJson({
+          'number': 3,
+        }) as modes.NumberChoice<int>).number,
+        3,
+      );
+      expect(
+        (modes.Choice<int>.fromJson({
+          'text': 'ready',
+        }) as modes.TextChoice<int>).text,
+        'ready',
+      );
+      expect(
+        modes.Choice<int>.fromJson({'number': 'wrong', 'text': 'fallback'}),
+        isA<modes.TextChoice<int>>(),
+      );
+      expect(
+        const modes.$ChoiceSerializer<int>().serialize(text),
+        text.serialize(),
+      );
+      expect(
+        const modes.$ChoiceDeserializer<int>().deserialize({'number': 3}),
+        isA<modes.NumberChoice<int>>(),
+      );
+      expect(
+        const modes.$NumberChoiceSerializer<int>().serialize(
+          number as modes.NumberChoice<int>,
+        ),
+        {'number': 3},
+      );
+      expect(
+        const modes.$NumberChoiceDeserializer<int>().deserialize({
+          'number': 8,
+        }).number,
+        8,
+      );
+      expect(
+        const modes.$TextChoiceSerializer<int>().serialize(
+          text as modes.TextChoice<int>,
+        ),
+        {'text': 'ready'},
+      );
+      expect(
+        const modes.$TextChoiceDeserializer<int>().deserialize({
+          'text': 'again',
+        }).text,
+        'again',
+      );
+      expect(modes.decodeNumber<int>({'number': 7}).number, 7);
+      expect(modes.decodeText<int>({'text': 'alias'}).text, 'alias');
+      expect(modes.numberPayload<int>(number), {'number': 3});
+      expect(modes.textPayload<int>(text), {'text': 'ready'});
+      expect(() => modes.Choice<int>.fromJson({}), throwsArgumentError);
+      expect(
+        () => const modes.OtherChoice<int>().serialize(),
+        throwsArgumentError,
+      );
+      expect(
+        () => const modes.OtherChoice<int>().toJson(),
+        throwsArgumentError,
+      );
+    },
+  );
+}

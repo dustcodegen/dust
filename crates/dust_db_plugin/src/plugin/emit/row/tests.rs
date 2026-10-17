@@ -72,6 +72,7 @@ fn emits_basic_from_row_extension() {
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(),
         params: vec![ConstructorParamIr {
             name: "id".to_owned(),

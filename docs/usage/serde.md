@@ -209,10 +209,44 @@ fail clearly. An explicit effective child field can override an opaque parent
 field without rewriting it. A child field that still uses its own parameter
 continues to require explicit JSON mapping; bounds are not decoder functions.
 
-Generic sealed redirects remain pending in
-[#134](https://github.com/dustcodegen/dust/issues/134). Do not use those shapes in
-production yet. See the [generic-model design](../design/generic-models.md) and
-the [ordinary generic JSON fixtures](../../fixtures/generic_serde).
+Generic sealed redirects are implemented on the development branch under
+[#134](https://github.com/dustcodegen/dust/issues/134), with acceptance still in
+progress. Their declared or omitted targets retain applied arguments, bounds,
+named constructors and `.new`; identifiers never contain `<T>`.
+For example, the [complete declared family](../../fixtures/generic_sealed/declared_traditional.dart.snapshot)
+uses `Event<A, B extends List<A>>` and redirects `Event.done` to
+`Done<B, A>.create`:
+
+```dart
+const event = Event<int, List<int>>.done('ready');
+final json = event.serialize(); // {'label': 'ready', 'type': 'done'}
+final Event<int, List<int>> restored = Event<int, List<int>>.fromJson(json);
+final codecResult = const $EventDeserializer<int, List<int>>().deserialize(json);
+```
+
+Sealed decoding honors the redirect's constructor even when the ordinary leaf
+codec selects a different first constructible constructor. Tagged, adjacent and
+untagged representations retain their owning types. Unknown generic subtypes
+outside the factory protocol throw `ArgumentError`; Dart cannot prove every
+dependent generic subtype pattern exhaustive. Manual JSON methods remain the
+manual variant's responsibility.
+
+Omitted generic targets must carry a complete permutation of the owner's bare
+parameters. Dust copies those source binders and bounds, rather than inventing
+names for concrete/nested applications. Unproven imported ownership, invalid
+arity and opaque substitutions fail before replacing generated output/cache.
+Factory-parameter `@SerDe` metadata supplies generated field codecs, aliases and
+wire defaults. Redirecting factories cannot declare explicit Dart defaults;
+nullable optional parameters still default to `null`. When source binders capture
+runtime JSON names, a generated public factory uses an allocated public payload
+typedef such as `$CaptureDoneJson`, not private aliases in its public signature.
+
+All constructor forms are **not** production-ready: required nullable named and
+optional positional parameters need the separate
+[#138](https://github.com/dustcodegen/dust/issues/138) fix. Do not use those omitted
+variant forms yet. See the [generic-model design](../design/generic-models.md),
+[sealed fixtures](../../fixtures/generic_sealed) and
+[ordinary generic JSON fixtures](../../fixtures/generic_serde).
 
 ## Enums
 

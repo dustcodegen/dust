@@ -90,6 +90,7 @@ fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -> Construct
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(25, 60),
         params,
     }

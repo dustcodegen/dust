@@ -14,6 +14,12 @@ use super::parse_text::{
     default_value_source, is_field_formal_parameter, optional_parameter_kind, parameter_name_node,
 };
 
+/// Structured redirect targets without parsing their written source.
+mod redirects;
+
+#[cfg(test)]
+mod tests;
+
 /// Extracts constructor metadata from a class member declaration or signature.
 pub(super) fn extract_constructor(
     node: Node<'_>,
@@ -34,6 +40,7 @@ pub(super) fn extract_constructor(
             annotations: annotations.to_vec(),
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             params: Vec::new(),
             span: text_range(node),
         };
@@ -56,6 +63,7 @@ pub(super) fn extract_constructor(
         annotations: annotations.to_vec(),
         redirected_target_source,
         redirected_target_name,
+        redirected_target: redirects::extract_redirect_application(signature, source),
         params,
         span: text_range(signature),
     }

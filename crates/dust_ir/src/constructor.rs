@@ -1,4 +1,4 @@
-use crate::{FieldIr, SpanIr, TypeIr};
+use crate::{FieldIr, NameIr, SpanIr, TypeIr};
 
 /// The parameter style used by a lowered constructor parameter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -37,10 +37,23 @@ pub struct ConstructorIr {
     pub redirected_target_source: Option<String>,
     /// The redirected target base name, if it could be extracted.
     pub redirected_target_name: Option<String>,
+    /// Structured target type and named constructor, when available.
+    pub redirected_target: Option<RedirectTargetIr>,
     /// The source span for the constructor.
     pub span: SpanIr,
     /// The lowered constructor parameters.
     pub params: Vec<ConstructorParamIr>,
+}
+
+/// An applied redirect target, separate from its declaration name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RedirectTargetIr {
+    /// The applied target type in the owning class's parameter scope.
+    pub ty: TypeIr,
+    /// Optional named constructor with its original span.
+    pub constructor: Option<NameIr>,
+    /// The complete redirect target span.
+    pub span: SpanIr,
 }
 
 impl ConstructorIr {

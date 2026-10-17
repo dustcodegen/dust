@@ -131,6 +131,7 @@ fn constructor_knows_when_all_fields_are_constructible() {
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(30, 48),
         params: vec![ConstructorParamIr {
             name: "name".to_owned(),
@@ -170,6 +171,7 @@ fn constructor_detects_missing_required_fields() {
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(30, 48),
         params: vec![ConstructorParamIr {
             name: "name".to_owned(),
