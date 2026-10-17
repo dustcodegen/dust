@@ -31,6 +31,11 @@ mod sdk;
 /// URI identity normalization, separate from filesystem paths.
 mod uri;
 
+/// Real public server exports preserve ownership without enabling server registration.
+#[cfg(test)]
+#[path = "namespace_sources/server_contract_tests.rs"]
+mod server_contract_tests;
+
 /// One immutable source graph snapshot for discovery, analysis and output.
 pub(crate) struct NamespaceSources {
     /// Resolved namespaces bound to actual declaring-library identities.
