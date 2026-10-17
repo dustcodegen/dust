@@ -1,0 +1,144 @@
+import 'package:dust_dart/serde.dart';
+
+part 'serde_scope.g.dart';
+
+/// JSON object used by this consumer.
+typedef Json = Map<String, Object?>;
+typedef _DustSerdeObject = int;
+
+/// Exercises a user declaration reserved against the generated alias.
+int reservedNameProof(Object value) => value is _DustSerdeObject ? 1 : 0;
+
+/// Legal source binders cannot capture generated runtime or local names.
+@Derive([Serialize(), Deserialize()])
+@SerDe(disallowUnrecognizedKeys: true)
+class Captured<
+  String,
+  Object,
+  Map,
+  Serializable,
+  Serializer,
+  Deserializer,
+  JsonHelper,
+  ArgumentError,
+  instance,
+  json,
+  value,
+  key,
+  allowedKeys,
+  amountValue,
+  rawAmount,
+  rawAmountKey
+>
+    with
+        _$Captured<
+          String,
+          Object,
+          Map,
+          Serializable,
+          Serializer,
+          Deserializer,
+          JsonHelper,
+          ArgumentError,
+          instance,
+          json,
+          value,
+          key,
+          allowedKeys,
+          amountValue,
+          rawAmount,
+          rawAmountKey
+        > {
+  /// Creates one JSON value.
+  const Captured(this.amount);
+
+  /// Decodes using the helper's inferred arguments.
+  factory Captured.fromJson(Json data) => _$CapturedDeserialize(data);
+
+  /// Decodes through the explicitly typed alias.
+  factory Captured.alias(Json data) =>
+      _$CapturedFromJson<
+        String,
+        Object,
+        Map,
+        Serializable,
+        Serializer,
+        Deserializer,
+        JsonHelper,
+        ArgumentError,
+        instance,
+        json,
+        value,
+        key,
+        allowedKeys,
+        amountValue,
+        rawAmount,
+        rawAmountKey
+      >(data);
+
+  /// Concrete numeric value.
+  @SerDe(aliases: ['old'], defaultValue: 0)
+  final int amount;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() =>
+      _$CapturedToJson<
+        String,
+        Object,
+        Map,
+        Serializable,
+        Serializer,
+        Deserializer,
+        JsonHelper,
+        ArgumentError,
+        instance,
+        json,
+        value,
+        key,
+        allowedKeys,
+        amountValue,
+        rawAmount,
+        rawAmountKey
+      >(this);
+}
+
+/// Collection callbacks and core map entries have independent scopes.
+@Derive([Serialize(), Deserialize()])
+class Collection<MapEntry, item, itemKey, value, valueKey, key>
+    with _$Collection<MapEntry, item, itemKey, value, valueKey, key> {
+  /// Creates one JSON value.
+  const Collection(this.entries);
+
+  /// Decodes using the helper's inferred arguments.
+  factory Collection.fromJson(Json json) => _$CollectionDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Collection.alias(Json json) =>
+      _$CollectionFromJson<MapEntry, item, itemKey, value, valueKey, key>(json);
+
+  /// Concrete nested entries.
+  final Map<String, List<int>> entries;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() =>
+      _$CollectionToJson<MapEntry, item, itemKey, value, valueKey, key>(this);
+}
+
+/// A binder named num must not capture a concrete numeric conversion.
+@Derive([Serialize(), Deserialize()])
+class Decimal<num> with _$Decimal<num> {
+  /// Creates one JSON value.
+  const Decimal(this.amount);
+
+  /// Decodes using the helper's inferred arguments.
+  factory Decimal.fromJson(Json json) => _$DecimalDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Decimal.alias(Json json) => _$DecimalFromJson<num>(json);
+
+  /// Concrete numeric value.
+  final double amount;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$DecimalToJson<num>(this);
+}

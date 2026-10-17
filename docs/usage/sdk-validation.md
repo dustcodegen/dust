@@ -118,6 +118,20 @@ the repository lock running on every SDK.
    per consumer reject wrong helper receiver/candidate types. Baseline generated
    hashes must stay unchanged; every owned source/generated/test file is removed
    and temporarily changed analyzer/source bytes restored even after failure.
+10. Generate the three `fixtures/generic_serde` libraries on those same six
+    targets: four ordinary SDK rows and latest Dart/Flutter primary consumers.
+    Require exact complete snapshots and identical traditional/primary bytes.
+    Strict analysis without broad generated lint suppression records only the
+    intentional name-style infos from collision binders. Eight runtime contracts
+    cover typed factories/directional codecs, dependent bounds, named
+    constructors, defaults/aliases, strict keys, nullable values, collections,
+    custom codecs and captured core/local names. Require full reported generated
+    executable-line coverage (203 lines across the three libraries), ignoring no
+    coverage markers. Four expected kernel failures per target reject wrong
+    result/receiver/bound uses and erased deserializer results. Baseline hashes
+    must remain unchanged, and owned staging is cleaned even after failure.
+    Applied inheritance and generic sealed redirects are separate pending gates,
+    not established by these ordinary-model tests.
 
 Lint-tool selection is 7.0.0 on the core floor, 10.1.0 on Dart 3.10/3.11 and
 10.3.0 on 3.12+. The staged floor options omit only the already-disabled

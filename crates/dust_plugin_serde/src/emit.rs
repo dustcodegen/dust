@@ -18,6 +18,7 @@ use crate::{
     },
     emit_variant_class::{emit_generated_variant_class, generated_variant_classes},
     enum_codecs::EnumCodecs,
+    names::plan_json_names,
 };
 
 /// Orchestrates the emission of all SerDe-related code for a library.
@@ -30,6 +31,16 @@ pub(crate) fn emit_library(
 ) -> PluginContribution {
     let mut contribution = PluginContribution::default();
     let generated_variants = generated_variant_classes(library);
+    let names = plan_json_names(
+        library,
+        &generated_variants
+            .iter()
+            .map(|v| &v.class)
+            .collect::<Vec<_>>(),
+    );
+    contribution
+        .shared_helpers
+        .extend(names.declarations.iter().cloned());
     let mut serializable_classes = library
         .classes
         .iter()
@@ -86,30 +97,32 @@ pub(crate) fn emit_library(
 
     // Generate class-specific code.
     for class in &library.classes {
+        let names = names.names_for(class);
         if wants_serialize(class) {
             let helper_class_name = sealed_base_by_variant
                 .get(class.name.as_str())
                 .copied()
                 .unwrap_or(class.name.as_str());
-            contribution.push_mixin_interface(&class.name, "Serializable");
-            for member in emit_serialize_mixin_members(helper_class_name) {
+            contribution.push_mixin_interface(&class.name, names.reference("Serializable"));
+            for member in emit_serialize_mixin_members(class, helper_class_name, names) {
                 contribution.push_mixin_member(&class.name, member);
             }
             if is_sealed_serde_class(class) {
                 if let Some(helper) = emit_sealed_to_json_helper(class, &serializable_classes) {
                     contribution
                         .support_types
-                        .push(emit_serializer_support_type(&class.name));
+                        .push(emit_serializer_support_type(class, names));
                     contribution.top_level_functions.push(helper);
                 }
             } else {
                 contribution
                     .support_types
-                    .push(emit_serializer_support_type(&class.name));
+                    .push(emit_serializer_support_type(class, names));
                 contribution.top_level_functions.push(emit_to_json_helper(
                     class,
                     &serializable_classes,
                     serializable_enums,
+                    names,
                 ));
             }
         }
@@ -121,7 +134,7 @@ pub(crate) fn emit_library(
                     emitted_helper = true;
                 }
             } else if let Some(helper) =
-                emit_from_json_helper(class, &deserializable_classes, deserializable_enums)
+                emit_from_json_helper(class, &deserializable_classes, deserializable_enums, names)
             {
                 contribution.top_level_functions.push(helper);
                 emitted_helper = true;
@@ -129,7 +142,7 @@ pub(crate) fn emit_library(
             if emitted_helper {
                 contribution
                     .support_types
-                    .push(emit_deserializer_support_type(&class.name));
+                    .push(emit_deserializer_support_type(class, names));
             }
         }
     }
@@ -144,14 +157,16 @@ pub(crate) fn emit_library(
     }
 
     for variant in &generated_variants {
+        let names = names.names_for(&variant.class);
         if variant.serializable {
             contribution
                 .support_types
-                .push(emit_serializer_support_type(&variant.class.name));
+                .push(emit_serializer_support_type(&variant.class, names));
             contribution.top_level_functions.push(emit_to_json_helper(
                 &variant.class,
                 &serializable_classes,
                 serializable_enums,
+                names,
             ));
         }
         if variant.deserializable {
@@ -159,12 +174,13 @@ pub(crate) fn emit_library(
                 &variant.class,
                 &deserializable_classes,
                 deserializable_enums,
+                names,
             ) {
                 contribution.top_level_functions.push(helper);
             }
             contribution
                 .support_types
-                .push(emit_deserializer_support_type(&variant.class.name));
+                .push(emit_deserializer_support_type(&variant.class, names));
         }
     }
 

@@ -51,3 +51,22 @@ def generated_hashes(app: Path) -> dict[str, str]:
     if not result:
         raise ValueError("Dust produced no generated Dart files")
     return result
+
+
+def generated_library_coverage(report: Path, stems: tuple[str, ...]) -> dict[str, dict[str, int]]:
+    """Require each expected generated library once, nonempty and completely hit."""
+    result = {}
+    for record in report.read_text().split("end_of_record"):
+        lines = record.splitlines()
+        names = [stem for stem in stems if any(
+            line.startswith("SF:") and line.endswith(f"/{stem}.g.dart") for line in lines)]
+        if not names:
+            continue
+        name, = names
+        hits = [int(line.split(",")[1]) for line in lines if line.startswith("DA:")]
+        if name in result or not hits or any(hit <= 0 for hit in hits):
+            raise ValueError(f"Incomplete or duplicate generated coverage: {name}")
+        result[name] = {"hit": len(hits), "found": len(hits)}
+    if set(result) != set(stems):
+        raise ValueError("Missing generated library coverage")
+    return result

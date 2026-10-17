@@ -155,15 +155,42 @@ a custom codec. Dust validates JSON capability for types declared in the
 current workspace; external package types are checked later by the Dart
 analyzer.
 
-In the generic-model development branch, a field using its class parameter
+## Generic Models (Development Branch)
+
+Ordinary generic models retain their chosen arguments and bounds in generated
+helpers, mixins and directional codec classes. Keep the mixin applied to the
+model's parameters, and forward the factory to a typed helper:
+
+```dart
+@Derive([Serialize(), Deserialize()])
+class Label<T extends num> with _$Label<T> {
+  const Label(this.text);
+
+  factory Label.fromJson(Map<String, Object?> json) => _$LabelFromJson<T>(json);
+
+  final String text;
+}
+
+final Label<int> label = Label<int>.fromJson({'text': 'ready'});
+const serializer = $LabelSerializer<int>();
+const deserializer = $LabelDeserializer<int>();
+final Label<int> decoded = deserializer.deserialize(serializer.serialize(label));
+```
+
+The concrete `String` field needs no conversion for `T`. A field using its class parameter
 (for example `T` or `List<T?>`) requires explicit `@SerDe(using: ...)` mapping.
 Skipped directions do not need parameter conversion; deserialization defaults
 still apply. Bounds do not imply a JSON conversion. A parameter named `DateTime`, `List` or
 another SDK type is still a parameter, not that SDK type; Dust reports the field
-instead of guessing its conversion. This capability check is not complete
-generic SerDe support: typed helper emission remains open in
-[#128](https://github.com/dustcodegen/dust/issues/128). Do not use generic SerDe
-models in production yet; see the [generic-model design](../design/generic-models.md).
+instead of guessing its conversion. No generic decoder-callback API is added.
+
+This is unreleased, scoped support under
+[#128](https://github.com/dustcodegen/dust/issues/128), not general generic-model
+readiness. Applied inheritance and generic sealed redirects remain open in
+[#133](https://github.com/dustcodegen/dust/issues/133) and
+[#134](https://github.com/dustcodegen/dust/issues/134). Do not use those shapes in
+production yet. See the [generic-model design](../design/generic-models.md) and
+the [executable fixtures](../../fixtures/generic_serde).
 
 ## Enums
 

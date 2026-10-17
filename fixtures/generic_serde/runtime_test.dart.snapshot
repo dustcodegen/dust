@@ -1,0 +1,297 @@
+import 'package:dust_dart/serde.dart';
+import 'package:serde_probe/serde_basic.dart';
+import 'package:serde_probe/serde_scope.dart';
+import 'package:serde_probe/serde_values.dart';
+import 'package:test/test.dart';
+
+typedef _Scoped =
+    Captured<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+typedef _ScopedEncoder =
+    $CapturedSerializer<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+typedef _ScopedDecoder =
+    $CapturedDeserializer<
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int,
+      int
+    >;
+typedef _Collection = Collection<int, int, int, int, int, int>;
+typedef _CollectionEncoder =
+    $CollectionSerializer<int, int, int, int, int, int>;
+typedef _CollectionDecoder =
+    $CollectionDeserializer<int, int, int, int, int, int>;
+
+Phantom<int> _inferPhantom(Map<String, Object?> json) => Phantom.fromJson(json);
+
+void main() {
+  group('typed generic JSON helpers', () {
+    test('phantom argument survives factories, aliases and public codecs', () {
+      const input = Phantom<int>('label');
+      const expected = {'label': 'label'};
+      expect(input.serialize(), expected);
+      expect(input.toJson(), expected);
+      expect(input.aliasJson(), expected);
+      const Serializer<Phantom<int>, Map<String, Object?>> encoder =
+          $PhantomSerializer();
+      const Deserializer<Phantom<int>, Map<String, Object?>> decoder =
+          $PhantomDeserializer();
+      expect(encoder.serialize(input), expected);
+      final inferred = _inferPhantom(expected);
+      for (final output in [
+        inferred,
+        Phantom<int>.fromJson(expected),
+        Phantom<int>.alias(expected),
+        decoder.deserialize(expected),
+        const $PhantomDeserializer<int>().deserialize(expected),
+      ]) {
+        expect(output, isA<Phantom<int>>());
+        expect(output, isNot(isA<Phantom<double>>()));
+        expect(output.label, 'label');
+      }
+      expect(const $PhantomSerializer<int>().serialize(input), expected);
+    });
+
+    test(
+      'dependent and recursive bounds retain a private constructor target',
+      () {
+        final value = Bounded<int, List<int>, String>.fromJson({'amount': 7});
+        expect(value.amount, 7);
+        expect(value, isA<Bounded<int, List<int>, String>>());
+        expect(value.serialize(), {'amount': 7});
+        expect(value.toJson(), {'amount': 7});
+        expect(value.aliasJson(), {'amount': 7});
+        expect(Bounded<int, List<int>, String>.alias({'amount': 8}).amount, 8);
+        expect(
+          const $BoundedSerializer<int, List<int>, String>().serialize(value),
+          {'amount': 7},
+        );
+        expect(
+          const $BoundedDeserializer<int, List<int>, String>().deserialize({
+            'amount': 9,
+          }).amount,
+          9,
+        );
+      },
+    );
+
+    test('empty models retain nullable and Null phantom arguments', () {
+      const value = Empty<int?>();
+      expect(value.serialize(), isEmpty);
+      expect(value.toJson(), isEmpty);
+      expect(value.aliasJson(), isEmpty);
+      expect(Empty<int?>.fromJson({}), isA<Empty<int?>>());
+      expect(Empty<Null>.alias({}), isA<Empty<Null>>());
+      expect(const $EmptySerializer<int?>().serialize(value), isEmpty);
+      expect(
+        const $EmptyDeserializer<int?>().deserialize({}),
+        isA<Empty<int?>>(),
+      );
+    });
+
+    test(
+      'concrete scalars, nested collections, alias keys and defaults execute',
+      () {
+        final date = DateTime.utc(2020);
+        final value = Values<int>(
+          date,
+          {1, 2},
+          {
+            'a': [3, 4],
+          },
+          1.25,
+          'any',
+          flag: true,
+        );
+        final expected = <String, Object?>{
+          'date': date.toIso8601String(),
+          'numbers': [1, 2],
+          'nested': {
+            'a': [3, 4],
+          },
+          'total': 1.25,
+          'flag': true,
+          'enabled': true,
+          'any': 'any',
+        };
+        expect(value.serialize(), expected);
+        expect(value.toJson(), expected);
+        expect(value.aliasJson(), expected);
+        expect(const $ValuesSerializer<int>().serialize(value), expected);
+        for (final decoded in [
+          Values<int>.fromJson(expected),
+          Values<int>.alias(expected),
+          const $ValuesDeserializer<int>().deserialize(expected),
+        ]) {
+          expect(decoded, isA<Values<int>>());
+          expect(decoded.date, date);
+          expect(decoded.numbers, {1, 2});
+          expect(decoded.nested, {
+            'a': [3, 4],
+          });
+          expect(decoded.total, 1.25);
+          expect(decoded.flag, isTrue);
+          expect(decoded.enabled, isTrue);
+          expect(decoded.any, 'any');
+        }
+        final alias = Map<String, Object?>.from(expected)
+          ..remove('date')
+          ..remove('flag')
+          ..remove('enabled');
+        alias['legacyDate'] = date.toIso8601String();
+        expect(Values<int>.fromJson(alias).date, date);
+        expect(Values<int>.fromJson(alias).flag, isFalse);
+        expect(Values<int>.fromJson(alias).enabled, isTrue);
+        alias['legacyEnabled'] = false;
+        expect(Values<int>.fromJson(alias).enabled, isFalse);
+        alias.remove('legacyDate');
+        expect(Values<int>.fromJson(alias).date, isNull);
+        final absent = Values<int>(null, {}, {}, 0, null, flag: false);
+        final decoded = Values<int>.fromJson(absent.toJson());
+        expect(decoded.date, isNull);
+        expect(decoded.any, isNull);
+        expect(
+          () => Values<int>.fromJson({...expected, 'unknown': 1}),
+          throwsArgumentError,
+        );
+      },
+    );
+
+    test(
+      'concrete custom codecs keep nullable branches and global references',
+      () {
+        final date = DateTime.utc(2020);
+        for (final optional in [null, date]) {
+          final value = WithCodec<int>(date, optional);
+          final expected = <String, Object?>{
+            'date': date.millisecondsSinceEpoch,
+            'optional': optional?.millisecondsSinceEpoch,
+          };
+          expect(value.serialize(), expected);
+          expect(value.toJson(), expected);
+          expect(value.aliasJson(), expected);
+          expect(const $WithCodecSerializer<int>().serialize(value), expected);
+          for (final decoded in [
+            WithCodec<int>.fromJson(expected),
+            WithCodec<int>.alias(expected),
+            const $WithCodecDeserializer<int>().deserialize(expected),
+          ]) {
+            expect(decoded, isA<WithCodec<int>>());
+            expect(decoded.date, date);
+            expect(decoded.optional, optional);
+          }
+        }
+      },
+    );
+
+    test('core, runtime and generated local references escape capture', () {
+      expect(reservedNameProof(1), 1);
+      const value = _Scoped(7);
+      expect(value.serialize(), {'amount': 7});
+      expect(value.toJson(), {'amount': 7});
+      expect(value.aliasJson(), {'amount': 7});
+      expect(const _ScopedEncoder().serialize(value), {'amount': 7});
+      for (final decoded in [
+        _Scoped.fromJson({'amount': 7}),
+        _Scoped.alias({'old': 7}),
+        const _ScopedDecoder().deserialize({'amount': 7}),
+      ]) {
+        expect(decoded, isA<_Scoped>());
+        expect(decoded.amount, 7);
+      }
+      expect(_Scoped.fromJson({}).amount, 0);
+      expect(() => _Scoped.fromJson({'unknown': 1}), throwsArgumentError);
+    });
+
+    test('collection callbacks and MapEntry retain core meanings', () {
+      const value = _Collection({
+        'a': [1, 2],
+      });
+      const expected = {
+        'entries': {
+          'a': [1, 2],
+        },
+      };
+      expect(value.serialize(), expected);
+      expect(value.toJson(), expected);
+      expect(value.aliasJson(), expected);
+      expect(const _CollectionEncoder().serialize(value), expected);
+      for (final decoded in [
+        _Collection.fromJson(expected),
+        _Collection.alias(expected),
+        const _CollectionDecoder().deserialize(expected),
+      ]) {
+        expect(decoded, isA<_Collection>());
+        expect(decoded.entries, {
+          'a': [1, 2],
+        });
+      }
+    });
+
+    test(
+      'a parameter named num cannot capture a concrete double conversion',
+      () {
+        const value = Decimal<int>(1.25);
+        expect(value.serialize(), {'amount': 1.25});
+        expect(value.toJson(), {'amount': 1.25});
+        expect(value.aliasJson(), {'amount': 1.25});
+        expect(const $DecimalSerializer<int>().serialize(value), {
+          'amount': 1.25,
+        });
+        for (final decoded in [
+          Decimal<int>.fromJson({'amount': 1.25}),
+          Decimal<int>.alias({'amount': 1.25}),
+          const $DecimalDeserializer<int>().deserialize({'amount': 1.25}),
+        ]) {
+          expect(decoded, isA<Decimal<int>>());
+          expect(decoded.amount, 1.25);
+        }
+      },
+    );
+  });
+}

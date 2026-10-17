@@ -18,6 +18,8 @@ mod emit_support;
 mod emit_variant_class;
 /// How a use site reaches an enum's JSON helpers, in its library or another.
 mod enum_codecs;
+/// Scoped generated JSON references and local names.
+mod names;
 /// Plugin registration and Dust plugin implementation.
 mod plugin;
 /// Validates serde-compatible model shapes.

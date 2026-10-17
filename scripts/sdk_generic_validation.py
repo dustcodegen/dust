@@ -6,7 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from sdk_codegen_fixtures import generated_hashes
+from sdk_codegen_fixtures import generated_hashes, generated_library_coverage
 from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import require_only_name_infos
 from sdk_validation_types import check_validation_types
@@ -26,21 +26,7 @@ def require_validation_parity(rows: list[dict], primary: dict[str, dict]) -> Non
 
 def validation_coverage(report: Path) -> dict[str, dict[str, int]]:
     """Require each owned generated library, including its private helpers, to execute."""
-    result = {}
-    for record in report.read_text().split("end_of_record"):
-        lines = record.splitlines()
-        names = [stem for stem in STEMS if any(
-            line.startswith("SF:") and line.endswith(f"/{stem}.g.dart") for line in lines)]
-        if not names:
-            continue
-        name, = names
-        hits = [int(line.split(",")[1]) for line in lines if line.startswith("DA:")]
-        if name in result or not hits or any(hit <= 0 for hit in hits):
-            raise ValueError(f"Incomplete or duplicate generic validation coverage: {name}")
-        result[name] = {"hit": len(hits), "found": len(hits)}
-    if set(result) != set(STEMS):
-        raise ValueError("Missing generic validation generated coverage")
-    return result
+    return generated_library_coverage(report, STEMS)
 
 
 def check_generic_validation(run, dust: Path, dart: Path, app: Path, output: Path,

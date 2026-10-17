@@ -10,6 +10,8 @@ mod dart_names;
 mod generics;
 /// Dart literal escaping.
 mod literals;
+/// Collision-safe generated name allocation.
+mod names;
 /// Serde rename rules.
 mod rename;
 /// Dart source parsing re-exports.
@@ -31,6 +33,7 @@ pub use generics::{
     render_class_type, render_type_arguments, render_type_parameter, render_type_parameters,
 };
 pub use literals::{dart_string_literal, escape_dart_string};
+pub use names::{NameAllocator, library_declaration_names, library_reference_names};
 
 pub use source::{
     balanced_parenthesized, normalized_args, parse_bool_literal, parse_named_arguments,

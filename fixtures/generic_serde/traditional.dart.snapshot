@@ -1,0 +1,61 @@
+import 'package:dust_dart/serde.dart';
+
+part 'serde_basic.g.dart';
+
+/// JSON object used by this consumer.
+typedef Json = Map<String, Object?>;
+
+/// A concrete field must not erase a phantom argument.
+@Derive([Serialize(), Deserialize()])
+class Phantom<T extends num> with _$Phantom<T> {
+  /// Creates one JSON value.
+  const Phantom(this.label);
+
+  /// Decodes using the helper's inferred arguments.
+  factory Phantom.fromJson(Json json) => _$PhantomDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Phantom.alias(Json json) => _$PhantomFromJson<T>(json);
+
+  /// Concrete JSON label.
+  final String label;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$PhantomToJson<T>(this);
+}
+
+/// Dependent and recursive bounds retain a named construction target.
+@Derive([Serialize(), Deserialize()])
+class Bounded<A extends num, B extends List<A>, C extends Comparable<C>>
+    with _$Bounded<A, B, C> {
+  /// Creates one JSON value.
+  const Bounded._create(this.amount);
+
+  /// Decodes using the helper's inferred arguments.
+  factory Bounded.fromJson(Json json) => _$BoundedDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Bounded.alias(Json json) => _$BoundedFromJson<A, B, C>(json);
+
+  /// Concrete numeric value.
+  final int amount;
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$BoundedToJson<A, B, C>(this);
+}
+
+/// Empty JSON models still retain the chosen argument.
+@Derive([Serialize(), Deserialize()])
+class Empty<T> with _$Empty<T> {
+  /// Creates one JSON value.
+  const Empty();
+
+  /// Decodes using the helper's inferred arguments.
+  factory Empty.fromJson(Json json) => _$EmptyDeserialize(json);
+
+  /// Decodes through the explicitly typed alias.
+  factory Empty.alias(Json json) => _$EmptyFromJson<T>(json);
+
+  /// Encodes through the explicitly typed alias.
+  Json aliasJson() => _$EmptyToJson<T>(this);
+}

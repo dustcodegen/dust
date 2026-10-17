@@ -20,6 +20,8 @@ from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
 from sdk_generic_names import check_generic_names
 from sdk_generic_validation import check_generic_validation, require_validation_parity
+from sdk_generic_serde import check_generic_serde, require_serde_parity
+from sdk_unsupported import check_unsupported
 from sdk_static_strings import check_static_strings
 
 
@@ -137,9 +139,11 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         strings = check_static_strings(run, dart, app, output / role / "static-strings", env)
         validation = check_generic_validation(run, dust, dart, app, output / role / "generic-validation",
                                              output / role / "dart/analysis_options.yaml", "product_showcase", env)
+        serde = check_generic_serde(run, dust, dart, app, output / role / "generic-serde",
+                                   output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
                      "generated": hashes, "genericNegative": negatives, "genericNames": names,
-                     "staticStrings": strings, "genericValidation": validation})
+                     "staticStrings": strings, "genericValidation": validation, "genericSerde": serde})
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
@@ -166,8 +170,10 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         validation = check_generic_validation(run, dust, flutter_dart, app, output / role / "flutter-validation",
                                              output / role / "flutter/analysis_options.yaml", "dust_benchmark_project", env,
                                              flutter=flutter)
+        serde = check_generic_serde(run, dust, flutter_dart, app, output / role / "flutter-serde",
+                                   output / role / "flutter/analysis_options.yaml", "dust_benchmark_project", env, flutter=flutter)
         rows.append({"role": role, "target": "flutter", "sdk": metadata, "generated": hashes,
-                     "genericValidation": validation})
+                     "genericValidation": validation, "genericSerde": serde})
 
     require_deterministic_generation(rows)
     primary = {
@@ -178,6 +184,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
     validation = {target: json.loads((output / f"primary-{target}-validation/results.json").read_text())
                   for target in ("dart", "flutter")}
     require_validation_parity(rows, validation)
+    serde = {target: json.loads((output / f"primary-{target}-serde/results.json").read_text()) for target in ("dart", "flutter")}
+    require_serde_parity(rows, serde)
     proof = {
         "sourceCommit": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
         "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
@@ -185,6 +193,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         "rows": rows, "primary": primary, "unsupported": negatives,
         "primaryGenericNames": json.loads((output / "primary-generic-names/results.json").read_text()),
         "primaryGenericValidation": validation,
+        "primaryGenericSerde": serde,
     }
     (output / "proof.json").write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
     print(f"SDK compatibility gate passed; evidence: {output}", flush=True)
@@ -240,41 +249,10 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
                              output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
                              "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env,
                              primary=True, flutter=flutter)
+    check_generic_serde(run, dust, dart, app, output / f"primary-{'flutter' if flutter else 'dart'}-serde",
+                        output / ("primary-flutter" if flutter else "primary") / "analysis_options.yaml",
+                        "primary_flutter_consumer" if flutter else "primary_sdk_consumer", env, primary=True, flutter=flutter)
     return hashes
-
-
-def check_unsupported(run, dust: Path, dart: Path, output: Path) -> list[str]:
-    """The latest SDK must accept each sample before Dust's rejection is counted."""
-    app = output / "unsupported"
-    (app / "lib").mkdir(parents=True)
-    shutil.copy2(ROOT / "analysis_options.yaml", app / "analysis_options.yaml")
-    (app / "pubspec.yaml").write_text(json.dumps({
-        "name": "dust_unsupported_syntax_probe", "publish_to": "none",
-        "environment": {"sdk": ">=3.13.0 <4.0.0"},
-        "dependencies": {"dust_dart": {"path": str(ROOT / "packages/dust_dart")}},
-        "dev_dependencies": {"very_good_analysis": "10.3.0"},
-    }) + "\n", encoding="utf-8")
-    run([str(dart), "pub", "get"], app)
-    sources = {
-        "named-concise": """class Probe {
-  /// Creates a probe.
-  const new create(this.name);
-  /// Name.
-  final String name;
-}
-""",
-    }
-    for name, declaration in sources.items():
-        (app / "lib/probe.dart").write_text(
-            "import 'package:dust_dart/derive.dart';\n\n/// Unsupported syntax probe.\n@Derive([ToString()])\n" + declaration.rstrip() + "\n",
-            encoding="utf-8",
-        )
-        run([str(dart), "analyze", "--fatal-infos", "lib/probe.dart"], app)
-        for command in ("build", "check"):
-            result = run([str(dust), command, "--root", str(app)], expected=1)
-            if "Dust does not support concise constructors yet" not in result.stderr or (app / "lib/probe.g.dart").exists():
-                raise ValueError(f"{name}: missing parser failure or unexpected generated output")
-    return list(sources)
 
 
 def main() -> None:
