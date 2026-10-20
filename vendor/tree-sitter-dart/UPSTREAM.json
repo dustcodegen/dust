@@ -1,11 +1,11 @@
 {
   "repository": "https://github.com/UserNobody14/tree-sitter-dart",
-  "revision": "3f0c7a8309d89927e7cc6bef39569c815fddb2e5",
+  "revision": "acfb453395e25cf6a1018e064df3c92e68e38782",
   "abi": 15,
   "files": {
     "LICENSE": "d270cb3a4985d75033bd77d875ccebff1d66e32788a3f727891e28d76132dd46",
-    "grammar.js": "b87834b9b3c6f073002270231b37bd52d08587cbf00bbe6192df2fe315932375",
-    "src/parser.c": "cca7aee98b5d316c4c9cf2ce7f75ca2de570261e4e793d9f4d42d0de637d493c",
+    "grammar.js": "16b0d96429637ebd4419b4d6333285cb642e72435b7943b6cd365c3f725e7e34",
+    "src/parser.c": "0a97d072639c9e6a36f9673cb8edb956314cfbfafa60012f08d351eb2cd56ea2",
     "src/scanner.c": "07a7b7818b175e9460523e705dd88d20f7b5141bac95c593d4426e6d52284996",
     "src/node-types.json": "9e351626d3a185b95ccdf58fb9e94967e8e97075ff62295269ba4208f51c7600",
     "src/tree_sitter/alloc.h": "b29c1c9fb7cc82f58c84b376df1297d6e2737a1d655fd356db0859e3c29c2fea",

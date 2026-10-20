@@ -99,6 +99,9 @@ fn generic_constructor_receivers_are_not_dot_shorthands() {
         "void run() { List<int>.from(values); Future<void>.value(); }",
         "void run() { final values = List<int>.from(items); return Future<void>.value(); }",
         "void run() { final values = Map<String, List<int>>.from(items); }",
+        "// @dart=3.6\nvoid run(bool enabled) { use(enabled ? Map<String, String>.of(migrations) : const {}); }",
+        "// @dart=3.13\nvoid run() { final config = {'pragmas': Map<String, Object>.of(options.pragmas)}; }",
+        "// @dart=3.13\nFuture<Map<String, String>> load() async => Map<String, String>.unmodifiable(messages);",
         include_str!(
             "../../../../examples/shopping_app/lib/features/cart/view_models/cart_view_model.dart"
         ),
@@ -116,9 +119,9 @@ fn generic_constructor_receivers_are_not_dot_shorthands() {
 
 #[test]
 fn comparison_and_arithmetic_operands_are_still_guarded_as_dot_shorthands() {
-    let source = "class Value { const Value(); static const zero = Value(); bool operator >(Value other) => false; Value operator +(Value other) => this; } bool greater(Value value) => value > .zero; Value sum(Value value) => value + .zero;";
+    let source = "// @dart=3.13\nclass Value { const Value(); static const zero = Value(); bool operator >(Value other) => false; Value operator +(Value other) => this; } bool greater(Value value) => value > .zero; Value sum(Value value) => value + .zero; void accept(bool a, Object b) {} void compare(bool a, Value b, Value c) => accept(a < (b), c > .zero);";
     let result = parse(313, source);
-    assert_eq!(result.diagnostics.len(), 2, "{:?}", result.diagnostics);
+    assert_eq!(result.diagnostics.len(), 3, "{:?}", result.diagnostics);
     for diagnostic in result.diagnostics {
         assert_eq!(
             diagnostic.message,
