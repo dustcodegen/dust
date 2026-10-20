@@ -1,8 +1,10 @@
-# Primary constructors: development status
+# Primary constructors
 
-Work in progress under [#76](https://github.com/dustcodegen/dust/issues/76),
-not a published Dust feature. Do not migrate production models on the strength
-of grammar acceptance alone. Versions and runtime SDK floors are unchanged.
+The current Dust source supports class-header primary constructors under
+[#76](https://github.com/dustcodegen/dust/issues/76). This support is not in the
+published 0.2.1 binaries or packages: build the CLI from this checkout and use
+the matching source packages together. Versions and runtime SDK floors remain
+unchanged, and traditional declarations remain fully supported.
 
 Dart primary constructors require language version 3.13 or newer. The class
 header declares the constructor; `final` or `var` parameters induce fields:
@@ -69,11 +71,13 @@ part 'account_row.g.dart';
 class const AccountRow(final String name, final String? note);
 ```
 
-These are scoped tests, not proof of every primary-constructor form. Inferred
-declaring-parameter types, generic/inherited field combinations and full
-acceptance checks still need complete validation.
+These executable checks define the supported source boundary. They cover typed
+declaring parameters, generic and inherited fields, constructor defaults,
+private names, callbacks and the Dust features listed above. They do not claim
+support for every Dart declaration form; syntax outside this documented surface
+must continue to fail clearly instead of generating incomplete code.
 
-Remaining gaps in this draft:
+Separate unsupported forms and limits:
 
 - Named mixin applications (`class Alias = Base with Mix;`) retain declaration
   identity for annotation ownership, but Dust generation for those classes
@@ -90,18 +94,16 @@ Remaining gaps in this draft:
   fail clearly. See the [approved contract](../design/function-formal-types.md)
   and [executable fixtures](../../fixtures/primary_callback_formals/README.md).
 - [Generic class generation (#93)](https://github.com/dustcodegen/dust/issues/93)
-  now has scoped executable typed-copy checks for traditional and primary
-  classes using `with _$Box<T>`. These cover bounds, nullable arguments,
-  nested helpers, equality/debug output and typed imported replacements.
-  Core-name/local collisions have separate traditional/primary executable
-  probes. The [approved design](../design/generic-models.md) still requires
-  generated-member collisions (#103) and integration capability checks. Scoped
-  generic validation tests now cover typed helpers, nested errors, effective
-  nullability and Flutter form validators. These do not establish all generic derives.
+  is supported for the capabilities exercised by the traditional and primary
+  consumers using `with _$Box<T>`. These cover bounds, nullable arguments,
+  nested helpers, equality/debug output, validation, SerDe, inheritance, sealed
+  models and typed imported replacements. Names that collide with generated
+  members such as `copyWith` remain tracked separately in
+  [#103](https://github.com/dustcodegen/dust/issues/103); this is not a claim
+  that every generic derive combination is supported.
 
-For these cases, a successful `dust build` does not establish that the generated
-Dart compiles. Do not use the draft feature as production-readiness evidence.
-
-Keep verified traditional declarations for production until the issue's full
-acceptance gates pass. Named concise `new` constructors and dot shorthands remain separate
-unsupported features and fail clearly.
+Named concise `new` constructors and dot shorthands remain separate unsupported
+features and fail clearly. Named mixin applications remain unsupported generation
+targets. The published 0.2.1 release still requires traditional declarations;
+primary-constructor projects must use a source-built CLI and matching source
+packages until a later coordinated release.

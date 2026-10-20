@@ -195,24 +195,33 @@ Keep the source commit clean when collecting final review evidence.
 
 ## Recorded local execution
 
-On macOS arm64, 2026-10-15, refreshed stable metadata selected Dart 3.13.5 and
-Flutter 3.47.7. All four rows passed fresh generation/check and fatal-info
-analysis, with no new skips:
+On macOS arm64, 2026-10-20, refreshed stable metadata selected standalone Dart
+3.13.6 and Flutter 3.47.7 / Dart 3.13.5. At clean source commit `515d241b`, all
+four traditional rows passed fresh generation/check, fatal-info analysis and
+tests with no new skips:
 
 | Target | SDK | Consumer tests | Generated files |
 | --- | --- | --- | --- |
-| Minimum Dart | 3.6.0 | Showcase: 49 passed, one existing skip | 27 |
+| Minimum Dart | 3.6.0 | Showcase: all passed, one existing online skip | 30 |
 | Minimum compatible Flutter | 3.29.0 / Dart 3.7.0 | Benchmark: 23 passed | 76 |
-| Latest stable Dart | 3.13.5 | Showcase: 49 passed, one existing skip | 27 |
+| Latest stable Dart | 3.13.6 | Showcase: all passed, one existing online skip | 30 |
 | Latest stable Flutter | 3.47.7 / Dart 3.13.5 | Benchmark: 23 passed | 76 |
 
-Generated hashes matched across both ends for each consumer. In that recorded
-pre-primary-support run, both unsupported
-syntax samples passed latest Dart analysis; all four Dust build/check commands
-then failed with parser errors and no generated output, as required. The shared
-SQLite staging helper also passed its existing Dart 3.10.0 and 3.13.5 consumer
-analysis/tests/JIT/relocated-AOT gates; latest shopping analysis/80 tests passed.
-These are source-consumer/host results, not device or platform certification.
+Generated hashes matched across both ends for each traditional consumer. The
+Dart 3.13.6 primary consumer recreated seven generated files and passed normal
+build/check, online and offline DB validation, formatting, fatal-info analysis
+and all runtime tests. The Flutter 3.47.7 primary consumer recreated seven
+generated files and passed build/check, formatting, fatal-info analysis and all
+route, state and widget tests. Generic validation, SerDe, inheritance, sealed,
+callback, lexical-scope and name-collision probes reported complete generated
+executable-line coverage on their exercised files. The valid named concise
+`new` sample passed Dart analysis but Dust build/check rejected it with the
+specific unsupported-feature diagnostic and no generated output, as required.
+
+The shared SQLite staging helper also passed its existing Dart 3.10.0 and
+latest consumer analysis/tests/JIT/relocated-AOT gates; latest Shopping analysis
+and 80 tests passed. These are source-consumer/host results, not device or
+platform certification.
 
 ## Ordinary local gates
 
