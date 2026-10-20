@@ -74,6 +74,23 @@ class SdkCompatibilityTests(unittest.TestCase):
         manifest = (ROOT / "examples/benchmark_project/pubspec.yaml").read_text()
         self.assertIn("\n  test: ^1.25.15\n", manifest)
 
+    def test_flutter_gates_rebuild_shopping_database_offline_after_clean(self) -> None:
+        expected = [
+            "cargo run --quiet -p dust_cli -- build --clean --root examples/benchmark_project",
+            "cargo run --quiet -p dust_cli -- check --root examples/benchmark_project",
+            "cargo run --quiet -p dust_cli -- build --clean --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- db build --offline --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- check --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- check --db --offline --root examples/shopping_app",
+        ]
+        for script in ("lint.sh", "test.sh"):
+            commands = [
+                line.strip()
+                for line in (ROOT / "scripts/flutter" / script).read_text().splitlines()
+                if line.strip().startswith("cargo run")
+            ]
+            self.assertEqual(commands, expected, script)
+
     def test_latest_analysis_stays_identical_and_enabled_rules_are_not_removed(self) -> None:
         original = (ROOT / "analysis_options.yaml").read_text()
         with tempfile.TemporaryDirectory() as name:

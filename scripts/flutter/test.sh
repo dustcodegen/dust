@@ -34,12 +34,12 @@ if [[ "${1:-}" == "--examples" ]]; then
   cargo run --quiet -p dust_cli -- check --root examples/benchmark_project
   echo "==> Dust build --clean: examples/shopping_app"
   cargo run --quiet -p dust_cli -- build --clean --root examples/shopping_app
+  echo "==> Dust db build --offline: examples/shopping_app"
+  cargo run --quiet -p dust_cli -- db build --offline --root examples/shopping_app
   echo "==> Dust check: examples/shopping_app"
   cargo run --quiet -p dust_cli -- check --root examples/shopping_app
-  echo "==> Dust build: examples/shopping_app --db"
-  cargo run --quiet -p dust_cli -- build --root examples/shopping_app --db
-  echo "==> Dust check: examples/shopping_app --db"
-  cargo run --quiet -p dust_cli -- check --root examples/shopping_app --db
+  echo "==> Dust check --db --offline: examples/shopping_app"
+  cargo run --quiet -p dust_cli -- check --db --offline --root examples/shopping_app
 fi
 
 for target in "${TARGETS[@]}"; do
