@@ -14,6 +14,7 @@ fn changed_tool_hash_rebuilds_cached_output_without_changing_generated_bytes() {
     );
     let build = || {
         run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
             cwd: root.to_path_buf(),
             fail_fast: true,
             jobs: None,
