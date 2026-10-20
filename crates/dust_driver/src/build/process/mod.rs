@@ -4,13 +4,15 @@ mod execute;
 mod output;
 /// Workspace analysis scan for pending libraries.
 mod scan;
+/// End-to-end resolver/lowering binding regressions with explicit source graphs.
+#[cfg(test)]
+mod tests_namespace;
 
 use std::sync::Arc;
 
-use dust_dart_syntax::DartLanguageVersion;
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_parser_dart::{ParseOptions, ParsedDartFileSurface};
+use dust_parser_dart::ParsedDartFileSurface;
 use dust_plugin_api::{LibraryAnalysisSnapshot, WorkspaceAnalysis};
 use dust_text::FileId;
 use dust_workspace::SourceLibrary;
@@ -18,19 +20,20 @@ use dust_workspace::SourceLibrary;
 use crate::result::{BuildArtifact, DiagnosticFile};
 
 pub(crate) use self::{
-    execute::process_pending_library, output::emit_or_write_library,
-    scan::collect_workspace_analysis,
+    execute::process_pending_library,
+    output::emit_or_write_library,
+    scan::{collect_remaining_workspace_analysis, collect_workspace_analysis},
 };
 
 /// Immutable processing inputs shared by per-library workers.
 #[derive(Clone)]
 pub(crate) struct ProcessingConfig<'a> {
+    /// Original parser facts and scoped bindings from the same source snapshot.
+    pub(crate) namespaces: &'a crate::namespace_sources::NamespaceSources,
     /// Root of the Dart package being generated.
     pub(crate) package_root: &'a std::path::Path,
     /// Dart package name.
     pub(crate) package_name: &'a str,
-    /// Workspace-level Dart language version for files without `// @dart`.
-    pub(crate) dart_language_version: DartLanguageVersion,
     /// Resolver catalog built from plugin symbol ownership.
     pub(crate) catalog: &'a dust_resolver::SymbolCatalog,
     /// Active plugin registry used for validation and emission.
@@ -63,14 +66,6 @@ pub(crate) struct LoweringConfig<'a> {
     pub(crate) registry: &'a dust_plugin_api::PluginRegistry,
 }
 
-/// Builds parser options for one source file.
-pub(crate) fn parse_options(dart_language_version: DartLanguageVersion) -> ParseOptions {
-    ParseOptions {
-        language_version: dart_language_version,
-        ..ParseOptions::default()
-    }
-}
-
 /// Result of processing one source library through Dust code generation.
 pub(crate) struct BuildOutcome {
     /// Diagnostics produced while processing the library.
@@ -88,7 +83,7 @@ pub(crate) struct BuildOutcome {
 }
 
 impl BuildOutcome {
-    /// Builds a failed outcome that should invalidate the library cache entry.
+    /// Builds a failed outcome that cannot replace the last successful cache entry.
     pub(crate) fn failed(
         library: &SourceLibrary,
         diagnostics: Vec<Diagnostic>,

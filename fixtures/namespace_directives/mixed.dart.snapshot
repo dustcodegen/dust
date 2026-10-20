@@ -1,0 +1,11 @@
+// 🌿 Keep every span in UTF-8 bytes.
+import 'base.dart'
+  if (dart.library.io) 'io.dart'
+  if (environment.feature /* condition */ == 'yes') r'web.dart'
+  as platform show GET, POST /* between clauses */ show /* repeated */ GET hide POST;
+export r'exports.dart'
+  if (dart.library.html) 'web_export.dart'
+  show /* export */ Public hide Private show Public, Extra;
+import 'shared.dart' as platform hide Internal;
+import 'deferred.dart' deferred as lazy show Deferred;
+part 'members.dart';

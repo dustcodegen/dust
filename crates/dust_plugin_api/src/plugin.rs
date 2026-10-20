@@ -1,7 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
+use std::path::Path;
 
-use crate::{PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder};
+use crate::{AnnotationOrigin, PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder};
 
 /// Context available while generating plugin output.
 #[derive(Debug, Clone, Copy)]
@@ -25,9 +26,24 @@ pub trait DustPlugin: Send + Sync {
         &[]
     }
 
+    /// Identifies actual Dart declarations for this plugin's claimed symbols.
+    ///
+    /// Omitting metadata preserves unknown provenance, not a foreign binding.
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        &[]
+    }
+
     /// Returns config symbols that do not require the source library to declare a generated part.
     fn partless_configs(&self) -> &'static [&'static str] {
         &[]
+    }
+
+    /// Plans standalone library paths without reading or generating their contents.
+    ///
+    /// `source` is an absolute handwritten source path. Each claim still requires
+    /// a class annotation bound to its canonical producer before use.
+    fn potential_generated_libraries(&self, _source: &Path) -> Vec<crate::GeneratedLibrary> {
+        Vec::new()
     }
 
     /// Returns the surface-level annotation names this plugin handles.

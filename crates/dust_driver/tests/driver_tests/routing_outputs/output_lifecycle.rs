@@ -15,6 +15,7 @@ fn build_writes_route_output_only_from_router_root() {
     write_routing_workspace(workspace.path(), "dashboard");
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -49,12 +50,14 @@ fn build_refreshes_router_output_when_annotated_page_changes() {
     write_routing_workspace(workspace.path(), "dashboard");
 
     let first = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
         db: Default::default(),
     });
     let second = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -63,6 +66,7 @@ fn build_refreshes_router_output_when_annotated_page_changes() {
     let second_source = read_route_outputs(workspace.path());
     write_dashboard_page(workspace.path(), "home");
     let third = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -85,18 +89,21 @@ fn check_reports_stale_route_output_before_build_and_fresh_after_build() {
     write_routing_workspace(workspace.path(), "dashboard");
 
     let before = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
         db: Default::default(),
     });
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
         db: Default::default(),
     });
     let after = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -124,6 +131,7 @@ fn clean_removes_route_output_only_from_router_root() {
     let workspace = make_workspace();
     write_routing_workspace(workspace.path(), "dashboard");
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -170,6 +178,7 @@ fn watch_rebuilds_route_output_when_annotated_page_changes() {
         }
     });
     let result = run_watch(WatchRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&root)),
         cwd: root.clone(),
         fail_fast: true,
         jobs: None,
@@ -191,6 +200,7 @@ fn route_generation_works_from_pub_workspace_member() {
     write_routing_workspace(&package_root, "dashboard");
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(&package_root)),
         cwd: package_root.clone(),
         fail_fast: true,
         jobs: None,

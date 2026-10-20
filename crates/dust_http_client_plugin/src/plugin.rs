@@ -1,8 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
-    AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution, SymbolPlan,
-    WorkspaceAnalysisBuilder,
+    AnnotationOrigin, AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution,
+    SymbolPlan, WorkspaceAnalysisBuilder,
 };
 use dust_workspace::generated_test_output_path;
 
@@ -32,6 +32,9 @@ use self::validate::{JsonCapabilityContext, collect_workspace_analysis_ir, valid
 /// Dust plugin for generating Dio-backed HTTP clients.
 pub struct HttpClientPlugin;
 
+/// HTTP Query is not the separate SQL Query declared in DB annotations.
+const ANNOTATION_LIBRARY: &str = "package:dust_dart/src/http/http_client_annotations.dart";
+
 impl HttpClientPlugin {
     /// Creates a new instance of the plugin.
     pub fn new() -> Self {
@@ -57,6 +60,38 @@ impl DustPlugin for HttpClientPlugin {
 
     fn claimed_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[
+                AnnotationOrigin::new("dust_dart::HttpClient", ANNOTATION_LIBRARY, "HttpClient"),
+                AnnotationOrigin::new("dust_dart::GET", ANNOTATION_LIBRARY, "GET"),
+                AnnotationOrigin::new("dust_dart::POST", ANNOTATION_LIBRARY, "POST"),
+                AnnotationOrigin::new("dust_dart::PUT", ANNOTATION_LIBRARY, "PUT"),
+                AnnotationOrigin::new("dust_dart::PATCH", ANNOTATION_LIBRARY, "PATCH"),
+                AnnotationOrigin::new("dust_dart::DELETE", ANNOTATION_LIBRARY, "DELETE"),
+                AnnotationOrigin::new("dust_dart::HEAD", ANNOTATION_LIBRARY, "HEAD"),
+                AnnotationOrigin::new("dust_dart::OPTIONS", ANNOTATION_LIBRARY, "OPTIONS"),
+                AnnotationOrigin::new("dust_dart::Path", ANNOTATION_LIBRARY, "Path"),
+                AnnotationOrigin::new("dust_dart::Query", ANNOTATION_LIBRARY, "Query"),
+                AnnotationOrigin::new("dust_dart::Queries", ANNOTATION_LIBRARY, "Queries"),
+                AnnotationOrigin::new("dust_dart::Header", ANNOTATION_LIBRARY, "Header"),
+                AnnotationOrigin::new("dust_dart::Headers", ANNOTATION_LIBRARY, "Headers"),
+                AnnotationOrigin::new("dust_dart::HeaderMap", ANNOTATION_LIBRARY, "HeaderMap"),
+                AnnotationOrigin::new("dust_dart::Body", ANNOTATION_LIBRARY, "Body"),
+                AnnotationOrigin::new("dust_dart::Field", ANNOTATION_LIBRARY, "Field"),
+                AnnotationOrigin::new("dust_dart::Part", ANNOTATION_LIBRARY, "Part"),
+                AnnotationOrigin::new("dust_dart::Extra", ANNOTATION_LIBRARY, "Extra"),
+                AnnotationOrigin::new(
+                    "dust_dart::FormUrlEncoded",
+                    ANNOTATION_LIBRARY,
+                    "FormUrlEncoded",
+                ),
+                AnnotationOrigin::new("dust_dart::MultiPart", ANNOTATION_LIBRARY, "MultiPart"),
+                AnnotationOrigin::new("dust_dart::HttpParse", ANNOTATION_LIBRARY, "HttpParse"),
+            ]
+        }
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {

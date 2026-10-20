@@ -14,6 +14,7 @@ fn normal_build_does_not_generate_sqlx_database_or_dao_output() {
     write_dao_workspace(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -73,6 +74,7 @@ fn db_build_writes_sqlx_dao_output() {
     write_split_pipeline_workspace(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -97,6 +99,7 @@ fn db_build_ignores_non_db_derive_members_in_query_collision_files() {
     write_http_query_collision_workspace(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -124,6 +127,7 @@ fn db_only_build_does_not_emit_derive_output() {
     write_db_workspace(workspace.path(), true);
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -146,6 +150,7 @@ fn normal_build_preserves_existing_database_output() {
     write_split_pipeline_workspace(workspace.path());
 
     let db_build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -155,6 +160,7 @@ fn normal_build_preserves_existing_database_output() {
         },
     });
     let normal_build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

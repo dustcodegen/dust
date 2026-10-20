@@ -1,0 +1,127 @@
+import 'dart:async';
+
+import 'package:dust_dart/derive.dart';
+import 'package:dust_dart/derive.dart' as d;
+
+part 'validation_shapes.g.dart';
+
+/// An alias may already be nullable without a written field question mark.
+typedef OptionalValue<T> = T?;
+
+/// The chosen argument determines whether an unbounded value can be null.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class ValueBox<T> with _$ValueBox<T> {
+  /// Creates a value.
+  const ValueBox(this.value);
+
+  /// Required generic value.
+  @Validate<Object?>(required: true)
+  final T value;
+}
+
+/// Nullable aliases retain their actual generic argument.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class AliasBox<T> with _$AliasBox<T> {
+  /// Creates an aliased value.
+  const AliasBox(this.value);
+
+  /// Required value through an alias.
+  @Validate<Object?>(required: true)
+  final OptionalValue<T> value;
+}
+
+/// A nested generic model retains ordinary validation dispatch.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Child<T> with _$Child<T> {
+  /// Creates a child.
+  const Child(this.value);
+
+  /// Required child value.
+  @Validate<Object?>(required: true)
+  final T? value;
+}
+
+/// Parent validation prefixes nested errors without erasing the child type.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Parent<T> with _$Parent<T> {
+  /// Creates a parent.
+  const Parent(this.child);
+
+  /// Optional validated child.
+  @Validate<Object?>(nested: true)
+  final Child<T>? child;
+}
+
+/// Helper declarations retain recursive and dependent bounds.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Bounded<T extends Comparable<T>, U extends T> with _$Bounded<T, U> {
+  /// Creates bounded values.
+  const Bounded(this.left, this.right);
+
+  /// Required recursively bounded value.
+  @Validate<Object?>(required: true)
+  final T? left;
+
+  /// Required dependent value.
+  @Validate<Object?>(required: true)
+  final U? right;
+}
+
+/// Function-local binders, records and FutureOr remain source-owned types.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Payload<T> with _$Payload<T> {
+  /// Creates a compound payload.
+  const Payload(this.future, this.pair, this.callback);
+
+  /// A future or value whose actual argument may be nullable.
+  @Validate<Object?>(required: true)
+  final FutureOr<T> future;
+
+  /// A required record.
+  @Validate<Object?>(required: true)
+  final (T, int)? pair;
+
+  /// A required generic function value.
+  @Validate<Object?>(required: true)
+  final T Function<S>(S)? callback;
+}
+
+/// Non-nullable outer containers retain generic element types.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Items<T> with _$Items<T> {
+  /// Creates a collection.
+  const Items(this.values);
+
+  /// At least two elements is required.
+  @Validate<Object?>(length: Length(min: 2))
+  final List<T> values;
+}
+
+/// Empty generic validators need neither a raw receiver nor unused helpers.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class Empty<T> with _$Empty<T> {
+  /// Creates an empty model.
+  const Empty();
+}
+
+/// Number of custom validator calls in this proof library.
+int customCalls = 0;
+
+/// Rejects a non-null forbidden value.
+ValidationError? rejectForbidden(Object value) {
+  customCalls++;
+  return value == 'forbidden'
+      ? const ValidationError(field: 'value', message: 'forbidden')
+      : null;
+}
+
+/// Nullable actual arguments skip custom callbacks when not required.
+@Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
+class CustomBox<T> with _$CustomBox<T> {
+  /// Creates a custom-validated value.
+  const CustomBox(this.value);
+
+  /// Non-null values are passed to the custom callback.
+  @Validate<Object>(custom: rejectForbidden)
+  final T value;
+}

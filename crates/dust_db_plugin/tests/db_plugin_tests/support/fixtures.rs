@@ -7,11 +7,14 @@ use super::ir::{config, field, method_param, named_param, result_type, span, tra
 
 pub(crate) fn row_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "UserProfile".to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: vec![
             field("id", TypeIr::int(), Vec::new()),
@@ -52,6 +55,7 @@ pub(crate) fn row_class() -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![
                 named_param("id", TypeIr::int(), false),
@@ -87,6 +91,7 @@ pub(crate) fn simple_user_row_class() -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![
                 named_param("id", TypeIr::int(), false),
@@ -100,11 +105,14 @@ pub(crate) fn simple_user_row_class() -> ClassIr {
 
 pub(crate) fn dao_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "UserDao".to_owned(),
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -112,12 +120,14 @@ pub(crate) fn dao_class() -> ClassIr {
             is_factory: true,
             redirected_target_source: Some("_$UserDao".to_owned()),
             redirected_target_name: Some("_$UserDao".to_owned()),
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "db".to_owned(),
                 ty: TypeIr::named("Executor"),
                 span: span(),
                 kind: ParamKind::Positional,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             }],
@@ -131,11 +141,14 @@ pub(crate) fn dao_class() -> ClassIr {
 
 pub(crate) fn database_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "AppDatabase".to_owned(),
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: Vec::new(),

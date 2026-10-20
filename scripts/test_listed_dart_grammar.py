@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from check_listed_dart_grammar import FILES, ROOT, check
-from check_listed_parser_parity import CASES, CLASS_CASES, MARKER, compare, records
+from check_listed_parser_parity import CASES, CLASS_CASES, I18N_CASES, MARKER, compare, records
 
 
 class ListedGrammarTests(unittest.TestCase):
@@ -23,7 +23,7 @@ class ListedGrammarTests(unittest.TestCase):
             path.write_bytes(b"source\n")
         value = {
             "repository": "https://github.com/UserNobody14/tree-sitter-dart",
-            "revision": "3f0c7a8309d89927e7cc6bef39569c815fddb2e5", "abi": 15,
+            "revision": "acfb453395e25cf6a1018e064df3c92e68e38782", "abi": 15,
             "files": {name: hashlib.sha256(b"source\n").hexdigest() for name in FILES},
         }
         self.write(root, value)
@@ -33,17 +33,19 @@ class ListedGrammarTests(unittest.TestCase):
         """Write the synthetic provenance document under the owned temp root."""
         (root / "UPSTREAM.json").write_text(json.dumps(value), encoding="utf-8")
 
-    def test_checked_in_sources_match_and_active_parser_stays_unchanged(self) -> None:
+    def test_active_parser_is_pinned_and_legacy_harness_is_separate(self) -> None:
         self.assertEqual(check(ROOT / "vendor/tree-sitter-dart"), [])
         manifest = (ROOT / "crates/dust_parser_dart_ts/Cargo.toml").read_text()
-        self.assertIn('tree-sitter-dart = "0.1.0"', manifest)
+        self.assertIn('tree-sitter-dart = { path = "../../vendor/tree-sitter-dart" }', manifest)
         harness = (ROOT / "crates/dust_parser_dart_ts/parity/Cargo.toml").read_text()
-        self.assertIn('tree-sitter-dart = { path = "../../../vendor/tree-sitter-dart" }', harness)
+        self.assertIn('tree-sitter-dart = "=0.1.0"', harness)
+        self.assertIn('name = "dust_legacy_parser_parity"', harness)
 
     def test_parser_parity_requires_all_complete_matching_records(self) -> None:
         output = "\n".join(
             f"test prefix {MARKER}{name}:" +
-            ("[ParsedClassSurface { name: User }]" if name in CLASS_CASES else "ParsedDartFileSurface { name: User }")
+            ("I18nScanResult { name: User }" if name in I18N_CASES else
+             "[ParsedClassSurface { name: User }]" if name in CLASS_CASES else "ParsedDartFileSurface { name: User }")
             for name in sorted(CASES)
         )
         self.assertEqual(set(records(output)), CASES)
@@ -54,6 +56,8 @@ class ListedGrammarTests(unittest.TestCase):
                         output.replace("[ParsedClassSurface { name: User }]", "[]", 1),
                         output.replace("ParsedDartFileSurface { name: User }", "[]", 1),
                         output.replace("ParsedDartFileSurface { name: User }", "[ParsedClassSurface { name: User }]", 1),
+                        output.replace("I18nScanResult { name: User }", "[]", 1),
+                        output.replace("I18nScanResult { name: User }", "ParsedDartFileSurface { name: User }", 1),
                         output + f"\n{MARKER}unknown:invalid", output + f"\n{MARKER}broken"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 records(invalid)

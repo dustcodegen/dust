@@ -6,6 +6,10 @@
 mod emit;
 /// Generated source final formatting.
 mod format;
+/// Generic generated-mixin application validation.
+mod generics;
+/// Deterministic generated output-set hashing.
+mod hash;
 /// Plugin contribution merging.
 mod merge;
 /// Filesystem write orchestration.
@@ -13,7 +17,8 @@ mod write;
 /// Small Dart source writer.
 mod writer;
 
-pub use emit::{EmitResult, emit_library, emit_library_with_plan, hash_output_set};
+pub use emit::{EmitResult, emit_library, emit_library_with_plan};
+pub use hash::hash_output_set;
 pub use write::{
     AuxiliaryWriteResult, WriteResult, persist_emit_result, write_library, write_library_with_plan,
 };

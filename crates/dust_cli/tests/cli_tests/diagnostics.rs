@@ -1,4 +1,4 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::helpers::{DustImport, make_workspace, write_dust_file, write_file};
 
@@ -13,7 +13,8 @@ fn cli_build_renders_warning_details() {
          class User {\n\
            final String id;\n\
            const User(this.id);\n\
-         }\n",
+         }\n\
+         final class UnknownTrait extends DeriveTrait { const UnknownTrait(); }\n",
     );
 
     let run = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
@@ -77,9 +78,15 @@ fn cli_build_renders_error_notes() {
 
 #[test]
 fn unsupported_syntax_fails_build_and_check_without_replacing_output() {
-    for declaration in [
-        "class const User(final String name) with _$User;",
-        "class User with _$User { const new create(this.name); final String name; }",
+    for (declaration, feature) in [
+        (
+            "class User with _$User { const new create(this.name); final String name; }",
+            "concise constructors",
+        ),
+        (
+            "class User with _$User { factory create() => User._(); const User._(); }",
+            "concise constructors",
+        ),
     ] {
         for existing in [false, true] {
             let workspace = make_workspace();
@@ -111,7 +118,7 @@ fn unsupported_syntax_fails_build_and_check_without_replacing_output() {
                 assert!(run.stdout.is_empty());
                 assert!(
                     run.stderr
-                        .contains("tree-sitter reported a Dart syntax error")
+                        .contains(&format!("Dust does not support {feature} yet"))
                 );
                 assert!(run.stderr.contains("Check this file with `dart analyze`."));
                 assert!(run.stderr.contains("Dust's bundled parser"));

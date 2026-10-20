@@ -11,8 +11,15 @@ use crate::syntax::{
 use crate::types::extract_type_before;
 
 use super::parse_text::{
-    default_value_source, is_field_formal_parameter, optional_parameter_kind, parameter_name_node,
+    default_value_source, is_field_formal_parameter, is_required_parameter,
+    optional_parameter_kind, parameter_name_node,
 };
+
+/// Structured redirect targets without parsing their written source.
+mod redirects;
+
+#[cfg(test)]
+mod tests;
 
 /// Extracts constructor metadata from a class member declaration or signature.
 pub(super) fn extract_constructor(
@@ -34,6 +41,7 @@ pub(super) fn extract_constructor(
             annotations: annotations.to_vec(),
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             params: Vec::new(),
             span: text_range(node),
         };
@@ -56,6 +64,7 @@ pub(super) fn extract_constructor(
         annotations: annotations.to_vec(),
         redirected_target_source,
         redirected_target_name,
+        redirected_target: redirects::extract_redirect_application(signature, source),
         params,
         span: text_range(signature),
     }
@@ -65,7 +74,8 @@ pub(super) fn extract_constructor(
 pub(super) fn is_constructor_signature_kind(kind: &str) -> bool {
     matches!(
         kind,
-        "constant_constructor_signature"
+        "primary_constructor"
+            | "constant_constructor_signature"
             | "constructor_signature"
             | "factory_constructor_signature"
             | "redirecting_factory_constructor_signature"
@@ -74,6 +84,12 @@ pub(super) fn is_constructor_signature_kind(kind: &str) -> bool {
 
 /// Extracts the named-constructor suffix from a constructor signature.
 fn constructor_name(signature: Node<'_>, source: &SourceText) -> Option<String> {
+    if signature.kind() == "primary_constructor" {
+        return signature
+            .child_by_field_name("name")
+            .filter(|name| name.kind() == "identifier")
+            .map(|name| node_text(name, source));
+    }
     let boundary = direct_named_child(signature, "formal_parameter_list")?.start_byte();
     let mut cursor = signature.walk();
     let mut identifiers = signature.children(&mut cursor).filter(|child| {
@@ -181,12 +197,12 @@ fn collect_optional_formal_parameters(
     source: &SourceText,
     out: &mut Vec<ParsedConstructorParamSurface>,
 ) {
-    let kind = optional_parameter_kind(node, source);
+    let kind = optional_parameter_kind(node);
     collect_formal_parameters(node, source, out, kind);
 }
 
 /// Converts one tree-sitter parameter node into constructor parameter metadata.
-fn extract_formal_parameter(
+pub(super) fn extract_formal_parameter(
     node: Node<'_>,
     source: &SourceText,
     kind: ParameterKind,
@@ -209,7 +225,13 @@ fn extract_formal_parameter(
         annotations,
         type_source,
         parsed_type,
+        function_formal: super::function_formals::extract(node, source),
         kind,
+        is_required: is_required_parameter(node, source)
+            || (kind == ParameterKind::Positional
+                && node
+                    .parent()
+                    .is_some_and(|parent| parent.kind() == "formal_parameter_list")),
         has_default: default_value_source.is_some(),
         default_value_source,
         span: text_range(node),

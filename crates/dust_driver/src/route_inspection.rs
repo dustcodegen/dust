@@ -21,7 +21,7 @@ pub(crate) struct RouteInspection {
 }
 
 /// Collects route analysis snapshots without writing generated files.
-pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
+pub(crate) fn collect_route_inspection(cwd: &Path, sdk_root: Option<&Path>) -> RouteInspection {
     let started = Instant::now();
     let mut result = CommandResult::default();
 
@@ -29,6 +29,7 @@ pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
         workspace,
         registry,
         catalog,
+        namespaces,
         tool_hash,
         package_config_hash,
         cache,
@@ -36,6 +37,7 @@ pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
     } = match CachedDriverContext::load(
         cwd,
         RegistrySelection::for_check(DbRequestOptions::default()),
+        sdk_root,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -51,11 +53,12 @@ pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
 
     let batch = prepare_and_process_batch(
         BatchConfig {
+            analysis_libraries: &workspace.libraries,
+            namespaces: &namespaces,
             cache_root: &workspace.cache_root,
             package_root: &workspace.package_root,
             package_name: &workspace.package_name,
             is_flutter_package: workspace.is_flutter_package,
-            dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
             package_config_hash,
             tool_hash,
             cache: &cache,
@@ -64,7 +67,6 @@ pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
             write_output: false,
             fail_fast: false,
             jobs: None,
-            file_id_base: 1,
             phase: ProgressPhase::Build,
             progress: None,
         },
@@ -72,6 +74,7 @@ pub(crate) fn collect_route_inspection(cwd: &Path) -> RouteInspection {
         &mut cache_report,
     );
 
+    result.diagnostic_files.extend(batch.diagnostic_files);
     let snapshots = batch
         .outcomes
         .iter()

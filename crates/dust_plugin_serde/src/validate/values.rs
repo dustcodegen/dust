@@ -63,11 +63,32 @@ pub(super) fn default_value_is_compatible(ty: &TypeIr, value: &AnnotationValueIr
 pub(super) fn validate_type_supported(
     ty: &TypeIr,
     context: &JsonModelContext<'_>,
-    class_name: &str,
-    field_name: &str,
+    class: &ClassIr,
+    field: &FieldIr,
     direction: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
+    let class_name = &class.name;
+    let field_name = &field.name;
+    if let TypeIr::Named { name, args, .. } = ty
+        && args.is_empty()
+        && class
+            .type_parameters
+            .iter()
+            .any(|parameter| parameter.name.source == name.as_ref())
+    {
+        if field.serde.as_ref().is_some_and(|serde| {
+            (direction == "Serialize" && serde.skip_serializing)
+                || (direction == "Deserialize" && serde.skip_deserializing)
+        }) {
+            return;
+        }
+        diagnostics.push(Diagnostic::error(format!(
+            "`{direction}` cannot automatically map class parameter `{name}` on `{class_name}.{field_name}`; use `SerDe(using: ...)`"
+        )).with_label(SourceLabel::new(field.span.file_id, field.span.range,
+                                      "generic field requires explicit SerDe mapping")));
+        return;
+    }
     match ty {
         TypeIr::Builtin { .. } | TypeIr::Dynamic => {}
         TypeIr::Unknown => diagnostics.push(Diagnostic::error(format!(
@@ -83,14 +104,7 @@ pub(super) fn validate_type_supported(
             if name.as_ref() == DART_LIST || name.as_ref() == DART_SET =>
         {
             if let Some(item) = args.first() {
-                validate_type_supported(
-                    item,
-                    context,
-                    class_name,
-                    field_name,
-                    direction,
-                    diagnostics,
-                );
+                validate_type_supported(item, context, class, field, direction, diagnostics);
             } else {
                 diagnostics.push(Diagnostic::error(format!(
                     "`{direction}` requires one type argument for `{name}` on `{class_name}.{field_name}`"
@@ -109,14 +123,7 @@ pub(super) fn validate_type_supported(
                     "`{direction}` only supports `Map<String, T>` on `{class_name}.{field_name}`"
                 )));
             }
-            validate_type_supported(
-                &args[1],
-                context,
-                class_name,
-                field_name,
-                direction,
-                diagnostics,
-            );
+            validate_type_supported(&args[1], context, class, field, direction, diagnostics);
         }
         TypeIr::Named { name, args, .. } => {
             if !args.is_empty() {

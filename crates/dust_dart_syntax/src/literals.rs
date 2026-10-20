@@ -30,13 +30,13 @@ pub fn parse_bool_literal(source: &str) -> Option<bool> {
 ///
 /// Raw strings (`r'...'`) and triple-quoted strings are supported. Adjacent
 /// string literal concatenation is intentionally rejected so checked SQL can be
-/// validated from one exact source literal.
+/// validated from one exact source literal. Malformed escapes and unpaired UTF-16
+/// surrogates return `None`, never a lossy or guessed value.
 pub fn parse_static_dart_string_literal(source: &str) -> Option<String> {
     let source = source.trim();
-    let (raw, source) = match source.as_bytes() {
-        [b'r' | b'R', b'\'' | b'"', ..] => (true, &source[1..]),
-        _ => (false, source),
-    };
+    let (raw, source) = source
+        .strip_prefix('r')
+        .map_or((false, source), |s| (true, s));
     let quote = source.chars().next()?;
     if !matches!(quote, '\'' | '"') {
         return None;
@@ -46,46 +46,112 @@ pub fn parse_static_dart_string_literal(source: &str) -> Option<String> {
     } else {
         quote.to_string()
     };
-    let body_start = delimiter.len();
-
-    let mut value = String::new();
-    let mut escaped = false;
-    let mut end_offset = None;
-    for (index, ch) in source[body_start..].char_indices() {
-        let absolute = body_start + index;
-        if !raw && escaped {
-            value.push(match ch {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                'b' => '\u{0008}',
-                'f' => '\u{000C}',
-                'v' => '\u{000B}',
-                '\\' => '\\',
-                '\'' => '\'',
-                '"' => '"',
-                '$' => '$',
-                _ => ch,
-            });
-            escaped = false;
-            continue;
+    let multiline = delimiter.len() == 3;
+    let body = &source[delimiter.len()..];
+    let mut chars = if multiline {
+        skip_first_line(body)
+    } else {
+        body
+    }
+    .chars();
+    let mut units = Vec::new();
+    loop {
+        if let Some(tail) = chars.as_str().strip_prefix(&delimiter) {
+            return tail
+                .trim()
+                .is_empty()
+                .then(|| String::from_utf16(&units).ok())?;
         }
-        if !raw && ch == '\\' {
-            escaped = true;
-            continue;
-        }
+        let ch = chars.next()?;
         if !raw && ch == '$' {
             return None;
         }
-        if source[absolute..].starts_with(&delimiter) {
-            end_offset = Some(absolute + delimiter.len());
-            break;
+        let code = if !raw && ch == '\\' {
+            escaped_code(&mut chars, multiline)?
+        } else {
+            source_character(ch, &mut chars, multiline)? as u32
+        };
+        if let Ok(unit) = u16::try_from(code) {
+            units.push(unit);
+        } else {
+            units.extend_from_slice(char::from_u32(code)?.encode_utf16(&mut [0; 2]));
         }
-        value.push(ch);
     }
+}
 
-    let end_offset = end_offset?;
-    source[end_offset..].trim().is_empty().then_some(value)
+/// Dart ignores a whitespace-only first physical line, even in raw literals.
+fn skip_first_line(source: &str) -> &str {
+    let mut chars = source.chars();
+    while let Some(mut ch) = chars.next() {
+        if ch == '\\' {
+            let Some(escaped) = chars.next() else {
+                return source;
+            };
+            ch = escaped;
+        }
+        match ch {
+            ' ' | '\t' => {}
+            '\n' => return chars.as_str(),
+            '\r' => return chars.as_str().strip_prefix('\n').unwrap_or(chars.as_str()),
+            _ => return source,
+        }
+    }
+    source
+}
+
+/// Only physical line breaks are normalized; `\r` stays a carriage return.
+fn source_character(ch: char, chars: &mut std::str::Chars<'_>, multiline: bool) -> Option<char> {
+    if matches!(ch, '\r' | '\n') {
+        if !multiline {
+            return None;
+        }
+        if ch == '\r' && chars.as_str().starts_with('\n') {
+            chars.next();
+        }
+        Some('\n')
+    } else {
+        Some(ch)
+    }
+}
+
+/// Escape values can be UTF-16 surrogates; validate pairing only after decoding.
+fn escaped_code(chars: &mut std::str::Chars<'_>, multiline: bool) -> Option<u32> {
+    Some(match chars.next()? {
+        'n' => '\n' as u32,
+        'r' => '\r' as u32,
+        't' => '\t' as u32,
+        'b' => 8,
+        'f' => 12,
+        'v' => 11,
+        'x' => hex_digits(chars, 2)?,
+        'u' if chars.as_str().starts_with('{') => {
+            chars.next();
+            let mut code = 0;
+            let mut count = 0;
+            loop {
+                let ch = chars.next()?;
+                if ch == '}' {
+                    if count == 0 || code > 0x10ffff {
+                        return None;
+                    }
+                    break code;
+                }
+                count += 1;
+                if count > 6 {
+                    return None;
+                }
+                code = code * 16 + ch.to_digit(16)?;
+            }
+        }
+        'u' => hex_digits(chars, 4)?,
+        '\r' | '\n' if !multiline => return None,
+        ch => ch as u32,
+    })
+}
+
+/// Fixed-width escapes consume exactly their declared number of hex digits.
+fn hex_digits(chars: &mut std::str::Chars<'_>, count: usize) -> Option<u32> {
+    (0..count).try_fold(0, |code, _| Some(code * 16 + chars.next()?.to_digit(16)?))
 }
 
 #[cfg(test)]
@@ -146,7 +212,7 @@ mod tests {
             Some("\r\u{0008}\u{000C}\u{000B}".to_owned())
         );
         assert_eq!(
-            parse_static_dart_string_literal(r#"R"$raw""#),
+            parse_static_dart_string_literal(r#"r"$raw""#),
             Some("$raw".to_owned())
         );
         assert_eq!(parse_static_dart_string_literal(""), None);

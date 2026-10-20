@@ -5,10 +5,11 @@ use dust_ir::{ClassIr, DartFileIr, FieldIr, TypeIr};
 use super::{
     model::{ValidateConfig, field_validations, has_validate_trait},
     shape::validate_config_shape,
-    type_source::{input_kind, supports_length},
+    type_source::{class_input_kind, supports_length},
 };
 use crate::features::{
     VALIDATE_SYMBOL,
+    clone_copy_with::is_class_parameter,
     names::{library_declaration_names, upper_first},
 };
 
@@ -51,7 +52,7 @@ fn validate_public_validator_names(
 ) {
     let declaration_names = library_declaration_names(library);
     for validation in field_validations(library, class) {
-        if input_kind(&validation.field.ty).is_none() {
+        if class_input_kind(class, &validation.field.ty).is_none() {
             continue;
         }
 
@@ -83,20 +84,22 @@ fn validate_field_config(
         || config.does_not_contain.is_some()
         || config.regex.is_some()
         || config.must_match.is_some())
-        && !field.ty.is_named(DART_STRING)
+        && (is_class_parameter(class, &field.ty) || !field.ty.is_named(DART_STRING))
     {
         diagnostics.push(Diagnostic::error(format!(
             "`@Validate` string validators on `{}` require `String` or `String?`",
             field.name
         )));
     }
-    if config.length.is_some() && !supports_length(&field.ty) {
+    if config.length.is_some()
+        && (is_class_parameter(class, &field.ty) || !supports_length(&field.ty))
+    {
         diagnostics.push(Diagnostic::error(format!(
             "`@Validate(length: ...)` on `{}` requires String, List, Set, or Map",
             field.name
         )));
     }
-    if config.range.is_some() && !is_numeric(&field.ty) {
+    if config.range.is_some() && (is_class_parameter(class, &field.ty) || !is_numeric(&field.ty)) {
         diagnostics.push(Diagnostic::error(format!(
             "`@Validate(range: ...)` on `{}` requires int, double, or num",
             field.name

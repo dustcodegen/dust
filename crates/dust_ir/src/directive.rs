@@ -1,4 +1,4 @@
-use crate::{NameIr, SpanIr};
+use crate::{ExprSourceIr, NameIr, NamespaceDirectiveIr, SpanIr};
 
 /// A Dart library declaration.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,6 +12,8 @@ pub struct LibraryDeclIr {
 /// A Dart import directive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportIr {
+    /// Ordered namespace facts; `None` means not supplied, never proven foreign.
+    pub namespace: Option<NamespaceDirectiveIr>,
     /// The imported URI without quotes.
     pub uri: String,
     /// The optional import prefix.
@@ -29,6 +31,8 @@ pub struct ImportIr {
 /// A Dart export directive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExportIr {
+    /// Ordered namespace facts; `None` means not supplied, never proven foreign.
+    pub namespace: Option<NamespaceDirectiveIr>,
     /// The exported URI without quotes.
     pub uri: String,
     /// The source span for the directive.
@@ -38,6 +42,8 @@ pub struct ExportIr {
 /// A Dart part directive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartIr {
+    /// Exact URI literal source/span when supplied by the source parser.
+    pub uri_literal: Option<ExprSourceIr>,
     /// The part URI without quotes.
     pub uri: String,
     /// The source span for the directive.
@@ -47,6 +53,8 @@ pub struct PartIr {
 /// A Dart part-of directive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartOfIr {
+    /// Exact URI literal source/span for URI-form `part of`, if supplied.
+    pub uri_literal: Option<ExprSourceIr>,
     /// The declared library name, if written as an identifier.
     pub library_name: Option<NameIr>,
     /// The declared library URI, if written as a string.

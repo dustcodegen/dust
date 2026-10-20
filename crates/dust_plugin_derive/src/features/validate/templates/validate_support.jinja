@@ -1,3 +1,7 @@
+{%- if nullable_alias %}
+{{ nullable_alias }}
+
+{% endif %}
 {%- for field in fields %}
 {%- if field.can_validate_input %}
 /// TextFormField validator for `{{ class_name }}.{{ field.name }}`.
@@ -13,19 +17,20 @@
 /// )
 /// ```
 {{ field.public_input_signature }} {
-  return {{ extension_name }}.{{ field.input_helper_name }}({% if field.uses_self %}self, {% endif %}value);
+  return {{ extension_name }}.{{ field.input_helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.input_value_name }});
 }
 
 {% endif %}
 {% endfor %}
-extension {{ extension_name }} on {{ class_name }} {
+{%- if not generic or fields %}
+{% if generic %}abstract final class {{ extension_name }}{% else %}extension {{ extension_name }} on {{ class_name }}{% endif %} {
 {%- for field in fields %}
   {{ field.helper_signature }} {
 {%- for config in field.configs %}
 {%- if config.nullable %}
 {%- if config.required_message %}
     if ({{ field.value_name }} == null) {
-      {{ field.errors_name }}.add(ValidationError(field: {{ field.literal }}, message: {{ config.required_message }}));
+      {{ field.errors_name }}.add({{ runtime.ValidationError }}(field: {{ field.literal }}, message: {{ config.required_message }}));
     } else {
 {%- for rule in config.rules %}
 {{ rule_line(field, rule, "      ") }}
@@ -48,31 +53,31 @@ extension {{ extension_name }} on {{ class_name }} {
 {%- if field.can_validate_input %}
 
   {{ field.input_signature }} {
-    final {{ field.errors_name }} = <ValidationError>[];
+    final {{ field.errors_name }} = <{{ runtime.ValidationError }}>[];
 {%- if field.input_kind == "string" %}
 {%- if field.nullable %}
-    {{ field.helper_name }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}value, {{ field.errors_name }});
+    {% if generic %}{{ extension_name }}.{% endif %}{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.input_value_name }}, {{ field.errors_name }});
 {%- else %}
-    {{ field.helper_name }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}value ?? '', {{ field.errors_name }});
+    {% if generic %}{{ extension_name }}.{% endif %}{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.input_value_name }} ?? '', {{ field.errors_name }});
 {%- endif %}
 {%- else %}
 {%- if field.nullable %}
-    if (value == null || value.isEmpty) {
-      {{ field.helper_name }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}null, {{ field.errors_name }});
+    if ({{ field.input_value_name }} == null || {{ field.input_value_name }}.isEmpty) {
+      {% if generic %}{{ extension_name }}.{% endif %}{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}null, {{ field.errors_name }});
     } else {
-      final {{ field.parsed_name }} = {{ field.input_kind }}.tryParse(value);
+      final {{ field.parsed_name }} = {{ field.input_kind }}.tryParse({{ field.input_value_name }});
       if ({{ field.parsed_name }} == null) {
-        {{ field.errors_name }}.add(ValidationError(field: {{ field.literal }}, message: {{ field.parse_error_message }}));
+        {{ field.errors_name }}.add({{ runtime.ValidationError }}(field: {{ field.literal }}, message: {{ field.parse_error_message }}));
       } else {
-        {{ field.helper_name }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.parsed_name }}, {{ field.errors_name }});
+        {% if generic %}{{ extension_name }}.{% endif %}{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.parsed_name }}, {{ field.errors_name }});
       }
     }
 {%- else %}
-    final {{ field.parsed_name }} = {{ field.input_kind }}.tryParse(value ?? '');
+    final {{ field.parsed_name }} = {{ field.input_kind }}.tryParse({{ field.input_value_name }} ?? '');
     if ({{ field.parsed_name }} == null) {
-      {{ field.errors_name }}.add(ValidationError(field: {{ field.literal }}, message: {{ field.parse_error_message }}));
+      {{ field.errors_name }}.add({{ runtime.ValidationError }}(field: {{ field.literal }}, message: {{ field.parse_error_message }}));
     } else {
-      {{ field.helper_name }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.parsed_name }}, {{ field.errors_name }});
+      {% if generic %}{{ extension_name }}.{% endif %}{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ field.self_name }}, {% endif %}{{ field.parsed_name }}, {{ field.errors_name }});
     }
 {%- endif %}
 {%- endif %}
@@ -81,3 +86,4 @@ extension {{ extension_name }} on {{ class_name }} {
 {%- endif %}
 {% endfor %}
 }
+{% endif %}

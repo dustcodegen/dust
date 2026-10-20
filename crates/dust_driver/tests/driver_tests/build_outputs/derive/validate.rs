@@ -8,6 +8,7 @@ fn build_writes_dart_validate_output_without_form_helpers() {
     write_signup_request(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -85,6 +86,7 @@ fn build_writes_flutter_form_helpers_for_flutter_packages() {
     write_signup_request(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -116,6 +118,7 @@ fn build_resolves_validate_string_constants_from_the_same_library() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,

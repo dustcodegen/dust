@@ -11,6 +11,7 @@ fn db_build_writes_database_without_from_row_mapper() {
     write_db_workspace(workspace.path(), false);
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -103,6 +104,7 @@ fn migration_change_invalidates_cached_database_output() {
     let workspace = make_workspace();
     write_db_workspace(workspace.path(), false);
     let request = || BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,
@@ -133,6 +135,7 @@ fn normal_build_writes_from_row_trait_without_database_output() {
     write_row_only_workspace(workspace.path());
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

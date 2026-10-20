@@ -11,6 +11,9 @@ use crate::syntax::{direct_named_child, find_first_descendant_text, node_text, t
 /// Parser-owned annotation value extraction helpers.
 mod values;
 
+#[cfg(test)]
+mod tests;
+
 /// Extracts a structured annotation from a tree-sitter annotation node.
 pub(crate) fn extract_annotation(node: Node<'_>, source: &SourceText) -> ParsedAnnotation {
     let (name, prefix, qualified_name) = node
@@ -45,31 +48,30 @@ fn annotation_name(node: Node<'_>, source: &SourceText) -> (String, Option<Strin
         return (qualified_name.clone(), None, qualified_name);
     }
 
-    let mut cursor = node.walk();
-    let Some(short_node) = node
-        .children(&mut cursor)
-        .filter(|child| child.is_named())
-        .last()
-    else {
-        return (qualified_name.clone(), None, qualified_name);
-    };
-
-    let name = node_text(short_node, source);
-    let prefix = source
-        .slice(TextRange::new(
-            TextSize::new(node.start_byte() as u32),
-            TextSize::new(short_node.start_byte() as u32),
-        ))
-        .map(str::trim)
-        .map(|value| value.trim_end_matches('.').trim())
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned);
-
+    let mut identifiers = Vec::new();
+    annotation_identifiers(node, source, &mut identifiers);
+    let name = identifiers.pop().unwrap_or_default();
+    let prefix = (!identifiers.is_empty()).then(|| identifiers.join("."));
     (name, prefix, qualified_name)
 }
 
+/// Reads only name identifiers; named comment extras never become a qualifier.
+fn annotation_identifiers(node: Node<'_>, source: &SourceText, identifiers: &mut Vec<String>) {
+    if matches!(node.kind(), "identifier" | "type_identifier") {
+        identifiers.push(node_text(node, source));
+        return;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor).filter(|child| child.is_named()) {
+        annotation_identifiers(child, source, identifiers);
+    }
+}
+
 /// Extracts positional and named arguments from an annotation argument list.
-fn extract_annotation_arguments(node: Node<'_>, source: &SourceText) -> ParsedAnnotationArguments {
+pub(crate) fn extract_annotation_arguments(
+    node: Node<'_>,
+    source: &SourceText,
+) -> ParsedAnnotationArguments {
     let mut arguments = ParsedAnnotationArguments::default();
     let mut cursor = node.walk();
     for child in node

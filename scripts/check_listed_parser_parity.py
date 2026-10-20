@@ -7,9 +7,12 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CLASS_CASES = {"traditional", "modifiers", "metadata", "methods", "factories", "parameters", "operators"}
+CLASS_CASES = {"traditional", "modifiers", "metadata", "methods", "factories", "parameters", "operators", "named-mixins", "callback-formals"}
+I18N_CASES = {"i18n-static", "i18n-runtime", "i18n-hardcoded", "i18n-ignored", "i18n-shopping"}
 CASES = CLASS_CASES | {"directives", "conditional-directives", "uri-part", "unnamed-library",
-                       "enums", "declarations", "variables", "functions"}
+                       "namespace-directives",
+                       "enums", "declarations", "variables", "functions",
+                       "query-terminals", "query-context", "query-unsafe", "query-dynamic"} | I18N_CASES
 MARKER = "DUST_PARSER_PARITY:"
 
 
@@ -20,7 +23,8 @@ def records(output: str) -> dict[str, str]:
         if MARKER not in line:
             continue
         name, separator, facts = line.partition(MARKER)[2].partition(":")
-        prefix = "[ParsedClassSurface {" if name in CLASS_CASES else "ParsedDartFileSurface {"
+        prefix = ("I18nScanResult {" if name in I18N_CASES else
+                  "[ParsedClassSurface {" if name in CLASS_CASES else "ParsedDartFileSurface {")
         if not separator or name not in CASES or name in found or not facts.startswith(prefix):
             raise ValueError(f"Invalid parser parity record: {name!r}")
         found[name] = facts
@@ -43,11 +47,11 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=True)
     logs = []
     for name, selector in (
-        ("existing", ["-p", "dust_parser_dart_ts"]),
-        ("listed", ["--manifest-path", "crates/dust_parser_dart_ts/parity/Cargo.toml"]),
+        ("existing", ["--manifest-path", "crates/dust_parser_dart_ts/parity/Cargo.toml"]),
+        ("listed", ["-p", "dust_parser_dart_ts"]),
     ):
         result = subprocess.run(
-            ["cargo", "test", *selector, "--locked", "--lib", "parity_tests", "--",
+            ["cargo", "test", *selector, "--locked", "--lib", "--",
              "--nocapture", "--test-threads=1"],
             cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900,
         )

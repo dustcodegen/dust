@@ -48,7 +48,7 @@ pub(crate) fn apply_indexed_outcomes(
         let has_error = diagnostics.iter().any(|diagnostic| diagnostic.is_error());
         let has_labels = diagnostics.iter().any(Diagnostic::has_labels);
 
-        if let Some(expected_output_hash) = expected_output_hash {
+        if let Some(expected_output_hash) = expected_output_hash.filter(|_| !has_error) {
             if let (Some(source_hash), Some(tool_hash)) = (source_hash, tool_hash) {
                 cache.insert(
                     config.cache_root,
@@ -65,8 +65,6 @@ pub(crate) fn apply_indexed_outcomes(
                     },
                 );
             }
-        } else {
-            cache.remove(config.cache_root, &library.source_path);
         }
 
         result.diagnostics.extend(diagnostics);

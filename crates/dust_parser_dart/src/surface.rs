@@ -1,14 +1,26 @@
 use dust_text::TextRange;
 
-use crate::ParsedQueryCallSurface;
+use crate::{ParsedQueryCallSurface, ParsedTypeSurface};
 
 /// Surface types for annotations and their argument values.
 mod annotations;
 /// Surface types for top-level and member declarations.
 mod declarations;
+/// Source-preserving namespace directive facts.
+mod directives;
+/// Declaring callback signatures, separate from their written return types.
+mod function_formals;
+/// Generic class-header facts.
+mod generics;
+/// Lexical scope and constant-identity facts for metadata ownership.
+mod lexical;
 /// Surface types for fields, constructors and parameters.
 mod members;
 
+pub use self::directives::*;
+pub use self::function_formals::*;
+pub use self::generics::ParsedTypeParamSurface;
+pub use self::lexical::*;
 pub use self::{annotations::*, declarations::*, members::*};
 
 /// A generation-relevant view of one parsed Dart file.
@@ -19,6 +31,8 @@ pub use self::{annotations::*, declarations::*, members::*};
 pub struct ParsedDartFileSurface {
     /// The full source span for the parsed file.
     pub span: TextRange,
+    /// Source-owned lexical scopes; synthetic legacy backends may omit them.
+    pub lexical_scopes: Vec<ParsedLexicalScope>,
     /// Top-level directives such as imports and parts.
     pub directives: Vec<ParsedDirective>,
     /// Top-level classes that were extracted from the source.
@@ -71,6 +85,8 @@ pub enum ParsedDirective {
     },
     /// An `import` directive.
     Import {
+        /// Ordered source facts when extractable; synthetic inputs may omit them.
+        namespace: Option<ParsedNamespaceDirective>,
         /// The imported URI text without quotes.
         uri: String,
         /// The optional import prefix after `as`.
@@ -86,6 +102,8 @@ pub enum ParsedDirective {
     },
     /// An `export` directive.
     Export {
+        /// Ordered source facts when extractable; synthetic inputs may omit them.
+        namespace: Option<ParsedNamespaceDirective>,
         /// The exported URI text without quotes.
         uri: String,
         /// The source span of the full directive.
@@ -93,6 +111,8 @@ pub enum ParsedDirective {
     },
     /// A `part` directive.
     Part {
+        /// Exact URI literal when supplied by the source parser.
+        uri_literal: Option<ParsedUriLiteral>,
         /// The part URI text without quotes.
         uri: String,
         /// The source span of the full directive.
@@ -100,6 +120,8 @@ pub enum ParsedDirective {
     },
     /// A `part of` directive.
     PartOf {
+        /// Exact URI literal for URI-form `part of`, if supplied.
+        uri_literal: Option<ParsedUriLiteral>,
         /// The declared library name, if written as an identifier.
         library_name: Option<String>,
         /// The declared library URI, if written as a string.
@@ -131,6 +153,8 @@ pub enum ParsedClassKind {
     SealedClass,
     /// A Dart `mixin class` declaration.
     MixinClass,
+    /// A named mixin application with implicit forwarding constructors.
+    MixinApplicationClass,
 }
 
 /// A parsed class declaration relevant to Dust generation.
@@ -140,12 +164,18 @@ pub struct ParsedClassSurface {
     pub kind: ParsedClassKind,
     /// The class name.
     pub name: String,
+    /// Class type parameters in declaration order.
+    pub type_parameters: Vec<ParsedTypeParamSurface>,
+    /// Written mixin applications in source order.
+    pub mixins: Vec<ParsedTypeSurface>,
     /// Whether the declaration is marked `abstract`.
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.
     pub is_interface: bool,
-    /// The immediate superclass name, if the declaration has an `extends` clause.
+    /// The immediate superclass name from `extends` or a named mixin application.
     pub superclass_name: Option<String>,
+    /// Written superclass application, including arguments and source locations.
+    pub superclass: Option<ParsedTypeSurface>,
     /// All metadata annotations attached to the class.
     pub annotations: Vec<ParsedAnnotation>,
     /// Extracted fields from the class body.

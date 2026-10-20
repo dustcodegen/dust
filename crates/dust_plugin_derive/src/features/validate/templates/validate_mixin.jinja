@@ -7,13 +7,15 @@
 ///   print(errors.first.message);
 /// }
 /// ```
-ValidationResult validate() {
-  final {{ self_name }} = this as {{ class_name }};
-  final {{ errors_name }} = <ValidationError>[];
+{{ runtime.ValidationResult }} validate() {
+{%- if not generic or fields %}
+  final {{ self_name }} = this as {{ class_type }};
+{%- endif %}
+  final {{ errors_name }} = <{{ runtime.ValidationError }}>[];
 {%- for field in fields %}
-  {{ extension_name }}.{{ field.helper_name }}({% if field.uses_self %}{{ self_name }}, {% endif %}{{ self_name }}.{{ field.name }}, {{ errors_name }});
+  {{ extension_name }}.{{ field.helper_name }}{{ field.type_arguments }}({% if field.uses_self %}{{ self_name }}, {% endif %}{{ self_name }}.{{ field.name }}, {{ errors_name }});
 {%- endfor %}
-  return {{ errors_name }}.isEmpty ? const Valid() : Invalid({{ errors_name }});
+  return {{ errors_name }}.isEmpty ? const {{ runtime.Valid }}() : {{ runtime.Invalid }}({{ errors_name }});
 }
 
 /// Throws [ValidationException] when this `{{ class_name }}` is invalid.
@@ -24,7 +26,7 @@ ValidationResult validate() {
 /// ```
 void validateOrThrow() {
   final {{ result_name }} = validate();
-  if ({{ result_name }} case Invalid(errors: final {{ invalid_errors_name }})) {
-    throw ValidationException({{ invalid_errors_name }});
+  if ({{ result_name }} case {{ runtime.Invalid }}({% if not generic or invalid_errors_name != "errors" %}errors: {% else %}:{% endif %}final {{ invalid_errors_name }})) {
+    throw {{ runtime.ValidationException }}({{ invalid_errors_name }});
   }
 }

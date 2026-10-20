@@ -1,5 +1,13 @@
+use crate::features::clone_copy_with::is_class_parameter;
 use dust_dart_emit::{DART_DOUBLE, DART_INT, DART_LIST, DART_MAP, DART_NUM, DART_SET, DART_STRING};
 use dust_ir::TypeIr;
+
+/// A class binder named like a core type is not a concrete form input type.
+pub(crate) fn class_input_kind(class: &dust_ir::ClassIr, ty: &TypeIr) -> Option<&'static str> {
+    (!is_class_parameter(class, ty))
+        .then(|| input_kind(ty))
+        .flatten()
+}
 
 /// Renders a Dart type for generated validation helper signatures.
 pub(crate) fn render_type(ty: &TypeIr) -> String {

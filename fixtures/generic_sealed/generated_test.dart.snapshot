@@ -1,0 +1,181 @@
+import 'package:test/test.dart';
+import 'package:sealed_probe/sealed_generated.dart' as generated;
+
+void main() {
+  test(
+    'omitted variants preserve constructor targets and typed codec results',
+    () {
+      const done = generated.Command<int, List<int>>.done('ready');
+      const none = generated.Command<int, List<int>>.none();
+      expect(done, isA<generated.GeneratedDone<List<int>, int>>());
+      expect(none, isA<generated.GeneratedNone<int, List<int>>>());
+      expect(done.serialize(), {
+        'label': 'ready',
+        'note': null,
+        'kind': 'done',
+      });
+      expect(done.toJson(), done.serialize());
+      expect(done.aliasJson(), done.serialize());
+      expect(none.serialize(), {'kind': 'none'});
+      final restored = generated.Command<int, List<int>>.fromJson(
+        done.serialize(),
+      );
+      expect(restored, isA<generated.GeneratedDone<List<int>, int>>());
+      expect(
+        (restored as generated.GeneratedDone<List<int>, int>).label,
+        'ready',
+      );
+      expect(
+        generated.GeneratedDone<List<int>, int>.fromJson({'label': 'again'})
+            .label,
+        'again',
+      );
+      expect(
+        generated.GeneratedDone<List<int>, int>.fromJson({
+          'label': 'again',
+          'note': 2,
+        }).note,
+        2,
+      );
+      expect(
+        (const generated.Command<int, List<int>>.done(
+          'ready',
+          3,
+        ) as generated.GeneratedDone<List<int>, int>).note,
+        3,
+      );
+      expect(
+        generated.GeneratedNone<int, List<int>>.fromJson({}),
+        isA<generated.GeneratedNone<int, List<int>>>(),
+      );
+      expect(
+        const generated.$CommandSerializer<int, List<int>>().serialize(none),
+        none.serialize(),
+      );
+      expect(
+        const generated.$CommandDeserializer<int, List<int>>().deserialize(
+          none.serialize(),
+        ),
+        isA<generated.GeneratedNone<int, List<int>>>(),
+      );
+      expect(
+        const generated.$GeneratedDoneSerializer<List<int>, int>().serialize(
+          restored,
+        ),
+        {'label': 'ready', 'note': null},
+      );
+      expect(
+        const generated.$GeneratedDoneDeserializer<List<int>, int>()
+            .deserialize({'label': 'codec'})
+            .label,
+        'codec',
+      );
+      expect(
+        const generated.$GeneratedNoneSerializer<int, List<int>>().serialize(
+          none as generated.GeneratedNone<int, List<int>>,
+        ),
+        isEmpty,
+      );
+      expect(
+        const generated.$GeneratedNoneDeserializer<int, List<int>>()
+            .deserialize({}),
+        isA<generated.GeneratedNone<int, List<int>>>(),
+      );
+      expect(
+        generated.donePayload<int, List<int>>(
+          done as generated.GeneratedDone<List<int>, int>,
+        ),
+        {'label': 'ready', 'note': null},
+      );
+      expect(generated.nonePayload<int, List<int>>(none), isEmpty);
+      expect(
+        () => generated.Command<int, List<int>>.fromJson({'kind': 'missing'}),
+        throwsArgumentError,
+      );
+      expect(
+        () => generated.Command<int, List<int>>.fromJson({'kind': 'done'}),
+        throwsArgumentError,
+      );
+      expect(
+        () => const generated.Unlisted<int, List<int>>().serialize(),
+        throwsArgumentError,
+      );
+    },
+  );
+  test(
+    'generated variants retain codecs, aliases and nullable wire defaults',
+    () {
+      final date = DateTime.fromMillisecondsSinceEpoch(1234, isUtc: true);
+      final event = generated.Command<int, List<int>>.at(date);
+      expect(event.serialize(), {'date': 1234, 'kind': 'at'});
+      expect(
+        (generated.Command<int, List<int>>.fromJson(
+          event.serialize(),
+        ) as generated.GeneratedAt<List<int>, int>).date,
+        date,
+      );
+      expect(
+        generated.GeneratedAt<List<int>, int>.fromJson({'oldDate': 1234}).date,
+        date,
+      );
+      expect(
+        const generated.$GeneratedAtSerializer<List<int>, int>().serialize(
+          event as generated.GeneratedAt<List<int>, int>,
+        ),
+        {'date': 1234},
+      );
+      expect(
+        const generated.$GeneratedAtDeserializer<List<int>, int>().deserialize({
+          'date': 1234,
+        }).date,
+        date,
+      );
+      expect(generated.atPayload<int, List<int>>(event), {'date': 1234});
+      expect(
+        () => generated.Command<int, List<int>>.fromJson({
+          'kind': 'at',
+          'date': 'wrong',
+        }),
+        throwsArgumentError,
+      );
+
+      const defaults = generated.Command<int, List<int>>.count(requested: null);
+      expect(defaults.serialize(), {
+        'requested': null,
+        'count': null,
+        'fallback': null,
+        'kind': 'count',
+      });
+      final decoded = generated.GeneratedCount<int, List<int>>.fromJson({});
+      expect((decoded.count, decoded.fallback), (null, 7));
+      final alias = generated.GeneratedCount<int, List<int>>.fromJson({
+        'requested': 10,
+        'oldCount': 8,
+        'fallback': 9,
+      });
+      expect((alias.count, alias.fallback), (8, 9));
+      expect(alias.requested, 10);
+      expect(
+        const generated.$GeneratedCountSerializer<int, List<int>>().serialize(
+          decoded,
+        ),
+        {'requested': null, 'count': null, 'fallback': 7},
+      );
+      expect(
+        const generated.$GeneratedCountDeserializer<int, List<int>>()
+            .deserialize({'count': 5})
+            .count,
+        5,
+      );
+      expect(
+        generated.Command<int, List<int>>.fromJson({'kind': 'count'}),
+        isA<generated.GeneratedCount<int, List<int>>>(),
+      );
+      expect(generated.countPayload<int, List<int>>(decoded), {
+        'requested': null,
+        'count': null,
+        'fallback': 7,
+      });
+    },
+  );
+}

@@ -26,6 +26,10 @@ mod library;
 mod lowering;
 /// Method declarations.
 mod method;
+/// Ordered, source-preserving directive namespace inputs.
+mod namespace;
+/// Declaration identities attached to registered annotations.
+mod origin;
 /// Query function metadata.
 mod query_call;
 /// Route configuration.
@@ -36,6 +40,8 @@ mod serde;
 mod state;
 /// Applied plugin traits and configs.
 mod traits;
+/// Structural substitution after the caller establishes binder ownership.
+mod type_substitution;
 /// Type metadata.
 mod types;
 /// Workspace-level IR.
@@ -44,8 +50,8 @@ mod workspace;
 pub use annotation::{
     AnnotationIr, AnnotationNumberKindIr, AnnotationValueIr, ExprSourceIr, NameIr,
 };
-pub use class::{ClassIr, ClassKindIr};
-pub use constructor::{ConstructorIr, ConstructorParamIr, ParamKind};
+pub use class::{ClassIr, ClassKindIr, MixinApplicationIr, SuperclassIr};
+pub use constructor::{ConstructorIr, ConstructorParamIr, ParamKind, RedirectTargetIr};
 pub use db::{
     DbConfigIr, DbDatabaseConfigIr, DbDriverIr, DbQueryConfigIr, DbRenameRuleIr, DbSqlxConfigIr,
 };
@@ -63,6 +69,10 @@ pub use http::{
 pub use library::{DartFileIr, SpanIr};
 pub use lowering::LoweringOutcome;
 pub use method::{MethodIr, MethodParamIr};
+pub use namespace::{
+    CombinatorKindIr, ConditionalUriIr, NamespaceDirectiveIr, VisibilityCombinatorIr,
+};
+pub use origin::AnnotationOrigin;
 pub use query_call::{QueryCallIr, QueryFunctionIr};
 pub use route::{RouteConfigIr, RouterConfigIr};
 pub use serde::{
@@ -71,5 +81,6 @@ pub use serde::{
 };
 pub use state::{StateConfigIr, StateModeIr};
 pub use traits::{ConfigApplicationIr, NormalizedConfigIr, SymbolId, TraitApplicationIr};
+pub use type_substitution::substitute_type;
 pub use types::{BuiltinType, TypeIr};
 pub use workspace::WorkspaceIr;

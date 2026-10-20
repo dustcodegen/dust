@@ -1,3 +1,5 @@
+/// Class header facts and scoped member lowering.
+mod classes;
 /// Lowering for top-level declarations.
 mod declarations;
 /// Lowering for library, import, export and part directives.
@@ -6,9 +8,16 @@ mod directives;
 mod inheritance;
 /// Lowering for class members.
 mod members;
+/// Source-preserving namespace directive lowering.
+mod namespaces;
 mod tests_declarations;
 mod tests_directives;
+mod tests_generics;
 mod tests_inheritance;
+mod tests_namespaces;
+mod tests_redirect_targets;
+mod tests_superclasses;
+mod tests_type_signatures;
 
 use std::collections::HashMap;
 
@@ -17,24 +26,27 @@ use dust_ir::{
     AnnotationIr, ClassIr, ClassKindIr, ConfigApplicationIr, ConstructorIr, ConstructorParamIr,
     DartFileIr, EnumIr, EnumVariantIr, ExportIr, ExprSourceIr, ExtensionIr, ExtensionTypeIr,
     FieldIr, FunctionIr, ImportIr, LibraryDeclIr, LoweringOutcome, MethodIr, MethodParamIr,
-    MixinIr, NameIr, ParamKind, PartIr, PartOfIr, SerdeClassConfigIr, SpanIr, TopLevelVariableIr,
-    TraitApplicationIr, TypedefIr,
+    MixinApplicationIr, MixinIr, NameIr, ParamKind, PartIr, PartOfIr, SerdeClassConfigIr, SpanIr,
+    TopLevelVariableIr, TraitApplicationIr, TypeParamIr, TypedefIr,
 };
 use dust_parser_dart::{
-    ParameterKind, ParsedAnnotation, ParsedDirective, ParsedExtensionSurface,
-    ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
-    ParsedMethodParamSurface, ParsedMixinSurface, ParsedTopLevelVariableSurface,
-    ParsedTypedefSurface,
+    ParameterKind, ParsedDirective, ParsedExtensionSurface, ParsedExtensionTypeSurface,
+    ParsedFieldSurface, ParsedFunctionSurface, ParsedMethodParamSurface, ParsedMixinSurface,
+    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypeSurface, ParsedTypedefSurface,
 };
 use dust_resolver::{
-    ResolvedConstructor, ResolvedField, ResolvedLibrary, ResolvedMethod, SymbolCatalog,
-    lower_type_ir as lower_type,
+    BindingContext, ResolvedConstructor, ResolvedField, ResolvedLibrary, ResolvedMethod,
+    lower_parameter_type_ir, lower_type_ir as lower_type,
+    lower_type_ir_in_scope as lower_type_in_scope,
 };
+
+#[cfg(test)]
+use dust_resolver::SymbolCatalog;
 
 use self::inheritance::{
     infer_param_type, merged_fields_for_class, resolve_constructor_param_types,
 };
-use self::{declarations::*, directives::*, members::*};
+use self::{classes::*, declarations::*, directives::*, members::*};
 
 /// Lowers one resolved library into semantic IR.
 #[cfg(test)]
@@ -43,9 +55,18 @@ pub(crate) fn lower_library(library: &mut ResolvedLibrary) -> LoweringOutcome<Da
 }
 
 /// Lowers one resolved library and attaches registered annotation symbols.
+#[cfg(test)]
 pub(crate) fn lower_library_with_catalog(
     library: &mut ResolvedLibrary,
     catalog: &SymbolCatalog,
+) -> LoweringOutcome<DartFileIr> {
+    lower_library_with_bindings(library, &BindingContext::new(catalog, None))
+}
+
+/// Keeps metadata lowering in the same owner context as feature normalization.
+pub(crate) fn lower_library_with_bindings(
+    library: &mut ResolvedLibrary,
+    bindings: &BindingContext<'_>,
 ) -> LoweringOutcome<DartFileIr> {
     let mut diagnostics = Vec::new();
     let collect_diagnostics_by_class = library
@@ -58,13 +79,36 @@ pub(crate) fn lower_library_with_catalog(
         .iter_mut()
         .enumerate()
         .map(|(index, class)| {
+            for constructor in &class.constructors {
+                for parameter in &constructor.surface.params {
+                    if let Some(formal) = &parameter.function_formal {
+                        for annotation in formal.annotations() {
+                            let _ = bindings.annotation_ir(
+                                class.span.file_id,
+                                annotation,
+                                &mut diagnostics,
+                            );
+                        }
+                    }
+                    for annotation in &parameter.annotations {
+                        let _ = bindings.annotation_ir(
+                            class.span.file_id,
+                            annotation,
+                            &mut diagnostics,
+                        );
+                    }
+                }
+            }
             let collect_diagnostics = collect_diagnostics_by_class[index];
             let outcome = lower_class_from_parts(ClassLoweringInput {
                 kind: class.kind,
                 name: &class.name,
+                type_parameters: &class.type_parameters,
+                mixins: &class.mixins,
                 is_abstract: class.is_abstract,
                 is_interface: class.is_interface,
                 superclass_name: class.superclass_name.as_deref(),
+                superclass: class.superclass.as_ref(),
                 span: class.span,
                 fields: &mut class.fields,
                 constructors: &class.constructors,
@@ -105,7 +149,10 @@ pub(crate) fn lower_library_with_catalog(
             &mut active_stack,
             &mut diagnostics,
         );
-        classes[index].fields = merged_fields;
+        if collect_diagnostics_by_class[index] {
+            diagnostics.extend(merged_fields.diagnostics);
+        }
+        classes[index].fields = merged_fields.value;
         let mut constructor_diagnostics = Vec::new();
         resolve_constructor_param_types(&mut classes[index], &mut constructor_diagnostics);
         if collect_diagnostics_by_class[index] {
@@ -124,7 +171,8 @@ pub(crate) fn lower_library_with_catalog(
             library_annotations: lower_library_annotations(
                 library.span.file_id,
                 &library.directives,
-                catalog,
+                bindings,
+                &mut diagnostics,
             ),
             import_directives: lower_import_directives(library.span.file_id, &library.directives),
             export_directives: lower_export_directives(library.span.file_id, &library.directives),
@@ -135,37 +183,37 @@ pub(crate) fn lower_library_with_catalog(
             mixins: lower_mixins(
                 library.span.file_id,
                 &library.mixins,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             extensions: lower_extensions(
                 library.span.file_id,
                 &library.extensions,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             extension_types: lower_extension_types(
                 library.span.file_id,
                 &library.extension_types,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             functions: lower_functions(
                 library.span.file_id,
                 &library.functions,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             variables: lower_variables(
                 library.span.file_id,
                 &library.variables,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             typedefs: lower_typedefs(
                 library.span.file_id,
                 &library.typedefs,
-                catalog,
+                bindings,
                 &mut diagnostics,
             ),
             enums,

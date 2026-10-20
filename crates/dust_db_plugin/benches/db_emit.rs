@@ -35,11 +35,14 @@ fn main() {
     const METHODS: usize = 500;
     const ITERS: usize = 50;
     let row = ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "BenchRow".to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: vec![FieldIr {
             name: "id".to_owned(),
@@ -54,12 +57,14 @@ fn main() {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "id".to_owned(),
                 ty: TypeIr::int(),
                 span: span(),
                 kind: ParamKind::Named,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             }],
@@ -73,11 +78,14 @@ fn main() {
         serde: None,
     };
     let dao = ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "BenchDao".to_owned(),
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -85,12 +93,14 @@ fn main() {
             is_factory: true,
             redirected_target_source: Some("_$BenchDao".to_owned()),
             redirected_target_name: Some("_$BenchDao".to_owned()),
+            redirected_target: None,
             span: span(),
             params: vec![ConstructorParamIr {
                 name: "db".to_owned(),
                 ty: TypeIr::named("Executor"),
                 span: span(),
                 kind: ParamKind::Positional,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             }],

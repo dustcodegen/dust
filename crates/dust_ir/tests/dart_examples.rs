@@ -26,11 +26,14 @@ fn models_real_dart_data_class_shapes() {
         part_of: None,
         span: span(1, 0, 220),
         classes: vec![ClassIr {
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             kind: ClassKindIr::Class,
             name: "UserProfile".to_owned(),
             is_abstract: false,
             is_interface: false,
             superclass_name: None,
+            superclass: None,
             span: span(1, 40, 210),
             fields: vec![
                 FieldIr {
@@ -63,6 +66,7 @@ fn models_real_dart_data_class_shapes() {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(1, 160, 205),
                 params: vec![
                     ConstructorParamIr {
@@ -70,6 +74,7 @@ fn models_real_dart_data_class_shapes() {
                         ty: TypeIr::named("String"),
                         span: span(1, 172, 179),
                         kind: ParamKind::Positional,
+                        is_required: true,
                         has_default: false,
                         default_value_source: None,
                     },
@@ -78,6 +83,7 @@ fn models_real_dart_data_class_shapes() {
                         ty: TypeIr::named("String").nullable(),
                         span: span(1, 181, 197),
                         kind: ParamKind::Positional,
+                        is_required: true,
                         has_default: false,
                         default_value_source: None,
                     },
@@ -86,6 +92,7 @@ fn models_real_dart_data_class_shapes() {
                         ty: TypeIr::generic("List", vec![TypeIr::named("String")]),
                         span: span(1, 199, 208),
                         kind: ParamKind::Positional,
+                        is_required: true,
                         has_default: false,
                         default_value_source: None,
                     },

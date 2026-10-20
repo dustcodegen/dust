@@ -29,18 +29,21 @@ fn check_reports_stale_before_build_and_fresh_after_build() {
     );
 
     let first_check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
         db: Default::default(),
     });
     let build = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
         db: Default::default(),
     });
     let second_check = run_check(CheckRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -174,6 +177,7 @@ fn build_emits_progress_events() {
 
     let result = run_build_with_progress(
         BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
             cwd: workspace.path().to_path_buf(),
             fail_fast: false,
             jobs: Some(2),

@@ -27,11 +27,14 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                 span: span(0, 120),
                 classes: vec![
                     ClassIr {
+                        type_parameters: Vec::new(),
+                        mixins: Vec::new(),
                         kind: ClassKindIr::Class,
                         name: "Price".to_owned(),
                         is_abstract: false,
                         is_interface: false,
                         superclass_name: None,
+                        superclass: None,
                         span: span(1, 20),
                         fields: vec![FieldIr {
                             name: "currency".to_owned(),
@@ -46,12 +49,14 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                             is_factory: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
+                            redirected_target: None,
                             span: span(3, 4),
                             params: vec![ConstructorParamIr {
                                 name: "currency".to_owned(),
                                 ty: TypeIr::string(),
                                 span: span(3, 4),
                                 kind: ParamKind::Positional,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             }],
@@ -65,11 +70,14 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         serde: None,
                     },
                     ClassIr {
+                        type_parameters: Vec::new(),
+                        mixins: Vec::new(),
                         kind: ClassKindIr::Class,
                         name: "Product".to_owned(),
                         is_abstract: false,
                         is_interface: false,
                         superclass_name: None,
+                        superclass: None,
                         span: span(20, 100),
                         fields: vec![
                             FieldIr {
@@ -94,6 +102,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                             is_factory: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
+                            redirected_target: None,
                             span: span(24, 25),
                             params: vec![
                                 ConstructorParamIr {
@@ -101,6 +110,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                                     ty: TypeIr::named("Price"),
                                     span: span(24, 25),
                                     kind: ParamKind::Positional,
+                                    is_required: true,
                                     has_default: false,
                                     default_value_source: None,
                                 },
@@ -109,6 +119,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                                     ty: TypeIr::list_of(TypeIr::named("Price")),
                                     span: span(25, 26),
                                     kind: ParamKind::Positional,
+                                    is_required: true,
                                     has_default: false,
                                     default_value_source: None,
                                 },

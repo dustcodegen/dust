@@ -1,7 +1,7 @@
 //! Modern Rust binding for Dust's pinned, unchanged listed-upstream Dart grammar.
 //!
-//! This prepared binding is not yet the active Dust parser. Grammar acceptance
-//! does not establish Dust field extraction or generated-code support.
+//! Dust uses this binding after extraction parity checks. Grammar acceptance
+//! alone does not establish generated-code support for new syntax.
 
 use tree_sitter_language::LanguageFn;
 

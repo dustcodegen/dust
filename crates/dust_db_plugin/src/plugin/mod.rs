@@ -1,8 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
-    DustPlugin, MetadataOutput, PluginContext, PluginContribution, PluginExecutionMode, SymbolPlan,
-    WorkspaceAnalysis, WorkspaceAnalysisBuilder,
+    AnnotationOrigin, DustPlugin, MetadataOutput, PluginContext, PluginContribution,
+    PluginExecutionMode, SymbolPlan, WorkspaceAnalysis, WorkspaceAnalysisBuilder,
 };
 
 /// Package-wide DB facts collected during the workspace scan.
@@ -25,6 +25,8 @@ mod emit;
 mod migrations;
 /// Internal DB plugin model used by parsing, validation, and emission.
 mod model;
+/// Actual Dart declarations used by the two DB plugin profiles.
+mod origins;
 /// Parses DB annotations and query call sites.
 mod parse;
 /// SQL string rewriting helpers.
@@ -129,6 +131,14 @@ impl DustPlugin for DbPlugin {
         }
     }
 
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        if self.options.databases {
+            origins::ORIGINS
+        } else {
+            &origins::ORIGINS[..2]
+        }
+    }
+
     fn supported_annotations(&self) -> &'static [&'static str] {
         if self.options.databases {
             SUPPORTED_DATABASE_ANNOTATIONS
@@ -159,9 +169,13 @@ impl DustPlugin for DbPlugin {
     fn generate(
         &self,
         library: &DartFileIr,
-        _context: &PluginContext<'_>,
+        context: &PluginContext<'_>,
     ) -> Vec<PluginContribution> {
-        vec![emit_db_library(library, self.options)]
+        vec![emit_db_library(
+            library,
+            self.options,
+            context.symbol_plan.workspace_analysis(),
+        )]
     }
 }
 

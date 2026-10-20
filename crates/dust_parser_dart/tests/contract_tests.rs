@@ -16,16 +16,21 @@ impl ParseBackend for FakeBackend {
         ParseResult {
             library: ParsedDartFileSurface {
                 span: TextRange::new(0_u32, 32_u32),
+                lexical_scopes: Vec::new(),
                 directives: vec![ParsedDirective::Part {
+                    uri_literal: None,
                     uri: "user.g.dart".to_owned(),
                     span: TextRange::new(0_u32, 19_u32),
                 }],
                 classes: vec![ParsedClassSurface {
                     kind: ParsedClassKind::Class,
                     name: "User".to_owned(),
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: Some("Entity".to_owned()),
+                    superclass: None,
                     annotations: vec![ParsedAnnotation {
                         name: "Derive".to_owned(),
                         prefix: None,
@@ -46,6 +51,7 @@ impl ParseBackend for FakeBackend {
                         }],
                         type_source: Some("String".to_owned()),
                         parsed_type: None,
+                        function_formal: None,
                         has_default: false,
                         span: TextRange::new(55_u32, 72_u32),
                     }],
@@ -55,12 +61,15 @@ impl ParseBackend for FakeBackend {
                         annotations: Vec::new(),
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         params: vec![ParsedConstructorParamSurface {
                             name: "name".to_owned(),
                             annotations: Vec::new(),
                             type_source: None,
                             parsed_type: None,
+                            function_formal: None,
                             kind: ParameterKind::Positional,
+                            is_required: true,
                             has_default: false,
                             default_value_source: None,
                             span: TextRange::new(80_u32, 89_u32),
@@ -80,6 +89,7 @@ impl ParseBackend for FakeBackend {
                 query_calls: Vec::new(),
             },
             diagnostics: Vec::new(),
+            namespace_diagnostics: Vec::new(),
             options,
         }
     }
@@ -97,6 +107,7 @@ fn parse_result_reports_presence_of_diagnostics() {
     let result = ParseResult {
         library: ParsedDartFileSurface {
             span: TextRange::new(0_u32, 0_u32),
+            lexical_scopes: Vec::new(),
             directives: Vec::new(),
             classes: Vec::new(),
             enums: Vec::new(),
@@ -109,6 +120,7 @@ fn parse_result_reports_presence_of_diagnostics() {
             query_calls: Vec::new(),
         },
         diagnostics: vec![Diagnostic::error("unexpected token")],
+        namespace_diagnostics: vec![Diagnostic::error("unexpected token")],
         options: ParseOptions::default(),
     };
 
@@ -132,8 +144,20 @@ fn parse_file_dispatches_through_injected_backend() {
 }
 
 #[test]
+fn generation_error_status_is_not_weakened_by_the_namespace_projection() {
+    let source = SourceText::new(FileId::new(142), "class User {}");
+    let mut result = FakeBackend.parse_file(&source, ParseOptions::default());
+    result
+        .diagnostics
+        .push(Diagnostic::error("generation limitation"));
+    assert_eq!(result.namespace_diagnostics, []);
+    assert!(result.has_errors());
+}
+
+#[test]
 fn directive_span_accessor_returns_stored_span() {
     let directive = ParsedDirective::Import {
+        namespace: None,
         uri: "dart:convert".to_owned(),
         prefix: None,
         show: Vec::new(),
@@ -149,6 +173,7 @@ fn directive_span_accessor_returns_stored_span() {
 fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
     let library = ParsedDartFileSurface {
         span: TextRange::new(0_u32, 0_u32),
+        lexical_scopes: Vec::new(),
         directives: Vec::new(),
         classes: Vec::new(),
         enums: Vec::new(),
@@ -163,9 +188,12 @@ fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
     let class = ParsedClassSurface {
         kind: ParsedClassKind::MixinClass,
         name: "UserMixin".to_owned(),
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         is_abstract: true,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         annotations: vec![ParsedAnnotation {
             name: "Derive".to_owned(),
             prefix: None,
@@ -186,6 +214,7 @@ fn parsed_surface_helpers_cover_empty_and_mixin_class_cases() {
             }],
             type_source: Some("String".to_owned()),
             parsed_type: None,
+            function_formal: None,
             has_default: true,
             span: TextRange::new(21_u32, 35_u32),
         }],

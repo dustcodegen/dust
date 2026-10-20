@@ -7,7 +7,7 @@ use super::*;
 pub(super) fn lower_mixins(
     file_id: dust_text::FileId,
     mixins: &[ParsedMixinSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MixinIr> {
     mixins
@@ -17,12 +17,12 @@ pub(super) fn lower_mixins(
             annotations: mixin
                 .annotations
                 .iter()
-                .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+                .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
                 .collect(),
             fields: mixin
                 .fields
                 .iter()
-                .map(|field| lower_unresolved_field(file_id, field, diagnostics))
+                .map(|field| lower_unresolved_field(file_id, field, bindings, diagnostics))
                 .collect(),
             span: SpanIr::new(file_id, mixin.span),
         })
@@ -33,7 +33,7 @@ pub(super) fn lower_mixins(
 pub(super) fn lower_extensions(
     file_id: dust_text::FileId,
     extensions: &[ParsedExtensionSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ExtensionIr> {
     extensions
@@ -54,7 +54,7 @@ pub(super) fn lower_extensions(
                 annotations: extension
                     .annotations
                     .iter()
-                    .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+                    .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
                     .collect(),
                 span: SpanIr::new(file_id, extension.span),
             }
@@ -66,7 +66,7 @@ pub(super) fn lower_extensions(
 pub(super) fn lower_extension_types(
     file_id: dust_text::FileId,
     extension_types: &[ParsedExtensionTypeSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ExtensionTypeIr> {
     extension_types
@@ -83,7 +83,7 @@ pub(super) fn lower_extension_types(
                 annotations: extension_type
                     .annotations
                     .iter()
-                    .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+                    .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
                     .collect(),
                 representation: FieldIr {
                     name: extension_type.representation_name.clone(),
@@ -103,7 +103,7 @@ pub(super) fn lower_extension_types(
 pub(super) fn lower_functions(
     file_id: dust_text::FileId,
     functions: &[ParsedFunctionSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<FunctionIr> {
     functions
@@ -114,16 +114,26 @@ pub(super) fn lower_functions(
                 function.return_type_source.as_deref(),
             );
             diagnostics.extend(return_type.diagnostics);
+            let annotations = function
+                .annotations
+                .iter()
+                .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
+                .collect::<Vec<_>>();
+            let collect_type_diagnostics = annotations
+                .iter()
+                .any(|annotation| annotation.resolved_symbol.is_some());
 
             FunctionIr {
                 name: lower_name_ir(file_id, &function.name, function.span),
                 return_type: return_type.value,
-                params: lower_unresolved_method_params(file_id, &function.params, diagnostics),
-                annotations: function
-                    .annotations
-                    .iter()
-                    .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
-                    .collect(),
+                params: lower_unresolved_method_params(
+                    file_id,
+                    &function.params,
+                    collect_type_diagnostics,
+                    bindings,
+                    diagnostics,
+                ),
+                annotations,
                 span: SpanIr::new(file_id, function.span),
             }
         })
@@ -134,7 +144,7 @@ pub(super) fn lower_functions(
 pub(super) fn lower_variables(
     file_id: dust_text::FileId,
     variables: &[ParsedTopLevelVariableSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<TopLevelVariableIr> {
     variables
@@ -162,7 +172,7 @@ pub(super) fn lower_variables(
                 annotations: variable
                     .annotations
                     .iter()
-                    .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+                    .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
                     .collect(),
                 span: SpanIr::new(file_id, variable.span),
             }
@@ -174,7 +184,7 @@ pub(super) fn lower_variables(
 pub(super) fn lower_typedefs(
     file_id: dust_text::FileId,
     typedefs: &[ParsedTypedefSurface],
-    catalog: &SymbolCatalog,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<TypedefIr> {
     typedefs
@@ -192,7 +202,7 @@ pub(super) fn lower_typedefs(
                 annotations: typedef
                     .annotations
                     .iter()
-                    .map(|annotation| lower_annotation_ir(file_id, annotation, catalog))
+                    .map(|annotation| bindings.annotation_ir(file_id, annotation, diagnostics))
                     .collect(),
                 span: SpanIr::new(file_id, typedef.span),
             }

@@ -2,6 +2,33 @@
 
 use super::*;
 
+/// Resolves constant constructor calls across both grammar field layouts.
+pub(super) fn const_object_call_shape(
+    call: Node<'_>,
+    source: &SourceText,
+) -> Option<I18nCallShape> {
+    let type_node = call
+        .child_by_field_name("type")
+        .or_else(|| direct_named_child(call, "type_identifier"))?;
+    let kind = match node_text(type_node, source).as_str() {
+        "Text" => I18nCallKind::HardcodedText,
+        "TranslatedText" => {
+            let constructor = call
+                .child_by_field_name("constructor")
+                .or_else(|| direct_named_child(call, "identifier"));
+            if constructor.is_some_and(|node| node_text(node, source) == "dynamic") {
+                return None;
+            }
+            I18nCallKind::Translation(I18nTranslationKind::TranslatedText)
+        }
+        _ => return None,
+    };
+    Some(I18nCallShape {
+        kind,
+        span: text_range(call.start_byte(), call.end_byte()),
+    })
+}
+
 /// Matched i18n call metadata.
 pub(super) struct I18nCallShape {
     /// Recognized call kind.

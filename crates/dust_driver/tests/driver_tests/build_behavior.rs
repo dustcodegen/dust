@@ -3,6 +3,51 @@ use dust_driver::{BuildRequest, CleanRequest, run_build, run_clean};
 use super::support::{DustImport, make_workspace, write_dust_file, write_file};
 
 #[test]
+fn changed_tool_hash_rebuilds_cached_output_without_changing_generated_bytes() {
+    let workspace = make_workspace();
+    let root = workspace.path();
+    let source = root.join("lib/user.dart");
+    write_dust_file(
+        &source,
+        &[DustImport::Derive],
+        "part 'user.g.dart';\n@ToString()\nclass User { final String id; const User(this.id); }\n",
+    );
+    let build = || {
+        run_build(BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
+            cwd: root.to_path_buf(),
+            fail_fast: true,
+            jobs: None,
+            db: Default::default(),
+        })
+    };
+    assert_eq!(build().diagnostics, []);
+    let cached = build();
+    assert_eq!(cached.diagnostics, []);
+    assert_eq!(cached.cache.as_ref().unwrap().hits, 1);
+    let output = root.join("lib/user.g.dart");
+    let expected = std::fs::read(&output).unwrap();
+    let mut cache = dust_cache::WorkspaceCache::load(root).unwrap();
+    let original = cache.get(root, &source).unwrap().clone();
+    let mut outdated = original.clone();
+    outdated.tool_hash ^= 1;
+    cache.insert(root, &source, outdated);
+    cache.flush().unwrap();
+
+    let rebuilt = build();
+    assert_eq!(rebuilt.diagnostics, []);
+    assert_eq!(rebuilt.cache.as_ref().unwrap().hits, 0);
+    assert_eq!(rebuilt.cache.as_ref().unwrap().misses, 1);
+    assert!(!rebuilt.build_artifacts[0].cached);
+    assert_eq!(std::fs::read(&output).unwrap(), expected);
+    let repaired = dust_cache::WorkspaceCache::load(root).unwrap();
+    assert_eq!(repaired.get(root, &source), Some(&original));
+    let cached_again = build();
+    assert_eq!(cached_again.diagnostics, []);
+    assert_eq!(cached_again.cache.as_ref().unwrap().hits, 1);
+}
+
+#[test]
 fn second_build_uses_persistent_cache_under_dot_dart_tool() {
     let workspace = make_workspace();
     write_dust_file(
@@ -17,12 +62,14 @@ fn second_build_uses_persistent_cache_under_dot_dart_tool() {
     );
 
     let first = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
         db: Default::default(),
     });
     let second = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
@@ -59,6 +106,7 @@ fn clean_removes_dust_outputs_and_cache_but_keeps_foreign_generated_files() {
     );
 
     let built = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -122,6 +170,7 @@ fn parallel_build_keeps_artifact_order_deterministic() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: Some(4),
@@ -169,6 +218,7 @@ fn build_skips_invalid_library_and_continues_when_fail_fast_is_false() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: false,
         jobs: None,
@@ -211,6 +261,7 @@ fn build_stops_after_first_error_when_fail_fast_is_true() {
     );
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

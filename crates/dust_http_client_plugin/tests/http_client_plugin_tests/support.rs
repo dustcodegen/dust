@@ -90,11 +90,14 @@ pub(crate) fn http_client_class(
     methods: Vec<MethodIr>,
 ) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "Api".to_owned(),
         is_abstract: true,
         is_interface: true,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![factory_constructor()],
@@ -156,6 +159,7 @@ fn factory_constructor() -> ConstructorIr {
         is_factory: true,
         redirected_target_source: Some("_$Api".to_owned()),
         redirected_target_name: Some("_$Api".to_owned()),
+        redirected_target: None,
         span: span(12, 18),
         params: vec![
             ConstructorParamIr {
@@ -163,6 +167,7 @@ fn factory_constructor() -> ConstructorIr {
                 ty: TypeIr::named("Dio"),
                 span: span(13, 14),
                 kind: ParamKind::Positional,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             },
@@ -171,6 +176,7 @@ fn factory_constructor() -> ConstructorIr {
                 ty: TypeIr::string().nullable(),
                 span: span(14, 15),
                 kind: ParamKind::Named,
+                is_required: true,
                 has_default: false,
                 default_value_source: None,
             },
@@ -197,17 +203,21 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
             ty: field.ty.clone(),
             span: span(16, 17),
             kind: ParamKind::Named,
+            is_required: !field.has_default,
             has_default: field.has_default,
             default_value_source: None,
         })
         .collect();
 
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields,
         constructors: vec![
@@ -216,6 +226,7 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
                 is_factory: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(12, 18),
                 params: constructor_params,
             },
@@ -224,12 +235,14 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
                 is_factory: true,
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 span: span(18, 24),
                 params: vec![ConstructorParamIr {
                     name: "json".to_owned(),
                     ty: TypeIr::map_of(TypeIr::string(), TypeIr::object().nullable()),
                     span: span(18, 19),
                     kind: ParamKind::Positional,
+                    is_required: true,
                     has_default: false,
                     default_value_source: None,
                 }],

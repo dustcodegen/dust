@@ -20,6 +20,9 @@ mod serde;
 #[path = "resolver_tests/serde_variants.rs"]
 mod serde_variants;
 
+#[path = "resolver_tests/generic_redirects.rs"]
+mod generic_redirects;
+
 #[test]
 fn symbol_catalog_registers_traits_and_configs() {
     let mut catalog = SymbolCatalog::new();

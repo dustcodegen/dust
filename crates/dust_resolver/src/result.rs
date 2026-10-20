@@ -6,7 +6,7 @@ use dust_ir::{
 use dust_parser_dart::{
     ParsedConstructorSurface, ParsedDirective, ParsedExtensionSurface, ParsedExtensionTypeSurface,
     ParsedFunctionSurface, ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface,
-    ParsedTopLevelVariableSurface, ParsedTypeSurface, ParsedTypedefSurface,
+    ParsedTopLevelVariableSurface, ParsedTypeParamSurface, ParsedTypeSurface, ParsedTypedefSurface,
 };
 
 /// One resolved field plus its field-level Dust configuration.
@@ -18,6 +18,8 @@ pub struct ResolvedField {
     pub type_source: Option<String>,
     /// Parsed type facts, when provided by the parser backend.
     pub parsed_type: Option<ParsedTypeSurface>,
+    /// Original declaring callback facts for a primary-induced field.
+    pub function_formal: Option<dust_parser_dart::ParsedFunctionFormalTypeSurface>,
     /// Whether the field has a default initializer in the declaration.
     pub has_default: bool,
     /// The field source span.
@@ -61,6 +63,8 @@ pub struct ResolvedMethodParam {
 pub struct ResolvedConstructor {
     /// The parsed constructor surface.
     pub surface: ParsedConstructorSurface,
+    /// Semantic target facts after type-path/constructor disambiguation.
+    pub redirected_target: Option<dust_ir::RedirectTargetIr>,
     /// Resolved config applications.
     pub configs: Vec<ConfigApplicationIr>,
 }
@@ -101,12 +105,18 @@ pub struct ResolvedClass {
     pub kind: ClassKindIr,
     /// The class name.
     pub name: String,
+    /// Parser-owned type parameters and their original bound/source spans.
+    pub type_parameters: Vec<ParsedTypeParamSurface>,
+    /// Written mixin applications, including arguments and original spans.
+    pub mixins: Vec<ParsedTypeSurface>,
     /// Whether the declaration is marked `abstract`.
     pub is_abstract: bool,
     /// Whether the declaration uses Dart's `interface class` form.
     pub is_interface: bool,
     /// The immediate superclass name, if one was declared.
     pub superclass_name: Option<String>,
+    /// Parser-owned superclass type with actual arguments and original spans.
+    pub superclass: Option<ParsedTypeSurface>,
     /// The class source span.
     pub span: SpanIr,
     /// The resolved fields preserved for later lowering.

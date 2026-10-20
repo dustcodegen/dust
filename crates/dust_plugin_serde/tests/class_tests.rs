@@ -6,6 +6,12 @@ mod support;
 #[path = "class_tests/basic.rs"]
 mod basic;
 
+#[path = "class_tests/generics.rs"]
+mod generics;
+
+#[path = "class_tests/private_fields.rs"]
+mod private_fields;
+
 #[path = "class_tests/nested.rs"]
 mod nested;
 
@@ -14,6 +20,8 @@ mod config;
 
 #[path = "class_tests/sealed.rs"]
 mod sealed;
+#[path = "class_tests/sealed_generics.rs"]
+mod sealed_generics;
 
 #[path = "class_tests/sealed_generated_variants.rs"]
 mod sealed_generated_variants;

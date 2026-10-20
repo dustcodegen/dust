@@ -45,7 +45,7 @@ queryExecute('DELETE FROM users', []).execute(db);"
     write_source(root, dao, body);
 }
 
-fn write_source(root: &Path, dao: bool, body: &str) {
+pub(super) fn write_source(root: &Path, dao: bool, body: &str) {
     let declarations = if dao {
         format!(
             "part 'queries.g.dart';\n@SqlxDao()\nabstract final class ProbeDao {{\nconst factory ProbeDao(Executor db) = _$ProbeDao;\n{body}\n}}"

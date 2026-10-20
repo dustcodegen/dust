@@ -123,3 +123,40 @@ class User {
         })
     );
 }
+
+#[test]
+fn typed_constructor_names_keep_applied_source_without_rebinding_type_arguments() {
+    let written = "const p /* owner ( . */ . Box<List<argument.Type>> . named(3, field: true)";
+    let text = format!("@Meta(value: {written}) class Model {{}}");
+    let source = SourceText::new(FileId::new(125), text.as_str());
+    let parsed = TreeSitterDartBackend::new().parse_file(&source, ParseOptions::default());
+    assert_eq!(parsed.diagnostics, []);
+    let ir = dust_resolver::resolve_annotation_ir(
+        FileId::new(125),
+        &parsed.library.classes[0].annotations[0],
+        &SymbolCatalog::new(),
+    );
+    let AnnotationValueIr::Constructor {
+        name,
+        positional_args,
+        named_args,
+    } = &ir.named_args["value"]
+    else {
+        panic!("expected constructor")
+    };
+    assert_eq!(
+        name.source,
+        "p /* owner ( . */ . Box<List<argument.Type>> . named"
+    );
+    assert_eq!(name.short, "named");
+    assert_eq!(name.prefix.as_deref(), Some("p.Box"));
+    assert_eq!(source.slice(name.span.range), Some(written));
+    assert_eq!(
+        positional_args,
+        &[AnnotationValueIr::Number {
+            source: "3".to_owned(),
+            kind: AnnotationNumberKindIr::Int
+        }]
+    );
+    assert_eq!(named_args["field"], AnnotationValueIr::Bool(true));
+}

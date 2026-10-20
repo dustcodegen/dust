@@ -46,6 +46,7 @@ pub(crate) fn extract_fields_from_identifier_list(
             annotations: annotations.to_vec(),
             type_source: type_source.clone(),
             parsed_type: parsed_type.clone(),
+            function_formal: None,
             has_default: has_direct_child_kind(initialized, "="),
             span: text_range(initialized),
         });

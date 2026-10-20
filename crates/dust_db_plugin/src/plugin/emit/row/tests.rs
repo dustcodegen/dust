@@ -38,11 +38,14 @@ fn library(classes: Vec<ClassIr>) -> DartFileIr {
 
 fn class(name: &str) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(),
         fields: Vec::new(),
         constructors: Vec::new(),
@@ -69,12 +72,14 @@ fn emits_basic_from_row_extension() {
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(),
         params: vec![ConstructorParamIr {
             name: "id".to_owned(),
             ty: TypeIr::int(),
             span: span(),
             kind: ParamKind::Named,
+            is_required: true,
             has_default: false,
             default_value_source: None,
         }],

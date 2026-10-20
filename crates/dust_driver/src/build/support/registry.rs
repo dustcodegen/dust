@@ -97,11 +97,6 @@ const BUILTIN_PLUGINS: &[PluginRegistration] = &[
     },
 ];
 
-/// Builds the full default plugin registry.
-pub(crate) fn default_registry() -> PluginRegistry {
-    registry_for_selection(RegistrySelection::All)
-}
-
 /// Builds the plugin registry requested by a command.
 pub(crate) fn registry_for_selection(selection: RegistrySelection) -> PluginRegistry {
     let mut registry = PluginRegistry::new();

@@ -11,7 +11,7 @@ use dust_cache::WorkspaceCache;
 use crate::{
     build::{
         ApplyOutcomeConfig, BatchConfig, RegistrySelection, apply_indexed_outcomes,
-        flush_cache_into_result, prepare_and_process_batch, read_workspace_config_hash,
+        flush_cache_into_result, prepare_and_process_batch,
     },
     context::CachedDriverContext,
     progress::{ProgressEvent, ProgressPhase},
@@ -43,14 +43,20 @@ fn run_watch_inner(
     let mut result = CommandResult::default();
 
     let CachedDriverContext {
-        workspace,
+        mut workspace,
         registry,
         catalog,
+        mut namespaces,
+        mut package_config_hash,
         tool_hash,
         mut cache,
         mut cache_report,
         ..
-    } = match CachedDriverContext::load(&request.cwd, RegistrySelection::All) {
+    } = match CachedDriverContext::load(
+        &request.cwd,
+        RegistrySelection::All,
+        request.sdk_source_root.as_deref(),
+    ) {
         Ok(context) => context,
         Err(diagnostic) => {
             result.diagnostics.push(diagnostic);
@@ -58,19 +64,7 @@ fn run_watch_inner(
             return result;
         }
     };
-    let mut package_config_hash = match read_workspace_config_hash(
-        &workspace.package_config.path,
-        workspace.dust_config.path.as_deref(),
-        &workspace.package_root.join("pubspec.yaml"),
-    ) {
-        Ok(hash) => hash,
-        Err(diagnostic) => {
-            result.diagnostics.push(diagnostic);
-            result.elapsed_ms = started.elapsed().as_millis();
-            return result;
-        }
-    };
-    let mut snapshot = match build_snapshot(&request.cwd) {
+    let mut snapshot = match build_snapshot(&workspace, &namespaces, &catalog) {
         Ok(snapshot) => snapshot,
         Err(diagnostic) => {
             result.diagnostics.push(diagnostic);
@@ -86,11 +80,12 @@ fn run_watch_inner(
 
     let initial = prepare_and_process_batch(
         BatchConfig {
+            analysis_libraries: &workspace.libraries,
+            namespaces: &namespaces,
             cache_root: &workspace.cache_root,
             package_root: &workspace.package_root,
             package_name: &workspace.package_name,
             is_flutter_package: workspace.is_flutter_package,
-            dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
             package_config_hash,
             tool_hash,
             cache: &cache,
@@ -99,7 +94,6 @@ fn run_watch_inner(
             write_output: true,
             fail_fast: request.fail_fast,
             jobs: request.jobs,
-            file_id_base: 1,
             phase: ProgressPhase::WatchInitial,
             progress,
         },
@@ -107,6 +101,7 @@ fn run_watch_inner(
         &mut cache_report,
     );
 
+    result.diagnostic_files.extend(initial.diagnostic_files);
     if apply_indexed_outcomes(
         initial.outcomes,
         ApplyOutcomeConfig {
@@ -139,13 +134,25 @@ fn run_watch_inner(
         thread::sleep(Duration::from_millis(request.poll_interval_ms));
         watch.cycles = cycle + 1;
 
-        let next_snapshot = match build_snapshot(&request.cwd) {
-            Ok(snapshot) => snapshot,
+        let next_context = match CachedDriverContext::load(
+            &request.cwd,
+            RegistrySelection::All,
+            request.sdk_source_root.as_deref(),
+        ) {
+            Ok(context) => context,
             Err(diagnostic) => {
                 result.diagnostics.push(diagnostic);
                 break;
             }
         };
+        let next_snapshot =
+            match build_snapshot(&next_context.workspace, &next_context.namespaces, &catalog) {
+                Ok(snapshot) => snapshot,
+                Err(diagnostic) => {
+                    result.diagnostics.push(diagnostic);
+                    break;
+                }
+            };
 
         let changed =
             expand_route_rebuilds(changed_libraries(&snapshot, &next_snapshot), &next_snapshot);
@@ -153,6 +160,8 @@ fn run_watch_inner(
             .package_config_hash
             .unwrap_or(package_config_hash);
         snapshot = next_snapshot;
+        workspace = next_context.workspace;
+        namespaces = next_context.namespaces;
 
         if changed.is_empty() {
             continue;
@@ -161,11 +170,12 @@ fn run_watch_inner(
         watch.rebuild_batches += 1;
         let rebuilt = prepare_and_process_batch(
             BatchConfig {
+                analysis_libraries: &workspace.libraries,
+                namespaces: &namespaces,
                 cache_root: &workspace.cache_root,
                 package_root: &workspace.package_root,
                 package_name: &workspace.package_name,
                 is_flutter_package: workspace.is_flutter_package,
-                dart_language_version: workspace.dart_sdk_lower_bound.unwrap_or_default(),
                 package_config_hash,
                 tool_hash,
                 cache: &cache,
@@ -174,7 +184,6 @@ fn run_watch_inner(
                 write_output: true,
                 fail_fast: request.fail_fast,
                 jobs: request.jobs,
-                file_id_base: 10_000,
                 phase: ProgressPhase::WatchRebuild,
                 progress,
             },
@@ -182,6 +191,7 @@ fn run_watch_inner(
             &mut cache_report,
         );
 
+        result.diagnostic_files.extend(rebuilt.diagnostic_files);
         if apply_indexed_outcomes(
             rebuilt.outcomes,
             ApplyOutcomeConfig {

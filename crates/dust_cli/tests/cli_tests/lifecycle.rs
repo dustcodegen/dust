@@ -1,6 +1,6 @@
 use std::{thread, time::Duration};
 
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 
 use super::helpers::{
     DustImport, make_pub_workspace_member, make_workspace, write_dust_file, write_file,

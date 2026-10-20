@@ -26,11 +26,14 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                 part_of: None,
                 span: span(0, 100),
                 classes: vec![ClassIr {
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     kind: ClassKindIr::Class,
                     name: "Catalog".to_owned(),
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: None,
+                    superclass: None,
                     span: span(10, 80),
                     fields: vec![
                         FieldIr {
@@ -71,6 +74,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                         is_factory: false,
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         span: span(40, 60),
                         params: vec![
                             ConstructorParamIr {
@@ -78,6 +82,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                                 ty: TypeIr::list_of(TypeIr::list_of(TypeIr::string())),
                                 span: span(40, 41),
                                 kind: ParamKind::Positional,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },
@@ -86,6 +91,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                                 ty: TypeIr::list_of(TypeIr::string()),
                                 span: span(42, 44),
                                 kind: ParamKind::Positional,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },
@@ -94,6 +100,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                                 ty: TypeIr::generic("Set", vec![TypeIr::string()]).nullable(),
                                 span: span(45, 47),
                                 kind: ParamKind::Positional,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },
@@ -105,6 +112,7 @@ fn copywith_preserves_collection_references_without_deep_copy() {
                                 ),
                                 span: span(48, 49),
                                 kind: ParamKind::Positional,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },

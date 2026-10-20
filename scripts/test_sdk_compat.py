@@ -1,5 +1,6 @@
 """Offline safety regressions for the explicit minimum/latest compatibility gate."""
 
+import json
 import subprocess
 import tempfile
 import unittest
@@ -73,6 +74,23 @@ class SdkCompatibilityTests(unittest.TestCase):
         manifest = (ROOT / "examples/benchmark_project/pubspec.yaml").read_text()
         self.assertIn("\n  test: ^1.25.15\n", manifest)
 
+    def test_flutter_gates_rebuild_shopping_database_offline_after_clean(self) -> None:
+        expected = [
+            "cargo run --quiet -p dust_cli -- build --clean --root examples/benchmark_project",
+            "cargo run --quiet -p dust_cli -- check --root examples/benchmark_project",
+            "cargo run --quiet -p dust_cli -- build --clean --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- db build --offline --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- check --root examples/shopping_app",
+            "cargo run --quiet -p dust_cli -- check --db --offline --root examples/shopping_app",
+        ]
+        for script in ("lint.sh", "test.sh"):
+            commands = [
+                line.strip()
+                for line in (ROOT / "scripts/flutter" / script).read_text().splitlines()
+                if line.strip().startswith("cargo run")
+            ]
+            self.assertEqual(commands, expected, script)
+
     def test_latest_analysis_stays_identical_and_enabled_rules_are_not_removed(self) -> None:
         original = (ROOT / "analysis_options.yaml").read_text()
         with tempfile.TemporaryDirectory() as name:
@@ -84,7 +102,7 @@ class SdkCompatibilityTests(unittest.TestCase):
             (root / "analysis_options.yaml").write_text(
                 "linter:\n  rules:\n    unnecessary_ignore: true\n"
             )
-            with patch("sdk_compat.ROOT", root), patch("sdk_compat.stage_consumer", return_value=root):
+            with patch("sdk_codegen_fixtures.ROOT", root), patch("sdk_codegen_fixtures.stage_consumer", return_value=root):
                 stage_example(root, "examples/product_showcase", "7.0.0")
             self.assertIn("unnecessary_ignore: true", (root / "analysis_options.yaml").read_text())
 
@@ -111,23 +129,25 @@ class SdkCompatibilityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             require_deterministic_generation(rows)
 
-    def test_negative_probe_requires_sdk_analysis_and_parser_failure(self) -> None:
+    def test_negative_probe_requires_sdk_analysis_and_explicit_rejection(self) -> None:
         with tempfile.TemporaryDirectory() as name:
             calls = []
 
             def run(command, cwd=ROOT, expected=0):
                 calls.append(command)
-                return subprocess.CompletedProcess(command, expected, "", "syntax error" if expected else "")
+                message = "Dust does not support concise constructors yet"
+                return subprocess.CompletedProcess(command, expected, "", message if expected else "")
 
             self.assertEqual(check_unsupported(run, Path("dust"), Path("dart"), Path(name)),
-                             ["primary", "named-concise"])
-            self.assertEqual(sum("analyze" in call for call in calls), 2)
-            self.assertEqual(sum("build" in call or "check" in call for call in calls), 4)
-        with tempfile.TemporaryDirectory() as name:
-            def bad(command, cwd=ROOT, expected=0):
-                return subprocess.CompletedProcess(command, expected, "", "unrelated failure")
-            with self.assertRaises(ValueError):
-                check_unsupported(bad, Path("dust"), Path("dart"), Path(name))
+                             ["named-concise"])
+            self.assertEqual(sum("analyze" in call for call in calls), 1)
+            self.assertEqual(sum("build" in call or "check" in call for call in calls), 2)
+        for message in ("unrelated failure", "syntax error", "Dust does not support dot shorthands yet"):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as name:
+                def bad(command, cwd=ROOT, expected=0):
+                    return subprocess.CompletedProcess(command, expected, "", message)
+                with self.assertRaises(ValueError):
+                    check_unsupported(bad, Path("dust"), Path("dart"), Path(name))
 
     def test_negative_probe_rejects_generated_files_and_analyzer_failures(self) -> None:
         with tempfile.TemporaryDirectory() as name:
@@ -136,7 +156,8 @@ class SdkCompatibilityTests(unittest.TestCase):
             def emits(command, cwd=ROOT, expected=0):
                 if expected:
                     (root / "unsupported/lib/probe.g.dart").write_text("unexpected")
-                return subprocess.CompletedProcess(command, expected, "", "syntax error")
+                message = "Dust does not support concise constructors yet"
+                return subprocess.CompletedProcess(command, expected, "", message)
 
             with self.assertRaises(ValueError):
                 check_unsupported(emits, Path("dust"), Path("dart"), root)
@@ -152,7 +173,6 @@ class SdkCompatibilityTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 check_unsupported(analyzer_fails, Path("dust"), Path("dart"), Path(name))
             self.assertFalse(any("build" in call or "check" in call for call in calls))
-
 
 if __name__ == "__main__":
     unittest.main()

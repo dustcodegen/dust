@@ -49,7 +49,7 @@ pub(super) fn lower_selector_query_chain(
             .get(selector_index)
             .filter(|selector| selector.kind() == "selector")
             .and_then(|selector| selector_type_arguments_source(*selector, source));
-        if type_arg_source.is_some() {
+        if type_arg_source.is_some() && selector_arguments(children[selector_index]).is_none() {
             selector_index += 1;
         }
 
@@ -105,13 +105,13 @@ pub(super) fn lower_unsafe_sql_chain(
         let method = selector_property_name(*terminal, source)
             .filter(|name| matches!(name.as_str(), "fetch" | "fetchAs" | "execute"))?;
 
-        // `fetchAs<T>` carries its type argument in a selector of its own.
+        // Only the packaged grammar puts `fetchAs<T>` types in a separate selector.
         let mut args_index = index + 2;
         let type_arg_source = children
             .get(args_index)
             .filter(|selector| selector.kind() == "selector")
             .and_then(|selector| selector_type_arguments_source(*selector, source));
-        if type_arg_source.is_some() {
+        if type_arg_source.is_some() && selector_arguments(children[args_index]).is_none() {
             args_index += 1;
         }
 

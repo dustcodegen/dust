@@ -13,8 +13,9 @@ use dust_parser_dart::{
 use dust_text::FileId;
 
 use crate::{
-    ResolveResult, ResolvedClass, ResolvedEnum, ResolvedEnumVariant, ResolvedLibrary,
-    SymbolCatalog,
+    NamespaceScope, ResolveResult, ResolvedClass, ResolvedEnum, ResolvedEnumVariant,
+    ResolvedLibrary, SymbolCatalog,
+    binding::BindingContext,
     db::normalize_db,
     http::normalize_http,
     query_calls::normalize_query_calls,
@@ -59,28 +60,87 @@ pub fn resolve_library_with_partless_configs(
     catalog: &SymbolCatalog,
     partless_config_symbols: &[&str],
 ) -> ResolveResult {
+    resolve_library_with_bindings(
+        file_id,
+        source_path,
+        output_path,
+        library,
+        &BindingContext::new(catalog, None),
+        partless_config_symbols,
+    )
+}
+
+/// Resolves actual imported declarations before any feature normalization.
+///
+/// The caller supplies a fully loaded namespace graph; this does not load files
+/// or change the context-free compatibility entrypoints.
+pub fn resolve_library_in_namespace(
+    file_id: FileId,
+    source_path: &str,
+    output_path: &str,
+    library: &ParsedDartFileSurface,
+    catalog: &SymbolCatalog,
+    namespace: NamespaceScope<'_>,
+    partless_config_symbols: &[&str],
+) -> ResolveResult {
+    resolve_library_with_bindings(
+        file_id,
+        source_path,
+        output_path,
+        library,
+        &BindingContext::new(catalog, Some(namespace)),
+        partless_config_symbols,
+    )
+}
+
+/// Compatibility and production-context paths share feature resolution.
+pub fn resolve_library_with_bindings(
+    file_id: FileId,
+    source_path: &str,
+    output_path: &str,
+    library: &ParsedDartFileSurface,
+    context: &BindingContext<'_>,
+    partless_config_symbols: &[&str],
+) -> ResolveResult {
     let mut diagnostics = Vec::new();
-    validate_annotation_prefixes(file_id, library, &mut diagnostics);
-    let part_uri = first_part_uri(&library.directives);
+    if context.namespace.is_none() {
+        validate_annotation_prefixes(file_id, library, &mut diagnostics);
+    }
+    let part_uri = match context.primary_part {
+        Some(primary) => primary.select(&library.directives).map(str::to_owned),
+        None => library
+            .directives
+            .iter()
+            .find_map(|directive| match directive {
+                ParsedDirective::Part { uri, .. }
+                    if validate_generated_part_uri(output_path, uri).is_ok() =>
+                {
+                    Some(uri.clone())
+                }
+                _ => None,
+            })
+            .or_else(|| first_part_uri(&library.directives)),
+    };
     let mut enums: Vec<ResolvedEnum> = Vec::new();
     let mut classes = Vec::new();
     let mut saw_dust_symbol = false;
 
     for class in &library.classes {
-        let resolved = resolve_class(file_id, class, catalog, &mut diagnostics);
+        let resolved = resolve_class(file_id, class, context, &mut diagnostics);
         if class_has_dust_symbol(&resolved) {
             saw_dust_symbol = true;
         }
         classes.push(resolved);
     }
     for enum_surface in &library.enums {
-        let resolved: ResolvedEnum = resolve_enum(file_id, enum_surface, catalog, &mut diagnostics);
+        let resolved: ResolvedEnum = resolve_enum(file_id, enum_surface, context, &mut diagnostics);
         if !resolved.traits.is_empty() || !resolved.configs.is_empty() {
             saw_dust_symbol = true;
         }
         enums.push(resolved);
     }
-    normalize_sealed_serde_variants(&mut classes, &mut diagnostics);
+    crate::redirects::resolve_redirect_targets(&mut classes, &library.directives);
+    normalize_sealed_serde_variants(&mut classes, context, &mut diagnostics);
     mark_required_lowering_diagnostics(&mut classes);
 
     let needs_part = saw_dust_symbol
@@ -94,7 +154,9 @@ pub fn resolve_library_with_partless_configs(
     if needs_part {
         match part_uri.as_deref() {
             Some(uri) => {
-                if let Err(diagnostic) = validate_generated_part_uri(output_path, uri) {
+                if context.primary_part.is_none()
+                    && let Err(diagnostic) = validate_generated_part_uri(output_path, uri)
+                {
                     diagnostics.push(diagnostic);
                 }
             }
@@ -102,7 +164,15 @@ pub fn resolve_library_with_partless_configs(
                 Diagnostic::error("missing generated `part` directive for Dust-enabled library")
                     .with_label(SourceLabel::new(
                         file_id,
-                        library.span,
+                        library
+                            .directives
+                            .iter()
+                            .find_map(|directive| match directive {
+                                ParsedDirective::Part { span, .. } => Some(*span),
+                                _ => None,
+                            })
+                            .filter(|_| context.primary_part.is_some())
+                            .unwrap_or(library.span),
                         format!(
                             "expected a matching `part '{}';` directive",
                             expected_part_uri(output_path)
@@ -137,7 +207,7 @@ pub fn resolve_library_with_partless_configs(
 fn resolve_enum(
     file_id: FileId,
     enum_surface: &dust_parser_dart::ParsedEnumSurface,
-    catalog: &SymbolCatalog,
+    context: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> ResolvedEnum {
     let mut traits: Vec<TraitApplicationIr> = Vec::new();
@@ -145,7 +215,7 @@ fn resolve_enum(
     resolve_declaration_annotations(
         file_id,
         &enum_surface.annotations,
-        catalog,
+        context,
         diagnostics,
         &mut traits,
         &mut configs,
@@ -160,7 +230,7 @@ fn resolve_enum(
             resolve_declaration_annotations(
                 file_id,
                 &variant.annotations,
-                catalog,
+                context,
                 diagnostics,
                 &mut variant_traits,
                 &mut variant_configs,

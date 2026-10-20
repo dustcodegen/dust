@@ -11,8 +11,10 @@ use dust_text::TextRange;
 fn parse_surface_can_model_real_dart_library_shapes() {
     let library = ParsedDartFileSurface {
         span: TextRange::new(0_u32, 180_u32),
+        lexical_scopes: Vec::new(),
         directives: vec![
             ParsedDirective::Import {
+                namespace: None,
                 uri: "dart:convert".to_owned(),
                 prefix: None,
                 show: Vec::new(),
@@ -21,6 +23,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                 span: TextRange::new(0_u32, 22_u32),
             },
             ParsedDirective::Part {
+                uri_literal: None,
                 uri: "user.g.dart".to_owned(),
                 span: TextRange::new(23_u32, 42_u32),
             },
@@ -28,9 +31,12 @@ fn parse_surface_can_model_real_dart_library_shapes() {
         classes: vec![ParsedClassSurface {
             kind: ParsedClassKind::Class,
             name: "User".to_owned(),
+            type_parameters: Vec::new(),
+            mixins: Vec::new(),
             is_abstract: true,
             is_interface: false,
             superclass_name: Some("Entity".to_owned()),
+            superclass: None,
             annotations: vec![ParsedAnnotation {
                 name: "Derive".to_owned(),
                 prefix: None,
@@ -52,6 +58,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                     }],
                     type_source: Some("String".to_owned()),
                     parsed_type: None,
+                    function_formal: None,
                     has_default: false,
                     span: TextRange::new(100_u32, 118_u32),
                 },
@@ -60,6 +67,7 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                     annotations: Vec::new(),
                     type_source: Some("int?".to_owned()),
                     parsed_type: None,
+                    function_formal: None,
                     has_default: false,
                     span: TextRange::new(121_u32, 136_u32),
                 },
@@ -70,13 +78,16 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                 annotations: Vec::new(),
                 redirected_target_source: None,
                 redirected_target_name: None,
+                redirected_target: None,
                 params: vec![
                     ParsedConstructorParamSurface {
                         name: "name".to_owned(),
                         annotations: Vec::new(),
                         type_source: None,
                         parsed_type: None,
+                        function_formal: None,
                         kind: ParameterKind::Named,
+                        is_required: true,
                         has_default: false,
                         default_value_source: None,
                         span: TextRange::new(150_u32, 164_u32),
@@ -86,7 +97,9 @@ fn parse_surface_can_model_real_dart_library_shapes() {
                         annotations: Vec::new(),
                         type_source: None,
                         parsed_type: None,
+                        function_formal: None,
                         kind: ParameterKind::Named,
+                        is_required: true,
                         has_default: false,
                         default_value_source: None,
                         span: TextRange::new(166_u32, 174_u32),

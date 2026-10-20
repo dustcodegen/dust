@@ -28,11 +28,15 @@ pub use result::ParseResult;
 pub use surface::{
     ParameterKind, ParsedAnnotation, ParsedAnnotationArgument, ParsedAnnotationArguments,
     ParsedAnnotationNamedArgument, ParsedAnnotationNumberKind, ParsedAnnotationValue,
-    ParsedAnnotationValueRootKind, ParsedClassKind, ParsedClassSurface,
-    ParsedConstructorParamSurface, ParsedConstructorSurface, ParsedDartFileSurface,
-    ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface, ParsedExtensionSurface,
-    ParsedExtensionTypeSurface, ParsedFieldSurface, ParsedFunctionSurface,
-    ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface,
-    ParsedTopLevelVariableSurface, ParsedTypedefSurface,
+    ParsedAnnotationValueRootKind, ParsedClassKind, ParsedClassSurface, ParsedCombinatorKind,
+    ParsedConditionalUri, ParsedConstructorParamSurface, ParsedConstructorSurface,
+    ParsedDartFileSurface, ParsedDirective, ParsedEnumSurface, ParsedEnumVariantSurface,
+    ParsedExtensionSurface, ParsedExtensionTypeSurface, ParsedFieldSurface,
+    ParsedFunctionFormalParameterSurface, ParsedFunctionFormalTypeSurface, ParsedFunctionSurface,
+    ParsedLexicalDeclaration, ParsedLexicalDeclarationKind, ParsedLexicalInitializer,
+    ParsedLexicalInitializerKind, ParsedLexicalName, ParsedLexicalScope, ParsedLexicalScopeKind,
+    ParsedMethodParamSurface, ParsedMethodSurface, ParsedMixinSurface, ParsedNamespaceDirective,
+    ParsedRedirectIdentifierSurface, ParsedRedirectTargetSurface, ParsedTopLevelVariableSurface,
+    ParsedTypeParamSurface, ParsedTypedefSurface, ParsedUriLiteral, ParsedVisibilityCombinator,
 };
 pub use type_surface::{ParsedTypeKind, ParsedTypeSurface};

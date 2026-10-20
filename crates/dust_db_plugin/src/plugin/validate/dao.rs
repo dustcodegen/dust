@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use dust_dart_emit::{DART_EXEC_RESULT, DART_LIST, DART_ROW, DART_UNIT, DYNAMIC_TYPES};
 use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::TypeIr;
+use dust_plugin_api::WorkspaceAnalysis;
 
 use crate::plugin::{
     model::{DaoMethod, RowClass},
@@ -15,9 +16,10 @@ use super::types::is_supported_scalar_type;
 pub(super) fn validate_daos(
     library: &dust_ir::DartFileIr,
     rows: &[RowClass<'_>],
+    analysis: &WorkspaceAnalysis,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let imported_rows = imported_row_names(library);
+    let imported_rows = imported_row_names(library, analysis);
     let row_names = rows
         .iter()
         .map(|row| row.class.name.as_str())

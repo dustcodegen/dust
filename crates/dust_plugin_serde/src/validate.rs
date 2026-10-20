@@ -3,10 +3,10 @@
 use std::collections::BTreeMap;
 
 use dust_dart_emit::{DART_LIST, DART_MAP, DART_SET};
-use dust_diagnostics::Diagnostic;
+use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::{
     AnnotationNumberKindIr, AnnotationValueIr, BuiltinType, ClassIr, ClassKindIr, DartFileIr,
-    EnumIr, TypeIr,
+    EnumIr, FieldIr, TypeIr,
 };
 use dust_plugin_api::WorkspaceAnalysis;
 
@@ -42,19 +42,31 @@ pub(crate) fn validate_library_with_workspace(
 
 /// Validates a library using the provided JSON capability context.
 fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -> Vec<Diagnostic> {
-    let mut diagnostics = Vec::new();
+    let mut diagnostics = crate::variant_types::validate_variant_types(library);
 
-    for class in &library.classes {
+    let generated = crate::emit_variant_class::generated_variant_classes(library);
+    for class in library
+        .classes
+        .iter()
+        .chain(generated.iter().map(|variant| &variant.class))
+    {
         let serialize = wants_serialize(class);
         let deserialize = wants_deserialize(class);
         if !serialize && !deserialize {
             continue;
         }
 
-        // Dust SerDe generation doesn't yet support mixin classes.
-        if matches!(class.kind, ClassKindIr::MixinClass) {
+        if matches!(
+            class.kind,
+            ClassKindIr::MixinClass | ClassKindIr::MixinApplicationClass
+        ) {
+            let kind = if class.kind == ClassKindIr::MixinClass {
+                "mixin class"
+            } else {
+                "named mixin-application class"
+            };
             diagnostics.push(Diagnostic::error(format!(
-                "Dust serde generation does not support `mixin class` targets like `{}`",
+                "Dust serde generation does not support `{kind}` targets like `{}`",
                 class.name
             )));
             continue;
@@ -126,8 +138,8 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
                 validate_type_supported(
                     &field.ty,
                     &context,
-                    &class.name,
-                    &field.name,
+                    class,
+                    field,
                     "Serialize",
                     &mut diagnostics,
                 );
@@ -136,8 +148,8 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
                 validate_type_supported(
                     &field.ty,
                     &context,
-                    &class.name,
-                    &field.name,
+                    class,
+                    field,
                     "Deserialize",
                     &mut diagnostics,
                 );

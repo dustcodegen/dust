@@ -30,14 +30,27 @@ Supported handwritten syntax and generated Dart can work on a newer SDK even
 when new language syntax is not supported by Dust. A language-version gate
 records when Dart introduced a feature; it is not a parser-support guarantee.
 
-Class-header primary constructors and named concise `new` constructors are not
-supported yet in libraries processed by Dust. Keep traditional constructors
-inside the class body, with the class name and explicitly declared fields.
-This does not require changing constructor calls in your application.
+In this source checkout, version gates inspect syntax facts, not words in
+comments or string contents. For example, a regex containing `[.,]` is not a
+dot shorthand, and documentation or a supported `...?items` spread is not a
+Dart 3.8 null-aware element. Actual interpolation code is still checked:
+`'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic fix is
+unreleased and does not enable otherwise unsupported code generation.
+
+The current source supports class-header primary constructors for Dart language
+version 3.13 and newer across the documented Dart and Flutter feature surface.
+Fresh Dart 3.13.6 and Flutter 3.47.7 consumers build, analyze and test alongside
+traditional Dart 3.6.0 and Flutter 3.29.0 consumers. See the
+[usage and limits](primary-constructors.md). This source support is not included
+in the published 0.2.1 binaries or packages, so released installations must keep
+traditional in-body constructors and explicit fields. Constructor calls in
+application code do not need to change.
 
 The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
-Preparing its Rust binding does not switch the active parser or enable new
-syntax; extraction and generated-code parity must be verified first.
+This source checkout uses the pinned listed upstream after extraction parity;
+released binaries are not changed by updating the source. Named concise
+constructors and dot shorthands still get explicit unsupported-generation errors,
+even though the new grammar parses them. Grammar acceptance is not codegen support.
 
 When syntax cannot be parsed, `dust build` and `dust check` fail with a nonzero
 exit code, source context and guidance to run `dart analyze`. If Dart accepts

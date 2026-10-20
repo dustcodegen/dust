@@ -3,6 +3,9 @@
 #[path = "driver_tests/support.rs"]
 mod support;
 
+#[path = "driver_tests/production_namespaces.rs"]
+mod production_namespaces;
+
 #[path = "driver_tests/build_outputs.rs"]
 mod build_outputs;
 
@@ -41,6 +44,37 @@ mod output_policy;
 
 #[path = "driver_tests/build_behavior.rs"]
 mod build_behavior;
+
+#[path = "driver_tests/cache_errors.rs"]
+mod cache_errors;
+
+#[path = "driver_tests/generic_copy_outputs.rs"]
+mod generic_copy_outputs;
+
+#[path = "driver_tests/callback_formals.rs"]
+mod callback_formals;
+
+#[path = "driver_tests/generic_name_outputs.rs"]
+mod generic_name_outputs;
+#[path = "driver_tests/generic_validation.rs"]
+mod generic_validation;
+
+#[path = "driver_tests/validation_generation.rs"]
+mod validation_generation;
+
+#[path = "driver_tests/serde_parameters.rs"]
+mod serde_parameters;
+
+#[path = "driver_tests/generic_inheritance.rs"]
+mod generic_inheritance;
+#[path = "driver_tests/generic_sealed.rs"]
+mod generic_sealed;
+#[path = "driver_tests/generic_serde.rs"]
+mod generic_serde;
+#[path = "driver_tests/sealed_redirect_failures.rs"]
+mod sealed_redirect_failures;
+#[path = "driver_tests/superclass_substitution.rs"]
+mod superclass_substitution;
 
 #[path = "driver_tests/build_validation.rs"]
 mod build_validation;

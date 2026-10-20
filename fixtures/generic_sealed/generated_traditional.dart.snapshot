@@ -1,0 +1,76 @@
+import 'package:dust_dart/serde.dart';
+
+part 'sealed_generated.g.dart';
+
+/// Exercises the generated reordered payload alias.
+Map<String, Object?> donePayload<A, B extends List<A>>(
+  GeneratedDone<B, A> value,
+) => _$GeneratedDoneToJson<B, A>(value);
+
+/// Exercises the generated phantom payload alias.
+Map<String, Object?> nonePayload<A, B extends List<A>>(
+  GeneratedNone<A, B> value,
+) => _$GeneratedNoneToJson<A, B>(value);
+
+/// Exercises the generated custom-codec payload alias.
+Map<String, Object?> atPayload<A, B extends List<A>>(GeneratedAt<B, A> value) =>
+    _$GeneratedAtToJson<B, A>(value);
+
+/// Exercises the generated nullable/default payload alias.
+Map<String, Object?> countPayload<A, B extends List<A>>(
+  GeneratedCount<A, B> value,
+) => _$GeneratedCountToJson<A, B>(value);
+
+/// Both concrete variants are generated from their typed redirect declarations.
+@Derive([Serialize(), Deserialize()])
+@SerDe(tag: 'kind')
+sealed class Command<A, B extends List<A>> with _$Command<A, B> {
+  /// Creates the base value.
+  const Command();
+
+  /// Carries all owning binders in a different order.
+  const factory Command.done(String label, [int? note]) =
+      GeneratedDone<B, A>.create;
+
+  /// Uses Dart's explicit unnamed-constructor suffix.
+  const factory Command.none() = GeneratedNone<A, B>.new;
+
+  /// Keeps a user codec and alias declared on a factory parameter.
+  const factory Command.at(
+    @SerDe(using: epoch, aliases: ['oldDate']) DateTime date,
+  ) = GeneratedAt<B, A>.create;
+
+  /// Keeps implicit nullable defaults distinct from explicit wire defaults.
+  const factory Command.count({
+    required int? requested,
+    @SerDe(aliases: ['oldCount']) int? count,
+    @SerDe(defaultValue: 7) int? fallback,
+  }) = GeneratedCount<A, B>;
+
+  /// Decodes a typed generated variant.
+  factory Command.fromJson(Map<String, Object?> json) =>
+      _$CommandFromJson<A, B>(json);
+
+  /// Exercises the directional forwarding helper.
+  Map<String, Object?> aliasJson() => _$CommandToJson<A, B>(this);
+}
+
+/// A concrete payload codec; generic decoder callbacks are not required.
+class EpochCodec implements SerDeCodec<DateTime, int> {
+  /// Creates the epoch codec.
+  const EpochCodec();
+  @override
+  int serialize(DateTime value) => value.millisecondsSinceEpoch;
+  @override
+  DateTime deserialize(int value) =>
+      DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+}
+
+/// The codec instance referenced by the redirect parameter's metadata.
+const epoch = EpochCodec();
+
+/// Exercises rejection of a subtype outside the declared factory protocol.
+final class Unlisted<X, Y extends List<X>> extends Command<X, Y> {
+  /// Creates an intentionally unregistered command.
+  const Unlisted();
+}

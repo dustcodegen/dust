@@ -25,11 +25,14 @@ pub(crate) fn route_page_class(
     let mut route_config = config("AppRoute", Some(route_args));
     route_config.normalized = typed_route_config(&route_config).map(NormalizedConfigIr::Route);
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("StatelessWidget".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -37,6 +40,7 @@ pub(crate) fn route_page_class(
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(12, 18),
             params,
         }],
@@ -64,11 +68,14 @@ fn typed_route_config(config: &ConfigApplicationIr) -> Option<RouteConfigIr> {
 
 pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -76,6 +83,7 @@ pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(12, 18),
             params,
         }],
@@ -88,11 +96,14 @@ pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
 
 pub(crate) fn shell_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("StatelessWidget".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -100,6 +111,7 @@ pub(crate) fn shell_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(12, 18),
             params,
         }],
@@ -130,11 +142,14 @@ pub(crate) fn router_class(args: &str) -> ClassIr {
         not_found: router_config.named_string("notFound"),
     }));
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TestRouter".to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("$TestRouter".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),
@@ -151,6 +166,7 @@ pub(crate) fn constructor_param(name: &str, ty: TypeIr) -> ConstructorParamIr {
         ty,
         span: span(20, 30),
         kind: ParamKind::Named,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }
@@ -178,6 +194,7 @@ pub(crate) fn defaulted_param_source(
 ) -> ConstructorParamIr {
     ConstructorParamIr {
         has_default: true,
+        is_required: false,
         default_value_source: Some(default_value.to_owned()),
         ..constructor_param(name, ty)
     }

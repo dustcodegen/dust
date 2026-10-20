@@ -1,8 +1,12 @@
+use dust_diagnostics::Diagnostic;
+
+#[cfg(test)]
+mod tests;
 use dust_plugin_api::{PluginRegistry, short_symbol_name};
 use dust_resolver::SymbolCatalog;
 
 /// Builds a resolver symbol catalog from the registered plugin ownership set.
-pub(crate) fn build_symbol_catalog(registry: &PluginRegistry) -> SymbolCatalog {
+pub(crate) fn build_symbol_catalog(registry: &PluginRegistry) -> Result<SymbolCatalog, Diagnostic> {
     let mut catalog = SymbolCatalog::new();
 
     for symbol in registry.claimed_trait_symbols() {
@@ -16,5 +20,9 @@ pub(crate) fn build_symbol_catalog(registry: &PluginRegistry) -> SymbolCatalog {
         catalog.register_config(annotation_name, symbol_name);
     }
 
-    catalog
+    for origin in registry.annotation_origins() {
+        catalog.register_annotation_origin(origin)?;
+    }
+
+    Ok(catalog)
 }

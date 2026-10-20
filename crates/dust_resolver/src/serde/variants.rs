@@ -54,6 +54,7 @@ pub(super) fn variant_serde_tag(
 pub(super) fn variant_constructor_params(
     file_id: dust_text::FileId,
     constructor: &ResolvedConstructor,
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ConstructorParamIr> {
     constructor
@@ -61,11 +62,13 @@ pub(super) fn variant_constructor_params(
         .params
         .iter()
         .map(|param| {
-            let outcome = param
-                .type_source
-                .as_deref()
-                .map(|source| lower_type_ir(param.parsed_type.as_ref(), Some(source)))
-                .unwrap_or_else(|| dust_ir::LoweringOutcome::new(TypeIr::unknown()));
+            let outcome = crate::lower_parameter_type_ir(
+                file_id,
+                param.parsed_type.as_ref(),
+                param.type_source.as_deref(),
+                param.function_formal.as_ref(),
+                type_parameters,
+            );
             diagnostics.extend(outcome.diagnostics);
             ConstructorParamIr {
                 name: param.name.clone(),
@@ -75,9 +78,38 @@ pub(super) fn variant_constructor_params(
                     ParameterKind::Positional => ParamKind::Positional,
                     ParameterKind::Named => ParamKind::Named,
                 },
+                is_required: param.is_required,
                 has_default: param.has_default,
                 default_value_source: param.default_value_source.clone(),
             }
+        })
+        .collect()
+}
+
+/// Retains field metadata through the same binding policy as handwritten fields.
+pub(super) fn variant_field_serde(
+    file_id: dust_text::FileId,
+    constructor: &ResolvedConstructor,
+    context: &crate::BindingContext<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> std::collections::BTreeMap<String, SerdeFieldConfigIr> {
+    constructor
+        .surface
+        .params
+        .iter()
+        .filter_map(|param| {
+            let field = dust_parser_dart::ParsedFieldSurface {
+                name: param.name.clone(),
+                annotations: param.annotations.clone(),
+                type_source: param.type_source.clone(),
+                parsed_type: param.parsed_type.clone(),
+                function_formal: param.function_formal.clone(),
+                has_default: param.has_default,
+                span: param.span,
+            };
+            crate::resolve_support::resolve_field(file_id, &field, context, diagnostics)
+                .serde
+                .map(|serde| (param.name.clone(), serde))
         })
         .collect()
 }

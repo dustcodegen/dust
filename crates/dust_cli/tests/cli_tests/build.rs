@@ -1,4 +1,4 @@
-use dust_cli::run_cli;
+use crate::helpers::run_cli;
 use std::{
     fs,
     path::PathBuf,
@@ -8,6 +8,9 @@ use std::{
 use super::helpers::{
     DustImport, make_pub_workspace_member, make_workspace, write_dust_file, write_file,
 };
+
+#[path = "build_mixin_classes.rs"]
+mod mixin_classes;
 
 #[test]
 fn cli_build_writes_real_output() {
@@ -268,7 +271,7 @@ fn relative_target_workspace(name: &str) -> PathBuf {
         .as_nanos();
     let root = PathBuf::from(format!("target/dust_cli_tests/{name}_{nanos}"));
     write_file(&root.join("pubspec.yaml"), "name: dust_test\n");
-    write_file(&root.join(".dart_tool/package_config.json"), "{}\n");
+    super::helpers::prepare(&root, &root, "dust_test");
     root
 }
 

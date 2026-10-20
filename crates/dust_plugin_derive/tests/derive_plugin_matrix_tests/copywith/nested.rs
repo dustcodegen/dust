@@ -112,7 +112,7 @@ fn copywith_allocates_locals_around_field_name_collisions() {
 ///
 /// Usage:
 /// ```dart
-/// final updated = collision.copyWith(_self: 'John');
+/// final updated = collision.copyWith(self: 'John');
 /// final cleared = collision.copyWith(items: null);
 /// ```
 @pragma('vm:prefer-inline')
@@ -127,8 +127,8 @@ _$CollisionCopyWith<Collision> get copyWith => _$CollisionCopyWithImpl<Collision
 /// @nodoc
 abstract class _$CollisionCopyWith<$Res> {
   $Res call({
-    String? _self,
-    String? _then,
+    String? self,
+    String? then,
     String? value,
     List<String>? items,
   });
@@ -144,15 +144,15 @@ final class _$CollisionCopyWithImpl<$Res> implements _$CollisionCopyWith<$Res> {
   @override
   @pragma('vm:prefer-inline')
   $Res call({
-    Object? _self = null,
-    Object? _then = null,
+    Object? self = null,
+    Object? then = null,
     Object? value = null,
     Object? items = _collisionCopyWithUnset,
   }) {
     return _then2(
       Collision(
-        _self == null ? _self2._self : _self as String,
-        _then == null ? _self2._then : _then as String,
+        self == null ? _self2._self : self as String,
+        then == null ? _self2._then : then as String,
         value == null ? _self2.value : value as String,
         identical(items, _collisionCopyWithUnset)
             ? _self2.items

@@ -9,6 +9,44 @@ use dust_plugin_serde::register_plugin;
 use dust_text::{FileId, TextRange};
 
 #[test]
+fn named_mixin_applications_reject_serde_but_allow_unowned_declarations() {
+    let plugin = register_plugin();
+    for (kind, name) in [
+        (ClassKindIr::MixinClass, "mixin class"),
+        (
+            ClassKindIr::MixinApplicationClass,
+            "named mixin-application class",
+        ),
+    ] {
+        for traits in [
+            vec![],
+            vec!["foreign::Serialize"],
+            vec!["dust_dart::Serialize"],
+            vec!["dust_dart::Deserialize"],
+        ] {
+            let mut target = class("Alias", vec![], vec![], &traits);
+            target.kind = kind;
+            let errors = plugin.validate(&library(vec![target], vec![]));
+            let messages = errors
+                .into_iter()
+                .map(|error| error.message)
+                .collect::<Vec<_>>();
+            let expected = if traits
+                .first()
+                .is_some_and(|symbol| symbol.starts_with("dust_dart::"))
+            {
+                vec![format!(
+                    "Dust serde generation does not support `{name}` targets like `Alias`"
+                )]
+            } else {
+                vec![]
+            };
+            assert_eq!(messages, expected);
+        }
+    }
+}
+
+#[test]
 fn rejects_record_fields_and_generic_named_models() {
     let plugin = register_plugin();
     let record_type = TypeIr::record("({String id})");
@@ -78,6 +116,7 @@ fn constructor_param(name: &str, ty: TypeIr, kind: ParamKind) -> ConstructorPara
         ty,
         span: span(30, 35),
         kind,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }
@@ -90,6 +129,7 @@ fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -> Construct
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(25, 60),
         params,
     }
@@ -103,11 +143,14 @@ fn class(
     traits: &[&str],
 ) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(0, 100),
         fields,
         constructors,

@@ -1,20 +1,25 @@
 # Pinned listed-upstream Dart grammar
 
-Prepared binding for migration [#68](https://github.com/dustcodegen/dust/issues/68),
-stage [#69](https://github.com/dustcodegen/dust/issues/69). It is **not the active
-Dust parser**. The existing packaged grammar remains in use until extraction
-parity is established in [#70](https://github.com/dustcodegen/dust/issues/70).
-Accepting primary constructors here does not make them supported by Dust.
+Active source-checkout binding for migration
+[#68](https://github.com/dustcodegen/dust/issues/68), prepared in
+[#69](https://github.com/dustcodegen/dust/issues/69) and adopted under
+[#70](https://github.com/dustcodegen/dust/issues/70). The standalone parity
+harness retains the packaged grammar in a separate binary. Accepting primary
+constructors here did not by itself make them supported by Dust's generators;
+the separate extraction and generation work remains independently tested. This
+source change does not update already released binaries.
 
 ## Origin and changes
 
 Source: <https://github.com/UserNobody14/tree-sitter-dart>, exact commit
-`3f0c7a8309d89927e7cc6bef39569c815fddb2e5`. This is the community grammar listed
+`acfb453395e25cf6a1018e064df3c92e68e38782`. This is the community grammar listed
 by Tree-sitter, not a Dart-team-maintained parser.
 
 `grammar.js`, `src/` and `LICENSE` are byte-identical upstream copies. No C
-grammar changes, parser regeneration, scanner patches or header changes were
-made. `UPSTREAM.json` records their SHA-256 values and original metadata:
+grammar changes, local parser regeneration, scanner patches or header changes
+were made. The updated grammar and generated parser include upstream's generic
+constructor-receiver and record-type disambiguation fixes. `UPSTREAM.json`
+records their SHA-256 values and original metadata:
 
 Local Git attributes disable line-ending conversion for those pinned files.
 A regression checks their bytes after a `core.autocrlf=true` checkout into an
@@ -31,7 +36,7 @@ The active local Cargo manifest and Rust binding adapt the upstream's old
 Tree-sitter 0.22 interface to `tree-sitter-language::LanguageFn`. Tests use
 exactly Tree-sitter 0.25.10, the runtime Dust already uses. The crate retains
 upstream's `0.0.1` metadata version, is non-publishable, and is excluded from
-the root workspace and production dependency graph in this stage.
+the root workspace, but is now a production path dependency.
 
 The local build script preserves upstream C compiler settings and compiles
 the checked-in C sources. Its only refactoring is sharing the two source-file
@@ -74,6 +79,6 @@ resolution needs the ordinary Cargo registry cache or network; the grammar
 itself is already present and needs no Git access or generation tools.
 
 Tests assert exact AST contracts for traditional, primary and named-concise
-constructors, exercise generic/named/body/enum/inheritance grammar forms, and
-reject malformed source. They do not test Dust's field extraction or generated
-behavior for new syntax; those are later migration gates.
+constructors, exercise generic/named/body/enum/inheritance grammar forms and
+generic constructor receivers, and reject malformed source. Dust extraction and
+generated behavior remain separate compatibility gates.

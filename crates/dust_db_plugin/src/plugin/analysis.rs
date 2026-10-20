@@ -27,6 +27,10 @@ use super::{
     validate::schema_hash,
 };
 
+/// Shared parsed row declarations used by validation and import recognition.
+mod declarations;
+pub(super) use declarations::package_row_declarations;
+
 /// Database classes declared anywhere in the package.
 pub(crate) const DATABASES_KEY: &str = "dust_db_plugin.databases.v1";
 /// Row classes and the columns each one requires.
@@ -134,12 +138,7 @@ pub(crate) fn package_row_column_map(
     analysis: &WorkspaceAnalysis,
     package: &str,
 ) -> HashMap<String, Vec<RowColumn>> {
-    let declared = analysis
-        .string_set(ROW_COLUMNS_KEY)
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|value| parse_row(value, package))
-        .collect::<HashMap<_, _>>();
+    let declared = package_row_declarations(analysis, package);
     declared
         .keys()
         .map(|name| {

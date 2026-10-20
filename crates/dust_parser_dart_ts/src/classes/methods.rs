@@ -72,7 +72,7 @@ pub(super) fn extract_method(
 }
 
 /// Resolves a wrapper node to the callable signature that carries the name.
-fn callable_signature(node: Node<'_>) -> Node<'_> {
+pub(crate) fn callable_signature(node: Node<'_>) -> Node<'_> {
     if node.kind() != "method_signature" {
         return node;
     }
@@ -158,7 +158,7 @@ fn collect_method_optional_formal_parameters(
     out: &mut Vec<ParsedMethodParamSurface>,
     pending_annotations: &mut Vec<ParsedAnnotation>,
 ) {
-    let kind = optional_parameter_kind(node, source);
+    let kind = optional_parameter_kind(node);
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
         match child.kind() {
@@ -208,6 +208,7 @@ fn extract_method_formal_parameter(
         annotations: extract_direct_annotations(node, source),
         type_source,
         parsed_type,
+        function_formal: super::function_formals::extract(node, source),
         kind,
         is_required: is_required_parameter(node, source),
         has_default: default_value_source.is_some(),

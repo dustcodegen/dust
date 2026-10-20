@@ -52,11 +52,24 @@ fn malformed_source_is_not_accepted() {
     parser
         .set_language(&tree_sitter_dart::LANGUAGE.into())
         .unwrap();
-    assert!(parser
-        .parse("class Broken {", None)
-        .unwrap()
-        .root_node()
-        .has_error());
+    for source in ["class Broken {", "void run() { Map<String,>.of(values); }"] {
+        assert!(
+            parser.parse(source, None).unwrap().root_node().has_error(),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn generic_named_constructors_and_record_types_are_unambiguous() {
+    for source in [
+        "Object copy(input) => {'copy': Map<String, Object>.of(input)};",
+        "Object? copy(input) => input == null ? null : Map<String, String>.of(input);",
+        "Object copy(messages) => Bundle(messages: Map<String, String>.unmodifiable(messages));",
+        "typedef Single = (int,); typedef Pair = (int, String);",
+    ] {
+        parse(source);
+    }
 }
 
 #[test]

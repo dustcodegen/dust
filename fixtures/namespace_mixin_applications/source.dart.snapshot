@@ -1,0 +1,18 @@
+import 'dart:mirrors';
+
+class Base {
+  const Base(String path);
+}
+
+mixin Mix {}
+
+class GET = Base with Mix;
+
+class Api {
+  @GET('/probe')
+  void call() {}
+}
+
+void main() {
+  assert(reflectClass(Api).declarations[#call]!.metadata.single.reflectee is GET);
+}

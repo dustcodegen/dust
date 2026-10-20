@@ -38,11 +38,14 @@ pub(crate) fn config(args: Option<&str>) -> ConfigApplicationIr {
 
 pub(crate) fn view_model_class(name: &str, args: &str) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: Some(format!("${name}")),
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),
@@ -55,11 +58,14 @@ pub(crate) fn view_model_class(name: &str, args: &str) -> ClassIr {
 
 pub(crate) fn args_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TaskBoardArgs".to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: Some("ViewModelArgs".to_owned()),
+        superclass: None,
         span: span(10, 90),
         fields: vec![FieldIr {
             name: "repository".to_owned(),
@@ -79,11 +85,14 @@ pub(crate) fn args_class() -> ClassIr {
 
 pub(crate) fn state_class() -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: "TaskBoardState".to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 90),
         fields: Vec::new(),
         constructors: Vec::new(),

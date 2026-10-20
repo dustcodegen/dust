@@ -10,6 +10,7 @@ pub(super) fn emit_field_decode(
     deserializable_classes: &[&str],
     deserializable_enums: EnumCodecs<'_>,
     lines: &mut Vec<String>,
+    names: &JsonNames,
 ) -> String {
     let serde = field.serde.as_ref();
     if serde.is_some_and(|serde| serde.skip_deserializing) {
@@ -20,14 +21,16 @@ pub(super) fn emit_field_decode(
 
     let primary_key = json_key(class, &field.name, serde);
     let aliases = serde.map(|serde| serde.aliases.as_slice()).unwrap_or(&[]);
-    let has_expr = build_has_expr(&primary_key, aliases);
+    let json = names.local("json");
+    let has_expr = build_has_expr(&primary_key, aliases, json);
     let decoded = if aliases.is_empty() {
         decode_field_expr(
-            &format!("json['{primary_key}']"),
+            &format!("{json}['{primary_key}']"),
             &format!("'{primary_key}'"),
             field,
             deserializable_classes,
             deserializable_enums,
+            names,
         )
     } else {
         emit_alias_decode(
@@ -37,8 +40,32 @@ pub(super) fn emit_field_decode(
             deserializable_classes,
             deserializable_enums,
             lines,
+            names,
         )
     };
+
+    if !class.type_parameters.is_empty()
+        && field.ty.is_builtin(dust_ir::BuiltinType::Bool)
+        && !field.ty.is_nullable()
+        && let Some(dust_ir::AnnotationValueIr::Bool(default)) =
+            serde.and_then(|s| s.default_value.as_ref())
+    {
+        return if *default {
+            let missing = if aliases.is_empty() {
+                format!("!{has_expr}")
+            } else {
+                format!("!({has_expr})")
+            };
+            format!("{missing} || {decoded}")
+        } else {
+            let has_expr = if aliases.is_empty() {
+                has_expr
+            } else {
+                format!("({has_expr})")
+            };
+            format!("{has_expr} && {decoded}")
+        };
+    }
 
     serde
         .and_then(|serde| serde.default_value_source.as_deref())
@@ -53,15 +80,15 @@ pub(super) fn emit_field_decode(
 }
 
 /// Builds the expression that checks primary and alias keys.
-pub(super) fn build_has_expr(primary_key: &str, aliases: &[String]) -> String {
+pub(super) fn build_has_expr(primary_key: &str, aliases: &[String], json: &str) -> String {
     if aliases.is_empty() {
-        format!("json.containsKey('{primary_key}')")
+        format!("{json}.containsKey('{primary_key}')")
     } else {
-        std::iter::once(format!("json.containsKey('{primary_key}')"))
+        std::iter::once(format!("{json}.containsKey('{primary_key}')"))
             .chain(
                 aliases
                     .iter()
-                    .map(|alias| format!("json.containsKey('{alias}')")),
+                    .map(|alias| format!("{json}.containsKey('{alias}')")),
             )
             .collect::<Vec<_>>()
             .join(" || ")
@@ -76,30 +103,38 @@ pub(super) fn emit_alias_decode(
     deserializable_classes: &[&str],
     deserializable_enums: EnumCodecs<'_>,
     lines: &mut Vec<String>,
+    names: &JsonNames,
 ) -> String {
-    let raw_name = format!("raw{}", AsPascalCase(&field.name));
-    let raw_key_name = format!("raw{}Key", AsPascalCase(&field.name));
+    let raw_name = names
+        .local(&format!("raw{}", AsPascalCase(&field.name)))
+        .to_owned();
+    let raw_key_name = names
+        .local(&format!("raw{}Key", AsPascalCase(&field.name)))
+        .to_owned();
+    let json = names.local("json");
+    let object = names.reference("Object");
     let decoded = decode_field_expr(
         &raw_name,
         &raw_key_name,
         field,
         deserializable_classes,
         deserializable_enums,
+        names,
     );
     let uses_raw_key = decoded.contains(&raw_key_name);
 
     if uses_raw_key {
         lines.push(format!("  var {raw_key_name} = '{primary_key}';"));
     }
-    lines.push(format!("  Object? {raw_name};"));
-    lines.push(format!("  if (json.containsKey('{primary_key}')) {{"));
-    lines.push(format!("    {raw_name} = json['{primary_key}'];"));
+    lines.push(format!("  {object}? {raw_name};"));
+    lines.push(format!("  if ({json}.containsKey('{primary_key}')) {{"));
+    lines.push(format!("    {raw_name} = {json}['{primary_key}'];"));
     for alias in aliases {
-        lines.push(format!("  }} else if (json.containsKey('{alias}')) {{"));
+        lines.push(format!("  }} else if ({json}.containsKey('{alias}')) {{"));
         if uses_raw_key {
             lines.push(format!("    {raw_key_name} = '{alias}';"));
         }
-        lines.push(format!("    {raw_name} = json['{alias}'];"));
+        lines.push(format!("    {raw_name} = {json}['{alias}'];"));
     }
     lines.push("  }".to_owned());
 

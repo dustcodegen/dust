@@ -12,12 +12,12 @@ fn escapes_generated_single_quoted_literals() {
     let library = library_for(http_client_class(
         vec![config(
             "HttpClient",
-            Some(r#"(baseUrl: 'https://api.example.com/$tenant', headers: {"x-'$": "tok'$"})"#),
+            Some(r#"(baseUrl: r'https://api.example.com/$tenant', headers: {r"x-'$": r"tok'$"})"#),
         )],
         vec![method(
             "ping",
             future_of(TypeIr::named("void")),
-            vec![config("GET", Some("('/ping/$health')"))],
+            vec![config("GET", Some("(r'/ping/$health')"))],
             Vec::new(),
         )],
     ));

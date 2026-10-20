@@ -7,9 +7,9 @@ use dust_text::TextRange;
 pub struct ParsedAnnotation {
     /// The short annotation name without `@` or import prefix.
     pub name: String,
-    /// The optional import prefix before the short name.
+    /// The optional identifier qualifier before the short name, without trivia.
     pub prefix: Option<String>,
-    /// The full annotation name without `@`.
+    /// The full annotation name as written, without `@`, retaining trivia.
     pub qualified_name: String,
     /// The raw argument source, if present.
     pub arguments_source: Option<String>,
@@ -70,8 +70,12 @@ pub enum ParsedAnnotationValueRootKind {
     Record(Vec<(String, ParsedAnnotationValue)>),
     /// A constructor invocation.
     Constructor {
-        /// Constructor/type source.
+        /// Exact written callee, including type arguments and qualifier trivia.
         name: String,
+        /// Final callee identifier, excluding type arguments and trivia.
+        short_name: String,
+        /// Callee identifiers before the final segment, excluding type arguments and trivia.
+        prefix: Option<String>,
         /// Structured constructor arguments.
         arguments: Box<ParsedAnnotationArguments>,
     },

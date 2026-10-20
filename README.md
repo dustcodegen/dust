@@ -117,6 +117,7 @@ npx skills add dustcodegen/dust --skill use-dust
 | JSON serialization | Stable | [JSON guide](docs/usage/serde.md) |
 | Validation | Stable | [Validation guide](docs/usage/validation.md) |
 | HTTP clients | Stable | [HTTP guide](docs/usage/http.md) |
+| Primary constructors | Supported in source (Dart 3.13+) | [Usage and limits](docs/usage/primary-constructors.md) |
 | Routing | Beta | [Routing guide](docs/usage/routing.md) |
 | State management | Beta | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
@@ -127,6 +128,10 @@ npx skills add dustcodegen/dust --skill use-dust
 
 Stable features keep their documented authoring APIs compatible throughout
 `0.1.x`. Beta features may still receive API refinements.
+
+Primary-constructor support is available from the current source checkout, not
+the published 0.2.1 binaries or packages. Traditional constructors remain
+supported on the documented minimum Dart and Flutter SDKs.
 
 `dust_server` is a runtime, not a generator. Server code is written by hand
 today; `dust build` produces nothing for it.

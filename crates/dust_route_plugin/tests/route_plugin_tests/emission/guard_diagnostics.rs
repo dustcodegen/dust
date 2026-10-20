@@ -165,6 +165,7 @@ fn rejects_workspace_guard_dependency_without_matching_router_field() {
 
 fn import(uri: &str) -> ImportIr {
     ImportIr {
+        namespace: None,
         uri: uri.to_owned(),
         prefix: None,
         show: Vec::new(),

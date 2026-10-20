@@ -1,7 +1,7 @@
-// factory {{ class_name }}.fromJson(Map<String, Object?> json) => _${{ class_name }}FromJson(json);
-{{ class_name }} _${{ class_name }}Deserialize(Map<String, Object?> json) {
+// factory {{ class_name }}.fromJson({{ json_type }} json) => _${{ class_name }}FromJson(json);
+{{ class_type }} _${{ class_name }}Deserialize{{ type_parameters }}({{ json_type }} {{ json }}) {
 {{ body }}
 }
 
-{{ class_name }} _${{ class_name }}FromJson(Map<String, Object?> json) =>
-    _${{ class_name }}Deserialize(json);
+{{ class_type }} _${{ class_name }}FromJson{{ type_parameters }}({{ json_type }} {{ json }}) =>
+    _${{ class_name }}Deserialize{{ type_arguments }}({{ json }});

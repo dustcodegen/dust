@@ -1,6 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_plugin_api::{DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder};
+use dust_plugin_api::{
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+};
 
 /// Collects route, router, and guard facts across the workspace.
 mod analysis;
@@ -16,6 +18,8 @@ pub mod inspect;
 /// Deep-link fixture output built from route analysis facts.
 /// Internal route plugin model used by validation and emission.
 mod model;
+/// Shared potential and actual standalone output paths.
+mod outputs;
 /// Parses route annotations from lowered IR and source-surface facts.
 mod parse;
 /// Validates route pages and router configuration.
@@ -57,8 +61,43 @@ impl DustPlugin for RoutePlugin {
         CLAIMED_CONFIG_SYMBOLS
     }
 
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[
+                AnnotationOrigin::new(
+                    "dust_flutter::AppRouter",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "AppRouter",
+                ),
+                AnnotationOrigin::new(
+                    "dust_flutter::AppRoute",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "AppRoute",
+                ),
+                AnnotationOrigin::new(
+                    "dust_flutter::GeneratedRoute",
+                    "package:dust_flutter/src/router/route_annotations.dart",
+                    "GeneratedRoute",
+                ),
+            ]
+        }
+    }
+
     fn partless_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIG_SYMBOLS
+    }
+
+    fn potential_generated_libraries(
+        &self,
+        source: &std::path::Path,
+    ) -> Vec<dust_plugin_api::GeneratedLibrary> {
+        outputs::route_output_paths(&source.with_extension(""))
+            .into_iter()
+            .map(|path| dust_plugin_api::GeneratedLibrary {
+                path,
+                producer: dust_ir::SymbolId::new("dust_flutter::AppRouter"),
+            })
+            .collect()
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {

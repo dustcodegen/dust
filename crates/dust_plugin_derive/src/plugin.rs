@@ -1,6 +1,8 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_plugin_api::{DustPlugin, PluginContext, PluginContribution, SymbolPlan};
+use dust_plugin_api::{
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, SymbolPlan,
+};
 
 use crate::{
     emit::emit_library,
@@ -17,7 +19,7 @@ pub fn register_plugin() -> DerivePlugin {
 }
 
 /// Trait symbols claimed by the derive plugin.
-const CLAIMED_TRAITS: &[&str] = &[
+pub(crate) const CLAIMED_TRAITS: &[&str] = &[
     TO_STRING_SYMBOL,
     DEBUG_SYMBOL,
     EQ_SYMBOL,
@@ -32,6 +34,9 @@ const CLAIMED_CONFIGS: &[&str] = &[VALIDATE_SYMBOL];
 const SUPPORTED_ANNOTATIONS: &[&str] =
     &["Derive", "ToString", "Debug", "Eq", "CopyWith", "Validate"];
 
+/// Actual declarations, not the public derive barrel.
+const TRAIT_LIBRARY: &str = "package:dust_dart/src/derive/traits.dart";
+
 impl DustPlugin for DerivePlugin {
     fn plugin_name(&self) -> &'static str {
         "dust_plugin_derive"
@@ -43,6 +48,22 @@ impl DustPlugin for DerivePlugin {
 
     fn claimed_configs(&self) -> &'static [&'static str] {
         CLAIMED_CONFIGS
+    }
+
+    fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
+        const {
+            &[
+                AnnotationOrigin::new(TO_STRING_SYMBOL, TRAIT_LIBRARY, "ToString"),
+                AnnotationOrigin::new(DEBUG_SYMBOL, TRAIT_LIBRARY, "Debug"),
+                AnnotationOrigin::new(EQ_SYMBOL, TRAIT_LIBRARY, "Eq"),
+                AnnotationOrigin::new(COPY_WITH_SYMBOL, TRAIT_LIBRARY, "CopyWith"),
+                AnnotationOrigin::new(
+                    VALIDATE_SYMBOL,
+                    "package:dust_dart/src/derive/validation.dart",
+                    "Validate",
+                ),
+            ]
+        }
     }
 
     fn supported_annotations(&self) -> &'static [&'static str] {

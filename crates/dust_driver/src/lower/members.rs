@@ -7,9 +7,19 @@ use super::*;
 pub(super) fn lower_unresolved_field(
     file_id: dust_text::FileId,
     field: &ParsedFieldSurface,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> FieldIr {
-    let ty = lower_type(field.parsed_type.as_ref(), field.type_source.as_deref());
+    for annotation in &field.annotations {
+        let _ = bindings.annotation_ir(file_id, annotation, diagnostics);
+    }
+    let ty = lower_parameter_type_ir(
+        file_id,
+        field.parsed_type.as_ref(),
+        field.type_source.as_deref(),
+        field.function_formal.as_ref(),
+        &[],
+    );
     diagnostics.extend(ty.diagnostics);
 
     FieldIr {
@@ -26,13 +36,27 @@ pub(super) fn lower_unresolved_field(
 pub(super) fn lower_unresolved_method_params(
     file_id: dust_text::FileId,
     params: &[ParsedMethodParamSurface],
+    collect_type_diagnostics: bool,
+    bindings: &BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MethodParamIr> {
     params
         .iter()
         .map(|param| {
-            let ty = lower_type(param.parsed_type.as_ref(), param.type_source.as_deref());
-            diagnostics.extend(ty.diagnostics);
+            let resolved = bindings.parameter(file_id, param, diagnostics);
+            let ty = lower_parameter_type_ir(
+                file_id,
+                param.parsed_type.as_ref(),
+                param.type_source.as_deref(),
+                param.function_formal.as_ref(),
+                &[],
+            );
+            if collect_type_diagnostics
+                || !resolved.traits.is_empty()
+                || !resolved.configs.is_empty()
+            {
+                diagnostics.extend(ty.diagnostics);
+            }
 
             MethodParamIr {
                 name: param.name.clone(),
@@ -42,8 +66,8 @@ pub(super) fn lower_unresolved_method_params(
                 is_required: param.is_required,
                 has_default: param.has_default,
                 default_value_source: param.default_value_source.clone(),
-                traits: Vec::new(),
-                configs: Vec::new(),
+                traits: resolved.traits,
+                configs: resolved.configs,
             }
         })
         .collect()
@@ -55,15 +79,6 @@ pub(super) fn lower_parameter_kind(kind: ParameterKind) -> ParamKind {
         ParameterKind::Positional => ParamKind::Positional,
         ParameterKind::Named => ParamKind::Named,
     }
-}
-
-/// Lowers a parsed annotation into resolver-compatible annotation IR.
-pub(super) fn lower_annotation_ir(
-    file_id: dust_text::FileId,
-    annotation: &ParsedAnnotation,
-    catalog: &SymbolCatalog,
-) -> AnnotationIr {
-    dust_resolver::resolve_annotation_ir(file_id, annotation, catalog)
 }
 
 /// Builds a name IR value from raw source and source span.
@@ -86,86 +101,22 @@ pub(super) fn lower_name_ir(
     }
 }
 
-/// Lowers one resolved class into semantic IR.
-pub(super) struct ClassLoweringInput<'a> {
-    /// Declaration kind.
-    pub(super) kind: ClassKindIr,
-    /// Class name.
-    pub(super) name: &'a str,
-    /// Whether the class is abstract.
-    pub(super) is_abstract: bool,
-    /// Whether the class is an interface class.
-    pub(super) is_interface: bool,
-    /// Immediate superclass name.
-    pub(super) superclass_name: Option<&'a str>,
-    /// Class source span.
-    pub(super) span: SpanIr,
-    /// Resolved fields.
-    pub(super) fields: &'a mut [ResolvedField],
-    /// Resolved constructors.
-    pub(super) constructors: &'a [ResolvedConstructor],
-    /// Resolved methods.
-    pub(super) methods: &'a [ResolvedMethod],
-    /// Resolved trait applications.
-    pub(super) traits: &'a [TraitApplicationIr],
-    /// Resolved configuration applications.
-    pub(super) configs: &'a [ConfigApplicationIr],
-    /// Resolver-normalized SerDe configuration.
-    pub(super) serde_value: &'a mut Option<SerdeClassConfigIr>,
-}
-
-/// Lowers explicit class inputs into semantic IR.
-pub(super) fn lower_class_from_parts(input: ClassLoweringInput<'_>) -> LoweringOutcome<ClassIr> {
-    let ClassLoweringInput {
-        kind,
-        name,
-        is_abstract,
-        is_interface,
-        superclass_name,
-        span,
-        fields,
-        constructors,
-        methods,
-        traits,
-        configs,
-        serde_value,
-    } = input;
-    let mut diagnostics = Vec::new();
-    let serde = serde_value.take();
-
-    let fields = lower_resolved_fields(fields, &mut diagnostics);
-    let methods = lower_resolved_methods(methods, &mut diagnostics);
-    let constructors =
-        lower_resolved_constructors(span.file_id, constructors, &fields, &mut diagnostics);
-
-    LoweringOutcome {
-        value: ClassIr {
-            kind,
-            name: name.to_owned(),
-            is_abstract,
-            is_interface,
-            superclass_name: superclass_name.map(str::to_owned),
-            span,
-            fields,
-            constructors,
-            methods,
-            traits: traits.to_vec(),
-            configs: configs.to_vec(),
-            serde,
-        },
-        diagnostics,
-    }
-}
-
 /// Lowers resolved fields without requiring the owning class model.
 pub(super) fn lower_resolved_fields(
     fields: &mut [ResolvedField],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<FieldIr> {
     fields
         .iter_mut()
         .map(|field| {
-            let outcome = lower_type(field.parsed_type.as_ref(), field.type_source.as_deref());
+            let outcome = lower_parameter_type_ir(
+                field.span.file_id,
+                field.parsed_type.as_ref(),
+                field.type_source.as_deref(),
+                field.function_formal.as_ref(),
+                type_parameters,
+            );
             diagnostics.extend(outcome.diagnostics);
             FieldIr {
                 name: field.name.clone(),
@@ -182,23 +133,28 @@ pub(super) fn lower_resolved_fields(
 /// Lowers resolved methods without requiring the owning class model.
 pub(super) fn lower_resolved_methods(
     methods: &[ResolvedMethod],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<MethodIr> {
     methods
         .iter()
         .map(|method| {
-            let return_type = lower_type(
+            let return_type = lower_type_in_scope(
                 method.surface.parsed_return_type.as_ref(),
                 method.surface.return_type_source.as_deref(),
+                type_parameters,
             );
             diagnostics.extend(return_type.diagnostics);
             let params = method
                 .params
                 .iter()
                 .map(|param| {
-                    let ty = lower_type(
+                    let ty = lower_parameter_type_ir(
+                        param.span.file_id,
                         param.surface.parsed_type.as_ref(),
                         param.surface.type_source.as_deref(),
+                        param.surface.function_formal.as_ref(),
+                        type_parameters,
                     );
                     diagnostics.extend(ty.diagnostics);
                     MethodParamIr {
@@ -235,6 +191,7 @@ pub(super) fn lower_resolved_constructors(
     file_id: dust_text::FileId,
     constructors: &[ResolvedConstructor],
     fields: &[FieldIr],
+    type_parameters: &[&str],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<ConstructorIr> {
     constructors
@@ -245,17 +202,24 @@ pub(super) fn lower_resolved_constructors(
                 .params
                 .iter()
                 .map(|param| {
-                    let ty = param
-                        .type_source
-                        .as_deref()
-                        .map(|source| lower_type(param.parsed_type.as_ref(), Some(source)))
-                        .unwrap_or_else(|| infer_param_type(param.name.as_str(), fields));
+                    let ty = if param.function_formal.is_some() || param.type_source.is_some() {
+                        lower_parameter_type_ir(
+                            file_id,
+                            param.parsed_type.as_ref(),
+                            param.type_source.as_deref(),
+                            param.function_formal.as_ref(),
+                            type_parameters,
+                        )
+                    } else {
+                        infer_param_type(param.name.as_str(), fields)
+                    };
                     diagnostics.extend(ty.diagnostics);
                     ConstructorParamIr {
                         name: param.name.clone(),
                         ty: ty.value,
                         span: SpanIr::new(file_id, param.span),
                         kind: lower_parameter_kind(param.kind),
+                        is_required: param.is_required,
                         has_default: param.has_default,
                         default_value_source: param.default_value_source.clone(),
                     }
@@ -266,6 +230,7 @@ pub(super) fn lower_resolved_constructors(
                 is_factory: constructor.surface.is_factory,
                 redirected_target_source: constructor.surface.redirected_target_source.clone(),
                 redirected_target_name: constructor.surface.redirected_target_name.clone(),
+                redirected_target: constructor.redirected_target.clone(),
                 span: SpanIr::new(file_id, constructor.surface.span),
                 params,
             }

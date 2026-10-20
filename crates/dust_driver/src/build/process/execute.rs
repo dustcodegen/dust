@@ -3,13 +3,12 @@ use std::{sync::Arc, time::Instant};
 use dust_diagnostics::Diagnostic;
 use dust_emitter::WriteResult;
 use dust_ir::LoweringOutcome;
-use dust_parser_dart::{ParsedDartFileSurface, parse_file_with_backend};
-use dust_parser_dart_ts::TreeSitterDartBackend;
+use dust_parser_dart::ParsedDartFileSurface;
 use dust_resolver::ResolveResult;
-use dust_text::{FileId, SourceText};
+use dust_text::FileId;
 use dust_workspace::SourceLibrary;
 
-use crate::lower::lower_library_with_catalog;
+use crate::lower::lower_library_with_bindings;
 
 use super::{
     BuildOutcome, LoweringConfig, PendingLibrary, PreprocessedLibrary, ProcessingConfig,
@@ -39,7 +38,6 @@ pub(crate) fn process_pending_library(
         checked_output_hash: _,
         previous_output_hash,
     } = input;
-    let backend = TreeSitterDartBackend::new();
     let started = Instant::now();
     let mut outcome = process_library_from_source(
         file_id,
@@ -51,7 +49,6 @@ pub(crate) fn process_pending_library(
             lowered: pre_lowered,
         },
         previous_output_hash,
-        &backend,
         processing,
     );
     let routed = crate::build::support::route_only_analysis(&analysis_snapshot);
@@ -88,7 +85,6 @@ pub(crate) fn process_library_from_source(
     source: Arc<str>,
     preprocessed: PreprocessedLibrary,
     previous_output_hash: Option<Option<u64>>,
-    backend: &TreeSitterDartBackend,
     processing: &ProcessingConfig<'_>,
 ) -> BuildOutcome {
     let mut diagnostics = Vec::new();
@@ -106,14 +102,12 @@ pub(crate) fn process_library_from_source(
         lowered
     } else {
         let parsed = preprocessed.parsed.unwrap_or_else(|| {
-            let source_text = SourceText::new(file_id, Arc::clone(&source));
-            let parsed = parse_file_with_backend(
-                backend,
-                &source_text,
-                super::parse_options(processing.dart_language_version),
-            );
-            diagnostics.extend(parsed.diagnostics);
-            parsed.library
+            let (parsed, parse_diagnostics) = processing
+                .namespaces
+                .parsed(&library.source_path)
+                .expect("discovered namespace root has parser facts");
+            diagnostics.extend_from_slice(parse_diagnostics);
+            parsed.clone()
         });
         diagnostics.extend(preprocessed.diagnostics);
         if diagnostics.iter().any(|diagnostic| diagnostic.is_error()) {
@@ -132,7 +126,18 @@ pub(crate) fn process_library_from_source(
             catalog: processing.catalog,
             registry: processing.registry,
         };
-        match resolve_and_lower_library(file_id, library, &parsed, &lowering, &mut diagnostics) {
+        match resolve_and_lower_library(
+            file_id,
+            library,
+            &parsed,
+            &lowering,
+            processing.namespaces.bindings(
+                &library.source_path,
+                &library.output_path,
+                lowering.catalog,
+            ),
+            &mut diagnostics,
+        ) {
             Some(library) => library,
             None => {
                 let diagnostic_file = diagnostic_file_if_needed(
@@ -187,26 +192,30 @@ pub(crate) fn resolve_and_lower_library(
     library: &SourceLibrary,
     parsed: &ParsedDartFileSurface,
     lowering: &LoweringConfig<'_>,
+    bindings: dust_resolver::BindingContext<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<dust_ir::DartFileIr> {
     let partless_configs = lowering.registry.all_partless_configs();
     let ResolveResult {
         library: mut resolved_library,
         diagnostics: resolve_diagnostics,
-    } = dust_resolver::resolve_library_with_partless_configs(
+    } = dust_resolver::resolve_library_with_bindings(
         file_id,
         &workspace_relative_path(lowering.package_root, &library.source_path),
         &workspace_relative_path(lowering.package_root, &library.output_path),
         parsed,
-        lowering.catalog,
+        &bindings,
         &partless_configs,
     );
     diagnostics.extend(resolve_diagnostics);
+    if bindings.has_namespace() && diagnostics.iter().any(Diagnostic::is_error) {
+        return None;
+    }
 
     let LoweringOutcome {
         value: mut lowered_library,
         diagnostics: lower_diagnostics,
-    } = lower_library_with_catalog(&mut resolved_library, lowering.catalog);
+    } = lower_library_with_bindings(&mut resolved_library, &bindings);
     diagnostics.extend(lower_diagnostics);
     lowered_library.package_root = lowering.package_root.to_string_lossy().into_owned();
     lowered_library.package_name = lowering.package_name.to_owned();

@@ -1,13 +1,8 @@
-use std::sync::Arc;
-
-use dust_dart_syntax::DartLanguageVersion;
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_parser_dart::{ParsedDartFileSurface, parse_file_with_backend};
-use dust_parser_dart_ts::TreeSitterDartBackend;
+use dust_parser_dart::ParsedDartFileSurface;
 use dust_plugin_api::{LibraryAnalysisSnapshot, PluginRegistry, WorkspaceAnalysisBuilder};
 use dust_resolver::SymbolCatalog;
-use dust_text::SourceText;
 
 use crate::build::work::{available_worker_count, round_robin_groups};
 
@@ -32,9 +27,9 @@ pub(crate) fn collect_workspace_analysis(
     pending: &[PendingLibrary],
     package_root: &std::path::Path,
     package_name: &str,
-    dart_language_version: DartLanguageVersion,
     catalog: &SymbolCatalog,
     registry: &PluginRegistry,
+    namespaces: &crate::namespace_sources::NamespaceSources,
 ) -> WorkspaceAnalysisResult {
     if pending.is_empty() {
         return WorkspaceAnalysisResult {
@@ -60,24 +55,25 @@ pub(crate) fn collect_workspace_analysis(
         let mut handles = Vec::with_capacity(groups.len());
         for group in groups {
             handles.push(scope.spawn(move || {
-                let backend = TreeSitterDartBackend::new();
                 let mut local_analysis = WorkspaceAnalysisBuilder::default();
                 let mut local_results = Vec::new();
 
                 for (index, pending) in group {
-                    let source_text =
-                        SourceText::new(pending.file_id, Arc::clone(&pending.input.source));
-                    let parsed = parse_file_with_backend(
-                        &backend,
-                        &source_text,
-                        super::parse_options(dart_language_version),
-                    );
+                    let (parsed, parse_diagnostics) = namespaces
+                        .parsed(&pending.library.source_path)
+                        .expect("discovered namespace root has parser facts");
                     let mut library_analysis = WorkspaceAnalysisBuilder::default();
                     let lowered = lower_for_workspace_analysis(
-                        pending,
-                        &parsed.library,
-                        &parsed.diagnostics,
+                        pending.file_id,
+                        &pending.library,
+                        parsed,
+                        parse_diagnostics,
                         lowering,
+                        namespaces.bindings(
+                            &pending.library.source_path,
+                            &pending.library.output_path,
+                            catalog,
+                        ),
                     );
                     if let Some(lowered) = lowered.as_ref() {
                         registry.collect_workspace_analysis_ir(lowered, &mut library_analysis);
@@ -87,8 +83,8 @@ pub(crate) fn collect_workspace_analysis(
                     local_results.push((
                         index,
                         analysis_snapshot,
-                        parsed.library,
-                        parsed.diagnostics,
+                        parsed.clone(),
+                        parse_diagnostics.to_vec(),
                         lowered,
                     ));
                 }
@@ -124,12 +120,51 @@ pub(crate) fn collect_workspace_analysis(
     })
 }
 
+/// A watch batch still needs current facts from libraries it will not regenerate.
+pub(crate) fn collect_remaining_workspace_analysis(
+    libraries: &[dust_workspace::SourceLibrary],
+    processing: &[dust_workspace::SourceLibrary],
+    lowering: &LoweringConfig<'_>,
+    namespaces: &crate::namespace_sources::NamespaceSources,
+) -> WorkspaceAnalysisBuilder {
+    let processing = processing
+        .iter()
+        .map(|library| &library.source_path)
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut analysis = WorkspaceAnalysisBuilder::default();
+    for library in libraries {
+        if processing.contains(&library.source_path) {
+            continue;
+        }
+        let (parsed, diagnostics) = namespaces
+            .parsed(&library.source_path)
+            .expect("discovered namespace root has parser facts");
+        if let Some(lowered) = lower_for_workspace_analysis(
+            namespaces
+                .file_id(&library.source_path)
+                .expect("namespace root id"),
+            library,
+            parsed,
+            diagnostics,
+            lowering,
+            namespaces.bindings(&library.source_path, &library.output_path, lowering.catalog),
+        ) {
+            lowering
+                .registry
+                .collect_workspace_analysis_ir(&lowered, &mut analysis);
+        }
+    }
+    analysis
+}
+
 /// Lowers a parsed library once so IR-native workspace analysis can feed emission.
 fn lower_for_workspace_analysis(
-    pending: &PendingLibrary,
+    file_id: dust_text::FileId,
+    library: &dust_workspace::SourceLibrary,
     parsed: &ParsedDartFileSurface,
     parse_diagnostics: &[Diagnostic],
     lowering: &LoweringConfig<'_>,
+    bindings: dust_resolver::BindingContext<'_>,
 ) -> Option<DartFileIr> {
     if !parse_diagnostics.is_empty() {
         return None;
@@ -137,10 +172,11 @@ fn lower_for_workspace_analysis(
 
     let mut diagnostics = Vec::new();
     let lowered = resolve_and_lower_library(
-        pending.file_id,
-        &pending.library,
+        file_id,
+        library,
         parsed,
         lowering,
+        bindings,
         &mut diagnostics,
     )?;
     diagnostics.is_empty().then_some(lowered)

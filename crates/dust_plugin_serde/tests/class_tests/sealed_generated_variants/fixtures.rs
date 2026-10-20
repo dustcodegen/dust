@@ -10,6 +10,8 @@ pub(super) fn payment_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "success".to_owned(),
                 target_class_name: "JsonPaymentSuccess".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_success".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Named),
@@ -20,6 +22,8 @@ pub(super) fn payment_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "failed".to_owned(),
                 target_class_name: "JsonPaymentFailed".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "payment_failed".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Named),
@@ -41,16 +45,23 @@ pub(super) fn shape_event_base() -> ClassIr {
             SerdeVariantConfigIr {
                 constructor_name: "empty".to_owned(),
                 target_class_name: "EmptyVariant".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "empty".to_owned(),
                 params: Vec::new(),
             },
             SerdeVariantConfigIr {
                 constructor_name: "mixed".to_owned(),
                 target_class_name: "MixedVariant".to_owned(),
+                target: None,
+                field_serde: Default::default(),
                 tag: "mixed".to_owned(),
                 params: vec![
                     constructor_param("id", TypeIr::string(), ParamKind::Positional),
-                    constructor_param("note", TypeIr::string().nullable(), ParamKind::Named),
+                    ConstructorParamIr {
+                        is_required: false,
+                        ..constructor_param("note", TypeIr::string().nullable(), ParamKind::Named)
+                    },
                     defaulted_constructor_param("retryCount", TypeIr::int(), "3"),
                 ],
             },
@@ -81,6 +92,7 @@ pub(super) fn defaulted_constructor_param(
         ty,
         span: span(30, 35),
         kind: ParamKind::Named,
+        is_required: false,
         has_default: true,
         default_value_source: Some(default.to_owned()),
     }
@@ -170,7 +182,7 @@ final class MixedVariant extends VariantShapeEvent {
     {
       this.note,
       this.retryCount = 3,
-    },
+    }
   ) : super();
 
   factory MixedVariant.fromJson(Map<String, Object?> json) =>

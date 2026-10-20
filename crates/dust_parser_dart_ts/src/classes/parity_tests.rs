@@ -16,10 +16,10 @@ fn classes(source: &SourceText) -> Vec<ParsedClassSurface> {
         "{}",
         tree.root_node().to_sexp()
     );
-    let expected_kind = if env!("CARGO_PKG_NAME") == "dust_listed_parser_parity" {
-        "class_definition"
-    } else {
+    let expected_kind = if env!("CARGO_PKG_NAME") == "dust_legacy_parser_parity" {
         "class_declaration"
+    } else {
+        "class_definition"
     };
     let mut cursor = tree.root_node().walk();
     let class = tree
@@ -41,6 +41,24 @@ fn assert_parity(case: &str, text: &str, count: usize) {
     let classes = classes(&source);
     assert_eq!(classes.len(), count);
     println!("DUST_PARSER_PARITY:{case}:{classes:?}");
+}
+
+#[test]
+fn named_mixin_applications_keep_complete_header_facts() {
+    assert_parity(
+        "named-mixins",
+        "class Base<T> {} mixin Mix<T> {} @Tag() abstract class Alias<T /* binder */ extends /* bound */ Object> = Base<List<T>> with Mix<T>;",
+        2,
+    );
+}
+
+#[test]
+fn declaring_callback_signatures_keep_complete_facts() {
+    assert_parity(
+        "callback-formals",
+        "class Callbacks { Callbacks(bool? predicate(String value)?, T echo<T extends Object>(T value), {bool fallback(String value) = accept}); void call(bool predicate(@Tag() bool nested(String value), [int? count])); void named(bool predicate({required String value, int? count})); }",
+        1,
+    );
 }
 
 #[test]

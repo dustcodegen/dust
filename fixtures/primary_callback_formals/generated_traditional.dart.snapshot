@@ -1,0 +1,40 @@
+import 'package:dust_dart/derive.dart';
+
+part 'callback_probe.g.dart';
+
+/// A callback-bearing model at the minimum Dart language version.
+@Derive([CopyWith(), ToString()])
+class CallbackProbe with _$CallbackProbe {
+  /// Creates a model with explicitly typed declaring callback parameters.
+  const CallbackProbe(
+    bool predicate(String value),
+    bool? maybe(String value),
+    bool nullable(String value)?,
+    T echo<T extends Object>(T value),
+    bool nested(bool next(String value), [int? count]),
+    bool named({required String value, int? count}),
+  ) : predicate = predicate,
+      maybe = maybe,
+      nullable = nullable,
+      echo = echo,
+      nested = nested,
+      named = named;
+
+  /// Tests a string.
+  final bool Function(String value) predicate;
+
+  /// Returns a nullable result without making the callback nullable.
+  final bool? Function(String value) maybe;
+
+  /// An independently nullable callback.
+  final bool Function(String value)? nullable;
+
+  /// Preserves generic callback binders and bounds.
+  final T Function<T extends Object>(T value) echo;
+
+  /// Invokes a nested callback with an optional argument.
+  final bool Function(bool Function(String value) next, [int? count]) nested;
+
+  /// Keeps named invocation requiredness.
+  final bool Function({required String value, int? count}) named;
+}

@@ -36,11 +36,14 @@ pub(super) fn library(classes: Vec<ClassIr>) -> DartFileIr {
 
 pub(super) fn class(name: &str) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 80),
         fields: Vec::new(),
         constructors: vec![ConstructorIr {
@@ -48,6 +51,7 @@ pub(super) fn class(name: &str) -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(40, 60),
             params: Vec::new(),
         }],

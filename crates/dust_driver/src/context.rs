@@ -13,6 +13,7 @@ use crate::{
     },
     catalog::build_symbol_catalog,
     compatibility::validate_workspace_package_versions,
+    namespace_sources::NamespaceSources,
     result::CacheReport,
 };
 
@@ -39,7 +40,7 @@ impl DriverContext {
             }
         };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
-        let catalog = build_symbol_catalog(&registry);
+        let catalog = build_symbol_catalog(&registry)?;
 
         Ok(Self {
             workspace,
@@ -57,6 +58,8 @@ pub(crate) struct CachedDriverContext {
     pub(crate) registry: PluginRegistry,
     /// Resolver catalog derived from the registry.
     pub(crate) catalog: SymbolCatalog,
+    /// Actual source snapshot used consistently for discovery and processing.
+    pub(crate) namespaces: NamespaceSources,
     /// Hash of active code generation logic and plugins.
     pub(crate) tool_hash: CodegenToolHash,
     /// Hash of package and Dust configuration files.
@@ -69,12 +72,28 @@ pub(crate) struct CachedDriverContext {
 
 impl CachedDriverContext {
     /// Loads workspace, registry, catalog, hashes, and cache state.
-    pub(crate) fn load(cwd: &Path, selection: RegistrySelection) -> Result<Self, Diagnostic> {
+    pub(crate) fn load(
+        cwd: &Path,
+        selection: RegistrySelection,
+        sdk_root: Option<&Path>,
+    ) -> Result<Self, Diagnostic> {
         let DriverContext {
-            workspace,
+            mut workspace,
             registry,
             catalog,
         } = DriverContext::load(cwd, selection)?;
+        if !workspace.package_root.join("lib").exists() {
+            validate_workspace_libraries(&workspace)?;
+        }
+        validate_workspace_package_versions(&workspace)?;
+        let namespaces = NamespaceSources::load(
+            cwd,
+            &mut workspace,
+            sdk_root,
+            &catalog,
+            &registry,
+            !matches!(selection, RegistrySelection::All),
+        )?;
         validate_workspace_libraries(&workspace)?;
         validate_workspace_package_versions(&workspace)?;
         let tool_hash = codegen_tool_hash_for_selection(selection);
@@ -93,6 +112,7 @@ impl CachedDriverContext {
             workspace,
             registry,
             catalog,
+            namespaces,
             tool_hash,
             package_config_hash,
             cache,

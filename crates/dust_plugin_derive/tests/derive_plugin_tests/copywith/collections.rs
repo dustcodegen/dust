@@ -26,11 +26,14 @@ fn copywith_replaces_collection_fields_shallowly() {
                 part_of: None,
                 span: span(0, 100),
                 classes: vec![ClassIr {
+                    type_parameters: Vec::new(),
+                    mixins: Vec::new(),
                     kind: ClassKindIr::Class,
                     name: "Catalog".to_owned(),
                     is_abstract: false,
                     is_interface: false,
                     superclass_name: None,
+                    superclass: None,
                     span: span(10, 80),
                     fields: vec![
                         FieldIr {
@@ -55,6 +58,7 @@ fn copywith_replaces_collection_fields_shallowly() {
                         is_factory: false,
                         redirected_target_source: None,
                         redirected_target_name: None,
+                        redirected_target: None,
                         span: span(40, 60),
                         params: vec![
                             ConstructorParamIr {
@@ -62,6 +66,7 @@ fn copywith_replaces_collection_fields_shallowly() {
                                 ty: TypeIr::list_of(TypeIr::list_of(TypeIr::string())),
                                 span: span(40, 41),
                                 kind: ParamKind::Named,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },
@@ -73,6 +78,7 @@ fn copywith_replaces_collection_fields_shallowly() {
                                 ),
                                 span: span(48, 49),
                                 kind: ParamKind::Named,
+                                is_required: true,
                                 has_default: false,
                                 default_value_source: None,
                             },

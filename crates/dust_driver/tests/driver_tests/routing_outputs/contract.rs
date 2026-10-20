@@ -9,6 +9,7 @@ fn build_matches_full_route_output_snapshot() {
     write_routing_workspace(workspace.path(), "dashboard");
 
     let result = run_build(BuildRequest {
+        sdk_source_root: Some(crate::support::sdk_source_root(workspace.path())),
         cwd: workspace.path().to_path_buf(),
         fail_fast: true,
         jobs: None,

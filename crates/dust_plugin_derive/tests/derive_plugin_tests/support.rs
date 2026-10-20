@@ -11,11 +11,14 @@ pub(crate) fn span(start: u32, end: u32) -> SpanIr {
 
 pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(10, 80),
         fields: vec![
             FieldIr {
@@ -40,6 +43,7 @@ pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
             is_factory: false,
             redirected_target_source: None,
             redirected_target_name: None,
+            redirected_target: None,
             span: span(40, 60),
             params: vec![
                 ConstructorParamIr {
@@ -47,6 +51,7 @@ pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
                     ty: TypeIr::named("String"),
                     span: span(45, 47),
                     kind: ParamKind::Positional,
+                    is_required: true,
                     has_default: false,
                     default_value_source: None,
                 },
@@ -55,6 +60,7 @@ pub(crate) fn class_with_traits(name: &str, traits: &[&str]) -> ClassIr {
                     ty: TypeIr::named("int").nullable(),
                     span: span(49, 52),
                     kind: ParamKind::Positional,
+                    is_required: true,
                     has_default: false,
                     default_value_source: None,
                 },

@@ -45,6 +45,7 @@ pub(crate) fn constructor_param(name: &str, ty: TypeIr, kind: ParamKind) -> Cons
         ty,
         span: span(20, 30),
         kind,
+        is_required: true,
         has_default: false,
         default_value_source: None,
     }
@@ -56,6 +57,7 @@ pub(crate) fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -
         is_factory: false,
         redirected_target_source: None,
         redirected_target_name: None,
+        redirected_target: None,
         span: span(30, 40),
         params,
     }
@@ -63,11 +65,14 @@ pub(crate) fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -
 
 pub(crate) fn class(name: &str, fields: Vec<FieldIr>, constructors: Vec<ConstructorIr>) -> ClassIr {
     ClassIr {
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
         kind: ClassKindIr::Class,
         name: name.to_owned(),
         is_abstract: false,
         is_interface: false,
         superclass_name: None,
+        superclass: None,
         span: span(0, 100),
         fields,
         constructors,

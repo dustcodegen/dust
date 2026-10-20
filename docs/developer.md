@@ -51,6 +51,14 @@ assigns their `.g.dart` output paths. The driver fingerprints source text,
 `pubspec.yaml`, package configuration, `dust.yaml`, active codegen sources, and
 the previous primary and auxiliary outputs.
 
+The codegen fingerprint also includes the active vendored Dart grammar's
+native sources and headers, node definitions, Rust binding/build inputs,
+grammar definition, Cargo manifest and upstream provenance. A native-only
+grammar update therefore invalidates generation caches without a version bump.
+Vendor tests, preserved upstream comparison copies and machine-local build or
+package-manager artifacts are not inputs. Cargo tracks each registered input
+for rebuilds; the manifest uses sorted repository-relative paths.
+
 A library is a cache hit only when those inputs and its generated output set
 still match.
 

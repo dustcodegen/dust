@@ -6,7 +6,7 @@ use crate::{
 
 /// Runs read-only route table inspection across the discovered workspace.
 pub fn run_route_table(request: RouteTableRequest) -> CommandResult {
-    let inspection = collect_route_inspection(&request.cwd);
+    let inspection = collect_route_inspection(&request.cwd, request.sdk_source_root.as_deref());
     if inspection.scanned_files == 0 && inspection.result.has_errors() {
         return inspection.result;
     }

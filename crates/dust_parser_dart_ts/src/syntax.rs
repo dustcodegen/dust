@@ -48,6 +48,13 @@ pub(crate) fn direct_named_child<'tree>(node: Node<'tree>, kind: &str) -> Option
         .find(|child| child.is_named() && child.kind() == kind)
 }
 
+/// Returns the first direct child, including punctuation, of the requested kind.
+pub(crate) fn direct_child<'tree>(node: Node<'tree>, kind: &str) -> Option<Node<'tree>> {
+    let mut cursor = node.walk();
+    node.children(&mut cursor)
+        .find(|child| child.kind() == kind)
+}
+
 /// Returns whether a node has a direct child of the requested kind.
 pub(crate) fn has_direct_child_kind(node: Node<'_>, kind: &str) -> bool {
     let mut cursor = node.walk();

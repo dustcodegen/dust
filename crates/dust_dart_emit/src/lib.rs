@@ -2,10 +2,16 @@
 #![deny(missing_docs)]
 #![doc = "Shared Dart rendering helpers reused by Dust plugins."]
 
+/// Named argument labels distinct from private field names.
+mod arguments;
 /// Dart runtime type and symbol names.
 mod dart_names;
+/// Generic declaration and use-site rendering.
+mod generics;
 /// Dart literal escaping.
 mod literals;
+/// Collision-safe generated name allocation.
+mod names;
 /// Serde rename rules.
 mod rename;
 /// Dart source parsing re-exports.
@@ -22,7 +28,12 @@ pub use dart_names::{
     DART_STREAM, DART_STRING, DART_UNIT, DART_URI, DART_VOID,
 };
 
+pub use arguments::named_argument_name;
+pub use generics::{
+    render_class_type, render_type_arguments, render_type_parameter, render_type_parameters,
+};
 pub use literals::{dart_string_literal, escape_dart_string};
+pub use names::{NameAllocator, library_declaration_names, library_reference_names};
 
 pub use source::{
     balanced_parenthesized, normalized_args, parse_bool_literal, parse_named_arguments,

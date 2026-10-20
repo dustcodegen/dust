@@ -1,23 +1,33 @@
-use dust_parser_dart::{ParsedClassKind, ParsedClassSurface};
+use dust_parser_dart::{ParsedClassKind, ParsedClassSurface, ParsedTypeKind};
 use dust_text::SourceText;
 use tree_sitter::Node;
 
 use crate::{
     annotations::extract_annotation,
-    syntax::{find_first_descendant_text, has_direct_child_kind, node_text, text_range},
+    syntax::{direct_named_child, has_direct_child_kind, node_text, text_range},
 };
 
 use super::{
     annotated_members,
     constructors::{extract_constructor, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
+    generics::{extract_class_mixins, extract_class_superclass, extract_class_type_parameters},
     methods::extract_method,
+    primary::extract_declaring_fields,
 };
+
+/// The named-mixin form keeps its name and applications in a nested header.
+pub(crate) fn class_header(node: Node<'_>) -> Node<'_> {
+    direct_named_child(node, "mixin_application_class").unwrap_or(node)
+}
 
 /// Extracts a Dust class surface from one tree-sitter class declaration.
 pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassSurface {
+    let header = class_header(node);
     let is_sealed = has_direct_child_kind(node, "sealed");
-    let kind = if has_direct_child_kind(node, "mixin") {
+    let kind = if header.kind() == "mixin_application_class" {
+        ParsedClassKind::MixinApplicationClass
+    } else if has_direct_child_kind(node, "mixin") {
         ParsedClassKind::MixinClass
     } else if is_sealed {
         ParsedClassKind::SealedClass
@@ -26,19 +36,29 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     };
     let is_abstract = has_direct_child_kind(node, "abstract");
     let is_interface = has_direct_child_kind(node, "interface");
-    let class_name = node
+    let class_name = header
         .child_by_field_name("name")
+        .or_else(|| direct_named_child(header, "identifier"))
         .map(|name| node_text(name, source))
         .unwrap_or_default();
-    let superclass_name = node
-        .child_by_field_name("superclass")
-        .and_then(|superclass| {
-            find_first_descendant_text(superclass, source, &["type_identifier"])
+    let superclass = extract_class_superclass(header, source);
+    let superclass_name = superclass
+        .as_ref()
+        .and_then(|superclass| match &superclass.kind {
+            ParsedTypeKind::Named { name, .. } | ParsedTypeKind::Builtin(name) => {
+                Some(name.clone())
+            }
+            _ => None,
         });
     let mut annotations = Vec::new();
     let mut fields = Vec::new();
     let mut constructors = Vec::new();
     let mut methods = Vec::new();
+    if let Some(primary) = node.child_by_field_name("primary_constructor") {
+        let constructor = extract_constructor(primary, &[], source);
+        fields.extend(extract_declaring_fields(primary, &constructor.params));
+        constructors.push(constructor);
+    }
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor).filter(|child| child.is_named()) {
@@ -50,6 +70,11 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     if let Some(body) = node.child_by_field_name("body") {
         for (declaration, member_annotations) in annotated_members(body, source) {
             match classify_class_member(declaration) {
+                Some(ClassMemberShape::PrimaryBody) => {
+                    if let Some(constructor) = constructors.first_mut() {
+                        constructor.annotations.extend(member_annotations);
+                    }
+                }
                 Some(ClassMemberShape::Constructor(signature)) => {
                     constructors.push(extract_constructor(signature, &member_annotations, source));
                 }
@@ -74,9 +99,12 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     ParsedClassSurface {
         kind,
         name: class_name,
+        type_parameters: extract_class_type_parameters(header, source),
+        mixins: extract_class_mixins(header, source),
         is_abstract,
         is_interface,
         superclass_name,
+        superclass,
         annotations,
         fields,
         constructors,
@@ -87,6 +115,8 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
 
 /// Shape of one class member declaration.
 enum ClassMemberShape<'tree> {
+    /// Metadata on the in-body part belongs to the header constructor.
+    PrimaryBody,
     /// Constructor signature node.
     Constructor(Node<'tree>),
     /// Initialized identifier list for fields.
@@ -97,6 +127,9 @@ enum ClassMemberShape<'tree> {
 
 /// Classifies a class member into a shape Dust extracts.
 fn classify_class_member<'tree>(node: Node<'tree>) -> Option<ClassMemberShape<'tree>> {
+    if node.kind() == "primary_constructor_body_signature" {
+        return Some(ClassMemberShape::PrimaryBody);
+    }
     if is_constructor_signature_kind(node.kind()) {
         return Some(ClassMemberShape::Constructor(node));
     }

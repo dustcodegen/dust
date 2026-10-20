@@ -9,7 +9,8 @@ use crate::{
     annotations::extract_annotation,
     classes::{annotated_members, fields::extract_fields, methods::extract_method_params},
     syntax::{
-        direct_named_child, find_first_descendant, has_descendant_kind, node_text, text_range,
+        direct_child, direct_named_child, find_first_descendant, has_descendant_kind, node_text,
+        text_range,
     },
     types::{extract_type_before, extract_type_node},
 };

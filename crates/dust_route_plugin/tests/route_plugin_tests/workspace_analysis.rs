@@ -76,6 +76,7 @@ fn collects_route_imports_and_params_from_canonical_ir() {
         import("../models/product_filter.dart"),
         import("./widgets/product_shell.dart"),
         ImportIr {
+            namespace: None,
             uri: "../guards/product_guard.dart".to_owned(),
             prefix: Some("guards".to_owned()),
             show: vec!["ProductGuard".to_owned()],
@@ -221,6 +222,7 @@ fn collects_source_path_import_uri_for_non_lib_route_files() {
 
 fn import(uri: &str) -> ImportIr {
     ImportIr {
+        namespace: None,
         uri: uri.to_owned(),
         prefix: None,
         show: Vec::new(),

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use dust_dart_emit::{named_argument_name, render_class_type};
 use dust_ir::{ClassIr, ConstructorIr, ParamKind, SerdeFieldConfigIr};
 
 /// Dart's standard formatter line width.
@@ -7,6 +8,9 @@ const DART_LINE_WIDTH: usize = 80;
 
 /// Characters added around a constructor call by `  return {call};`.
 const RETURN_STATEMENT_OVERHEAD: usize = 10;
+
+#[cfg(test)]
+mod tests;
 
 /// Finds the constructor used for generated deserialization.
 pub(crate) fn find_deserialize_constructor(class: &ClassIr) -> Option<&ConstructorIr> {
@@ -71,28 +75,43 @@ pub(crate) fn render_constructor_call(
     let mut positional = Vec::new();
     let mut named = Vec::new();
 
-    for param in &constructor.params {
+    for (index, param) in constructor.params.iter().enumerate() {
         let value = values
             .iter()
             .find(|(name, _)| *name == param.name)
             .map(|(_, value)| value.clone());
 
         let Some(value) = value else {
-            if param.has_default {
-                continue;
+            if param.is_required {
+                return None;
             }
-            return None;
+            if param.kind == ParamKind::Positional
+                && constructor.params[index + 1..].iter().any(|later| {
+                    later.kind == ParamKind::Positional
+                        && values.iter().any(|(name, _)| *name == later.name)
+                })
+            {
+                positional.push(
+                    param
+                        .default_value_source
+                        .clone()
+                        .unwrap_or_else(|| "null".to_owned()),
+                );
+            }
+            continue;
         };
 
         match param.kind {
             ParamKind::Positional => positional.push(value),
-            ParamKind::Named => named.push(format!("{}: {}", param.name, value)),
+            ParamKind::Named => {
+                named.push(format!("{}: {}", named_argument_name(&param.name), value))
+            }
         }
     }
 
     let ctor = match &constructor.name {
-        Some(name) => format!("{}.{}", class.name, name),
-        None => class.name.clone(),
+        Some(name) => format!("{}.{}", render_class_type(class), name),
+        None => render_class_type(class),
     };
 
     let mut args = positional;

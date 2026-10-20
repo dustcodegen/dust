@@ -1,0 +1,14 @@
+class Base<T> {
+  const Base(this.value);
+  final T value;
+}
+
+mixin Mix<T> {}
+
+class Alias<T extends Object> = Base<List<T>> with Mix<T>;
+
+void main() {
+  const Alias<int> alias = Alias<int>([7]);
+  final List<int> values = alias.value;
+  assert(values.single == 7);
+}

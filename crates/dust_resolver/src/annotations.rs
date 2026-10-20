@@ -9,7 +9,18 @@ use dust_parser_dart::{
 };
 use dust_text::{FileId, TextRange};
 
-use crate::SymbolCatalog;
+use crate::{NamespaceScope, SymbolCatalog, binding::BindingContext};
+
+/// Converts an annotation using the same scoped ownership as feature normalization.
+pub fn resolve_annotation_ir_in_namespace(
+    file_id: FileId,
+    annotation: &ParsedAnnotation,
+    catalog: &SymbolCatalog,
+    namespace: NamespaceScope<'_>,
+    diagnostics: &mut Vec<dust_diagnostics::Diagnostic>,
+) -> AnnotationIr {
+    BindingContext::new(catalog, Some(namespace)).annotation_ir(file_id, annotation, diagnostics)
+}
 
 /// Converts one parsed annotation into semantic IR and resolves registered symbols.
 pub fn resolve_annotation_ir(
@@ -17,11 +28,7 @@ pub fn resolve_annotation_ir(
     annotation: &ParsedAnnotation,
     catalog: &SymbolCatalog,
 ) -> AnnotationIr {
-    let resolved_symbol = catalog
-        .resolve_qualified(&annotation.qualified_name)
-        .or_else(|| catalog.resolve(&annotation.name))
-        .map(|resolved| resolved.symbol.clone());
-    annotation_ir_from_parsed(file_id, annotation, resolved_symbol)
+    BindingContext::new(catalog, None).annotation_ir(file_id, annotation, &mut Vec::new())
 }
 
 /// Converts one parsed annotation into semantic IR, optionally attaching a resolved symbol.
@@ -30,13 +37,12 @@ pub fn annotation_ir_from_parsed(
     annotation: &ParsedAnnotation,
     resolved_symbol: Option<SymbolId>,
 ) -> AnnotationIr {
-    let name = name_ir(file_id, &annotation.qualified_name, annotation.span);
     let (positional_args, named_args) = annotation_argument_values(file_id, annotation);
 
     AnnotationIr {
-        raw_name: name.source,
-        short_name: name.short,
-        prefix: name.prefix,
+        raw_name: annotation.qualified_name.clone(),
+        short_name: annotation.name.clone(),
+        prefix: annotation.prefix.clone(),
         positional_args,
         named_args,
         resolved_symbol,
@@ -151,10 +157,20 @@ fn annotation_value_ir(file_id: FileId, value: &ParsedAnnotationValue) -> Annota
                 .map(|(name, value)| (name.clone(), annotation_value_ir(file_id, value)))
                 .collect(),
         ),
-        ParsedAnnotationValueRootKind::Constructor { name, arguments } => {
+        ParsedAnnotationValueRootKind::Constructor {
+            name,
+            short_name,
+            prefix,
+            arguments,
+        } => {
             let (positional_args, named_args) = parsed_argument_values(file_id, arguments);
             AnnotationValueIr::Constructor {
-                name: name_ir(file_id, name, value.span),
+                name: NameIr {
+                    source: name.clone(),
+                    short: short_name.clone(),
+                    prefix: prefix.clone(),
+                    span: SpanIr::new(file_id, value.span),
+                },
                 positional_args,
                 named_args,
             }

@@ -4,9 +4,10 @@ use dust_plugin_api::SymbolPlan;
 
 use crate::features::{
     clone_copy_with::validate_copy_with,
-    eq_hash::validate_eq_hash,
+    eq_hash::{has_trait, validate_eq_hash},
     validate::{emit_flutter_form_helpers, validate_validate},
 };
+use crate::plugin::CLAIMED_TRAITS;
 
 /// Validates derive requests for every class in a library.
 pub(crate) fn validate_library(library: &DartFileIr) -> Vec<Diagnostic> {
@@ -25,9 +26,18 @@ pub(crate) fn validate_library_with_plan(
 fn validate_library_inner(library: &DartFileIr, emit_form_helpers: bool) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     for class in &library.classes {
-        if matches!(class.kind, ClassKindIr::MixinClass) {
+        if matches!(
+            class.kind,
+            ClassKindIr::MixinClass | ClassKindIr::MixinApplicationClass
+        ) && CLAIMED_TRAITS.iter().any(|symbol| has_trait(class, symbol))
+        {
+            let kind = if class.kind == ClassKindIr::MixinClass {
+                "mixin class"
+            } else {
+                "named mixin-application class"
+            };
             diagnostics.push(Diagnostic::error(format!(
-                "Dust derive generation does not support `mixin class` targets like `{}`",
+                "Dust derive generation does not support `{kind}` targets like `{}`",
                 class.name
             )));
             continue;

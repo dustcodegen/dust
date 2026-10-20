@@ -3,6 +3,11 @@
 use dust_parser_dart::{ParseBackend, ParseOptions, ParsedDartFileSurface};
 use dust_text::{FileId, SourceText};
 
+/// Complete translation scans, including diagnostics and source spans.
+mod i18n;
+/// Complete query facts, including context and unsafe SQL markers.
+mod queries;
+
 /// Exercises the real backend, including its declaration fast path and diagnostics.
 fn parse(text: &str) -> ParsedDartFileSurface {
     let source = SourceText::new(FileId::new(0), text);
@@ -44,6 +49,15 @@ export 'base.dart' if (dart.library.html) 'web.dart' show Public;
     );
     assert_eq!(library.directives.len(), 3);
     contract("conditional-directives", library);
+}
+
+#[test]
+fn source_preserving_namespace_directives() {
+    let library = parse(include_str!(
+        "../../../fixtures/namespace_directives/mixed.dart.snapshot"
+    ));
+    assert_eq!(library.directives.len(), 5);
+    contract("namespace-directives", library);
 }
 
 #[test]

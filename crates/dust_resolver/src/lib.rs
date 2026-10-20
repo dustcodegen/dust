@@ -4,14 +4,24 @@
 
 /// Annotation lowering helpers.
 mod annotations;
+/// One scoped ownership policy for annotation applications and IR lowering.
+mod binding;
 /// Symbol catalog lookup.
 mod catalog;
 /// Resolver-owned database configuration normalization.
 mod db;
+/// Source-owned declaring callback type lowering.
+mod function_formals;
 /// Resolver-owned HTTP configuration normalization.
 mod http;
+/// Source-fact-driven annotation namespace binding.
+mod namespace;
+/// Resolved generated-part selection without URI re-parsing.
+mod primary_part;
 /// Resolver-owned DB query-call normalization.
 mod query_calls;
+/// Redirect constructor/type-path disambiguation using shared source facts.
+mod redirects;
 /// Library resolution entry points.
 mod resolve;
 /// Shared declaration resolution helpers.
@@ -27,13 +37,20 @@ mod state;
 /// Resolver-owned type lowering.
 mod types;
 
-pub use annotations::{annotation_ir_from_parsed, resolve_annotation_ir};
+pub use annotations::{
+    annotation_ir_from_parsed, resolve_annotation_ir, resolve_annotation_ir_in_namespace,
+};
+pub use binding::BindingContext;
 pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
+pub use function_formals::lower_parameter_type_ir;
+pub use namespace::{NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope};
+pub use primary_part::PrimaryPart;
 pub use resolve::{
-    resolve_library, resolve_library_with_partless_configs, validate_generated_part_uri,
+    resolve_library, resolve_library_in_namespace, resolve_library_with_bindings,
+    resolve_library_with_partless_configs, validate_generated_part_uri,
 };
 pub use result::{
     ResolveResult, ResolvedClass, ResolvedConstructor, ResolvedEnum, ResolvedEnumVariant,
     ResolvedField, ResolvedLibrary, ResolvedMethod, ResolvedMethodParam,
 };
-pub use types::lower_type_ir;
+pub use types::{lower_type_ir, lower_type_ir_in_scope};
