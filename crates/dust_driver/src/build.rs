@@ -11,6 +11,8 @@ mod work;
 
 use std::time::Instant;
 
+use dust_workspace::{detect_workspace_root, load_dust_config};
+
 use crate::{
     context::CachedDriverContext,
     i18n_bootstrap::build_i18n_bootstrap,
@@ -46,6 +48,17 @@ fn run_build_inner(
 ) -> CommandResult {
     let started = Instant::now();
     let mut result = CommandResult::default();
+    let i18n_bootstrap = match detect_workspace_root(&request.cwd).and_then(|root| {
+        let config = load_dust_config(&root)?;
+        build_i18n_bootstrap(&root, &config)
+    }) {
+        Ok(artifact) => artifact,
+        Err(diagnostic) => {
+            result.diagnostics.push(diagnostic);
+            result.elapsed_ms = started.elapsed().as_millis();
+            return result;
+        }
+    };
 
     let CachedDriverContext {
         workspace,
@@ -104,10 +117,8 @@ fn run_build_inner(
         &mut result,
         None,
     );
-    match build_i18n_bootstrap(&workspace.package_root, &workspace.dust_config) {
-        Ok(Some(artifact)) => result.build_artifacts.push(artifact),
-        Ok(None) => {}
-        Err(diagnostic) => result.diagnostics.push(diagnostic),
+    if let Some(artifact) = i18n_bootstrap {
+        result.build_artifacts.push(artifact);
     }
     flush_cache_into_result(&mut cache, &mut result);
     result.cache = Some(cache_report);

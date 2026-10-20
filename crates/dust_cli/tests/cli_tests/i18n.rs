@@ -3,6 +3,35 @@ use crate::helpers::run_cli;
 use super::helpers::{make_workspace, write_file};
 
 #[test]
+fn cli_build_clean_restores_imported_i18n_bootstrap_before_loading_sources() {
+    let workspace = make_workspace();
+    write_file(
+        &workspace.path().join("dust.yaml"),
+        "i18n:\n  locales: [en, my]\n",
+    );
+    write_file(
+        &workspace.path().join("lib/main.dart"),
+        "import 'i18n/app_i18n.g.dart';\nclass App { @override String toString() => 'App'; }\nvoid main() { AppI18n; }\n",
+    );
+
+    let first = run_cli(["build", "--root", workspace.path().to_str().unwrap()]);
+    let output = workspace.path().join("lib/i18n/app_i18n.g.dart");
+    let removed = run_cli(["clean", "--root", workspace.path().to_str().unwrap()]);
+    assert_eq!(removed.exit_code, 0, "{}", removed.stderr);
+    assert!(!output.exists());
+    let clean = run_cli([
+        "build",
+        "--clean",
+        "--root",
+        workspace.path().to_str().unwrap(),
+    ]);
+
+    assert_eq!(first.exit_code, 0, "{}", first.stderr);
+    assert_eq!(clean.exit_code, 0, "{}", clean.stderr);
+    assert!(output.exists());
+}
+
+#[test]
 fn cli_i18n_build_writes_arb_files() {
     let workspace = make_workspace();
     write_file(
