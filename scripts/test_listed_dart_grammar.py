@@ -23,7 +23,7 @@ class ListedGrammarTests(unittest.TestCase):
             path.write_bytes(b"source\n")
         value = {
             "repository": "https://github.com/UserNobody14/tree-sitter-dart",
-            "revision": "3f0c7a8309d89927e7cc6bef39569c815fddb2e5", "abi": 15,
+            "revision": "acfb453395e25cf6a1018e064df3c92e68e38782", "abi": 15,
             "files": {name: hashlib.sha256(b"source\n").hexdigest() for name in FILES},
         }
         self.write(root, value)
