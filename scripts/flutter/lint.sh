@@ -26,6 +26,8 @@ for target in "${TARGETS[@]}"; do
 done
 
 if [[ "${1:-}" == "--examples" ]]; then
+  echo "==> Generate benchmark sources: examples/benchmark_project"
+  (cd examples/benchmark_project && dart run tool/generate.dart --count 64)
   echo "==> Dust build --clean: examples/benchmark_project"
   cargo run --quiet -p dust_cli -- build --clean --root examples/benchmark_project
   echo "==> Dust check: examples/benchmark_project"
