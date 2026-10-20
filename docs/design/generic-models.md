@@ -332,8 +332,10 @@ omit extra optional target arguments; when a later positional value is supplied,
 earlier omitted slots use their declared defaults or implicit null. Compiler
 probes reject missing required nullable arguments on both generated and factory
 calls. These are scoped constructor contracts, not all-constructor certification.
-Generic integration and overall
-primary-constructor support remain incomplete until their remaining gates pass.
+Generic integration remains bounded by the unsupported cases documented above.
+The primary-constructor path itself is covered by #76's complete latest-SDK
+Dart and Flutter consumers; that does not expand generic support beyond the
+validated capabilities.
 
 Explicit generic function-type classification is covered by
 [#99](https://github.com/dustcodegen/dust/issues/99) /

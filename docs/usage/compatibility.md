@@ -37,12 +37,14 @@ Dart 3.8 null-aware element. Actual interpolation code is still checked:
 `'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic fix is
 unreleased and does not enable otherwise unsupported code generation.
 
-Class-header primary-constructor support is in development under
-[#76](https://github.com/dustcodegen/dust/issues/76). This branch exercises typed
-declaring parameters through generated Dart and Flutter consumers; it is not
-complete or released. See the [development usage and limits](primary-constructors.md).
-For released binaries, keep traditional in-body constructors and explicit fields.
-This does not require changing constructor calls in your application.
+The current source supports class-header primary constructors for Dart language
+version 3.13 and newer across the documented Dart and Flutter feature surface.
+Fresh Dart 3.13.6 and Flutter 3.47.7 consumers build, analyze and test alongside
+traditional Dart 3.6.0 and Flutter 3.29.0 consumers. See the
+[usage and limits](primary-constructors.md). This source support is not included
+in the published 0.2.1 binaries or packages, so released installations must keep
+traditional in-body constructors and explicit fields. Constructor calls in
+application code do not need to change.
 
 The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
 This source checkout uses the pinned listed upstream after extraction parity;

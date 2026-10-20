@@ -13,11 +13,12 @@ The separate legacy harness still uses registry `tree-sitter-dart 0.1.0`.
 Named concise constructors and dot shorthands are explicitly rejected with
 `Dust does not support ... yet`, source labels and a traditional-syntax
 workaround. The grammar can parse them; generated-code support is a separate
-stage. Primary-constructor work now has separate
-[development consumers and limits](primary-constructors.md) under #76.
-Updating a local checkout does not change already released binaries.
+stage. Primary constructors now have separate positive Dart and Flutter
+[consumers and documented limits](primary-constructors.md) under #76. Updating
+a local checkout does not change already released binaries.
 
-Continue using traditional in-body constructors for models processed by Dust:
+Use traditional in-body constructors with Dart versions below 3.13 or the
+published Dust 0.2.1 release:
 
 ```dart
 import 'package:dust_dart/derive.dart';
@@ -32,9 +33,9 @@ class User with _$User {
 }
 ```
 
-No existing handwritten app API, generated output, runtime constraint or
-package/CLI version changes in the adoption stage. No released
-binary gains primary-constructor support from this work.
+No existing handwritten app API or runtime constraint changes in the adoption
+stage. Current source builds gain primary-constructor support; no released binary
+gains that support until a coordinated later release.
 
 ## Extraction and adoption checks
 
