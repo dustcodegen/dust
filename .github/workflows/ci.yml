@@ -241,7 +241,7 @@ jobs:
         run: ./scripts/rust/coverage.sh 90
 
       - name: Upload coverage
-        if: needs.changes.outputs.docs_only != 'true'
+        if: needs.changes.outputs.docs_only != 'true' && vars.CODECOV_ENABLED == 'true'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           disable_search: true
@@ -392,7 +392,7 @@ jobs:
         run: bash scripts/dart/coverage.sh ${{ matrix.path }} ${{ matrix.coverage_floor }}
 
       - name: Upload coverage
-        if: needs.changes.outputs.docs_only != 'true' && matrix.coverage_floor != ''
+        if: needs.changes.outputs.docs_only != 'true' && matrix.coverage_floor != '' && vars.CODECOV_ENABLED == 'true'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           disable_search: true
@@ -525,7 +525,7 @@ jobs:
         run: bash scripts/flutter/coverage.sh ${{ matrix.path }} ${{ matrix.coverage_floor }}
 
       - name: Upload coverage
-        if: needs.changes.outputs.docs_only != 'true' && matrix.coverage_floor != ''
+        if: needs.changes.outputs.docs_only != 'true' && matrix.coverage_floor != '' && vars.CODECOV_ENABLED == 'true'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           disable_search: true
