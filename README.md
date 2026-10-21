@@ -1,10 +1,11 @@
 # dust
 
-**Rust-powered, batteries-included code generation for full-stack Dart and
-Flutter.**
+**Rust-powered, full-stack code generation for Dart and Flutter—from apps to
+servers.**
 
-Generate data classes, JSON, validation, HTTP clients and servers, routing,
-state management, localization, and SQL—without `build_runner`.
+Dust's packages bring Rust-inspired, batteries-included tooling to data
+classes, JSON, validation, HTTP clients, routing, state management,
+localization, SQL, and Dart servers—without `build_runner`.
 
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
