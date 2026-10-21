@@ -1,7 +1,10 @@
 # dust
 
-**Extremely fast, batteries-included code generation for full-stack Dart and
-Flutter.**
+**Rust-speed code generation for the full Dart and Flutter stack.**
+
+Batteries included: data classes, JSON, validation, HTTP clients, routing,
+state, localization, and SQL—without `build_runner`. Dust also includes a
+runtime for Dart HTTP servers.
 
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
