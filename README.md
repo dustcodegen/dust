@@ -1,6 +1,7 @@
 # dust
 
-**Built to make developers and AI agents happy.**
+**Extremely fast, batteries-included code generation for full-stack Dart and
+Flutter.**
 
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
