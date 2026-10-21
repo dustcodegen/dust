@@ -12,11 +12,12 @@ The original remote is unavailable, so its current state cannot be verified.
 Versions are unchanged. The original `v0.2.1` source was rebuilt through
 [Rust-only release CI](https://github.com/dustcodegen/dust/actions/workflows/rust-release.yml)
 with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
-Only manual Rust release CI is enabled, not Dart/Flutter publishing or the
-inherited general CI/Scorecard workflows. Original CI history and external
-quality integrations are not migrated. Current documentation and package
-metadata use `dustcodegen/dust`; already-published pub.dev metadata stays unchanged
-until a future package release.
+General CI and OpenSSF Scorecard run in the organization repository. Production
+Dart/Flutter publishing remains disabled until a release is prepared and
+approved. Original CI history and external quality integrations are not
+migrated. Current documentation and package metadata use `dustcodegen/dust`;
+already-published pub.dev metadata stays unchanged until a future package
+release.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you
