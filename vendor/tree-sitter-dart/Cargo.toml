@@ -5,7 +5,7 @@ version = "0.0.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
-repository = "https://github.com/UserNobody14/tree-sitter-dart"
+repository = "https://github.com/dustcodegen/tree-sitter-dart"
 publish = false
 build = "bindings/rust/build.rs"
 

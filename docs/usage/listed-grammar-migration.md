@@ -7,8 +7,9 @@ This is a community upstream, not an official Dart-team parser.
 
 ## Active grammar and syntax staging
 
-The active parser uses `vendor/tree-sitter-dart`, pinned at upstream commit
-`acfb453395e25cf6a1018e064df3c92e68e38782` with ABI 15 and Tree-sitter 0.25.10.
+The active parser uses `vendor/tree-sitter-dart`, pinned at the
+[Dust organization fork](https://github.com/dustcodegen/tree-sitter-dart), commit
+`acfb453395e25cf6a1018e064df3c92e68e38782`, with ABI 15 and Tree-sitter 0.25.10.
 The separate legacy harness still uses registry `tree-sitter-dart 0.1.0`.
 Named concise constructors and dot shorthands are explicitly rejected with
 `Dust does not support ... yet`, source labels and a traditional-syntax
