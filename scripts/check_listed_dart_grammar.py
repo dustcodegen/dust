@@ -24,10 +24,10 @@ def check(root: Path) -> list[str]:
         return [f"Unable to read UPSTREAM.json: {error}"]
     if not isinstance(manifest, dict):
         return ["UPSTREAM.json must contain an object"]
-    if (manifest.get("repository") != "https://github.com/UserNobody14/tree-sitter-dart"
+    if (manifest.get("repository") != "https://github.com/dustcodegen/tree-sitter-dart"
             or not re.fullmatch(r"[0-9a-f]{40}", str(manifest.get("revision", "")))
             or manifest.get("abi") != 15):
-        return ["Expected the listed Dart upstream, an immutable revision and ABI 15"]
+        return ["Expected the Dust Dart fork, an immutable revision and ABI 15"]
     files = manifest.get("files")
     if not isinstance(files, dict) or set(files) != FILES:
         return ["The complete pinned source and notice file set must be recorded"]
