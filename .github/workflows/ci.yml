@@ -547,7 +547,6 @@ jobs:
       - rust
       - dart-packages
       - flutter-packages
-      - postgres-fixture
     if: >-
       needs.changes.outputs.docs_only != 'true' &&
       (github.event_name != 'pull_request' ||
