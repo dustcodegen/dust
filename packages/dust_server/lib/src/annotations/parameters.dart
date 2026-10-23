@@ -74,6 +74,8 @@ final class HeaderMap {
 /// Binds a parameter to the typed request body.
 ///
 /// The media type is JSON unless the handler carries [FormUrlEncoded].
+/// A same-library model deriving Dust `Deserialize()` uses its generated
+/// decoder; other model types must expose a static `deserialize` function.
 @Target({TargetKind.parameter})
 final class Body {
   /// Reads and decodes the body.

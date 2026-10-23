@@ -173,7 +173,11 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
             &arguments,
             ";",
         );
-        lines.push("    return noContent();".to_owned());
+        if handler.status == 204 {
+            lines.push("    return noContent();".to_owned());
+        } else {
+            lines.push(format!("    return Response({});", handler.status));
+        }
         lines.push("  });".to_owned());
     } else {
         lines.push("  return guard(".to_owned());

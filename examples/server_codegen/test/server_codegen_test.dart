@@ -1,10 +1,13 @@
 import 'package:http/http.dart' as http;
 import 'package:server_codegen/bearer_auth.dart' as bearer_auth;
 import 'package:server_codegen/controller_state.dart' as controller_state;
+import 'package:server_codegen/forms_and_raw.dart' as forms_and_raw;
 import 'package:server_codegen/hello_world.dart' as hello_world;
 import 'package:server_codegen/json_body.dart' as json_body;
 import 'package:server_codegen/multipart_form.dart' as multipart_form;
 import 'package:server_codegen/path_and_query.dart' as path_and_query;
+import 'package:server_codegen/request_data.dart' as request_data;
+import 'package:server_codegen/verbs_and_responses.dart' as verbs_and_responses;
 import 'package:test/test.dart';
 
 import 'support.dart';
@@ -48,6 +51,83 @@ void main() {
     final response = await app.send('GET', '/greetings/Ada');
 
     expect(app.json(response), {'message': 'Hello, Ada!'});
+    expect(response.headers['x-content-type-options'], 'nosniff');
+  });
+
+  test('generated request extractors expose broad request data', () async {
+    final app = await serveExample(request_data.buildApp());
+
+    final response = await app.send(
+      'GET',
+      '/request-data/inspect?tag=red&tag=blue&mode=full',
+      headers: {'x-request-id': 'demo-1'},
+    );
+    final body = app.json(response);
+
+    expect(body['tags'], ['red', 'blue']);
+    expect(body['query'], {'tag': 'blue', 'mode': 'full'});
+    expect(body['rawQuery'], 'tag=red&tag=blue&mode=full');
+    expect(body['requestId'], 'demo-1');
+    expect(body['host'], isNotEmpty);
+    expect(body['peer'], '127.0.0.1');
+    expect(body['method'], 'GET');
+  });
+
+  test('generated form fields share one body read', () async {
+    final app = await serveExample(forms_and_raw.buildApp());
+
+    final response = await app.send(
+      'POST',
+      '/bodies/form',
+      body: 'title=Ship+Dust&priority=2',
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+    );
+
+    expect(app.json(response), {'title': 'Ship Dust', 'priority': 2});
+  });
+
+  test('generated raw body handlers preserve text bytes and streams', () async {
+    final app = await serveExample(forms_and_raw.buildApp());
+
+    final text = await app.send('POST', '/bodies/text', body: 'plain text');
+    final bytes = await app.send('POST', '/bodies/bytes', body: [1, 2, 3]);
+    final stream = await app.send('POST', '/bodies/stream', body: 'streamed');
+
+    expect(text.body, 'plain text');
+    expect(bytes.statusCode, 202);
+    expect(bytes.bodyBytes, [1, 2, 3]);
+    expect(stream.body, 'streamed');
+  });
+
+  test('generated routes support every HTTP verb', () async {
+    final app = await serveExample(verbs_and_responses.buildApp());
+
+    final put = await app.send('PUT', '/resources/7');
+    final patch = await app.send('PATCH', '/resources/7');
+    final delete = await app.send('DELETE', '/resources/7');
+    final head = await app.send('HEAD', '/resources/7');
+    final options = await app.send('OPTIONS', '/resources');
+
+    expect(app.json(put), {'method': 'PUT', 'id': 7});
+    expect(app.json(patch), {'method': 'PATCH', 'id': 7});
+    expect(delete.statusCode, 204);
+    expect(head.statusCode, 200);
+    expect(head.body, isEmpty);
+    expect(options.statusCode, 204);
+  });
+
+  test('generated response dispatch preserves wrappers and responses',
+      () async {
+    final app = await serveExample(verbs_and_responses.buildApp());
+
+    final result = await app.send('GET', '/resources/result');
+    final missing = await app.send('GET', '/resources/missing');
+    final custom = await app.send('GET', '/resources/custom');
+
+    expect(result.body, 'ok');
+    expect(missing.statusCode, 404);
+    expect(custom.statusCode, 202);
+    expect(custom.body, 'custom');
   });
 
   test('generated custom extractor enforces bearer auth', () async {

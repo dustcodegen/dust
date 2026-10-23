@@ -367,3 +367,14 @@ fn ignores_plain_controller_methods_without_server_metadata() {
             .any(|value| value.contains("do not declare a supported handler"))
     );
 }
+
+#[test]
+fn derives_default_status_from_the_return_type() {
+    assert_eq!(default_status(&TypeIr::named("void")), 204);
+    assert_eq!(default_status(&TypeIr::named("Unit")), 204);
+    assert_eq!(
+        default_status(&TypeIr::generic("Future", vec![TypeIr::named("void")],)),
+        204
+    );
+    assert_eq!(default_status(&TypeIr::named("Todo")), 200);
+}

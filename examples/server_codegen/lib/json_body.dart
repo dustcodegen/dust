@@ -28,15 +28,10 @@ Future<Map<String, Object?>> createNote(@Body() CreateNote input) async => {
     };
 
 /// The JSON body accepted by [createNote].
-@Derive([Validate()])
+@Derive([Deserialize(), Validate()])
 final class CreateNote with _$CreateNote {
   /// Creates a note request.
   const CreateNote({required this.title});
-
-  /// Decodes one JSON object.
-  factory CreateNote.deserialize(Map<String, Object?> json) {
-    return CreateNote(title: json['title']! as String);
-  }
 
   /// The required, non-empty note title.
   @Validate(length: Length(min: 1), message: 'must not be empty')

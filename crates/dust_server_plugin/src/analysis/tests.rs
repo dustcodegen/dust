@@ -86,6 +86,7 @@ fn serializes_every_wrapper_and_unknown_type() {
             wrapper,
             extraction: Extraction::State,
             validated: false,
+            serde_deserialized: false,
         });
         assert_eq!(fact.wrapper, expected);
         assert_eq!(fact.type_source, "String");

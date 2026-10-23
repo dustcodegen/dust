@@ -52,6 +52,22 @@ extension _CreateNoteValidation on CreateNote {
   }
 
 }
+final class $CreateNoteDeserializer implements Deserializer<CreateNote, Map<String, Object?>> {
+  const $CreateNoteDeserializer();
+
+  @override
+  CreateNote deserialize(Map<String, Object?> json) => _$CreateNoteDeserialize(json);
+}
+
+// factory CreateNote.fromJson(Map<String, Object?> json) => _$CreateNoteFromJson(json);
+CreateNote _$CreateNoteDeserialize(Map<String, Object?> json) {
+  final titleValue = JsonHelper.as<String>(json['title'], 'title', 'String');
+
+  return CreateNote(title: titleValue);
+}
+
+CreateNote _$CreateNoteFromJson(Map<String, Object?> json) =>
+    _$CreateNoteDeserialize(json);
 
 Router noteRoutes() => Router.module(
       prefix: '/notes',
@@ -70,7 +86,7 @@ Router noteRoutes() => Router.module(
 Future<Response> _$handleCreateNote(Request request) async {
   final Result<CreateNote, Rejection> _dustResult0 =
       await const ValidatedExtractable<CreateNote>(
-    JsonExtractable<CreateNote>(CreateNote.deserialize),
+    JsonExtractable<CreateNote>(_$CreateNoteDeserialize),
   ).extract(request);
   if (_dustResult0 case Err(:final error)) return error.intoResponse();
   final _dustValue0 = (_dustResult0 as Ok<CreateNote, Rejection>).value;

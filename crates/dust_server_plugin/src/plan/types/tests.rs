@@ -95,7 +95,7 @@ fn recognizes_phase_three_response_shapes() {
 }
 
 #[test]
-fn recognizes_only_same_library_dust_validation_derives() {
+fn recognizes_only_same_library_dust_derives() {
     let mut class = ClassIr {
         kind: ClassKindIr::Class,
         name: "CreateTodo".to_owned(),
@@ -120,13 +120,22 @@ fn recognizes_only_same_library_dust_validation_derives() {
         &TypeIr::named("CreateTodo"),
         std::slice::from_ref(&class)
     ));
+    assert!(!derives_deserialize(
+        &TypeIr::named("CreateTodo"),
+        std::slice::from_ref(&class)
+    ));
     assert!(!derives_validate(
         &TypeIr::named("models.CreateTodo"),
         std::slice::from_ref(&class)
     ));
 
     class.traits[0].symbol = SymbolId::new("other::Validate");
-    assert!(!derives_validate(&TypeIr::named("CreateTodo"), &[class]));
+    assert!(!derives_validate(
+        &TypeIr::named("CreateTodo"),
+        std::slice::from_ref(&class)
+    ));
+    class.traits[0].symbol = SymbolId::new("dust_dart::Deserialize");
+    assert!(derives_deserialize(&TypeIr::named("CreateTodo"), &[class]));
 }
 
 #[test]

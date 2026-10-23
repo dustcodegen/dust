@@ -18,7 +18,7 @@ mod values;
 mod tests;
 
 use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, DartFileIr, FunctionIr, MethodIr};
+use dust_ir::{ClassIr, DartFileIr, FunctionIr, MethodIr, TypeIr};
 
 pub(crate) use model::{
     BodyFormat, Callable, ControllerPlan, Extraction, ExtractionWrapper, HandlerPlan, ParamPlan,
@@ -263,7 +263,8 @@ fn parse_handler<'a>(
     );
     let path = required_string(args, 0, "verb path", diagnostics)?;
     validate_route_path(&path, args.span(), diagnostics);
-    let status = parse_status(args, diagnostics).unwrap_or(200);
+    let status =
+        parse_status(args, diagnostics).unwrap_or_else(|| default_status(callable.return_type()));
     let middleware = parse_middleware(args, diagnostics);
     let metadata = parse_route_metadata(args, inherited_tags, callable.name());
     let placeholders = path_keys(&path);
@@ -290,6 +291,20 @@ fn parse_handler<'a>(
         middleware,
         metadata,
     })
+}
+
+/// Selects the response status implied by a handler return type.
+fn default_status(ty: &TypeIr) -> u16 {
+    let value = if ty.is_named("Future") && ty.args().len() == 1 {
+        &ty.args()[0]
+    } else {
+        ty
+    };
+    if value.is_named("void") || value.is_named("Unit") {
+        204
+    } else {
+        200
+    }
 }
 
 /// Reads a controller or top-level route-group annotation.

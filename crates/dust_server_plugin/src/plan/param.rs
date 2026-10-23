@@ -9,9 +9,9 @@ use super::{
     model::{Args, Extraction, ExtractionWrapper, ParamPlan},
     param::custom::custom,
     types::{
-        derives_validate, is_map_of, is_peer_info, is_uploaded_file, raw_body_format,
-        require_body_type, require_queries_type, require_raw_query_type, require_scalar,
-        require_state_type,
+        derives_deserialize, derives_validate, is_map_of, is_peer_info, is_uploaded_file,
+        raw_body_format, require_body_type, require_queries_type, require_raw_query_type,
+        require_scalar, require_state_type,
     },
     values::{error, optional_string, required_string, validate_no_args, validate_zero_named},
 };
@@ -176,12 +176,15 @@ pub(super) fn parse_param<'a>(
     };
     let validated =
         matches!(extraction, Extraction::Body(_)) && derives_validate(value_type, classes);
+    let serde_deserialized = matches!(extraction, Extraction::Body(_) | Extraction::Queries)
+        && derives_deserialize(value_type, classes);
     Some(ParamPlan {
         param,
         value_type,
         wrapper,
         extraction,
         validated,
+        serde_deserialized,
     })
 }
 
@@ -218,6 +221,7 @@ fn passthrough<'a>(
         wrapper,
         extraction,
         validated: false,
+        serde_deserialized: false,
     })
 }
 

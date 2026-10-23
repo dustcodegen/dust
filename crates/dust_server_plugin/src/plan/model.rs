@@ -109,6 +109,8 @@ pub(crate) struct ParamPlan<'a> {
     pub(crate) extraction: Extraction,
     /// Whether the decoded body must run its generated `Validate()` contract.
     pub(crate) validated: bool,
+    /// Whether the model decoder comes from Dust `Deserialize()` generation.
+    pub(crate) serde_deserialized: bool,
 }
 
 /// How an extractor failure reaches the handwritten handler.

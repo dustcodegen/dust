@@ -25,6 +25,7 @@ fn non_const_decoder_extractors_keep_wrappers_non_const() {
         wrapper: ExtractionWrapper::Optional,
         extraction: Extraction::Body(BodyFormat::Json),
         validated: false,
+        serde_deserialized: false,
     };
     let fallible = ParamPlan {
         param: &params[1],
@@ -32,6 +33,7 @@ fn non_const_decoder_extractors_keep_wrappers_non_const() {
         wrapper: ExtractionWrapper::Fallible,
         extraction: Extraction::Queries,
         validated: false,
+        serde_deserialized: false,
     };
 
     assert_eq!(

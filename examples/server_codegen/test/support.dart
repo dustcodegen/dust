@@ -25,29 +25,27 @@ final class ExampleApp {
     String path, {
     Object? body,
     Map<String, String> headers = const {},
-  }) {
+  }) async {
     final uri = Uri.parse(
       'http://${server.address.host}:${server.port}$path',
     );
-    final encoded = switch (body) {
-      null => null,
-      final String text => text,
-      _ => jsonEncode(body),
-    };
     final requestHeaders = {
       if (body != null && !headers.containsKey('content-type'))
         'content-type': 'application/json',
       ...headers,
     };
-    return switch (method) {
-      'GET' => http.get(uri, headers: requestHeaders),
-      'POST' => http.post(
-          uri,
-          headers: requestHeaders,
-          body: encoded,
-        ),
-      _ => throw ArgumentError.value(method, 'method'),
-    };
+    final request = http.Request(method, uri)..headers.addAll(requestHeaders);
+    switch (body) {
+      case null:
+        break;
+      case final List<int> bytes:
+        request.bodyBytes = bytes;
+      case final String text:
+        request.body = text;
+      default:
+        request.body = jsonEncode(body);
+    }
+    return http.Response.fromStream(await request.send());
   }
 
   /// Decodes a JSON response object.

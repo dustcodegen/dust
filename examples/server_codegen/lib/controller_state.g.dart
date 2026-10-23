@@ -22,11 +22,14 @@ mixin _$GreetingController {
             '/{name}',
             _$handleGreet,
             metadata: const RouteMetadata(
-              operationId: 'greet',
+              operationId: 'greetByName',
+              summary: 'Create a greeting',
+              tags: ['greetings'],
             ),
           ),
         ],
-      );
+      )
+      ..layer(const SecurityHeaders());
 
   Future<Response> _$handleGreet(Request request) async {
     final Result<String, Rejection> _dustResult0 =

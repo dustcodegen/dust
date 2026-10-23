@@ -36,6 +36,7 @@ fn plan<'a>(
         wrapper,
         extraction,
         validated: false,
+        serde_deserialized: false,
     }
 }
 
@@ -117,9 +118,10 @@ fn renders_validated_json_and_form_bodies_exactly() {
         Extraction::Body(BodyFormat::Json),
     );
     json.validated = true;
+    json.serde_deserialized = true;
     assert_eq!(
         render_extractor(&json),
-        "const ValidatedExtractable<CreateTodo>(\n    JsonExtractable<CreateTodo>(CreateTodo.deserialize),\n  )"
+        "const ValidatedExtractable<CreateTodo>(\n    JsonExtractable<CreateTodo>(_$CreateTodoDeserialize),\n  )"
     );
 
     let mut form = plan(
@@ -132,6 +134,31 @@ fn renders_validated_json_and_form_bodies_exactly() {
     assert_eq!(
         render_extractor(&form),
         "const ValidatedExtractable<CreateTodo>(\n    FormModelExtractable<CreateTodo>(CreateTodo.deserialize),\n  )"
+    );
+
+    let mut queries = plan(
+        &input,
+        &input.ty,
+        ExtractionWrapper::Required,
+        Extraction::Queries,
+    );
+    queries.serde_deserialized = true;
+    assert_eq!(
+        render_extractor(&queries),
+        "const QueriesExtractable<CreateTodo>(\n    _$CreateTodoDeserialize,\n  )"
+    );
+
+    let page = param("page", TypeIr::generic("Page", vec![TypeIr::named("Todo")]));
+    let mut generic = plan(
+        &page,
+        &page.ty,
+        ExtractionWrapper::Required,
+        Extraction::Body(BodyFormat::Json),
+    );
+    generic.serde_deserialized = true;
+    assert_eq!(
+        render_extractor(&generic),
+        "const JsonExtractable<Page<Todo>>(\n    _$PageDeserialize<Todo>,\n  )"
     );
 
     let fields = param(

@@ -17,10 +17,14 @@ Router buildApp() => Router()
   ..withState(const GreetingConfig('Hello'));
 
 /// Groups greeting endpoints under one path.
-@Controller('/greetings')
+@Controller(
+  '/greetings',
+  tags: ['greetings'],
+  middleware: [SecurityHeaders()],
+)
 final class GreetingController with _$GreetingController {
   /// Reads [GreetingConfig] from the router and a name from the path.
-  @GET('/{name}')
+  @GET('/{name}', summary: 'Create a greeting', operationId: 'greetByName')
   Future<Map<String, Object?>> greet(
     @Path() String name,
     @State() GreetingConfig config,
