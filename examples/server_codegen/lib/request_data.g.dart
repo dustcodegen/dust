@@ -35,35 +35,28 @@ Future<Response> _$handleInspect(Request request) async {
   if (_dustResult0 case Err(:final error)) return error.intoResponse();
   final _dustValue0 = (_dustResult0 as Ok<List<String>, Rejection>).value;
 
-  final Result<Map<String, String>, Rejection> _dustResult1 =
-      await QueriesExtractable<Map<String, String>>((queries) => queries)
-          .extract(request);
+  final Result<String?, Rejection> _dustResult1 =
+      await const RawQueryExtractable().extract(request);
   if (_dustResult1 case Err(:final error)) return error.intoResponse();
-  final _dustValue1 =
-      (_dustResult1 as Ok<Map<String, String>, Rejection>).value;
+  final _dustValue1 = (_dustResult1 as Ok<String?, Rejection>).value;
 
   final Result<String?, Rejection> _dustResult2 =
-      await const RawQueryExtractable().extract(request);
+      await const HeaderExtractable<String?>('x-request-id').extract(request);
   if (_dustResult2 case Err(:final error)) return error.intoResponse();
   final _dustValue2 = (_dustResult2 as Ok<String?, Rejection>).value;
 
-  final Result<String?, Rejection> _dustResult3 =
-      await const HeaderExtractable<String?>('x-request-id').extract(request);
-  if (_dustResult3 case Err(:final error)) return error.intoResponse();
-  final _dustValue3 = (_dustResult3 as Ok<String?, Rejection>).value;
-
-  final Result<Map<String, String>, Rejection> _dustResult4 =
+  final Result<Map<String, String>, Rejection> _dustResult3 =
       await const HeaderMapExtractable().extract(request);
-  if (_dustResult4 case Err(:final error)) return error.intoResponse();
-  final _dustValue4 =
-      (_dustResult4 as Ok<Map<String, String>, Rejection>).value;
+  if (_dustResult3 case Err(:final error)) return error.intoResponse();
+  final _dustValue3 =
+      (_dustResult3 as Ok<Map<String, String>, Rejection>).value;
 
-  final Result<PeerInfo, Rejection> _dustResult5 =
+  final Result<PeerInfo, Rejection> _dustResult4 =
       await const PeerExtractable().extract(request);
-  if (_dustResult5 case Err(:final error)) return error.intoResponse();
-  final _dustValue5 = (_dustResult5 as Ok<PeerInfo, Rejection>).value;
+  if (_dustResult4 case Err(:final error)) return error.intoResponse();
+  final _dustValue4 = (_dustResult4 as Ok<PeerInfo, Rejection>).value;
 
-  final _dustValue6 = RequestParts.of(request);
+  final _dustValue5 = RequestParts.of(request);
 
   return guard(
     () async => responseFrom(
@@ -74,7 +67,6 @@ Future<Response> _$handleInspect(Request request) async {
         _dustValue3,
         _dustValue4,
         _dustValue5,
-        _dustValue6,
       ),
       status: 200,
     ),

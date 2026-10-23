@@ -3,6 +3,10 @@ use dust_ir::{BuiltinType, ClassIr, SpanIr, TypeIr};
 
 use super::{model::RawBodyFormat, values::error};
 
+/// Typed query-model validation and conversion planning.
+mod query_model;
+pub(super) use query_model::query_model_plan;
+
 #[cfg(test)]
 /// Focused extractor and response type tests.
 mod tests;

@@ -1,7 +1,10 @@
 use dust_dart_emit::{DYNAMIC_TYPES, dart_string_literal};
 use dust_ir::TypeIr;
 
-use crate::plan::{BodyFormat, Extraction, ExtractionWrapper, ParamPlan, RawBodyFormat};
+use crate::plan::{
+    BodyFormat, Extraction, ExtractionWrapper, ParamPlan, QueryConversionKind, QueryConversionPlan,
+    QueryModelPlan, RawBodyFormat,
+};
 
 #[cfg(test)]
 mod tests;
@@ -144,6 +147,10 @@ pub(super) fn render_extractor(plan: &ParamPlan<'_>) -> String {
             Extraction::Body(BodyFormat::Form) => format!(
                 "ValidatedExtractable<{value_type}>(\n    FormModelExtractable<{value_type}>({decoder}),\n  )"
             ),
+            Extraction::QueryModel(_) => format!(
+                "ValidatedExtractable<{value_type}>(\n    {},\n  )",
+                inner.replace('\n', "\n    ")
+            ),
             _ => inner,
         };
     }
@@ -181,6 +188,7 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
                 true,
             )
         }
+        Extraction::QueryModel(query) => (render_query_model(plan, query, &ty), false),
         Extraction::Queries if is_string_map(plan.value_type) => (
             "QueriesExtractable<Map<String, String>>((queries) => queries)".to_owned(),
             false,
@@ -219,6 +227,37 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         | Extraction::Part { .. }
         | Extraction::Request
         | Extraction::RequestParts => unreachable!("handled before extractor rendering"),
+    }
+}
+
+/// Renders the adapter from URI pairs to the generated SerDe decoder.
+fn render_query_model(plan: &ParamPlan<'_>, query: &QueryModelPlan, ty: &str) -> String {
+    let decoder = render_decoder(plan, ty);
+    let mut lines = vec![
+        format!("QueryModelExtractable<{ty}>((query) {{"),
+        "  final values = query.toObjectMap();".to_owned(),
+    ];
+    for conversion in &query.conversions {
+        lines.push(render_query_conversion(conversion));
+    }
+    lines.push(format!("  return {decoder}(values);"));
+    lines.push("})".to_owned());
+    lines.join("\n")
+}
+
+/// Renders one field conversion inside a query-model adapter.
+fn render_query_conversion(conversion: &QueryConversionPlan) -> String {
+    let key = dart_string_literal(&conversion.key);
+    match &conversion.kind {
+        QueryConversionKind::Scalar(value) => format!(
+            "  query.coerceOne<{}>(values, {key});",
+            DYNAMIC_TYPES.render(value)
+        ),
+        QueryConversionKind::StringList => format!("  query.copyAll(values, {key});"),
+        QueryConversionKind::ScalarList(value) => format!(
+            "  query.coerceAll<{}>(values, {key});",
+            DYNAMIC_TYPES.render(value)
+        ),
     }
 }
 

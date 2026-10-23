@@ -92,8 +92,9 @@ dust build
 ```
 
 Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
-dependencies make a class clearer. Generated handlers also support
-`@Queries()`, `@Header(...)`, `@HeaderMap()`, `@Body()`, `@Field(...)`,
+dependencies make a class clearer. Generated handlers also support typed
+`@Query()` models, compatibility `@Queries()` maps, `@Header(...)`,
+`@HeaderMap()`, `@Body()`, `@Field(...)`,
 `@Part(...)`, `@RawBody()`, `@RawQuery()`, `@State()`, `@Peer()`, bare
 `Request`/`RequestParts`, and `@Extract(Type)`. Declare an extractor parameter
 as `Option<T>` to collapse client rejections to `None`, or as
@@ -119,16 +120,19 @@ below match their Dart declarations exactly.
 | Class | `@Controller(path, tags:, middleware:)` |
 | Method or function | `@GET(path, ...)`, `@POST(path, ...)`, `@PUT(path, ...)`, `@PATCH(path, ...)`, `@DELETE(path, ...)`, `@HEAD(path, ...)`, `@OPTIONS(path, ...)` |
 | Body mode | `@FormUrlEncoded()`, `@MultiPart()` |
-| Parameter | `@Extract(Type)`, `@Path([name])`, `@Query(name)`, `@Queries()`, `@RawQuery()`, `@Header(name)`, `@HeaderMap()`, `@Body()`, `@Field(name)`, `@Part(name)`, `@RawBody()`, `@State()`, `@Peer()` |
+| Parameter | `@Extract(Type)`, `@Path([name])`, `@Query([name])`, `@Queries()`, `@RawQuery()`, `@Header(name)`, `@HeaderMap()`, `@Body()`, `@Field(name)`, `@Part(name)`, `@RawBody()`, `@State()`, `@Peer()` |
 
 Every verb accepts `status:`, `summary:`, `description:`, `tags:`,
 `middleware:`, `operationId:`, `deprecated:`, and `hidden:`. A handler has one
 verb and at most one body mode. `@FormUrlEncoded()` and `@MultiPart()` stay
 separate from the verb because the encoding is independent of the HTTP method.
 
-`@Query(name)` is the normal typed API and reads and coerces one value.
-`@Queries()` is the escape hatch for receiving the complete
-`Map<String, String>` when query keys are dynamic.
+`@Query(name)` reads and coerces one scalar or repeated list. An unnamed
+`@Query()` decodes the complete query string into a same-library model deriving
+`Deserialize()`, using its SerDe names, aliases, defaults, enums, and flat list
+fields. A model deriving `Validate()` is validated after decoding. Existing
+`@Queries()` map handlers remain compatible, but new typed handlers use
+`@Query()`.
 
 A same-library JSON `@Body()` model deriving `Deserialize()` uses its generated
 private decoder. Imported JSON and form models expose a compatible static

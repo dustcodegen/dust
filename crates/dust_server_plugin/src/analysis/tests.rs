@@ -28,6 +28,9 @@ fn names_every_extraction_binding() {
         Extraction::Path("id".to_owned()),
         Extraction::Query("q".to_owned()),
         Extraction::QueryList("tag".to_owned()),
+        Extraction::QueryModel(crate::plan::QueryModelPlan {
+            conversions: Vec::new(),
+        }),
         Extraction::Queries,
         Extraction::Header("x-id".to_owned()),
         Extraction::HeaderMap,
@@ -55,6 +58,7 @@ fn names_every_extraction_binding() {
             "path",
             "query",
             "query-list",
+            "query-model",
             "queries",
             "header",
             "header-map",

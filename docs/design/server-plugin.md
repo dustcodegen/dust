@@ -173,7 +173,7 @@ The complete list:
 | `@GET(path, ...)` `@POST(path, ...)` `@PUT(path, ...)` `@PATCH(path, ...)` `@DELETE(path, ...)` `@HEAD(path, ...)` `@OPTIONS(path, ...)` | handler method or top-level function |
 | `@FormUrlEncoded()` `@MultiPart()` | handler method or function, body media type |
 | `@Extract(<extractor type>)` | handler parameter, custom extractor |
-| `@Path([name])` `@Query(name)` `@Queries()` `@RawQuery()` `@Header(name)` `@HeaderMap()` `@Body()` `@Field(name)` `@Part(name)` `@RawBody()` `@State()` `@Peer()` | handler parameter, built-in extractor |
+| `@Path([name])` `@Query([name])` `@Queries()` `@RawQuery()` `@Header(name)` `@HeaderMap()` `@Body()` `@Field(name)` `@Part(name)` `@RawBody()` `@State()` `@Peer()` | handler parameter, built-in extractor |
 
 The vocabulary deliberately follows the existing HTTP client's spelling rather
 than axum's. That lets a later client generator map structured server route
@@ -443,7 +443,8 @@ instance, so custom extractors are not second-class. The set and naming follow a
 | `Path<T>` | `@Path() String id` | key defaults to the Dart parameter name; `@Path('todo_id')` overrides |
 | `Query<T>` scalar | `@Query('done') bool? done` | coerced; nullability decides required-ness |
 | `Query<Vec<T>>` | `@Query('tag') List<String> tags` | `Uri.queryParameters` keeps only the last value for a repeated key, so a `List` parameter lowers to its own extractor |
-| `Query<T>` map | `@Queries() Map<String, String> query` | receives the complete query map unchanged; use `@Query(...)` for typed fields |
+| `Query<T>` model | `@Query() TodoFilter filter` | decodes a flat `Deserialize()` model; SerDe metadata controls names, aliases, defaults, enums, and unknown-key policy |
+| Legacy query map | `@Queries() Map<String, String> query` | source-compatible dynamic-map escape hatch; new typed handlers use `@Query()` |
 | `RawQuery` | `@RawQuery() String? raw` | |
 | `Json<T>` | `@Body() CreateTodo input` | JSON is the default media type |
 | `Form<T>` | `@Body() LoginForm form` with `@FormUrlEncoded()` | reads the query on `GET`/`HEAD`, the body otherwise, matching axum |

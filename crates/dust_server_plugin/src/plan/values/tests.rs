@@ -8,6 +8,8 @@ use dust_text::{FileId, TextRange};
 
 use super::*;
 
+mod annotations;
+
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(7), TextRange::new(2_u32, 9_u32))
 }
@@ -280,25 +282,4 @@ fn zero_argument_helpers_and_paths_report_exact_boundaries() {
         validate_route_path(invalid, span(), &mut diagnostics);
     }
     assert_eq!(diagnostics.len(), 10);
-}
-
-#[test]
-fn annotation_args_support_general_annotations() {
-    let annotation = dust_ir::AnnotationIr {
-        raw_name: "Routes".to_owned(),
-        short_name: "Routes".to_owned(),
-        prefix: None,
-        positional_args: vec![AnnotationValueIr::String("/notes".to_owned())],
-        named_args: BTreeMap::new(),
-        resolved_symbol: Some(SymbolId::new("dust_server::Routes")),
-        span: span(),
-    };
-    let args = Args::Annotation(&annotation);
-    assert_eq!(args.span(), span());
-    assert!(args.named().is_empty());
-    assert_eq!(
-        string_value(&args.positional()[0]),
-        Some("/notes".to_owned())
-    );
-    assert_eq!(string_value(&AnnotationValueIr::Null), None);
 }

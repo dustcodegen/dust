@@ -30,20 +30,23 @@ final class Path {
   final String? name;
 }
 
-/// Binds a parameter to one query value.
+/// Binds a parameter to one query value or a typed query model.
+///
+/// Pass [name] for one scalar or repeated-list value. Omit it for a
+/// same-library model deriving Dust `Deserialize()`.
 @Target({TargetKind.parameter})
 final class Query {
-  /// Reads the query value named [name].
-  const Query(this.name);
+  /// Reads [name], or the complete query string when [name] is omitted.
+  const Query([this.name]);
 
-  /// The query key.
-  final String name;
+  /// The query key, or `null` for a typed query model.
+  final String? name;
 }
 
 /// Binds a parameter to the whole query map.
 ///
 /// Use `Map<String, String>` for caller-controlled or dynamic query keys.
-/// Prefer individual [Query] parameters for a typed handler contract.
+/// Prefer [Query] for new typed handler contracts.
 @Target({TargetKind.parameter})
 final class Queries {
   /// Reads every query pair.

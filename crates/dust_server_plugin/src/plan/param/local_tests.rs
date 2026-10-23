@@ -98,6 +98,7 @@ fn accepts_callable_local_and_deferred_imported_extractors() {
             &BTreeSet::new(),
             BodyMedia::Json,
             std::slice::from_ref(&local),
+            &[],
             &mut diagnostics,
         )
         .is_some()
@@ -108,6 +109,7 @@ fn accepts_callable_local_and_deferred_imported_extractors() {
             &BTreeSet::new(),
             BodyMedia::Json,
             &[extractor_class(constructor(None, false, None))],
+            &[],
             &mut diagnostics,
         )
         .is_some()
@@ -134,6 +136,7 @@ fn rejects_local_extractors_that_const_call_cannot_construct() {
                 &BTreeSet::new(),
                 BodyMedia::Json,
                 &[class],
+                &[],
                 &mut diagnostics,
             )
             .is_none()

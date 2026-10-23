@@ -36,6 +36,54 @@ void main() {
     expect(invalid.statusCode, 400);
   });
 
+  test('generated query models reuse SerDe and validation', () async {
+    final app = await serveExample(path_and_query.buildApp());
+
+    final valid = await app.send(
+      'GET',
+      '/todos/search?owner=ada&done=true&page=2&tags=server&tags=dart&order=oldest',
+    );
+    final defaults = await app.send('GET', '/todos/search?owner=ada');
+    final alias = await app.send(
+      'GET',
+      '/todos/search?owner=ada&completed=false',
+    );
+    final missing = await app.send('GET', '/todos/search');
+    final malformed = await app.send(
+      'GET',
+      '/todos/search?owner=ada&page=many',
+    );
+    final invalid = await app.send(
+      'GET',
+      '/todos/search?owner=ada&page=0',
+    );
+    final unknown = await app.send(
+      'GET',
+      '/todos/search?owner=ada&extra=value',
+    );
+
+    expect(app.json(valid), {
+      'owner': 'ada',
+      'completed': true,
+      'page': 2,
+      'tags': ['server', 'dart'],
+      'order': 'oldest',
+    });
+    expect(app.json(defaults), {
+      'owner': 'ada',
+      'completed': null,
+      'page': 1,
+      'tags': <Object?>[],
+      'order': 'recent',
+    });
+    expect(app.json(alias)['completed'], isFalse);
+    expect(missing.statusCode, 400);
+    expect(app.json(missing)['error'], contains('owner'));
+    expect(malformed.statusCode, 400);
+    expect(invalid.statusCode, 422);
+    expect(unknown.statusCode, 400);
+  });
+
   test('generated JSON body is decoded and validated', () async {
     final app = await serveExample(json_body.buildApp());
 

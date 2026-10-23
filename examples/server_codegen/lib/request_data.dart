@@ -22,7 +22,6 @@ Router buildApp() => requestDataRoutes();
 @GET('/inspect', summary: 'Inspect request data', tags: ['diagnostics'])
 Future<Map<String, Object?>> inspect(
   @Query('tag') List<String> tags,
-  @Queries() Map<String, String> query,
   @RawQuery() String? rawQuery,
   @Header('x-request-id') String? requestId,
   @HeaderMap() Map<String, String> headers,
@@ -31,7 +30,7 @@ Future<Map<String, Object?>> inspect(
 ) async =>
     {
       'tags': tags,
-      'query': query,
+      'query': parts.url.queryParameters,
       'rawQuery': rawQuery,
       'requestId': requestId,
       'host': headers['host'],

@@ -71,6 +71,102 @@ void main() {
     });
   });
 
+  group('QueryParameters', () {
+    test('keeps the last scalar and all repeated values', () {
+      const query = QueryParameters({
+        'page': ['1'],
+        'tag': ['a', 'b'],
+        'empty': [],
+      });
+      final values = query.toObjectMap();
+
+      query.coerceOne<int>(values, 'page');
+      query.coerceOne<int>(values, 'missing');
+      query.copyAll(values, 'tag');
+      query.copyAll(values, 'missing');
+
+      expect(values, {
+        'page': 1,
+        'tag': ['a', 'b'],
+      });
+    });
+
+    test('coerces every repeated value', () {
+      const query = QueryParameters({
+        'id': ['1', '2'],
+      });
+      final values = query.toObjectMap();
+
+      query.coerceAll<int>(values, 'id');
+      query.coerceAll<int>(values, 'missing');
+
+      expect(values['id'], [1, 2]);
+    });
+
+    test('throws the field rejection when scalar coercion fails', () {
+      const query = QueryParameters({
+        'page': ['many'],
+      });
+
+      expect(
+        () => query.coerceOne<int>(query.toObjectMap(), 'page'),
+        throwsA(isA<Rejection>()),
+      );
+    });
+
+    test('throws the field rejection when list coercion fails', () {
+      const query = QueryParameters({
+        'id': ['1', 'many'],
+      });
+
+      expect(
+        () => query.coerceAll<int>(query.toObjectMap(), 'id'),
+        throwsA(isA<Rejection>()),
+      );
+    });
+  });
+
+  group('QueryModelExtractable', () {
+    test('decodes a prepared model', () async {
+      final extractor = QueryModelExtractable<Map<String, Object?>>((query) {
+        final values = query.toObjectMap();
+        query.coerceOne<int>(values, 'page');
+        query.copyAll(values, 'tag');
+        return values;
+      });
+      final outcome = await extractor.extract(
+        request('GET', '/todos?page=2&tag=a&tag=b'),
+      );
+
+      expect(expectOk(outcome), {
+        'page': 2,
+        'tag': ['a', 'b'],
+      });
+    });
+
+    test('keeps a field coercion rejection as 400', () async {
+      final extractor = QueryModelExtractable<Map<String, Object?>>((query) {
+        final values = query.toObjectMap();
+        query.coerceOne<int>(values, 'page');
+        return values;
+      });
+      final outcome = await extractor.extract(
+        request('GET', '/todos?page=many'),
+      );
+
+      expect(expectStatus(outcome, 400).message, contains('query "page"'));
+    });
+
+    test('reports a model shape failure as 400', () async {
+      final extractor = QueryModelExtractable<int>(
+        (_) => throw const FormatException('missing page'),
+      );
+      final outcome = await extractor.extract(request('GET', '/todos'));
+
+      expect(expectStatus(outcome, 400).message, contains('missing page'));
+    });
+  });
+
   group('QueriesExtractable', () {
     test('decodes the whole query map', () async {
       final extractor = QueriesExtractable<Map<String, String>>((raw) => raw);

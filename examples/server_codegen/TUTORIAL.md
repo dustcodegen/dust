@@ -46,17 +46,41 @@ Future<Map<String, Object?>> read(
 };
 ```
 
+Group related query fields without writing a decoder:
+
+```dart
+@Derive([Deserialize(), Validate()])
+final class TodoFilter with _$TodoFilter {
+  const TodoFilter({required this.owner, this.page = 1, this.tags = const []});
+
+  final String owner;
+
+  @SerDe(defaultValue: 1)
+  @Validate(range: Range(min: 1))
+  final int page;
+
+  @SerDe(defaultValue: <String>[])
+  final List<String> tags;
+}
+
+@GET('/search')
+Future<List<Todo>> search(@Query() TodoFilter filter) async => repository.search(filter);
+```
+
 - A non-nullable scalar is required and rejects invalid input with 400.
 - A nullable scalar is optional.
 - `List<T>` on `@Query(...)` reads repeated values.
-- Prefer individual `@Query(...)` parameters for a typed handler contract.
-- `@Queries()` exposes the complete `Map<String, String>` only when query keys
-  are dynamic.
+- `@Query() TodoFilter filter` decodes a flat `Deserialize()` model, including
+  SerDe names, aliases, defaults, enums, and repeated lists. A derived
+  `Validate()` contract runs after decoding.
+- `@Queries()` remains source-compatible for existing dynamic-map handlers;
+  new typed handlers should use `@Query()`.
 - `@HeaderMap()`, `@RawQuery()`, `@Peer()`, `Request`, and
   `RequestParts` expose broader request data when it is genuinely needed.
 
 See [request_data.dart](lib/request_data.dart) for a runnable request-data
-example.
+example and [path_and_query.dart](lib/path_and_query.dart) for both named and
+model query extraction.
 
 ## 3. Decode and validate JSON once
 

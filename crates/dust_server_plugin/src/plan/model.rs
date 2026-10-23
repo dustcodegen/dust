@@ -132,6 +132,8 @@ pub(crate) enum Extraction {
     Query(String),
     /// Repeated query values.
     QueryList(String),
+    /// Complete query string decoded into a typed model.
+    QueryModel(QueryModelPlan),
     /// Whole query map or decoded model.
     Queries,
     /// One HTTP header.
@@ -163,6 +165,31 @@ pub(crate) enum Extraction {
     Request,
     /// Immutable request-head facts.
     RequestParts,
+}
+
+/// Query-model fields that need preparation before SerDe decoding.
+pub(crate) struct QueryModelPlan {
+    /// Accepted query keys and their conversion.
+    pub(crate) conversions: Vec<QueryConversionPlan>,
+}
+
+/// One query key converted before the generated SerDe decoder runs.
+pub(crate) struct QueryConversionPlan {
+    /// Primary serialized field name or alias.
+    pub(crate) key: String,
+    /// Conversion required by the field's JSON representation.
+    pub(crate) kind: QueryConversionKind,
+}
+
+/// Conversion from URI strings into the JSON-shaped model input.
+#[derive(Clone)]
+pub(crate) enum QueryConversionKind {
+    /// One numeric or boolean scalar.
+    Scalar(TypeIr),
+    /// Repeated strings consumed unchanged by SerDe.
+    StringList,
+    /// Repeated numeric or boolean values.
+    ScalarList(TypeIr),
 }
 
 /// Typed body decoder selected by handler media annotations.

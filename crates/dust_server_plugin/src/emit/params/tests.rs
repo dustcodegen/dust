@@ -175,6 +175,39 @@ fn renders_validated_json_and_form_bodies_exactly() {
 }
 
 #[test]
+fn renders_typed_query_model_exactly() {
+    let input = param("filter", TypeIr::named("TodoFilter"));
+    let mut query = plan(
+        &input,
+        &input.ty,
+        ExtractionWrapper::Required,
+        Extraction::QueryModel(QueryModelPlan {
+            conversions: vec![
+                QueryConversionPlan {
+                    key: "done".to_owned(),
+                    kind: QueryConversionKind::Scalar(TypeIr::bool().nullable()),
+                },
+                QueryConversionPlan {
+                    key: "tags".to_owned(),
+                    kind: QueryConversionKind::StringList,
+                },
+                QueryConversionPlan {
+                    key: "ids".to_owned(),
+                    kind: QueryConversionKind::ScalarList(TypeIr::int()),
+                },
+            ],
+        }),
+    );
+    query.validated = true;
+    query.serde_deserialized = true;
+
+    assert_eq!(
+        render_extractor(&query),
+        "ValidatedExtractable<TodoFilter>(\n    QueryModelExtractable<TodoFilter>((query) {\n      final values = query.toObjectMap();\n      query.coerceOne<bool?>(values, 'done');\n      query.copyAll(values, 'tags');\n      query.coerceAll<int>(values, 'ids');\n      return _$TodoFilterDeserialize(values);\n    }),\n  )"
+    );
+}
+
+#[test]
 #[should_panic(expected = "handled before extractor rendering")]
 fn direct_rendering_rejects_shared_body_extractors() {
     let field = param("field", TypeIr::string());

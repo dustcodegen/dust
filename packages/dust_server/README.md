@@ -56,6 +56,11 @@ Future<Map<String, Object?>> create(@Query('name') String name) async =>
 Future<void> delete(@Path() int id) async {}
 ```
 
+Use `@Query() Filter filter` for a flat same-library model deriving
+`Deserialize()`. Generated code applies SerDe names, aliases, defaults, enums,
+and repeated list values; deriving `Validate()` adds post-decode validation.
+Named `@Query('details')` parameters remain the smallest choice for one value.
+
 Run `dust build`, then mount `itemRoutes()` in the application router. Use
 `@Controller(...)` only when a class is the clearer home for shared dependencies.
 Start with the focused
