@@ -13,10 +13,10 @@ run_without_git_env() {
   )
 }
 
-ensure_example_outputs_are_staged() {
-  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app; then
-    echo "error: Dust example outputs changed during pre-commit." >&2
-    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app" >&2
+ensure_generated_outputs_are_staged() {
+  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app fixtures/server_codegen_app; then
+    echo "error: Dust generated proof outputs changed during pre-commit." >&2
+    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app fixtures/server_codegen_app" >&2
     echo "Then rerun your commit." >&2
     exit 1
   fi
@@ -28,16 +28,23 @@ run_without_git_env ./scripts/flutter/format.sh --check
 run_without_git_env ./scripts/dart/format.sh --check --examples
 run_without_git_env ./scripts/flutter/format.sh --check --examples
 ./scripts/rust/lint.sh
+python3 scripts/validate_compatibility_contract.py --self-test
+python3 scripts/validate_compatibility_contract.py
 run_without_git_env ./scripts/dart/lint.sh
 run_without_git_env ./scripts/flutter/lint.sh
 run_without_git_env ./scripts/dart/lint.sh --examples
 run_without_git_env ./scripts/flutter/lint.sh --examples
-ensure_example_outputs_are_staged
+ensure_generated_outputs_are_staged
 ./scripts/rust/test.sh
+./scripts/rust/coverage.sh 90
 run_without_git_env ./scripts/dart/test.sh
+run_without_git_env ./scripts/dart/coverage.sh packages/dust_dart 100
+run_without_git_env ./scripts/dart/coverage.sh packages/dust_db_sqlite3 96
+run_without_git_env ./scripts/dart/coverage.sh packages/dust_server 100
 run_without_git_env ./scripts/flutter/test.sh
+run_without_git_env ./scripts/flutter/coverage.sh packages/dust_flutter 90
 run_without_git_env ./scripts/dart/test.sh --examples
 run_without_git_env ./scripts/flutter/test.sh --examples
-ensure_example_outputs_are_staged
+ensure_generated_outputs_are_staged
 
 echo "==> Pre-commit checks passed"

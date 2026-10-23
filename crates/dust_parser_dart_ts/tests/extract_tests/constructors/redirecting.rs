@@ -72,6 +72,7 @@ abstract interface class Api {
     assert!(class.is_interface);
     assert_eq!(class.constructors.len(), 2);
     assert!(class.constructors[0].is_factory);
+    assert!(!class.constructors[0].is_const);
     assert_eq!(class.constructors[0].name, None);
     assert_eq!(
         class.constructors[0].redirected_target_source.as_deref(),
@@ -105,6 +106,7 @@ abstract interface class Api {
             .nullable
     );
     assert_eq!(class.constructors[1].name.as_deref(), Some("internal"));
+    assert!(!class.constructors[1].is_const);
     assert_eq!(
         class.constructors[1].redirected_target_source.as_deref(),
         Some("_$Api.internal")

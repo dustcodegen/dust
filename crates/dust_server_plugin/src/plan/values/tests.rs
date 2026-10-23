@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use dust_ir::{AnnotationNumberKindIr, AnnotationValueIr, ConfigApplicationIr, SpanIr, SymbolId};
+use dust_ir::{
+    AnnotationNumberKindIr, AnnotationValueIr, ConfigApplicationIr, ExprSourceIr, NameIr, SpanIr,
+    SymbolId,
+};
 use dust_text::{FileId, TextRange};
 
 use super::*;
@@ -29,6 +32,15 @@ fn int(value: &str) -> AnnotationValueIr {
     AnnotationValueIr::Number {
         source: value.to_owned(),
         kind: AnnotationNumberKindIr::Int,
+    }
+}
+
+fn name(value: &str) -> NameIr {
+    NameIr {
+        source: value.to_owned(),
+        short: value.to_owned(),
+        prefix: None,
+        span: span(),
     }
 }
 
@@ -103,6 +115,89 @@ fn named_argument_validation_accepts_contract_and_rejects_wrong_shapes() {
     );
     validate_named(&Args::Config(&invalid), &[], &mut diagnostics);
     assert_eq!(diagnostics.len(), 9);
+}
+
+#[test]
+fn middleware_requires_emit_safe_const_layers() {
+    let valid = config(
+        Vec::new(),
+        [(
+            "middleware",
+            AnnotationValueIr::List(vec![
+                AnnotationValueIr::Constructor {
+                    name: name("TraceLayer"),
+                    positional_args: vec![
+                        AnnotationValueIr::List(vec![AnnotationValueIr::Bool(true)]),
+                        AnnotationValueIr::Set(vec![AnnotationValueIr::Null]),
+                        AnnotationValueIr::Map(vec![(
+                            AnnotationValueIr::String("limit".to_owned()),
+                            int("2"),
+                        )]),
+                        AnnotationValueIr::Record(vec![(
+                            "label".to_owned(),
+                            AnnotationValueIr::String("controller".to_owned()),
+                        )]),
+                    ],
+                    named_args: BTreeMap::new(),
+                },
+                AnnotationValueIr::Member(name("sharedLayer")),
+            ]),
+        )],
+    );
+    let mut diagnostics = Vec::new();
+    assert_eq!(
+        parse_middleware(&Args::Config(&valid), &mut diagnostics).len(),
+        2
+    );
+    assert!(diagnostics.is_empty());
+
+    let invalid = config(
+        Vec::new(),
+        [(
+            "middleware",
+            AnnotationValueIr::List(vec![
+                AnnotationValueIr::String("not a layer".to_owned()),
+                AnnotationValueIr::Constructor {
+                    name: name("TraceLayer"),
+                    positional_args: vec![AnnotationValueIr::Expression(ExprSourceIr {
+                        source: "buildLabel()".to_owned(),
+                        span: span(),
+                    })],
+                    named_args: BTreeMap::new(),
+                },
+            ]),
+        )],
+    );
+    assert!(parse_middleware(&Args::Config(&invalid), &mut diagnostics).is_empty());
+    assert_eq!(diagnostics.len(), 2);
+}
+
+#[test]
+fn metadata_value_helpers_preserve_order_and_types() {
+    let value = config(
+        Vec::new(),
+        [
+            (
+                "tags",
+                AnnotationValueIr::List(vec![
+                    AnnotationValueIr::String("group".to_owned()),
+                    AnnotationValueIr::String("route".to_owned()),
+                ]),
+            ),
+            ("deprecated", AnnotationValueIr::Bool(true)),
+        ],
+    );
+
+    assert_eq!(
+        parse_tags(&Args::Config(&value)),
+        vec!["group".to_owned(), "route".to_owned()]
+    );
+    assert_eq!(
+        metadata::bool_value(value.named_args.get("deprecated").unwrap()),
+        Some(true)
+    );
+    assert_eq!(metadata::bool_value(&AnnotationValueIr::Null), None);
+    assert!(parse_tags(&Args::Config(&config(Vec::new(), []))).is_empty());
 }
 
 #[test]

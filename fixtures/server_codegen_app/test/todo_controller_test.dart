@@ -23,6 +23,78 @@ void main() {
     expect(jsonDecode(await response.readAsString()), {'status': 'ok'});
   });
 
+  test('generated custom extractor short-circuits on rejection', () async {
+    final rejected = await handler(
+      Request('GET', Uri.parse('http://localhost/todos/required-auth')),
+    );
+    final accepted = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/todos/required-auth'),
+        headers: {'authorization': 'Bearer user-1'},
+      ),
+    );
+
+    expect(rejected.statusCode, 401);
+    expect(accepted.statusCode, 200);
+    expect(jsonDecode(await accepted.readAsString()), {'user': 'user-1'});
+  });
+
+  test('generated Option wrapper collapses client rejection', () async {
+    final anonymous = await handler(
+      Request('GET', Uri.parse('http://localhost/todos/optional-auth')),
+    );
+    final authenticated = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/todos/optional-auth'),
+        headers: {'authorization': 'Bearer user-1'},
+      ),
+    );
+
+    expect(jsonDecode(await anonymous.readAsString()), {
+      'authenticated': false,
+    });
+    expect(jsonDecode(await authenticated.readAsString()), {
+      'authenticated': true,
+    });
+  });
+
+  test('generated Option wrapper also wraps a built-in extractor', () async {
+    final missing = await handler(
+      Request('GET', Uri.parse('http://localhost/todos/optional-page')),
+    );
+    final present = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/todos/optional-page?page=2'),
+      ),
+    );
+
+    expect(jsonDecode(await missing.readAsString()), {'present': false});
+    expect(jsonDecode(await present.readAsString()), {'present': true});
+  });
+
+  test('generated Result wrapper passes scoped rejection to handler', () async {
+    final denied = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/todos/fallible-write-auth'),
+        headers: {'authorization': 'Bearer user-1:todos:read'},
+      ),
+    );
+    final allowed = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/todos/fallible-write-auth'),
+        headers: {'authorization': 'Bearer user-1:todos:write'},
+      ),
+    );
+
+    expect(jsonDecode(await denied.readAsString()), {'authorized': false});
+    expect(jsonDecode(await allowed.readAsString()), {'authorized': true});
+  });
+
   test('generated GET extracts path, query, and header values', () async {
     final response = await handler(
       Request(

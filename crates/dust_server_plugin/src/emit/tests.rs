@@ -4,7 +4,14 @@ use dust_ir::{
 use dust_text::{FileId, TextRange};
 
 use super::*;
-use crate::plan::{Callable, ControllerPlan};
+use crate::plan::{
+    BodyFormat, Callable, ControllerPlan, Extraction, ExtractionWrapper, ParamPlan,
+    RouteMetadataPlan,
+};
+
+mod extractors;
+mod metadata;
+mod middleware;
 
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(1), TextRange::new(0_u32, 1_u32))
@@ -74,6 +81,17 @@ fn function() -> FunctionIr {
     }
 }
 
+fn metadata(operation_id: &str) -> RouteMetadataPlan {
+    RouteMetadataPlan {
+        operation_id: operation_id.to_owned(),
+        summary: None,
+        description: None,
+        tags: Vec::new(),
+        deprecated: false,
+        hidden: false,
+    }
+}
+
 #[test]
 fn emits_every_phase_one_extractor_and_both_callable_kinds() {
     let class = class(method(vec![
@@ -107,8 +125,8 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
         Extraction::Queries,
         Extraction::Header("authorization".to_owned()),
         Extraction::HeaderMap,
-        Extraction::Body,
-        Extraction::Body,
+        Extraction::Body(BodyFormat::Json),
+        Extraction::Body(BodyFormat::Json),
     ];
     let method = &class.methods[0];
     let controller_handler = HandlerPlan {
@@ -120,8 +138,16 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
             .params
             .iter()
             .zip(extractions)
-            .map(|(param, extraction)| ParamPlan { param, extraction })
+            .map(|(param, extraction)| ParamPlan {
+                param,
+                value_type: &param.ty,
+                wrapper: ExtractionWrapper::Required,
+                extraction,
+                validated: false,
+            })
             .collect(),
+        middleware: Vec::new(),
+        metadata: metadata("write"),
     };
     let function = function();
     let function_handler = HandlerPlan {
@@ -130,16 +156,20 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
         path: "/health".to_owned(),
         status: 202,
         params: Vec::new(),
+        middleware: Vec::new(),
+        metadata: metadata("health"),
     };
-    let plan = ServerPlan {
+    let mut plan = ServerPlan {
         controllers: vec![ControllerPlan {
             class: &class,
             prefix: "/todos".to_owned(),
             handlers: vec![controller_handler],
+            middleware: Vec::new(),
         }],
         functions: vec![function_handler],
         function_prefix: "/api".to_owned(),
         function_name: "apiRoutes".to_owned(),
+        function_middleware: Vec::new(),
     };
 
     let output = emit_server(&plan);
@@ -163,6 +193,9 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
     assert!(top_level.contains("Router apiRoutes()"));
     assert!(top_level.contains("await health(),"));
     assert!(top_level.contains("status: 202,"));
+
+    plan.functions.clear();
+    assert!(emit_server(&plan).top_level_functions.is_empty());
 }
 
 #[test]
@@ -177,4 +210,82 @@ fn helper_boundaries_are_deterministic() {
         "Future",
         vec![TypeIr::named("void")]
     )));
+}
+
+#[test]
+fn emits_custom_extractors_and_parameter_wrappers() {
+    let class = class(method(vec![
+        param("user", TypeIr::named("AuthUser"), ParamKind::Positional),
+        param(
+            "viewer",
+            TypeIr::generic("Option", vec![TypeIr::named("AuthUser")]),
+            ParamKind::Positional,
+        ),
+        param(
+            "outcome",
+            TypeIr::generic(
+                "Result",
+                vec![TypeIr::named("AuthUser"), TypeIr::named("Rejection")],
+            ),
+            ParamKind::Positional,
+        ),
+        param(
+            "page",
+            TypeIr::generic("Option", vec![TypeIr::int()]),
+            ParamKind::Positional,
+        ),
+    ]));
+    let method = &class.methods[0];
+    let params = vec![
+        ParamPlan {
+            param: &method.params[0],
+            value_type: &method.params[0].ty,
+            wrapper: ExtractionWrapper::Required,
+            extraction: Extraction::Custom("BearerAuth".to_owned()),
+            validated: false,
+        },
+        ParamPlan {
+            param: &method.params[1],
+            value_type: &method.params[1].ty.args()[0],
+            wrapper: ExtractionWrapper::Optional,
+            extraction: Extraction::Custom("BearerAuth".to_owned()),
+            validated: false,
+        },
+        ParamPlan {
+            param: &method.params[2],
+            value_type: &method.params[2].ty.args()[0],
+            wrapper: ExtractionWrapper::Fallible,
+            extraction: Extraction::Custom("TodosWrite".to_owned()),
+            validated: false,
+        },
+        ParamPlan {
+            param: &method.params[3],
+            value_type: &method.params[3].ty.args()[0],
+            wrapper: ExtractionWrapper::Optional,
+            extraction: Extraction::Query("page".to_owned()),
+            validated: false,
+        },
+    ];
+    let output = emit_handler(
+        &HandlerPlan {
+            callable: Callable::Method(method),
+            method: "POST",
+            path: "/".to_owned(),
+            status: 200,
+            params,
+            middleware: Vec::new(),
+            metadata: metadata("write"),
+        },
+        Some("Todos"),
+    );
+
+    for expected in [
+        "final Result<AuthUser, Rejection> _dustResult0 =\n      await const BearerAuth().extract(request);",
+        "final Result<Option<AuthUser>, Rejection> _dustResult1 =\n      await const OptionalExtractable<AuthUser>(BearerAuth())\n          .extract(request);",
+        "final Result<Result<AuthUser, Rejection>, Rejection> _dustResult2 =\n      await const FallibleExtractable<AuthUser>(TodosWrite())\n          .extract(request);",
+        "final _dustValue2 =\n      (_dustResult2 as Ok<Result<AuthUser, Rejection>, Rejection>).value;",
+        "OptionalExtractable<int>(QueryExtractable<int>('page'))",
+    ] {
+        assert!(output.contains(expected), "missing {expected}");
+    }
 }

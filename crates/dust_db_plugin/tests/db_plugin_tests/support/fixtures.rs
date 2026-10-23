@@ -53,6 +53,7 @@ pub(crate) fn row_class() -> ClassIr {
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,
@@ -89,6 +90,7 @@ pub(crate) fn simple_user_row_class() -> ClassIr {
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,
@@ -118,6 +120,7 @@ pub(crate) fn dao_class() -> ClassIr {
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: true,
+            is_const: false,
             redirected_target_source: Some("_$UserDao".to_owned()),
             redirected_target_name: Some("_$UserDao".to_owned()),
             redirected_target: None,

@@ -28,6 +28,8 @@ fn redirect_facts_lower_in_the_owning_binder_scope_with_original_spans() {
         let start = text.find(fragment).unwrap() as u32;
         SpanIr::new(file, TextRange::new(start, start + fragment.len() as u32))
     };
+    assert!(class.constructors[0].is_const);
+    assert!(!class.constructors[1].is_const);
     assert_eq!(class.constructors[0].redirected_target, None);
     assert_eq!(
         class.constructors[1].redirected_target,

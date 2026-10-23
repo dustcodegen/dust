@@ -1,6 +1,6 @@
 # Server Runtime: axum Parity
 
-Status: settled, with the naming changes landed in `0.1.0-beta.2`.
+Status: settled, with the naming changes shipped before the stable 0.2.x line.
 
 `dust_server` is a Dart HTTP runtime on `shelf` whose API is modelled on Rust's
 axum. It is **not** built on axum — no Rust is involved — and the distinction

@@ -228,6 +228,7 @@ pub(super) fn lower_resolved_constructors(
             ConstructorIr {
                 name: constructor.surface.name.clone(),
                 is_factory: constructor.surface.is_factory,
+                is_const: constructor.surface.is_const,
                 redirected_target_source: constructor.surface.redirected_target_source.clone(),
                 redirected_target_name: constructor.surface.redirected_target_name.clone(),
                 redirected_target: constructor.redirected_target.clone(),

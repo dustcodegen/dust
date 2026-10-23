@@ -42,6 +42,7 @@ pub(crate) fn constructor(name: Option<&str>, params: Vec<ConstructorParamIr>) -
     ConstructorIr {
         name: name.map(str::to_owned),
         is_factory: false,
+        is_const: false,
         redirected_target_source: None,
         redirected_target_name: None,
         redirected_target: None,

@@ -5,7 +5,7 @@ use dust_ir::{
 use dust_text::{FileId, TextRange};
 
 use super::*;
-use crate::plan::{Callable, ControllerPlan};
+use crate::plan::{Callable, ControllerPlan, RouteMetadataPlan};
 
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(2), TextRange::new(0_u32, 1_u32))
@@ -86,6 +86,15 @@ fn rejects_duplicate_routes_per_group() {
             path: "/".to_owned(),
             status: 200,
             params: Vec::new(),
+            middleware: Vec::new(),
+            metadata: RouteMetadataPlan {
+                operation_id: "read".to_owned(),
+                summary: None,
+                description: None,
+                tags: Vec::new(),
+                deprecated: false,
+                hidden: false,
+            },
         },
         HandlerPlan {
             callable: Callable::Function(&function),
@@ -93,6 +102,15 @@ fn rejects_duplicate_routes_per_group() {
             path: "/".to_owned(),
             status: 200,
             params: Vec::new(),
+            middleware: Vec::new(),
+            metadata: RouteMetadataPlan {
+                operation_id: "read".to_owned(),
+                summary: None,
+                description: None,
+                tags: Vec::new(),
+                deprecated: false,
+                hidden: false,
+            },
         },
     ];
     let controllers: Vec<ControllerPlan<'_>> = Vec::new();

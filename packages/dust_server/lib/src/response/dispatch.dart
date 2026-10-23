@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dust_dart/serde.dart';
 import 'package:shelf/shelf.dart';
 
@@ -21,7 +23,9 @@ import 'rejection.dart';
 /// | `Some(value)` | the value, dispatched again |
 /// | `None` | 404 |
 /// | `null` | 204 |
+/// | `Unit` | 204 |
 /// | `String` | `text/plain`, sent as written |
+/// | `Uint8List` or `List<int>` | `application/octet-stream` |
 /// | `Stream<List<int>>` | streamed as it arrives, unbuffered |
 /// | anything else | JSON, through `serialize` when it derives `Serialize` |
 ///
@@ -39,7 +43,11 @@ Response responseFrom(Object? value, {int status = 200}) {
     Err(error: final inner) => _errorResponse(inner),
     Some(value: final inner) => responseFrom(inner, status: status),
     None() => const Rejection.notFound('not found').intoResponse(),
+    Unit() => noContent(),
     final String text => textResponse(text, status: status),
+    final Uint8List bytes => bytesResponse(bytes, status: status),
+    final List<int> bytes =>
+      bytesResponse(Uint8List.fromList(bytes), status: status),
     final Stream<List<int>> body => streamed(body, status: status),
     _ => jsonResponse(value, status: status),
   };

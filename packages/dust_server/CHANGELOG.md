@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Current-source generation reports a top-level function that uses server
+  annotations or extractors without an HTTP verb instead of silently omitting
+  it when the same library contains another valid route.
+
+### Changed
+
+- Current-facing documentation identifies the 0.2.x runtime and generated
+  server surface as stable. The production-readiness guide continues to track
+  operational evidence separately from API stability.
+
+### Added
+
+- The generated fixture and getting-started guide now lead with top-level GET,
+  POST, and DELETE functions using path and query parameters. `@Controller`
+  remains available for class-owned dependencies.
+
+- Current-source Dust generation attaches format-neutral `RouteMetadata` to
+  every generated route. `Router.describe()` preserves outer group metadata
+  before route metadata, while the Rust plugin records versioned structured
+  route facts for a future documentation package.
+
+- Current-source Dust generation emits structured controller and route layers,
+  and the generated fixture now proves nested composition, body limits,
+  request-scoped errors, serving, and graceful shutdown over a real socket.
+
+- Current-source Dust generation covers the Phase 3 extractor and response
+  surface, including shared form/multipart reads, raw bodies, state, peer,
+  validation-to-422, bytes, streams, `Unit`, and guarded 500 responses.
+
+- Current-source Dust generation supports custom `@Extract(Type)` parameters
+  and `Option<T>` / `Result<T, Rejection>` extractor wrappers. The runtime API
+  remains unchanged.
+
 ## [0.2.1] - 2026-09-28
 
 ### Added

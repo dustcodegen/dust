@@ -1,12 +1,20 @@
 //! Server plugin Phase-0 contract tests.
 
 use dust_ir::{
-    AnnotationIr, ClassIr, ClassKindIr, ConfigApplicationIr, DartFileIr, FunctionIr, MethodIr,
-    MethodParamIr, NameIr, ParamKind, SpanIr, SymbolId, TypeIr,
+    AnnotationIr, AnnotationValueIr, ClassIr, ClassKindIr, ConfigApplicationIr, ConstructorIr,
+    DartFileIr, FunctionIr, MethodIr, MethodParamIr, NameIr, ParamKind, PartIr, SpanIr, SymbolId,
+    TypeIr,
 };
 use dust_plugin_api::{DustPlugin, PluginContext, SymbolPlan};
 use dust_server_plugin::{ServerPlugin, register_plugin};
 use dust_text::{FileId, TextRange};
+
+#[path = "server_plugin_tests/metadata.rs"]
+mod metadata;
+#[path = "server_plugin_tests/middleware.rs"]
+mod middleware;
+#[path = "server_plugin_tests/registration.rs"]
+mod registration;
 
 fn empty_library() -> DartFileIr {
     DartFileIr::empty(
@@ -114,25 +122,6 @@ fn assert_rejected(file: &DartFileIr) {
 }
 
 #[test]
-fn registration_exposes_the_exact_phase_zero_contract() {
-    let plugin = register_plugin();
-    assert_eq!(plugin.plugin_name(), "Server");
-    assert!(plugin.claimed_traits().is_empty());
-    assert_eq!(plugin.claimed_configs().len(), 24);
-    assert_eq!(plugin.supported_annotations().len(), 24);
-    assert_eq!(plugin.annotation_origins().len(), 24);
-    assert_eq!(plugin.partless_configs(), plugin.claimed_configs());
-    assert_eq!(
-        plugin
-            .annotation_origins()
-            .iter()
-            .map(|origin| origin.symbol)
-            .collect::<Vec<_>>(),
-        plugin.claimed_configs()
-    );
-}
-
-#[test]
 fn unannotated_libraries_validate_and_generate_nothing() {
     let plugin = ServerPlugin::new();
     let file = empty_library();
@@ -229,4 +218,68 @@ fn overlapping_client_symbols_do_not_trigger_server_validation() {
     )];
 
     assert_eq!(register_plugin().validate(&library), []);
+}
+
+#[test]
+fn invalid_local_extractor_returns_diagnostics_without_generated_code() {
+    let mut library = empty_library();
+    let span = library.span;
+    library.part_directives.push(PartIr {
+        uri_literal: None,
+        uri: "server.g.dart".to_owned(),
+        span,
+    });
+    let extract = ConfigApplicationIr::with_arguments(
+        SymbolId::new("dust_server::Extract"),
+        None,
+        vec![AnnotationValueIr::Member(NameIr {
+            source: "BearerAuth".to_owned(),
+            short: "BearerAuth".to_owned(),
+            prefix: None,
+            span,
+        })],
+        Default::default(),
+        span,
+    );
+    let mut user = param(vec![extract], span);
+    user.ty = TypeIr::named("AuthUser");
+    let route = ConfigApplicationIr::with_arguments(
+        SymbolId::new("dust_server::GET"),
+        None,
+        vec![AnnotationValueIr::String("/".to_owned())],
+        Default::default(),
+        span,
+    );
+    let mut handler = method(vec![route], vec![user], span);
+    handler.return_type = TypeIr::named("Todo");
+    let controller = class(
+        vec![config("dust_server::Controller", span)],
+        vec![handler],
+        span,
+    );
+    let mut extractor = class(Vec::new(), Vec::new(), span);
+    extractor.name = "BearerAuth".to_owned();
+    extractor.constructors.push(ConstructorIr {
+        name: None,
+        is_factory: false,
+        is_const: false,
+        redirected_target_source: None,
+        redirected_target_name: None,
+        redirected_target: None,
+        span,
+        params: Vec::new(),
+    });
+    library.classes = vec![controller, extractor];
+
+    let plan = SymbolPlan::default();
+    let output = register_plugin().generate(&library, &PluginContext { symbol_plan: &plan });
+    assert_eq!(output.len(), 1);
+    assert!(output[0].mixin_members.is_empty());
+    assert!(output[0].top_level_functions.is_empty());
+    assert!(
+        output[0]
+            .diagnostics
+            .iter()
+            .any(|value| value.message.contains("cannot be constructed with const"))
+    );
 }

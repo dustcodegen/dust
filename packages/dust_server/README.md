@@ -7,13 +7,24 @@
 Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 
 > [!IMPORTANT]
-> **0.1.0-beta.2**. Complete enough to build on; the API may still change
-> before 1.0, so pin the exact version.
+> **0.2.1 stable runtime.** The current source checkout retains the documented
+> handwritten APIs while completing generated server wiring through Phase 5.
 >
-> Dust server generation is available for Phase 1 controllers and top-level
-> handlers: HTTP verbs, path/query/header extraction, JSON bodies, and
-> JSON/`void`/`Response` results. Custom extractors, state, raw/form/multipart
-> bodies, middleware emission, and typed `Result` responses remain staged work.
+> top-level handlers: the typed request extractors, validation, custom
+> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
+> failures, plus controller/route middleware and production-shaped runtime
+> composition proof. Generated routes expose format-neutral `RouteMetadata`
+> through `Router.describe()`; OpenAPI generation remains a separate package.
+> Controllers and top-level handlers support typed request extractors,
+> validation, custom `@Extract(Type)` values, extractor wrappers, response
+> dispatch, guarded failures, middleware, and production-shaped composition.
+> Generated routes expose format-neutral `RouteMetadata` through
+> `Router.describe()`; OpenAPI generation remains a separate package.
+> top-level handlers: the typed request extractors, validation, custom
+> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
+> failures, plus controller/route middleware and production-shaped runtime
+> composition proof. Generated routes expose format-neutral `RouteMetadata`
+> through `Router.describe()`; OpenAPI generation remains a separate package.
 > See the [design phases](../../docs/design/server-plugin.md#phases).
 
 ## Documentation
@@ -35,21 +46,44 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 
 ## At a glance
 
-Generated controller wiring:
+Start with top-level functions when routes do not need class-owned dependencies:
 
 ```dart
-part 'todo_controller.g.dart';
+@Routes('/items', name: 'itemRoutes')
+library items;
 
-@Controller('/todos')
-final class TodoController with _$TodoController {
-  @GET('/{id}')
-  Future<Map<String, Object?>> read(@Path() int id) async => {'id': id};
-}
+import 'package:dust_server/server.dart';
+
+part 'items.g.dart';
+
+@GET('/{id}')
+Future<Map<String, Object?>> read(
+  @Path() int id, {
+  @Query('details') bool? details,
+}) async => {'id': id, 'details': details ?? false};
+
+@POST('/', status: 201)
+Future<Map<String, Object?>> create(@Query('name') String name) async =>
+    {'name': name};
+
+@DELETE('/{id}')
+Future<void> delete(@Path() int id) async {}
 ```
 
-Run `dust build`, then mount `TodoController().routes()` in the application
-router. The complete generated GET/POST fixture is
+Run `dust build`, then mount `itemRoutes()` in the application router. Use
+`@Controller` only when a class is the clearer home for shared dependencies.
+The complete generated Phase 5 fixture is
 [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+
+Metadata declared on a verb is available after normal mounting:
+
+```dart
+@GET('/{id}', summary: 'Read a todo', tags: ['todos'])
+Future<Todo> read(@Path() int id) async => repository.read(id);
+
+final route = app.describe().first;
+final metadata = route.metadataOf<RouteMetadata>();
+```
 
 Runtime composition remains available directly:
 

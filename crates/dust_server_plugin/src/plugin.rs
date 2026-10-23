@@ -1,8 +1,10 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
-use dust_plugin_api::{AnnotationOrigin, DustPlugin, PluginContext, PluginContribution};
+use dust_plugin_api::{
+    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+};
 
-use crate::{emit::emit_server, plan::plan_server};
+use crate::{analysis::collect_server_workspace_analysis_ir, emit::emit_server, plan::plan_server};
 
 /// Server configuration symbols owned by this plugin.
 const CLAIMED_CONFIGS: &[&str] = &[
@@ -135,6 +137,14 @@ impl DustPlugin for ServerPlugin {
 
     fn supported_annotations(&self) -> &'static [&'static str] {
         SUPPORTED_ANNOTATIONS
+    }
+
+    fn collect_workspace_analysis_ir(
+        &self,
+        file: &DartFileIr,
+        analysis: &mut WorkspaceAnalysisBuilder,
+    ) {
+        collect_server_workspace_analysis_ir(file, analysis);
     }
 
     fn validate(&self, file: &DartFileIr) -> Vec<Diagnostic> {

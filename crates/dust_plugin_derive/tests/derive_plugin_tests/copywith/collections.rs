@@ -56,6 +56,7 @@ fn copywith_replaces_collection_fields_shallowly() {
                     constructors: vec![ConstructorIr {
                         name: None,
                         is_factory: false,
+                        is_const: false,
                         redirected_target_source: None,
                         redirected_target_name: None,
                         redirected_target: None,

@@ -196,7 +196,10 @@ void _collect(
             method: route.method,
             path: _routePath(path, route.path),
             handler: handler,
-            metadata: List.unmodifiable(metadata),
+            metadata: List.unmodifiable([
+              ...metadata,
+              if (route.metadata case final own?) own,
+            ]),
             isMount: route.isMount,
           ),
         );

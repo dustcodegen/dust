@@ -134,6 +134,21 @@ const signedIn = FirstOf<Caller>([SessionScheme(), BearerScheme()]);
 report a server-side fault, and hiding one would turn a misconfiguration into a
 silently anonymous request. `FirstOf` stops at a 5xx for the same reason.
 
+Generated handlers select the same behavior from the declared parameter type:
+
+```dart
+Future<void> read(
+  @Extract(BearerAuth) AuthUser user,
+  @Extract(BearerAuth) Option<AuthUser> viewer,
+  @Extract(TodosWrite) Result<AuthUser, Rejection> writeAccess,
+  @Query('page') Option<int> page,
+) async {}
+```
+
+`@Extract` takes a type with an unnamed zero-argument `const` constructor. Dust
+checks extractors declared in the same library before writing output; imported
+extractors remain checked by `dart analyze` at the generated call site.
+
 `readsRequestBody` looks through all of these, so a composition check sees the
 body extractor underneath a wrapper.
 

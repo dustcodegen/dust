@@ -161,6 +161,7 @@ fn synthesize_class(
                 .filter(|name| name.source != "new")
                 .map(|name| name.source.clone()),
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,

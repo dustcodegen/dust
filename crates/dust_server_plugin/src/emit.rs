@@ -1,8 +1,17 @@
-use dust_dart_emit::{DYNAMIC_TYPES, dart_string_literal};
+/// Structured constant emission for annotation-owned values.
+mod const_value;
+/// Parameter extraction and unwrapping emission.
+mod params;
+
+use dust_dart_emit::dart_string_literal;
 use dust_ir::{ParamKind, TypeIr};
 use dust_plugin_api::PluginContribution;
 
-use crate::plan::{Extraction, HandlerPlan, ParamPlan, ServerPlan};
+use crate::plan::{HandlerPlan, RouteMetadataPlan, ServerPlan};
+use const_value::render_const;
+use params::ParamEmitter;
+#[cfg(test)]
+use params::{is_json_map, is_string_map};
 
 /// Emitter contract tests.
 #[cfg(test)]
@@ -14,7 +23,11 @@ pub(crate) fn emit_server(plan: &ServerPlan<'_>) -> PluginContribution {
     for controller in &plan.controllers {
         contribution.push_mixin_member(
             &controller.class.name,
-            emit_router(&controller.prefix, &controller.handlers),
+            emit_router(
+                &controller.prefix,
+                &controller.handlers,
+                &controller.middleware,
+            ),
         );
         for handler in &controller.handlers {
             contribution.push_mixin_member(
@@ -28,6 +41,7 @@ pub(crate) fn emit_server(plan: &ServerPlan<'_>) -> PluginContribution {
             &plan.function_name,
             &plan.function_prefix,
             &plan.functions,
+            &plan.function_middleware,
         ));
         contribution.top_level_functions.extend(
             plan.functions
@@ -39,50 +53,103 @@ pub(crate) fn emit_server(plan: &ServerPlan<'_>) -> PluginContribution {
 }
 
 /// Emits a controller's conventional `routes` member.
-fn emit_router(prefix: &str, handlers: &[HandlerPlan<'_>]) -> String {
-    emit_named_router("routes", prefix, handlers)
+fn emit_router(
+    prefix: &str,
+    handlers: &[HandlerPlan<'_>],
+    middleware: &[dust_ir::AnnotationValueIr],
+) -> String {
+    emit_named_router("routes", prefix, handlers, middleware)
 }
 
 /// Emits a router factory with deterministic route order.
-fn emit_named_router(name: &str, prefix: &str, handlers: &[HandlerPlan<'_>]) -> String {
+fn emit_named_router(
+    name: &str,
+    prefix: &str,
+    handlers: &[HandlerPlan<'_>],
+    middleware: &[dust_ir::AnnotationValueIr],
+) -> String {
     let member_indent = "    ";
     let routes = handlers
         .iter()
         .map(|handler| {
             let handler_name = generated_handler_name(handler.callable.name());
+            let route_indent = format!("{member_indent}    ");
+            let argument_indent = format!("{route_indent}  ");
             format!(
-                "{member_indent}    Route({}, {}, {}),",
+                "{route_indent}Route(\n{argument_indent}{},\n{argument_indent}{},\n{argument_indent}{},\n{argument_indent}metadata: {},\n{route_indent}),",
                 dart_string_literal(handler.method),
                 dart_string_literal(&handler.path),
-                handler_name
+                wrap_handler(&handler_name, &handler.middleware),
+                render_metadata(&handler.metadata, &argument_indent),
             )
         })
         .collect::<Vec<_>>()
         .join("\n");
+    let layers = middleware
+        .iter()
+        .map(|value| format!("\n{member_indent}..layer({})", render_const(value, true)))
+        .collect::<String>();
     format!(
-        "Router {name}() => Router.module(\n{member_indent}  prefix: {},\n{member_indent}  routes: [\n{routes}\n{member_indent}  ],\n{member_indent});",
+        "Router {name}() => Router.module(\n{member_indent}  prefix: {},\n{member_indent}  routes: [\n{routes}\n{member_indent}  ],\n{member_indent})",
         dart_string_literal(prefix)
-    )
+    ) + &layers
+        + ";"
+}
+
+/// Emits format-neutral metadata without depending on a documentation format.
+fn render_metadata(metadata: &RouteMetadataPlan, indent: &str) -> String {
+    let field_indent = format!("{indent}  ");
+    let mut fields = vec![format!(
+        "{field_indent}operationId: {},",
+        dart_string_literal(&metadata.operation_id)
+    )];
+    if let Some(summary) = &metadata.summary {
+        fields.push(format!(
+            "{field_indent}summary: {},",
+            dart_string_literal(summary)
+        ));
+    }
+    if let Some(description) = &metadata.description {
+        fields.push(format!(
+            "{field_indent}description: {},",
+            dart_string_literal(description)
+        ));
+    }
+    if !metadata.tags.is_empty() {
+        let tags = metadata
+            .tags
+            .iter()
+            .map(|value| dart_string_literal(value))
+            .collect::<Vec<_>>()
+            .join(", ");
+        fields.push(format!("{field_indent}tags: [{tags}],"));
+    }
+    if metadata.deprecated {
+        fields.push(format!("{field_indent}deprecated: true,"));
+    }
+    if metadata.hidden {
+        fields.push(format!("{field_indent}hidden: true,"));
+    }
+    format!("const RouteMetadata(\n{}\n{indent})", fields.join("\n"))
+}
+
+/// Wraps one handler in route-local layers, preserving outermost-first order.
+fn wrap_handler(name: &str, middleware: &[dust_ir::AnnotationValueIr]) -> String {
+    middleware
+        .iter()
+        .rev()
+        .fold(name.to_owned(), |handler, value| {
+            format!("{}.toMiddleware()({handler})", render_const(value, true))
+        })
 }
 
 /// Emits extraction, rejection, dispatch, and guard code for one handler.
 fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
     let name = generated_handler_name(handler.callable.name());
     let mut lines = vec![format!("Future<Response> {name}(Request request) async {{")];
+    let mut param_emitter = ParamEmitter::default();
     for (index, param) in handler.params.iter().enumerate() {
-        let ty = DYNAMIC_TYPES.render(&param.param.ty);
-        let extractor = render_extractor(param);
-        lines.push(format!(
-            "  final Result<{ty}, Rejection> _dustResult{index} ="
-        ));
-        lines.push(format!("      await {extractor}.extract(request);"));
-        lines.push(format!(
-            "  if (_dustResult{index} case Err(:final error)) return error.intoResponse();"
-        ));
-        lines.push(format!(
-            "  final _dustValue{index} = (_dustResult{index} as Ok<{ty}, Rejection>).value;"
-        ));
-        lines.push(String::new());
+        param_emitter.push(&mut lines, index, param);
     }
     let arguments = handler
         .params
@@ -127,43 +194,6 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
     lines.join("\n")
 }
 
-/// Renders the runtime extractor selected for a parameter.
-fn render_extractor(plan: &ParamPlan<'_>) -> String {
-    let ty = DYNAMIC_TYPES.render(&plan.param.ty);
-    match &plan.extraction {
-        Extraction::Path(key) => {
-            format!("const PathExtractable<{ty}>({})", dart_string_literal(key))
-        }
-        Extraction::Query(key) => {
-            format!("const QueryExtractable<{ty}>({})", dart_string_literal(key))
-        }
-        Extraction::QueryList(key) => {
-            let item = DYNAMIC_TYPES.render(&plan.param.ty.args()[0]);
-            format!(
-                "const QueryListExtractable<{item}>({})",
-                dart_string_literal(key)
-            )
-        }
-        Extraction::Queries if is_string_map(&plan.param.ty) => {
-            "QueriesExtractable<Map<String, String>>((queries) => queries)".to_owned()
-        }
-        Extraction::Queries => {
-            format!("const QueriesExtractable<{ty}>(\n    {ty}.deserialize,\n  )")
-        }
-        Extraction::Header(name) => format!(
-            "const HeaderExtractable<{ty}>({})",
-            dart_string_literal(name)
-        ),
-        Extraction::HeaderMap => "const HeaderMapExtractable()".to_owned(),
-        Extraction::Body if is_json_map(&plan.param.ty) => {
-            format!("JsonExtractable<{ty}>((json) => json)")
-        }
-        Extraction::Body => {
-            format!("const JsonExtractable<{ty}>(\n    {ty}.deserialize,\n  )")
-        }
-    }
-}
-
 /// Derives a private generated handler name from a Dart callable.
 fn generated_handler_name(name: &str) -> String {
     let mut chars = name.chars();
@@ -199,19 +229,6 @@ fn push_call(
             .map(|argument| format!("{indent}  {argument},")),
     );
     lines.push(format!("{indent}){suffix}"));
-}
-
-/// Returns whether a type is a string-to-string map.
-fn is_string_map(ty: &TypeIr) -> bool {
-    ty.is_named("Map")
-        && ty.args().len() == 2
-        && ty.args()[0].is_named("String")
-        && ty.args()[1].is_named("String")
-}
-
-/// Returns whether a type is a JSON-object map.
-fn is_json_map(ty: &TypeIr) -> bool {
-    ty.is_named("Map") && ty.args().len() == 2 && ty.args()[0].is_named("String")
 }
 
 /// Returns whether the direct or future-wrapped result is void.

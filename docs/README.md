@@ -39,9 +39,9 @@ and contributor documentation.
 - [dust_server guides](./dust_server/README.md): routing, extraction, responses,
   middleware, serving, WebSockets, and testing
 
-  Phase 1 generation covers controllers and top-level handlers with path,
-  query, header, and JSON-body extraction. Later extractor and composition
-  phases remain tracked in the server design.
+  Phase 3 generation covers controllers and top-level handlers with the typed
+  request extractors, validation, response dispatch, and rejection taxonomy.
+  Route-composition generation remains tracked in the server design.
 
 ## Package References
 
@@ -52,7 +52,7 @@ and contributor documentation.
 - [`dust_db_sqlite3`](../packages/dust_db_sqlite3/README.md): native SQLite
   runtime for generated Database code.
 - [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
-  Phase 1 handler generation on `shelf`, shaped after axum.
+  Phase 3 handler generation on `shelf`, shaped after axum.
 
 ## Examples
 

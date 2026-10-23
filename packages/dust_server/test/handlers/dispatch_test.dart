@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dust_dart/serde.dart';
 import 'package:dust_server/server.dart';
@@ -41,6 +42,10 @@ void main() {
 
     test('answers 204 for null', () {
       expect(responseFrom(null).statusCode, 204);
+    });
+
+    test('answers 204 for Unit', () {
+      expect(responseFrom(const Unit()).statusCode, 204);
     });
 
     test('serializes a model through the derive, not toString', () async {
@@ -130,6 +135,19 @@ void main() {
       expect(response.headers['content-type'], 'application/octet-stream');
       expect(response.context['shelf.io.buffer_output'], false);
       expect(await response.readAsString(), 'hi');
+    });
+
+    test('sends byte buffers rather than trying to encode them', () async {
+      for (final bytes in <Object>[
+        Uint8List.fromList([104, 105]),
+        [104, 105]
+      ]) {
+        final response = responseFrom(bytes, status: 202);
+
+        expect(response.statusCode, 202);
+        expect(response.headers['content-type'], 'application/octet-stream');
+        expect(await response.readAsString(), 'hi');
+      }
     });
 
     test('a list of strings is still JSON', () async {

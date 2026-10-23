@@ -129,6 +129,7 @@ fn constructor_knows_when_all_fields_are_constructible() {
     let constructor = ConstructorIr {
         name: None,
         is_factory: false,
+        is_const: false,
         redirected_target_source: None,
         redirected_target_name: None,
         redirected_target: None,
@@ -170,6 +171,7 @@ fn constructor_detects_missing_required_fields() {
     let constructor = ConstructorIr {
         name: Some("partial".to_owned()),
         is_factory: false,
+        is_const: false,
         redirected_target_source: None,
         redirected_target_name: None,
         redirected_target: None,

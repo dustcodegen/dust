@@ -6,7 +6,7 @@ use super::*;
 #[path = "../../../../../fixtures/namespace_server_barrel/workspace.rs"]
 mod public_fixture;
 
-const INVALID_HANDLER: &str = "server annotations do not declare a Phase 1 handler";
+const INVALID_HANDLER: &str = "server annotations do not declare a supported handler";
 
 /// Replace only owned fixture dependencies with the actual runtime source trees.
 fn public_workspace() -> tempfile::TempDir {
@@ -163,10 +163,7 @@ fn library_and_top_level_server_annotations_are_discovered() {
         ),
         (
             "import 'package:dust_server/server.dart';\n@GET('/todos')\nString listTodos() => 'ok';\n",
-            vec![
-                "handler return type is not supported in server Phase 1",
-                "missing generated `part` directive for server handlers",
-            ],
+            vec!["missing generated `part` directive for server handlers"],
         ),
     ] {
         let workspace = public_workspace();
@@ -215,9 +212,13 @@ class CreateTodo {
     assert_eq!(result.diagnostics, []);
     let generated = fs::read_to_string(root.join("lib/model.g.dart")).unwrap();
     assert!(generated.contains("mixin _$TodoController"));
-    assert!(generated.contains("Route('GET', '/{id}', _$handleGet)"));
+    assert!(generated.contains(
+        "Route(\n            'GET',\n            '/{id}',\n            _$handleGet,\n            metadata: const RouteMetadata(\n              operationId: 'get',\n            ),\n          )"
+    ));
     assert!(generated.contains("const PathExtractable<String>('id')"));
-    assert!(generated.contains("Route('POST', '/', _$handleCreate)"));
+    assert!(generated.contains(
+        "Route(\n            'POST',\n            '/',\n            _$handleCreate,\n            metadata: const RouteMetadata(\n              operationId: 'create',\n            ),\n          )"
+    ));
     assert!(generated.contains(
         "const JsonExtractable<CreateTodo>(\n      CreateTodo.deserialize,\n    ).extract(request)"
     ));

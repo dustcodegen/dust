@@ -78,13 +78,29 @@ fn release_workflow_validates_compatibility_contract() {
 }
 
 #[test]
-fn ci_runs_compatibility_script_self_test_and_real_check() {
-    let workflow =
-        fs::read_to_string(repo_root().join(".github/workflows/ci.yml")).expect("read CI workflow");
+fn pre_commit_runs_compatibility_script_self_test_and_real_check() {
+    let hook =
+        fs::read_to_string(repo_root().join(".githooks/pre-commit")).expect("read pre-commit hook");
 
-    assert!(workflow.contains("Validate compatibility contract"));
-    assert!(workflow.contains("scripts/validate_compatibility_contract.py --self-test"));
-    assert!(workflow.contains("scripts/validate_compatibility_contract.py"));
+    assert!(hook.contains("scripts/validate_compatibility_contract.py --self-test"));
+    assert!(hook.contains("scripts/validate_compatibility_contract.py"));
+}
+
+#[test]
+fn only_release_action_workflows_are_present() {
+    let mut workflows = fs::read_dir(repo_root().join(".github/workflows"))
+        .expect("read workflow directory")
+        .map(|entry| {
+            entry
+                .expect("read workflow entry")
+                .file_name()
+                .into_string()
+                .expect("workflow file name")
+        })
+        .collect::<Vec<_>>();
+    workflows.sort();
+
+    assert_eq!(workflows, ["release.yml", "rust-release.yml"]);
 }
 
 #[test]

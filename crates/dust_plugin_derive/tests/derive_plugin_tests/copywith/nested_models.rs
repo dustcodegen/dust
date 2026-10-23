@@ -47,6 +47,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         constructors: vec![ConstructorIr {
                             name: None,
                             is_factory: false,
+                            is_const: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
                             redirected_target: None,
@@ -100,6 +101,7 @@ fn copywith_replaces_nested_models_shallowly_and_emits_chained_helper() {
                         constructors: vec![ConstructorIr {
                             name: None,
                             is_factory: false,
+                            is_const: false,
                             redirected_target_source: None,
                             redirected_target_name: None,
                             redirected_target: None,
