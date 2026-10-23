@@ -127,7 +127,7 @@ npx skills add dustcodegen/dust --skill use-dust
 | State management | Beta | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
 | Database | Beta | [Database guide](docs/usage/db.md) |
-| HTTP servers | Stable, Phase 5 source codegen | [Server guide](docs/dust_server/README.md) |
+| HTTP servers | Stable runtime; source codegen available | [Server guide](docs/dust_server/README.md) |
 | Firebase | Planned | — |
 | Supabase | Planned | — |
 
@@ -140,11 +140,9 @@ the published 0.2.1 binaries or packages. Traditional constructors remain
 supported on the documented minimum Dart and Flutter SDKs.
 
 The current source checkout generates `dust_server` controllers and top-level
-handlers through Phase 5: typed path, query, header, JSON, form, multipart,
-raw-body, state, peer, request, and custom extraction; validation; extractor
-wrappers; response dispatch; guarded failures; generated middleware; and real
-server composition. Generated routes also carry format-neutral metadata and
-publish structured workspace facts for later documentation tooling. This
+route modules with typed path, query, header, JSON, form, multipart, raw-body,
+state, peer, request, and custom extraction; validation; extractor wrappers;
+response dispatch; guarded failures; middleware; and route metadata. This
 server generator is not part of the published 0.2.1 binaries or packages.
 
 ## Documentation

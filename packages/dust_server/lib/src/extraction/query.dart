@@ -58,9 +58,8 @@ final class QueryListExtractable<T> implements FromRequestParts<List<T>> {
 
 /// Extracts every query value as a map.
 ///
-/// `@Queries() TodoFilter filter` decodes this map through the type's
-/// `Deserialize` implementation; `@Queries() Map<String, String> raw` takes it
-/// as-is.
+/// Generated `@Queries() Map<String, String>` parameters take the values as-is.
+/// A custom decoder can adapt the map for compatibility.
 final class QueriesExtractable<T> implements FromRequestParts<T> {
   /// Decodes the query map with [deserialize].
   const QueriesExtractable(this.deserialize);

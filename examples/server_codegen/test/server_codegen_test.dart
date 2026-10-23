@@ -118,7 +118,7 @@ void main() {
     expect(stream.body, 'streamed');
   });
 
-  test('generated routes support every HTTP verb', () async {
+  test('generated routes support all supported HTTP verbs', () async {
     final app = await serveExample(verbs_and_responses.buildApp());
 
     final put = await app.send('PUT', '/resources/7');

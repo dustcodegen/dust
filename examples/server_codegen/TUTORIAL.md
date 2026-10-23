@@ -26,7 +26,7 @@ final app = Router()..merge(todoRoutes());
 await serve(app, InternetAddress.anyIPv4, 8080);
 ```
 
-Use `@Routes` for top-level functions. Use `@Controller` when handlers share
+Use `@Routes(...)` for top-level functions. Use `@Controller(...)` when handlers share
 constructor dependencies. Both generate the same router primitives.
 
 ## 2. Declare request inputs
@@ -48,8 +48,11 @@ Future<Map<String, Object?>> read(
 
 - A non-nullable scalar is required and rejects invalid input with 400.
 - A nullable scalar is optional.
-- `List<T>` on `@Query` reads repeated values.
-- `@Queries`, `@HeaderMap`, `@RawQuery`, `@Peer`, `Request`, and
+- `List<T>` on `@Query(...)` reads repeated values.
+- Prefer individual `@Query(...)` parameters for a typed handler contract.
+- `@Queries()` exposes the complete `Map<String, String>` only when query keys
+  are dynamic.
+- `@HeaderMap()`, `@RawQuery()`, `@Peer()`, `Request`, and
   `RequestParts` expose broader request data when it is genuinely needed.
 
 See [request_data.dart](lib/request_data.dart) for a runnable request-data
@@ -94,8 +97,8 @@ See [forms_and_raw.dart](lib/forms_and_raw.dart) and
 
 ### Why `@FormUrlEncoded()` stays separate
 
-`@POST` declares transport: method, path, status, metadata, and middleware.
-`@FormUrlEncoded` selects how the one request body is decoded. Keeping those
+`@POST(...)` declares transport: method, path, status, metadata, and middleware.
+`@FormUrlEncoded()` selects how the one request body is decoded. Keeping those
 jobs separate matches Retrofit and lets the same body mode work with `POST`,
 `PUT`, or `PATCH` without adding flags to every verb.
 

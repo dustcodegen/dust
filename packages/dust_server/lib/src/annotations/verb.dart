@@ -2,8 +2,9 @@ import 'package:meta/meta_meta.dart';
 
 /// The shared shape of every verb annotation.
 ///
-/// Anything that would otherwise need a second annotation on the method is an
-/// argument here instead, so a handler carries exactly one.
+/// Route metadata is kept here so a handler carries exactly one HTTP verb.
+/// Body encoding remains a separate `FormUrlEncoded` or `MultiPart`
+/// annotation because it is independent of the method.
 ///
 /// ```dart
 /// @POST('/', status: 201, summary: 'Create a todo')

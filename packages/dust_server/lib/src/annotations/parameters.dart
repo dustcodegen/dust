@@ -41,6 +41,9 @@ final class Query {
 }
 
 /// Binds a parameter to the whole query map.
+///
+/// Use `Map<String, String>` for caller-controlled or dynamic query keys.
+/// Prefer individual [Query] parameters for a typed handler contract.
 @Target({TargetKind.parameter})
 final class Queries {
   /// Reads every query pair.

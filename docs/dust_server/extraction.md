@@ -145,7 +145,7 @@ Future<void> read(
 ) async {}
 ```
 
-`@Extract` takes a type with an unnamed zero-argument `const` constructor. Dust
+`@Extract(Type)` takes a type with an unnamed zero-argument `const` constructor. Dust
 checks extractors declared in the same library before writing output; imported
 extractors remain checked by `dart analyze` at the generated call site.
 
@@ -184,14 +184,15 @@ whether to try the next extractor, and a throw sails past it and ends the
 request.
 
 Configuration is expressed by subclassing, the way axum encodes it in the type,
-because an extractor named in `@Extract` needs a zero-argument `const`
+because an extractor named in `@Extract(Type)` needs a zero-argument `const`
 constructor.
 
 ## Bodies
 
 A body can only be read once, so at most one body extractor runs per handler and
 it runs last. `FormExtractable` and `MultipartExtractable` read the body once and
-hand back a `FormMap` or `MultipartForm`, which every `@Field` and `@Part` then
+hand back a `FormMap` or `MultipartForm`, which every `@Field(...)` and
+`@Part(...)` then
 reads from.
 
 `readBody` refuses an oversized `content-length` before reading anything, and

@@ -5,9 +5,10 @@ server-rendered HTML, static files, and serving across isolates.
 
 > [!IMPORTANT]
 > The server runtime is stable on the 0.2.x line. The current source checkout
-> completes all six generator phases described in
-> [Server Plugin Design](../design/server-plugin.md), including production-
-> shaped composition and route metadata.
+> also generates controller and top-level route wiring, including typed
+> extraction, validation, middleware, response dispatch, production-shaped
+> composition, and route metadata. The generator is not in the published 0.2.1
+> binaries yet.
 
 ## Sections
 

@@ -7,25 +7,11 @@
 Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 
 > [!IMPORTANT]
-> **0.2.1 stable runtime.** The current source checkout retains the documented
-> handwritten APIs while completing generated server wiring through Phase 5.
->
-> top-level handlers: the typed request extractors, validation, custom
-> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
-> failures, plus controller/route middleware and production-shaped runtime
-> composition proof. Generated routes expose format-neutral `RouteMetadata`
-> through `Router.describe()`; OpenAPI generation remains a separate package.
-> Controllers and top-level handlers support typed request extractors,
-> validation, custom `@Extract(Type)` values, extractor wrappers, response
-> dispatch, guarded failures, middleware, and production-shaped composition.
-> Generated routes expose format-neutral `RouteMetadata` through
-> `Router.describe()`; OpenAPI generation remains a separate package.
-> top-level handlers: the typed request extractors, validation, custom
-> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
-> failures, plus controller/route middleware and production-shaped runtime
-> composition proof. Generated routes expose format-neutral `RouteMetadata`
-> through `Router.describe()`; OpenAPI generation remains a separate package.
-> See the [design phases](../../docs/design/server-plugin.md#phases).
+> **0.2.1 stable runtime.** The current source checkout also generates wiring
+> for controllers and top-level route modules: typed extraction, validation,
+> response dispatch, middleware, guarded failures, and `RouteMetadata` visible
+> through `Router.describe()`. The generator is not in the published 0.2.1
+> binaries yet. OpenAPI generation remains a separate package.
 
 ## Documentation
 
@@ -71,10 +57,10 @@ Future<void> delete(@Path() int id) async {}
 ```
 
 Run `dust build`, then mount `itemRoutes()` in the application router. Use
-`@Controller` only when a class is the clearer home for shared dependencies.
+`@Controller(...)` only when a class is the clearer home for shared dependencies.
 Start with the focused
 [`examples/server_codegen`](../../examples/server_codegen/README.md); the
-complete internal Phase 5 regression fixture is
+complete internal regression fixture is
 [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
 
 Metadata declared on a verb is available after normal mounting:
@@ -115,8 +101,8 @@ which keeps the examples from rotting.
 
 ## Tests
 
-The historical coverage gate targets 100% line coverage. Dart coverage CI is
-disabled during the repository migration; only manual Rust release CI is enabled.
+The local pre-commit gate requires 100% line coverage. GitHub Actions are
+reserved for Rust releases.
 
 ```bash
 dart test
