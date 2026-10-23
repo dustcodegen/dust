@@ -1,0 +1,17 @@
+name: server_codegen_app
+description: Executable Phase 1 fixture for Dust server handler generation.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+resolution: workspace
+
+dependencies:
+  dust_server:
+    path: ../../packages/dust_server
+
+dev_dependencies:
+  test: ^1.26.0
+  very_good_analysis: ^10.3.0

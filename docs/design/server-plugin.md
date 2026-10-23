@@ -1,9 +1,9 @@
 # Server Plugin Design
 
-Status: Phase 0 integrated, with the runtime built. Dust now owns and discovers
-the server annotations in production, then fails with a source-labelled
-diagnostic because handler generation begins in Phase 1. This document defines
-that generation and runtime route composition.
+Status: Phases 0 and 1 are integrated. Dust owns and discovers the server
+annotations, generates controller and top-level route wiring, and supports the
+Phase 1 path/query/header/JSON extraction and response surface. Later extractors
+and runtime route-composition generation remain staged below.
 
 `packages/dust_server` exists and has a local 100% line-coverage gate.
 That includes `test/generated/`, which hand-writes what the
@@ -11,7 +11,7 @@ plugin will emit for the [Worked Example](#worked-example) below, and the
 examples in `example/`, which exercise every extractor, layer, and response path
 the plugin will emit against.
 
-`crates/dust_server_plugin` implements the Phase-0 ownership boundary only.
+`crates/dust_server_plugin` implements the ownership boundary and Phase 1.
 Sections marked **runtime-checked** describe behavior that runs today rather
 than intent — and that distinction earned its keep: probing the runtime that
 way has turned up more than twenty defects, every one of which the generated
@@ -1201,7 +1201,7 @@ Phase 6.
 | Phase | Scope | Exit criteria |
 | :--- | :--- | :--- |
 | 0 | **Integrated.** Production symbol ownership and discovery; no placeholder IR or handler output. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing client output. |
-| 1 | `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Native path validation and the missing-path-key diagnostic. | Todo controller serves GET and POST. |
+| 1 | **Integrated.** `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Native path validation and the missing-path-key diagnostic. | Generated Todo fixture serves GET and POST. |
 | 2 | `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
 | 3 | Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
 | 4 | `Router`, `merge` / `nest`, prefix normalization, `Layer` emission, middleware composition, body limit, `onError`. Verify existing runtime composition with generated handlers. | `bin/server.dart` runs end to end. |
@@ -1238,9 +1238,8 @@ recursively; a new plugin directory is not discovered automatically.
 
 ## Open Questions
 
-The runtime decisions below are settled. Phase 1 must still prove generated
-handlers against the executable Todo GET/POST exit gate before server codegen is
-presented as usable.
+The runtime decisions below are settled. The generated Todo GET/POST fixture is
+the Phase 1 exit gate; the remaining questions apply to later phases.
 
 ## Deferred
 

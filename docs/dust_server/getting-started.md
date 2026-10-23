@@ -64,6 +64,32 @@ folder decides what stays internal.
 
 ## Trying it
 
+Generate a controller:
+
+```dart
+import 'package:dust_server/server.dart';
+
+part 'todo_controller.g.dart';
+
+@Controller('/todos')
+final class TodoController with _$TodoController {
+  @GET('/{id}')
+  Future<Map<String, Object?>> read(@Path() int id) async => {'id': id};
+}
+```
+
+```bash
+dust build
+```
+
+Mount `TodoController().routes()` with `Router.merge`. Phase 1 also supports
+top-level verb functions and `@Query`, `@Queries`, `@Header`, `@HeaderMap`, and
+`@Body`. It intentionally rejects later-phase extractors with a build
+diagnostic. A runnable GET/POST example and request tests live in
+[`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+
+The runtime-only examples remain useful without generation:
+
 ```bash
 cd packages/dust_server
 dart run example/hello_world.dart

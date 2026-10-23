@@ -515,6 +515,7 @@ dependencies = [
 name = "dust_server_plugin"
 version = "0.2.1"
 dependencies = [
+ "dust_dart_emit",
  "dust_diagnostics",
  "dust_ir",
  "dust_plugin_api",

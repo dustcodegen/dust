@@ -39,8 +39,9 @@ and contributor documentation.
 - [dust_server guides](./dust_server/README.md): routing, extraction, responses,
   middleware, serving, WebSockets, and testing
 
-  A runtime, not a generator. Server code is handwritten today; `dust build`
-  produces nothing for it.
+  Phase 1 generation covers controllers and top-level handlers with path,
+  query, header, and JSON-body extraction. Later extractor and composition
+  phases remain tracked in the server design.
 
 ## Package References
 
@@ -50,8 +51,8 @@ and contributor documentation.
   validation, and i18n APIs.
 - [`dust_db_sqlite3`](../packages/dust_db_sqlite3/README.md): native SQLite
   runtime for generated Database code.
-- [`dust_server`](../packages/dust_server/README.md): HTTP server runtime on
-  `shelf`, shaped after axum. Beta, and not yet generated from annotations.
+- [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
+  Phase 1 handler generation on `shelf`, shaped after axum.
 
 ## Examples
 

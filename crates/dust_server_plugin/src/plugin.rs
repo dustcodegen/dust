@@ -1,6 +1,8 @@
-use dust_diagnostics::{Diagnostic, SourceLabel};
-use dust_ir::{AnnotationIr, ConfigApplicationIr, DartFileIr, SpanIr};
+use dust_diagnostics::Diagnostic;
+use dust_ir::DartFileIr;
 use dust_plugin_api::{AnnotationOrigin, DustPlugin, PluginContext, PluginContribution};
+
+use crate::{emit::emit_server, plan::plan_server};
 
 /// Server configuration symbols owned by this plugin.
 const CLAIMED_CONFIGS: &[&str] = &[
@@ -136,77 +138,17 @@ impl DustPlugin for ServerPlugin {
     }
 
     fn validate(&self, file: &DartFileIr) -> Vec<Diagnostic> {
-        let Some(span) = first_server_annotation(file) else {
-            return Vec::new();
-        };
-        vec![
-            Diagnostic::error(
-                "Dust server annotations are recognized, but handler generation is not available",
-            )
-            .with_label(SourceLabel::new(
-                span.file_id,
-                span.range,
-                "first server annotation in this library",
-            ))
-            .with_note("No generated server output was written; generation starts in Phase 1."),
-        ]
+        plan_server(file).err().unwrap_or_default()
     }
 
-    fn generate(
-        &self,
-        _file: &DartFileIr,
-        _context: &PluginContext<'_>,
-    ) -> Vec<PluginContribution> {
-        vec![PluginContribution::default()]
+    fn generate(&self, file: &DartFileIr, _context: &PluginContext<'_>) -> Vec<PluginContribution> {
+        match plan_server(file) {
+            Ok(Some(plan)) => vec![emit_server(&plan)],
+            Ok(None) => vec![PluginContribution::default()],
+            Err(diagnostics) => vec![PluginContribution {
+                diagnostics,
+                ..PluginContribution::default()
+            }],
+        }
     }
-}
-
-/// Finds the first supported server annotation at a valid server declaration site.
-fn first_server_annotation(file: &DartFileIr) -> Option<SpanIr> {
-    first_annotation(&file.library_annotations)
-        .or_else(|| {
-            file.classes.iter().find_map(|class| {
-                first_config(&class.configs).or_else(|| {
-                    class.methods.iter().find_map(|method| {
-                        first_config(&method.configs).or_else(|| {
-                            method
-                                .params
-                                .iter()
-                                .find_map(|param| first_config(&param.configs))
-                        })
-                    })
-                })
-            })
-        })
-        .or_else(|| {
-            file.functions.iter().find_map(|function| {
-                first_annotation(&function.annotations).or_else(|| {
-                    function
-                        .params
-                        .iter()
-                        .find_map(|param| first_config(&param.configs))
-                })
-            })
-        })
-}
-
-/// Finds the first server-owned resolved configuration.
-fn first_config(configs: &[ConfigApplicationIr]) -> Option<SpanIr> {
-    configs
-        .iter()
-        .find(|config| CLAIMED_CONFIGS.contains(&config.symbol.0.as_str()))
-        .map(|config| config.span)
-}
-
-/// Finds the first server-owned general annotation.
-fn first_annotation(annotations: &[AnnotationIr]) -> Option<SpanIr> {
-    annotations
-        .iter()
-        .find(|annotation| {
-            annotation
-                .resolved_symbol
-                .as_ref()
-                .is_some_and(|symbol| CLAIMED_CONFIGS.contains(&symbol.0.as_str()))
-        })
-        .map(|annotation| annotation.span)
 }

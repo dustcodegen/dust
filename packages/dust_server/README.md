@@ -10,12 +10,11 @@ Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 > **0.1.0-beta.2**. Complete enough to build on; the API may still change
 > before 1.0, so pin the exact version.
 >
-> The code generator described in
-> [docs/design/server-plugin.md](../../docs/design/server-plugin.md) does not
-> exist yet. This package is the runtime that generated code will call, built
-> first so the design is checked against working code rather than a sketch —
-> which has found more than twenty defects the generated code would otherwise
-> have been built on top of. See [CHANGELOG.md](CHANGELOG.md).
+> Dust server generation is available for Phase 1 controllers and top-level
+> handlers: HTTP verbs, path/query/header extraction, JSON bodies, and
+> JSON/`void`/`Response` results. Custom extractors, state, raw/form/multipart
+> bodies, middleware emission, and typed `Result` responses remain staged work.
+> See the [design phases](../../docs/design/server-plugin.md#phases).
 
 ## Documentation
 
@@ -35,6 +34,24 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 | [Dependencies](../../docs/dust_server/dependencies.md) | what is reused, and what is not |
 
 ## At a glance
+
+Generated controller wiring:
+
+```dart
+part 'todo_controller.g.dart';
+
+@Controller('/todos')
+final class TodoController with _$TodoController {
+  @GET('/{id}')
+  Future<Map<String, Object?>> read(@Path() int id) async => {'id': id};
+}
+```
+
+Run `dust build`, then mount `TodoController().routes()` in the application
+router. The complete generated GET/POST fixture is
+[`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+
+Runtime composition remains available directly:
 
 ```dart
 final app = Router()

@@ -103,17 +103,13 @@ fn function(
     }
 }
 
-fn assert_unsupported(file: &DartFileIr) {
+fn assert_rejected(file: &DartFileIr) {
     let diagnostics = register_plugin().validate(file);
-    assert_eq!(diagnostics.len(), 1);
-    assert_eq!(
-        diagnostics[0].message,
-        "Dust server annotations are recognized, but handler generation is not available"
-    );
-    assert_eq!(diagnostics[0].labels[0].range, file.span.range);
-    assert_eq!(
-        diagnostics[0].notes,
-        ["No generated server output was written; generation starts in Phase 1."]
+    assert!(!diagnostics.is_empty());
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| !diagnostic.labels.is_empty())
     );
 }
 
@@ -150,12 +146,27 @@ fn unannotated_libraries_validate_and_generate_nothing() {
 }
 
 #[test]
-fn every_supported_declaration_site_fails_before_generation() {
+fn invalid_libraries_generate_diagnostics_instead_of_code() {
+    let plugin = register_plugin();
+    let mut file = empty_library();
+    file.library_annotations = vec![annotation("dust_server::Routes", file.span)];
+    let plan = SymbolPlan::default();
+
+    let output = plugin.generate(&file, &PluginContext { symbol_plan: &plan });
+
+    assert_eq!(output.len(), 1);
+    assert!(!output[0].diagnostics.is_empty());
+    assert!(output[0].mixin_members.is_empty());
+    assert!(output[0].top_level_functions.is_empty());
+}
+
+#[test]
+fn incomplete_server_declarations_fail_clearly() {
     let mut library = empty_library();
     let span = library.span;
 
     library.library_annotations = vec![annotation("dust_server::Routes", span)];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 
     library.library_annotations.clear();
     library.classes = vec![class(
@@ -163,7 +174,7 @@ fn every_supported_declaration_site_fails_before_generation() {
         Vec::new(),
         span,
     )];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 
     library.classes = vec![class(
         Vec::new(),
@@ -174,7 +185,7 @@ fn every_supported_declaration_site_fails_before_generation() {
         )],
         span,
     )];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 
     library.classes = vec![class(
         Vec::new(),
@@ -185,7 +196,7 @@ fn every_supported_declaration_site_fails_before_generation() {
         )],
         span,
     )];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 
     library.classes.clear();
     library.functions = vec![function(
@@ -193,14 +204,14 @@ fn every_supported_declaration_site_fails_before_generation() {
         Vec::new(),
         span,
     )];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 
     library.functions = vec![function(
         Vec::new(),
         vec![param(vec![config("dust_server::Query", span)], span)],
         span,
     )];
-    assert_unsupported(&library);
+    assert_rejected(&library);
 }
 
 #[test]

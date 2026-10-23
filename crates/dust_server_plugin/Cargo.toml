@@ -10,6 +10,7 @@ homepage.workspace = true
 description = "HTTP server generation plugin for Dust."
 
 [dependencies]
+dust_dart_emit = { path = "../dust_dart_emit", version = "0.2.1" }
 dust_diagnostics = { path = "../dust_diagnostics", version = "0.2.1" }
 dust_ir = { path = "../dust_ir", version = "0.2.1" }
 dust_plugin_api = { path = "../dust_plugin_api", version = "0.2.1" }

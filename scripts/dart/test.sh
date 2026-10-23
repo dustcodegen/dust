@@ -11,6 +11,8 @@ while IFS= read -r package; do
 done < <("$ROOT_DIR/scripts/workspace_packages.sh" dart)
 # Independent Pub resolution is intentional; keep this consumer outside workspace.
 TARGETS+=("fixtures/sqlite_sdk_consumer")
+# Workspace discovery lists packages only, so include the executable fixture.
+TARGETS+=("fixtures/server_codegen_app")
 
 if [[ "${1:-}" == "--examples" ]]; then
   TARGETS=("examples/product_showcase")
@@ -23,6 +25,13 @@ for target in "${TARGETS[@]}"; do
   echo "==> Dart pub get: $target"
   (cd "$target" && dart pub get)
 done
+
+if [[ "${1:-}" != "--examples" ]]; then
+  echo "==> Dust build --clean: fixtures/server_codegen_app"
+  cargo run --quiet -p dust_cli -- build --clean --root fixtures/server_codegen_app
+  echo "==> Dust check: fixtures/server_codegen_app"
+  cargo run --quiet -p dust_cli -- check --root fixtures/server_codegen_app
+fi
 
 if [[ "${1:-}" == "--examples" ]]; then
   for example in examples/product_showcase; do
