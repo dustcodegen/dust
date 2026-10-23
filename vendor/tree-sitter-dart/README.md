@@ -11,14 +11,15 @@ source change does not update already released binaries.
 
 ## Origin and changes
 
-Source: <https://github.com/UserNobody14/tree-sitter-dart>, exact commit
-`acfb453395e25cf6a1018e064df3c92e68e38782`. This is the community grammar listed
-by Tree-sitter, not a Dart-team-maintained parser.
+Fork source: <https://github.com/dustcodegen/tree-sitter-dart>, exact commit
+`acfb453395e25cf6a1018e064df3c92e68e38782`. It is based on the
+[community grammar listed by Tree-sitter](https://github.com/UserNobody14/tree-sitter-dart),
+not a Dart-team-maintained parser.
 
-`grammar.js`, `src/` and `LICENSE` are byte-identical upstream copies. No C
+`grammar.js`, `src/` and `LICENSE` are byte-identical copies of that commit. No C
 grammar changes, local parser regeneration, scanner patches or header changes
-were made. The updated grammar and generated parser include upstream's generic
-constructor-receiver and record-type disambiguation fixes. `UPSTREAM.json`
+were made. The updated grammar and generated parser include the fork's generic
+constructor-receiver fix and upstream's record-type disambiguation fix. `UPSTREAM.json`
 records their SHA-256 values and original metadata:
 
 Local Git attributes disable line-ending conversion for those pinned files.
