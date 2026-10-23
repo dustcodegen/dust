@@ -12,5 +12,6 @@ export 'mounted_route.dart';
 export 'path_segment.dart';
 export 'paths.dart';
 export 'route.dart';
+export 'route_metadata.dart';
 export 'router_base.dart';
 export 'service.dart';

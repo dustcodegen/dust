@@ -5,6 +5,16 @@ import '../support.dart';
 
 const _form = FormExtractable();
 
+final class _Login {
+  const _Login(this.email);
+
+  factory _Login.deserialize(Map<String, Object?> fields) {
+    return _Login(fields['email']! as String);
+  }
+
+  final String email;
+}
+
 Request _formRequest(String body, {String method = 'POST'}) {
   return request(
     method,
@@ -98,6 +108,33 @@ void main() {
 
       expect(expectOk(form.field<String>('email')), 'a@b.c');
       expect(expectOk(form.field<int>('age')), 41);
+    });
+  });
+
+  group('FormModelExtractable', () {
+    test('decodes form fields into a model', () async {
+      final outcome = await const FormModelExtractable(_Login.deserialize)
+          .extract(_formRequest('email=a%40b.c'));
+
+      expect(expectOk(outcome).email, 'a@b.c');
+    });
+
+    test('maps a wrong model shape to 422', () async {
+      final outcome = await const FormModelExtractable(_Login.deserialize)
+          .extract(_formRequest('name=dust'));
+
+      expectStatus(outcome, 422);
+    });
+
+    test('keeps media and body-limit rejections', () async {
+      final wrongMedia = await const FormModelExtractable(_Login.deserialize)
+          .extract(request('POST', '/', body: 'email=a'));
+      final tooLarge =
+          await const FormModelExtractable(_Login.deserialize, limit: 4)
+              .extract(_formRequest('email=a'));
+
+      expectStatus(wrongMedia, 415);
+      expectStatus(tooLarge, 413);
     });
   });
 }

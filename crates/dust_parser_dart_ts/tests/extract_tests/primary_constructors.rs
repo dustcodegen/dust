@@ -30,6 +30,7 @@ fn declaring_parameters_induce_fields_but_plain_parameters_do_not() {
     let constructor = &class.constructors[0];
     assert_eq!(constructor.name, None);
     assert!(!constructor.is_factory);
+    assert!(constructor.is_const);
     assert_eq!(
         constructor
             .params
@@ -90,6 +91,7 @@ class Bundle<T>.named(@FieldTag('items') final List<T?> items, {required var int
     assert_eq!(class.constructors.len(), 1);
     let constructor = &class.constructors[0];
     assert_eq!(constructor.name.as_deref(), Some("named"));
+    assert!(!constructor.is_const);
     assert_eq!(
         constructor
             .annotations

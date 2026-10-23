@@ -48,6 +48,8 @@ pub struct ParsedConstructorSurface {
     pub name: Option<String>,
     /// Whether the constructor is declared with the `factory` modifier.
     pub is_factory: bool,
+    /// Whether the constructor is declared with the `const` modifier.
+    pub is_const: bool,
     /// All metadata annotations attached to the constructor.
     pub annotations: Vec<ParsedAnnotation>,
     /// The redirected target symbol reference, if the constructor redirects.

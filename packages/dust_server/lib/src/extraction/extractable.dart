@@ -58,12 +58,7 @@ final class OptionalExtractable<T> implements FromRequestParts<Option<T>> {
 
   @override
   Future<Result<Option<T>, Rejection>> extract(Request request) async {
-    final outcome = await inner.extract(request);
-    return switch (outcome) {
-      Ok(:final value) => Ok(Some(value)),
-      Err(:final error) when error.status >= 500 => Err(error),
-      Err() => Ok(None<T>()),
-    };
+    return optionalExtractionResult(await inner.extract(request));
   }
 }
 
@@ -87,6 +82,26 @@ final class FallibleExtractable<T>
   Future<Result<Result<T, Rejection>, Rejection>> extract(
     Request request,
   ) async {
-    return Ok(await inner.extract(request));
+    return fallibleExtractionResult(await inner.extract(request));
   }
 }
+
+/// Applies `Option<T>` semantics to an already evaluated extraction.
+///
+/// Generated form and multipart handlers share one body read, then use this
+/// helper for each field or part instead of running another extractor.
+Result<Option<T>, Rejection> optionalExtractionResult<T>(
+  Result<T, Rejection> outcome,
+) {
+  return switch (outcome) {
+    Ok(:final value) => Ok(Some(value)),
+    Err(:final error) when error.status >= 500 => Err(error),
+    Err() => Ok(None<T>()),
+  };
+}
+
+/// Applies `Result<T, Rejection>` semantics to an evaluated extraction.
+Result<Result<T, Rejection>, Rejection> fallibleExtractionResult<T>(
+  Result<T, Rejection> outcome,
+) =>
+    Ok(outcome);

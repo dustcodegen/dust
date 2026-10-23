@@ -1,5 +1,5 @@
 name: server_codegen_app
-description: Executable Phase 1 fixture for Dust server handler generation.
+description: Executable fixture for Dust server generation and composition.
 publish_to: none
 version: 0.1.0
 
@@ -9,6 +9,8 @@ environment:
 resolution: workspace
 
 dependencies:
+  dust_dart:
+    path: ../../packages/dust_dart
   dust_server:
     path: ../../packages/dust_server
 

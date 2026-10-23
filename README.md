@@ -17,12 +17,11 @@ The original remote is unavailable, so its current state cannot be verified.
 Versions are unchanged. The original `v0.2.1` source was rebuilt through
 [Rust-only release CI](https://github.com/dustcodegen/dust/actions/workflows/rust-release.yml)
 with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
-General CI and OpenSSF Scorecard run in the organization repository. Production
-Dart/Flutter publishing remains disabled until a release is prepared and
-approved. Original CI history and external quality integrations are not
-migrated. Current documentation and package metadata use `dustcodegen/dust`;
-already-published pub.dev metadata stays unchanged until a future package
-release.
+Only manual Rust release CI is enabled, not Dart/Flutter publishing or the
+inherited general CI/Scorecard workflows. Original CI history and external
+quality integrations are not migrated. Current documentation and package
+metadata use `dustcodegen/dust`; already-published pub.dev metadata stays
+unchanged until a future package release.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you
@@ -128,19 +127,25 @@ npx skills add dustcodegen/dust --skill use-dust
 | State management | Beta | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
 | Database | Beta | [Database guide](docs/usage/db.md) |
-| HTTP servers | Beta, runtime only | [Server guide](docs/dust_server/README.md) |
+| HTTP servers | Stable, Phase 5 source codegen | [Server guide](docs/dust_server/README.md) |
 | Firebase | Planned | — |
 | Supabase | Planned | — |
 
-Stable features keep their documented authoring APIs compatible throughout
-`0.1.x`. Beta features may still receive API refinements.
+Stable features keep their documented authoring APIs compatible. Breaking
+changes require an explicit migration note. Features marked Beta may still
+receive API refinements.
 
 Primary-constructor support is available from the current source checkout, not
 the published 0.2.1 binaries or packages. Traditional constructors remain
 supported on the documented minimum Dart and Flutter SDKs.
 
-`dust_server` is a runtime, not a generator. Server code is written by hand
-today; `dust build` produces nothing for it.
+The current source checkout generates `dust_server` controllers and top-level
+handlers through Phase 5: typed path, query, header, JSON, form, multipart,
+raw-body, state, peer, request, and custom extraction; validation; extractor
+wrappers; response dispatch; guarded failures; generated middleware; and real
+server composition. Generated routes also carry format-neutral metadata and
+publish structured workspace facts for later documentation tooling. This
+server generator is not part of the published 0.2.1 binaries or packages.
 
 ## Documentation
 

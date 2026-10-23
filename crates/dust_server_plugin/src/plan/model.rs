@@ -24,6 +24,21 @@ pub(crate) struct ServerPlan<'a> {
     pub(crate) function_prefix: String,
     /// Generated top-level router factory name.
     pub(crate) function_name: String,
+    /// Middleware applied to the top-level route group.
+    pub(crate) function_middleware: Vec<AnnotationValueIr>,
+}
+
+/// Shared controller or top-level route-group settings.
+#[derive(Default)]
+pub(super) struct GroupPlan {
+    /// Relative group prefix.
+    pub(super) prefix: String,
+    /// Optional generated top-level router name.
+    pub(super) configured_name: Option<String>,
+    /// Middleware applied to the whole group.
+    pub(super) middleware: Vec<AnnotationValueIr>,
+    /// Tags inherited by every route in the group.
+    pub(super) tags: Vec<String>,
 }
 
 /// One controller and its generated handler plans.
@@ -34,6 +49,8 @@ pub(crate) struct ControllerPlan<'a> {
     pub(crate) prefix: String,
     /// Validated handler methods.
     pub(crate) handlers: Vec<HandlerPlan<'a>>,
+    /// Middleware applied to every route in the controller.
+    pub(crate) middleware: Vec<AnnotationValueIr>,
 }
 
 /// A method or top-level function callable.
@@ -57,17 +74,55 @@ pub(crate) struct HandlerPlan<'a> {
     pub(crate) status: u16,
     /// Parameters in declaration order.
     pub(crate) params: Vec<ParamPlan<'a>>,
+    /// Middleware applied only to this route.
+    pub(crate) middleware: Vec<AnnotationValueIr>,
+    /// Format-neutral route documentation facts.
+    pub(crate) metadata: RouteMetadataPlan,
+}
+
+/// Documentation facts emitted with one route.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RouteMetadataPlan {
+    /// Stable operation identifier.
+    pub(crate) operation_id: String,
+    /// Optional one-line summary.
+    pub(crate) summary: Option<String>,
+    /// Optional longer description.
+    pub(crate) description: Option<String>,
+    /// Group tags followed by route-local tags.
+    pub(crate) tags: Vec<String>,
+    /// Whether the route is deprecated.
+    pub(crate) deprecated: bool,
+    /// Whether documentation tools should hide the route.
+    pub(crate) hidden: bool,
 }
 
 /// One handler parameter and its runtime extraction strategy.
 pub(crate) struct ParamPlan<'a> {
     /// Canonical parameter facts.
     pub(crate) param: &'a MethodParamIr,
+    /// Value type produced before an optional/fallible wrapper is applied.
+    pub(crate) value_type: &'a TypeIr,
+    /// Failure behavior selected by the parameter type.
+    pub(crate) wrapper: ExtractionWrapper,
     /// Selected runtime extractor.
     pub(crate) extraction: Extraction,
+    /// Whether the decoded body must run its generated `Validate()` contract.
+    pub(crate) validated: bool,
 }
 
-/// Runtime extraction strategies implemented by Phase one.
+/// How an extractor failure reaches the handwritten handler.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ExtractionWrapper {
+    /// Stop the generated handler on the first rejection.
+    Required,
+    /// Collapse client rejections into `None`.
+    Optional,
+    /// Pass the extractor result to the handwritten handler.
+    Fallible,
+}
+
+/// Runtime extraction strategies implemented through Phase three.
 pub(crate) enum Extraction {
     /// Named route-path segment.
     Path(String),
@@ -81,8 +136,51 @@ pub(crate) enum Extraction {
     Header(String),
     /// Complete header map.
     HeaderMap,
-    /// Typed JSON body.
-    Body,
+    /// Typed JSON or form body.
+    Body(BodyFormat),
+    /// User extractor type named by `@Extract(Type)`.
+    Custom(String),
+    /// Raw, undecoded query string.
+    RawQuery,
+    /// One field from a shared form body.
+    Field(String),
+    /// One value from a shared multipart body.
+    Part {
+        /// Multipart field name.
+        name: String,
+        /// Whether the target expects an uploaded file rather than text.
+        file: bool,
+    },
+    /// Raw request body selected by the parameter type.
+    RawBody(RawBodyFormat),
+    /// Application state keyed by the parameter type.
+    State,
+    /// Connection peer information.
+    Peer,
+    /// The shelf request unchanged.
+    Request,
+    /// Immutable request-head facts.
+    RequestParts,
+}
+
+/// Typed body decoder selected by handler media annotations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BodyFormat {
+    /// JSON object decoding.
+    Json,
+    /// URL-encoded form decoding.
+    Form,
+}
+
+/// Raw body representation selected by the parameter type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RawBodyFormat {
+    /// `Uint8List` bytes.
+    Bytes,
+    /// UTF-8 `String`.
+    Text,
+    /// Unread `Stream<List<int>>`.
+    Stream,
 }
 
 /// Shared view over class configs and general annotations.

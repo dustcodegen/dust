@@ -1,17 +1,17 @@
 # Server Runtime: Production Readiness
 
-Status: `packages/dust_server` is **not** production ready. `0.1.0-beta.1` is
-on pub.dev, so this is now a document about a package other people can install
-rather than an internal note. It says what is covered, what is missing, and
-what would have to be true before an application is put in front of real
-traffic.
+Status: `packages/dust_server` is a stable server runtime and generated wiring
+surface. This document tracks the operational evidence still needed for
+high-confidence, sustained production deployments; those gaps do not change
+the API's stable status.
 
 For the feature itself, see the [Server Plugin Design](server-plugin.md).
 
 ## Where it stands
 
-100% line coverage, gated in CI, and no analyzer findings. That says the code
-does what its tests say. It does not say the tests ask the right questions,
+100% line coverage, gated by the local pre-commit hook, and no analyzer
+findings. GitHub Actions are reserved for releases. That says the code does
+what its tests say. It does not say the tests ask the right questions,
 which is what the rest of this document is about — and the record backs the
 distinction: every defect below was found by writing an example or probing a
 combination, never by the coverage number moving.
@@ -204,18 +204,18 @@ reports the host's cores, not the container's CPU limit, so the obvious check
 fires loudly and wrongly on every constrained deployment. Until there is a
 reliable way to read the effective limit, this stays a documentation problem.
 
-### 11. CI has a coverage gate, and no benchmark gate
+### 11. Local validation has a coverage gate, and no benchmark gate
 
-The package is in the `dart-packages` matrix in `.github/workflows/ci.yml`, so
-analyze and test run on every commit, and `scripts/dart/coverage.sh` fails the
-build below a 100% floor. What is still missing is a benchmark regression
-check, and the suite has never run on any machine but one.
+The pre-commit hook runs package analysis, tests, generated fixture checks, and
+the 100% coverage floor locally. GitHub Actions run only for releases. What is
+still missing is a benchmark regression check, and the suite has never run on
+any machine but one.
 
 ### 12. Coverage is complete, and now gated
 
-100% of lines, 1204 of 1204. Reaching it was worth more than the number: closing
-the gaps, and then hunting past them, surfaced six real defects — each now
-pinned by a test.
+The local coverage gate requires 100% of lines. Reaching it was worth more than
+the number: closing the gaps, and then hunting past them, surfaced six real
+defects — each now pinned by a test.
 
 | Found | Was |
 | :--- | :--- |
@@ -233,24 +233,13 @@ change was finished.
 A covered line is still not a checked line — 100% says every line ran, not that
 every branch through it was asserted.
 
-### 13. The API is unstable by design
+### 13. Stable API changes require migration discipline
 
-The last few days moved `RouteGroup` to `Router`, `@Ctx` to `@State`, and
-dropped OpenAPI. `0.1.0-beta.1` is published, so changes now cost a version
-rather than a commit, but the surface is not settled and the generator that
-will be its main consumer does not exist yet.
-
-Two known changes are still owed, both of them axum parity:
-
-- **`serve` should be `serve`.** axum calls it `serve` even though its
-  second argument is a `Router`; the qualifier names the argument type the
-  caller can already see. It exists only to dodge a collision with
-  `shelf_io.serve` that cannot happen, since shelf is imported prefixed.
-- **`Router` should implement a `Service` interface** rather than converting
-  through `Router.handler`. A Dart class with a `call` method is assignable to
-  a matching function type, so `Router implements Service` would be passable
-  anywhere a shelf `Handler` is wanted, with no conversion — the same reason
-  `axum::serve(listener, app)` takes a `Router` directly.
+Earlier hardening moved `RouteGroup` to `Router`, `@Ctx` to `@State`, and
+dropped OpenAPI. Stable public releases mean future breaking changes require a
+versioned migration rather than an unannounced source edit. The current-source
+generator is now the runtime's main consumer, and `Router` already implements
+`Service`.
 
 Argument order and the shutdown model should not follow axum. It takes a bound
 listener because that is the Rust idiom, and gates shutdown on `Drop`; Dart
@@ -262,13 +251,11 @@ not have.
 
 In order, each one gated on the previous:
 
-1. Multipart streaming, so an upload limit is not a memory limit.
-2. A teardown hook on `Layer`, so middleware may own a resource.
-3. A soak test: sustained traffic for an hour, memory flat.
-4. A deployment note covering TLS termination and proxies.
-5. The plugin, so generated code is what gets exercised rather than
-   hand-written stand-ins.
-6. Only then a version number and a freeze on the public surface.
+1. A soak test: sustained traffic for an hour, memory flat.
+2. Exercise graceful shutdown during sustained real traffic.
+3. A deployment note covering TLS termination, proxies, and isolate sizing.
+4. A local benchmark regression baseline on a controlled machine.
+5. Only then a version number and a freeze on the public surface.
 
 Until those are done, the honest description is "a runtime with good test
 coverage of its own semantics", not "production ready".

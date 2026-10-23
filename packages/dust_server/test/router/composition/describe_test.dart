@@ -58,6 +58,31 @@ void main() {
       expect(app.describe().first.metadataOf<_Owner>()?.team, 'todos');
     });
 
+    test('puts route metadata after enclosing router metadata', () {
+      final app = Router(metadata: const _Owner('core'))
+        ..route(
+          '/todos',
+          MethodRouter().get(label('todos')),
+        );
+      final generated = Route(
+        'GET',
+        '/generated',
+        label('generated'),
+        metadata: const RouteMetadata(
+          operationId: 'listTodos',
+          tags: ['todos'],
+        ),
+      );
+      final module = Router.module(routes: [generated]);
+      app.merge(module);
+
+      final route = app.describe().last;
+
+      expect(route.metadata.first, isA<_Owner>());
+      expect(route.metadataOf<RouteMetadata>()?.operationId, 'listTodos');
+      expect(route.metadataOf<RouteMetadata>()?.tags, ['todos']);
+    });
+
     test('returns null for a type nobody attached', () {
       final app = Router()..merge(todosModule());
 

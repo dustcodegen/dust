@@ -38,6 +38,7 @@ pub(crate) fn route_page_class(
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,
@@ -81,6 +82,7 @@ pub(crate) fn guard_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,
@@ -109,6 +111,7 @@ pub(crate) fn shell_class(name: &str, params: Vec<ConstructorParamIr>) -> ClassI
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,

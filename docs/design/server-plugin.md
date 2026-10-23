@@ -1,9 +1,10 @@
 # Server Plugin Design
 
-Status: Phases 0 and 1 are integrated. Dust owns and discovers the server
+Status: Phases 0 through 5 are integrated. Dust owns and discovers the server
 annotations, generates controller and top-level route wiring, and supports the
-Phase 1 path/query/header/JSON extraction and response surface. Later extractors
-and runtime route-composition generation remain staged below.
+typed extractor, validation, response, rejection, middleware, and runtime
+composition surface. Generated route metadata and versioned workspace facts are
+integrated. Client generation from those facts is separate follow-up work.
 
 `packages/dust_server` exists and has a local 100% line-coverage gate.
 That includes `test/generated/`, which hand-writes what the
@@ -11,7 +12,7 @@ plugin will emit for the [Worked Example](#worked-example) below, and the
 examples in `example/`, which exercise every extractor, layer, and response path
 the plugin will emit against.
 
-`crates/dust_server_plugin` implements the ownership boundary and Phase 1.
+`crates/dust_server_plugin` implements the ownership boundary through Phase 5.
 Sections marked **runtime-checked** describe behavior that runs today rather
 than intent — and that distinction earned its keep: probing the runtime that
 way has turned up more than twenty defects, every one of which the generated
@@ -48,6 +49,8 @@ For the runtime as it exists today, see [dust_server](../dust_server/README.md).
   here; it is a `final` field on the controller.
 - Replacing `shelf`. Generated code targets the standard `Handler` contract and
   composes with existing `shelf` middleware.
+- Client generation. The server plugin publishes route facts; a separate
+  follow-up consumes them into a local client package without another contract.
 
 ## Naming
 
@@ -172,13 +175,10 @@ The complete list:
 | `@Extract(<extractor type>)` | handler parameter, custom extractor |
 | `@Path` `@Query` `@Queries` `@RawQuery` `@Header` `@HeaderMap` `@Body` `@Field` `@Part` `@RawBody` `@State` `@Peer` | handler parameter, built-in extractor |
 
-The vocabulary is deliberately the HTTP client's, not axum's spelling. `@Body()`
-means the typed body on both sides, `@HeaderMap()` merges headers on both sides,
-and `@FormUrlEncoded()`/`@MultiPart()` select the media type on both sides.
-Phase 6 generates client and server from one declaration, which is only possible
-if one annotation means one thing. Where axum's name and the client's name
-disagree, the client wins; `@Headers({...})` stays reserved for the client's
-method-level static headers.
+The vocabulary deliberately follows the existing HTTP client's spelling rather
+than axum's. That lets a later client generator map structured server route
+facts without another contract declaration. `@Headers({...})` stays reserved
+for the existing client's method-level static headers.
 
 Server verbs claim `dust_server::GET` and so on, distinct from the HTTP client's
 `dust_dart::GET`. The plugin registry rejects duplicate symbol ownership
@@ -540,8 +540,9 @@ and `@RawBody` read the body; every other built-in reads parts only.
 
 Two build diagnostics follow, with no cross-file work:
 
-- at most one body-reading built-in per handler
-- a body-reading built-in must be the last parameter
+- one body source per handler; several `@Field` values or several `@Part`
+  values share their source
+- body-reading parameters must be the final parameter group
 
 Axum gets this guarantee from `FromRequest` versus `FromRequestParts`; Dust gets
 it from the symbol table. Custom extractors are exempt, because Dust cannot know
@@ -651,11 +652,13 @@ final class RateLimit implements Layer {
 }
 ```
 
-Emission is the same trick as extractors: Dust writes
-`const RateLimit(perMinute: 30).toMiddleware()` from the lowered constructor
-call and the analyzer checks the rest. `Router.layer` also accepts bare `shelf`
-`Middleware` values at the composition site, for anything that does not need to
-be expressible in an annotation.
+Emission is the same trick as extractors: Dust rebuilds the structured const
+value from IR. Controller and module layers are passed to `Router.layer`, which
+also preserves `DisposableLayer` ownership. A verb layer writes
+`const RateLimit(perMinute: 30).toMiddleware()` around only that route, and the
+analyzer checks the contract. Opaque source expressions are rejected before
+output replacement. `Router.layer` also accepts bare `shelf` `Middleware`
+values at the handwritten composition site.
 
 Order is outermost-first: root group, then nested groups, then controller, then
 verb.
@@ -725,20 +728,28 @@ or similar, and `dust_server` carries only the seam it needs.
 
 ### The seam (runtime-checked)
 
-Two things, both generic:
+Three pieces, all generic:
 
 ```dart
 Router({Object? metadata});
 Router.module({String prefix = '', List<Route> routes = const [], Object? metadata});
+Route(String method, String path, Handler handler, {Object? metadata});
 void nest(String path, Router router);
 
 List<MountedRoute> describe();
 ```
 
 `metadata` is an opaque slot `dust_server` never reads. `describe()` walks the
-mount tree and returns each route with the path the router serves and the
-metadata of every group it was mounted through, outermost first, plus
-`metadataOf<T>()` to pull the innermost of a type back out.
+mount tree and returns each route with the path the router serves, the metadata
+of every group it was mounted through, outermost first, then its own route
+metadata. `metadataOf<T>()` pulls the innermost value of a type back out.
+
+Generated routes attach a `RouteMetadata` value containing `summary`,
+`description`, inherited and local `tags`, `operationId`, `deprecated`, and
+`hidden`. The runtime still does not interpret those fields. The plugin also
+stores versioned JSON facts under `dust_server.routes.v1`, including structured
+parameter bindings and normalized parameter/return types, for a future
+documentation package's build-time schema pass.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 
@@ -747,16 +758,15 @@ That is enough to rebuild everything the deleted emitter did, from outside:
 extension on Router {
   Map<String, Object?> openApi({required String title, required String version}) {
     for (final route in describe()) {
-      final doc = route.metadataOf<ApiDoc>();
+      final doc = route.metadataOf<RouteMetadata>();
       // ... build paths from route.method, route.path, doc
     }
   }
 }
 ```
 
-Adding it later is additive: a new package, a metadata type, and an extension
-method. No change to `Router`, no change to generated controllers beyond
-what they pass as `metadata`.
+Adding it later is additive: a new package and an extension method. No change
+to `Router` or generated controllers is required.
 
 ### What the annotations keep
 
@@ -770,37 +780,32 @@ is not a breaking change.
 ### Costs of deferring
 
 - No document at all until the separate package exists.
-- The plugin will emit `metadata:` on generated controllers before anything
-  reads it. Phase 5 decides that type, so until then generated code passes
-  nothing.
+- `RouteMetadata` and workspace facts exist, but no package turns them into an
+  OpenAPI document yet.
 - Duplicate `path` plus method is still caught, since `describe()` and
   `handler` share the same flattening and both throw on it.
 
 ## Testing
 
-Two layers, both riding existing machinery:
+Two layers cover generated server wiring without adding another handwritten
+annotation option:
 
-- Plugin fixtures under `fixtures/`, asserting emitted `.g.dart` for each
-  extractor form, response form, and diagnostic. Same shape as the other
-  plugins' fixture suites.
-- Generated route tests from Phase 3, reusing the `generateTest` machinery the
-  HTTP client plugin already has: one test per route asserting method, path,
-  status, and rejection codes against an in-process handler, with no socket.
+- Exact plugin contracts assert emitted `.g.dart` for each extractor, response,
+  and diagnostic.
+- The independently resolved `fixtures/server_codegen_app` consumer builds
+  those files and runs method, path, status, and rejection checks against its
+  in-process handler, with no socket.
 
 `dust_server` itself carries unit tests for prefix normalization, `Router`
 composition, `Rejection` encoding, and each built-in extractor.
 
 ## Worked Example
 
-The controller and `.g.dart` snippets below describe planned generation, not
-output from an existing server plugin. The executable handwritten stand-ins in
-[`test/generated/controller.dart`](../../packages/dust_server/test/generated/controller.dart)
-and [`functions.dart`](../../packages/dust_server/test/generated/functions.dart)
-exercise the runtime contract. Their
-[read](../../packages/dust_server/test/generated/read_handler_test.dart),
-[write](../../packages/dust_server/test/generated/write_handler_test.dart) and
-[function](../../packages/dust_server/test/generated/functions_test.dart) tests
-are runtime evidence, not proof that Dust emits these handlers today.
+The controller and `.g.dart` snippets below describe the generation contract.
+The current executable source, generated output, and request-mapping proof live
+in [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app). The
+handwritten files under `packages/dust_server/test/generated` remain focused
+runtime-unit fixtures rather than generator evidence.
 
 ```text
 todo_api/
@@ -1097,104 +1102,26 @@ For `POST /api/v1/todos`:
 6. The handwritten handler body runs, guarded for 500.
 7. Response dispatch encodes the result as 201 JSON.
 
-## Contracts
+## Backend-derived clients are separate
 
-Phase 6 generates a Dio client and a server controller from one declaration.
-The value is not saved keystrokes; it is that a path typo, a renamed query key,
-or a changed request type becomes a compile error on both sides at once.
+Server handlers are the source of truth. Dust does not require an
+`@HttpContract` interface or a second copy of each method. The server plugin
+publishes `dust_server.routes.v1` facts after validating the real handler.
 
-```dart
-// package:todo_api/contract.dart, depended on by client and server
-@HttpContract(baseUrl: 'https://api.example.com', tags: ['todos'])
-abstract interface class TodoApi {
-  factory TodoApi(Dio dio, {String? baseUrl}) = _$TodoApi;
+Follow-up [#186](https://github.com/dustcodegen/dust/issues/186) will consume
+those facts after the server feature lands. Its only planned configuration is
+the local destination package:
 
-  @GET('/todos/{id}', summary: 'Fetch one todo')
-  Future<Todo> get(@Path() String id);
-
-  @POST('/todos', status: 201)
-  Future<Todo> create(@Body() CreateTodo input);
-}
+```yaml
+server:
+  client_package: todo_client
 ```
 
-One declaration, two outputs:
-
-| Output | Shape |
-| :--- | :--- |
-| `_$TodoApi` | the Dio client the HTTP client plugin already emits |
-| `_$TodoApiServer` | a controller mixin whose generated handlers call the same method signatures |
-
-The server side is applied by implementing the contract:
-
-```dart
-class TodoController with _$TodoApiServer implements TodoApi {
-  TodoController(this._repo);
-  final TodoRepo _repo;
-
-  @override
-  Future<Todo> get(String id) => _repo.find(id);
-}
-```
-
-`implements TodoApi` is what makes the analyzer enforce agreement: a signature
-that drifts from the contract fails to compile in the server package.
-
-### Server-only parameters
-
-A contract method's signature is the wire signature, so parameters the client
-cannot supply are marked and skipped during client emission:
-
-| Annotation | Client | Server |
-| :--- | :--- | :--- |
-| `@Path` `@Query` `@Queries` `@Header` `@HeaderMap` `@Body` `@Field` `@Part` | sends | extracts |
-| `@Extract` `@State` `@Peer` | omitted from the client signature | extracts |
-| `Request` `RequestParts` | rejected by a diagnostic | extracts |
-
-Authentication is the common case, and omitting it from the client is correct:
-the client sends a token through a Dio interceptor, while the server turns that
-token into an `AuthUser`. The two are not the same value and should not share a
-parameter.
-
-### Argument divergence
-
-| Argument | Consumer |
-| :--- | :--- |
-| `baseUrl`, `headers`, `parseThread`, `target` | client only |
-| `status`, `middleware`, `hidden` | server only |
-| `path`, verb, `summary`, `description`, `tags`, `operationId`, `deprecated` | both |
-
-A client-only argument on a contract is not an error; the server plugin ignores
-it, and vice versa. Only a *conflict*, two paths for one method, is
-impossible by construction, which is the point.
-
-### Symbol ownership
-
-`@HttpContract` is one symbol and the registry rejects duplicate ownership
-(`crates/dust_plugin_api/src/registry.rs`), so one plugin must claim it and
-emit both sides. `dust_server_plugin` claims it and takes a crate dependency on
-`dust_http_client_plugin` for the client half.
-
-That requires the client plugin's emission to be callable as a module rather
-than only from its own `DustPlugin` entry point. Today it is organized as
-`parse/`, `validate/`, `emit/`, `plugin/`
-(`crates/dust_http_client_plugin/src/`), so the refactor is a visibility change
-plus a stable entry function, not a rewrite. Scope it as the first task of
-Phase 6.
-
-### Costs
-
-- The contract package is a third package in the dependency graph, depended on
-  by both client and server. Model types live there, so they must derive
-  `Serialize` *and* `Deserialize` even where one side needs only one direction.
-- `Result<T, E>` returns are server-only in Phase 6. The client would need to
-  map a status code back to `E`, which is a decoder the contract does not carry
-  yet. Contract methods return `Future<T>` and the client throws, as it does
-  today.
-- A contract cannot use the two sides' import-prefix escape hatch: the file
-  imports `package:dust_server/server.dart` for the annotations, so the client
-  package inherits a `shelf` dependency it does not use. Splitting the
-  annotation set into a third `dust_http_annotations` package would fix it and
-  is the open question below.
+Each `@Routes` library produces its own client in that package. Server-only
+parameters such as `@State`, `@Peer`, `@Extract`, `Request`, and `RequestParts`
+do not enter the wire signature. The future driver work must also reject types
+that the client package cannot import. None of that is part of the server
+plugin's completion gate.
 
 ## Phases
 
@@ -1202,14 +1129,14 @@ Phase 6.
 | :--- | :--- | :--- |
 | 0 | **Integrated.** Production symbol ownership and discovery; no placeholder IR or handler output. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing client output. |
 | 1 | **Integrated.** `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Native path validation and the missing-path-key diagnostic. | Generated Todo fixture serves GET and POST. |
-| 2 | `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
-| 3 | Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
-| 4 | `Router`, `merge` / `nest`, prefix normalization, `Layer` emission, middleware composition, body limit, `onError`. Verify existing runtime composition with generated handlers. | `bin/server.dart` runs end to end. |
-| 5 | `metadata:` emission on generated controllers, and whatever workspace facts the documentation package needs. Documentation itself ships separately. | A `describe()` walk recovers every route with its metadata. |
-| 6 | `@HttpContract`. Factor the client plugin's emission into a callable module, claim the symbol in `dust_server_plugin`, emit `_$TodoApi` and `_$TodoApiServer`, server-only parameter rules. | A shared contract package where a path change breaks both sides at compile time. |
+| 2 | **Integrated.** `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
+| 3 | **Integrated.** Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
+| 4 | **Integrated.** `Router`, `merge` / `nest`, prefix normalization, structured `Layer` emission, middleware composition, body limit, `onError`, and graceful serving. | The generated fixture's `bin/server.dart` path runs end to end over a loopback socket. |
+| 5 | **Integrated.** Per-route `RouteMetadata` emission plus versioned structured workspace facts. Documentation itself ships separately. | A `describe()` walk recovers every generated route with its own metadata after normal mounting. |
 
-Route-mapping test generation rides along from Phase 3 using the `generateTest`
-machinery the HTTP client plugin already has.
+Phase 4 route/composition and Phase 5 metadata proof live in the executable
+consumer fixture.
+Dust does not emit application tests or add a server `generateTest` option.
 
 ## Deferred surfaces
 
@@ -1236,17 +1163,11 @@ Add the plugin's `src/` directory to `CODEGEN_FINGERPRINT_ROOTS` in
 `crates/dust_driver/build.rs`. Its modules and templates are then included
 recursively; a new plugin directory is not discovered automatically.
 
-## Open Questions
-
-The runtime decisions below are settled. The generated Todo GET/POST fixture is
-the Phase 1 exit gate; the remaining questions apply to later phases.
-
 ## Deferred
 
-- **Moving the shared annotations to a `dust_http_annotations` package.** The
-  motivation stands — a Phase 6 contract package should not drag `shelf` into
-  client-only consumers — but the split is not being made yet. Revisit when a
-  contract package actually exists to be dragged into.
+- **Backend-derived clients.** #186 consumes route facts only after this server
+  feature lands. It must not introduce an `@HttpContract` interface or place
+  `shelf` dependencies in the generated client package.
 
 ## Resolved
 
@@ -1257,18 +1178,9 @@ the Phase 1 exit gate; the remaining questions apply to later phases.
   through it. `shelf_router` stays a **dev** dependency, as the conformance
   oracle in `test/router/conformance/`, and nothing in `lib/` imports it.
 
-- **`metadata` stays untyped, deliberately, so OpenAPI can land later.** The
-  question was what type generated controllers should pass. The answer is that
-  the runtime does not get to know: `Router` takes `Object?`, `describe()` hands
-  back `List<Object>`, and `metadataOf<T>()` lets a consumer pull out its own
-  type and ignore the rest. Naming a type in `dust_server` would drag a
-  documentation format into the runtime, which is the coupling the slot exists to
-  avoid.
-
-  Until a documentation package defines one, generated controllers pass nothing.
-  That costs only the document itself: adding it later is a new package, a
-  metadata type, and an extension method — no change to `Router`, and one extra
-  argument on generated controllers.
+- **Route metadata remains format-neutral.** Generated routes carry
+  `RouteMetadata`, and `describe()` recovers it after mounting. OpenAPI remains
+  outside the runtime and consumes the versioned route facts separately.
 
   What `describe()` already gives such a package: every route with its method,
   its path with `{name}` placeholders intact, and the metadata of every router it
@@ -1294,12 +1206,13 @@ the Phase 1 exit gate; the remaining questions apply to later phases.
   and page one.
 
 - **Validation uses the built-in `Validate()` derive.** The generator does not
-  define a validation mechanism of its own: it emits `@Derive([Validate()])` on
-  the request model and calls `validBody`, which runs the generated `validate()`
-  and answers **422** with per-field errors. That path is already proven by
-  `example/validation_422.dart` — every broken rule reported at once, and a shape
-  failure landing on the same status and body shape as a rule failure, so a
-  client writes one error renderer.
+  define a validation mechanism of its own. It recognizes
+  `@Derive([Validate()])` on a same-library body model and emits a
+  `ValidatedExtractable`, which runs the generated `validate()` and answers
+  **422** with per-field errors. Imported body models still decode, but their
+  validation must be called explicitly until cross-library derive facts are
+  available. The executable consumer fixture proves rule and shape failures use
+  the same status and body shape, so a client writes one error renderer.
 
   Whether those constraints are *also* published as a workspace fact for the
   documentation package is a separate question about the doc package, not about

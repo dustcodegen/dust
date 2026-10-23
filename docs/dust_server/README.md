@@ -4,10 +4,10 @@ Runtime for Dart HTTP servers: routing, extraction, responses, WebSockets,
 server-rendered HTML, static files, and serving across isolates.
 
 > [!IMPORTANT]
-> Beta and pre-1.0, so pin the exact version. The generator described in
-> [Server Plugin Design](../design/server-plugin.md) does not exist yet; this is
-> the runtime generated code will call, built first so the design is checked
-> against working code.
+> The server runtime is stable on the 0.2.x line. The current source checkout
+> completes all six generator phases described in
+> [Server Plugin Design](../design/server-plugin.md), including production-
+> shaped composition and route metadata.
 
 ## Sections
 

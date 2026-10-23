@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     annotated_members,
-    constructors::{extract_constructor, is_constructor_signature_kind},
+    constructors::{extract_constructor, has_const_modifier, is_constructor_signature_kind},
     fields::extract_fields_from_identifier_list,
     generics::{extract_class_mixins, extract_class_superclass, extract_class_type_parameters},
     methods::extract_method,
@@ -55,7 +55,8 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     let mut constructors = Vec::new();
     let mut methods = Vec::new();
     if let Some(primary) = node.child_by_field_name("primary_constructor") {
-        let constructor = extract_constructor(primary, &[], source);
+        let mut constructor = extract_constructor(primary, &[], source);
+        constructor.is_const = has_const_modifier(node);
         fields.extend(extract_declaring_fields(primary, &constructor.params));
         constructors.push(constructor);
     }

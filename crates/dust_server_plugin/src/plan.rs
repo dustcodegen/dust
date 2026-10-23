@@ -1,3 +1,5 @@
+/// Handler body-media and ordering validation.
+mod body;
 /// Dart identifier validation for generated declarations.
 mod identifier;
 /// Library-level lookup and validation.
@@ -16,24 +18,28 @@ mod values;
 mod tests;
 
 use dust_diagnostics::Diagnostic;
-use dust_ir::{DartFileIr, FunctionIr, MethodIr};
+use dust_ir::{ClassIr, DartFileIr, FunctionIr, MethodIr};
 
-pub(crate) use model::{Callable, ControllerPlan, Extraction, HandlerPlan, ParamPlan, ServerPlan};
+pub(crate) use model::{
+    BodyFormat, Callable, ControllerPlan, Extraction, ExtractionWrapper, HandlerPlan, ParamPlan,
+    RawBodyFormat, RouteMetadataPlan, ServerPlan,
+};
 
+use body::{parse_body_media, validate_body_order};
 use identifier::is_emittable_identifier;
 use library::{
     default_routes_name, find_config, first_server_span, is_server_config, validate_part,
     validate_unique_routes, verb_config,
 };
-use model::{Args, VERBS};
+use model::{Args, GroupPlan, VERBS};
 use param::parse_param;
 use types::unsupported_return;
 use values::{
-    error, parse_status, path_keys, required_string, string_value, validate_named,
-    validate_route_path,
+    error, parse_middleware, parse_route_metadata, parse_status, parse_tags, path_keys,
+    required_string, string_value, validate_named, validate_route_path,
 };
 
-/// Builds the validated Phase-one plan for one Dart library.
+/// Builds the validated server plan for one Dart library.
 pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut controllers = Vec::new();
@@ -57,29 +63,37 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
         if !class.type_parameters.is_empty() {
             diagnostics.push(error(
                 class.span,
-                "generic controllers are not supported in server Phase 1",
+                "generic controllers are not supported by generated server handlers",
                 "use a non-generic controller until typed controller casts are implemented",
             ));
         }
-        let prefix = parse_group(Args::Config(config), "Controller", &mut diagnostics)
-            .map(|value| value.0)
-            .unwrap_or_default();
+        let group =
+            parse_group(Args::Config(config), "Controller", &mut diagnostics).unwrap_or_default();
         let handlers = class
             .methods
             .iter()
-            .filter_map(|method| parse_method(method, &mut diagnostics))
+            .filter_map(|method| parse_method(method, &group.tags, &file.classes, &mut diagnostics))
             .collect();
         controllers.push(ControllerPlan {
             class,
-            prefix,
+            prefix: group.prefix,
             handlers,
+            middleware: group.middleware,
         });
     }
 
+    let function_group = routes.unwrap_or_default();
     let functions = file
         .functions
         .iter()
-        .filter_map(|function| parse_function(function, &mut diagnostics))
+        .filter_map(|function| {
+            parse_function(
+                function,
+                &function_group.tags,
+                &file.classes,
+                &mut diagnostics,
+            )
+        })
         .collect::<Vec<_>>();
     let has_output =
         controllers.iter().any(|value| !value.handlers.is_empty()) || !functions.is_empty();
@@ -87,7 +101,7 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
         if let Some(span) = first_server_span(file) {
             diagnostics.push(error(
                 span,
-                "server annotations do not declare a Phase 1 handler",
+                "server annotations do not declare a supported handler",
                 "add a supported HTTP verb to a controller method or top-level function",
             ));
         }
@@ -100,8 +114,9 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
 
     validate_part(file, &mut diagnostics);
     validate_unique_routes(&controllers, &functions, &mut diagnostics);
-    let (function_prefix, configured_name) = routes.unwrap_or_else(|| (String::new(), None));
-    let function_name = configured_name.unwrap_or_else(|| default_routes_name(&file.source_path));
+    let function_name = function_group
+        .configured_name
+        .unwrap_or_else(|| default_routes_name(&file.source_path));
     if !is_emittable_identifier(&function_name) {
         diagnostics.push(error(
             file.span,
@@ -116,14 +131,17 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
     Ok(Some(ServerPlan {
         controllers,
         functions,
-        function_prefix,
+        function_prefix: function_group.prefix,
         function_name,
+        function_middleware: function_group.middleware,
     }))
 }
 
 /// Normalizes one controller method when it declares a server verb.
 fn parse_method<'a>(
     method: &'a MethodIr,
+    inherited_tags: &[String],
+    classes: &[ClassIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = method
@@ -159,6 +177,8 @@ fn parse_method<'a>(
             .into_iter()
             .map(|(args, verb)| (Args::Config(args), verb))
             .collect(),
+        inherited_tags,
+        classes,
         diagnostics,
     )
 }
@@ -166,6 +186,8 @@ fn parse_method<'a>(
 /// Normalizes one top-level handler function.
 fn parse_function<'a>(
     function: &'a FunctionIr,
+    inherited_tags: &[String],
+    classes: &[ClassIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = function
@@ -180,16 +202,40 @@ fn parse_function<'a>(
         })
         .collect::<Vec<_>>();
     if verbs.is_empty() {
-        None
-    } else {
-        parse_handler(Callable::Function(function), verbs, diagnostics)
+        let has_server_metadata = function.annotations.iter().any(|annotation| {
+            annotation
+                .resolved_symbol
+                .as_ref()
+                .is_some_and(|symbol| symbol.0.starts_with("dust_server::"))
+        }) || function
+            .params
+            .iter()
+            .flat_map(|param| &param.configs)
+            .any(is_server_config);
+        if has_server_metadata {
+            diagnostics.push(error(
+                function.span,
+                "server handler is missing an HTTP verb",
+                "add exactly one server verb annotation",
+            ));
+        }
+        return None;
     }
+    parse_handler(
+        Callable::Function(function),
+        verbs,
+        inherited_tags,
+        classes,
+        diagnostics,
+    )
 }
 
 /// Validates shared handler arguments and builds its route plan.
 fn parse_handler<'a>(
     callable: Callable<'a>,
     verbs: Vec<(Args<'a>, &'static str)>,
+    inherited_tags: &[String],
+    classes: &[ClassIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     if verbs.len() != 1 {
@@ -218,18 +264,21 @@ fn parse_handler<'a>(
     let path = required_string(args, 0, "verb path", diagnostics)?;
     validate_route_path(&path, args.span(), diagnostics);
     let status = parse_status(args, diagnostics).unwrap_or(200);
+    let middleware = parse_middleware(args, diagnostics);
+    let metadata = parse_route_metadata(args, inherited_tags, callable.name());
     let placeholders = path_keys(&path);
+    let body_media = parse_body_media(callable, diagnostics);
     let params = callable
         .params()
         .iter()
-        .filter_map(|param| parse_param(param, &placeholders, diagnostics))
+        .filter_map(|param| parse_param(param, &placeholders, body_media, classes, diagnostics))
         .collect::<Vec<_>>();
-    validate_body_order(callable, &params, diagnostics);
+    validate_body_order(callable, body_media, &params, diagnostics);
     if unsupported_return(callable.return_type()) {
         diagnostics.push(error(
             callable.span(),
-            "handler return type is not supported in server Phase 1",
-            "use JSON data, void, or Response; Result and text support arrive in a later phase",
+            "handler return type is not supported by generated server handlers",
+            "use JSON data, Result, Option, text, bytes, a byte stream, Unit, void, or Response",
         ));
     }
     Some(HandlerPlan {
@@ -238,45 +287,13 @@ fn parse_handler<'a>(
         path,
         status,
         params,
+        middleware,
+        metadata,
     })
 }
 
-/// Ensures a handler reads the request body at most once and last.
-fn validate_body_order(
-    callable: Callable<'_>,
-    params: &[ParamPlan<'_>],
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let positions = params
-        .iter()
-        .enumerate()
-        .filter_map(|(index, param)| matches!(param.extraction, Extraction::Body).then_some(index))
-        .collect::<Vec<_>>();
-    if positions.len() > 1 {
-        diagnostics.push(error(
-            callable.span(),
-            "server handlers accept at most one body extractor",
-            "remove the extra Body parameter",
-        ));
-    }
-    if positions
-        .first()
-        .is_some_and(|index| *index + 1 != params.len())
-    {
-        diagnostics.push(error(
-            callable.span(),
-            "the body extractor must be the last handler parameter",
-            "move the Body parameter after all request-parts extractors",
-        ));
-    }
-}
-
 /// Reads a controller or top-level route-group annotation.
-fn parse_group(
-    args: Args<'_>,
-    name: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) -> Option<(String, Option<String>)> {
+fn parse_group(args: Args<'_>, name: &str, diagnostics: &mut Vec<Diagnostic>) -> Option<GroupPlan> {
     let allowed = if name == "Routes" {
         &["name", "tags", "middleware"][..]
     } else {
@@ -286,5 +303,12 @@ fn parse_group(
     let path = required_string(&args, 0, "route prefix", diagnostics)?;
     validate_route_path(&path, args.span(), diagnostics);
     let configured_name = args.named().get("name").and_then(string_value);
-    Some((path, configured_name))
+    let middleware = parse_middleware(&args, diagnostics);
+    let tags = parse_tags(&args);
+    Some(GroupPlan {
+        prefix: path,
+        configured_name,
+        middleware,
+        tags,
+    })
 }

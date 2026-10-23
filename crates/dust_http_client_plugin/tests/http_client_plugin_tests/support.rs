@@ -157,6 +157,7 @@ fn factory_constructor() -> ConstructorIr {
     ConstructorIr {
         name: None,
         is_factory: true,
+        is_const: false,
         redirected_target_source: Some("_$Api".to_owned()),
         redirected_target_name: Some("_$Api".to_owned()),
         redirected_target: None,
@@ -224,6 +225,7 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
             ConstructorIr {
                 name: None,
                 is_factory: false,
+                is_const: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
                 redirected_target: None,
@@ -233,6 +235,7 @@ pub(crate) fn serde_model_class(name: &str, fields: Vec<FieldIr>) -> ClassIr {
             ConstructorIr {
                 name: Some("fromJson".to_owned()),
                 is_factory: true,
+                is_const: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
                 redirected_target: None,

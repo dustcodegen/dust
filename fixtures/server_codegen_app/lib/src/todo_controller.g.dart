@@ -13,16 +13,538 @@
 
 part of 'todo_controller.dart';
 
+mixin _$CreateTodo implements Validatable {
+  /// Validates this `CreateTodo`.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final result = value.validate();
+  /// if (result case Invalid(:final errors)) {
+  ///   print(errors.first.message);
+  /// }
+  /// ```
+  ValidationResult validate() {
+    final self = this as CreateTodo;
+    final errors = <ValidationError>[];
+    _CreateTodoValidation._validateTitle(self.title, errors);
+    return errors.isEmpty ? const Valid() : Invalid(errors);
+  }
+
+  /// Throws [ValidationException] when this `CreateTodo` is invalid.
+  ///
+  /// Usage:
+  /// ```dart
+  /// value.validateOrThrow();
+  /// ```
+  void validateOrThrow() {
+    final result = validate();
+    if (result case Invalid(errors: final errors)) {
+      throw ValidationException(errors);
+    }
+  }
+}
+
 mixin _$TodoController {
   Router routes() => Router.module(
         prefix: '/todos',
         routes: [
-          Route('GET', '/{id}', _$handleRead),
-          Route('POST', '/', _$handleCreate),
-          Route('DELETE', '/', _$handleClear),
-          Route('OPTIONS', '/raw', _$handleRaw),
+          Route(
+            'GET',
+            '/required-auth',
+            _$handleRequiredAuth,
+            metadata: const RouteMetadata(
+              operationId: 'requiredAuth',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/optional-auth',
+            _$handleOptionalAuth,
+            metadata: const RouteMetadata(
+              operationId: 'optionalAuth',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/optional-page',
+            _$handleOptionalPage,
+            metadata: const RouteMetadata(
+              operationId: 'optionalPage',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/fallible-write-auth',
+            _$handleFallibleWriteAuth,
+            metadata: const RouteMetadata(
+              operationId: 'fallibleWriteAuth',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/query',
+            _$handleQuery,
+            metadata: const RouteMetadata(
+              operationId: 'query',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/',
+            _$handleCreate,
+            metadata: const RouteMetadata(
+              operationId: 'create',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/form-model',
+            _$handleFormModel,
+            metadata: const RouteMetadata(
+              operationId: 'formModel',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/form-fields',
+            _$handleFormFields,
+            metadata: const RouteMetadata(
+              operationId: 'formFields',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/multipart',
+            _$handleMultipart,
+            metadata: const RouteMetadata(
+              operationId: 'multipart',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/raw-text',
+            _$handleRawText,
+            metadata: const RouteMetadata(
+              operationId: 'rawText',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/raw-bytes',
+            _$handleRawBytes,
+            metadata: const RouteMetadata(
+              operationId: 'rawBytes',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/raw-stream',
+            _$handleRawStream,
+            metadata: const RouteMetadata(
+              operationId: 'rawStream',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/context',
+            _$handleContext,
+            metadata: const RouteMetadata(
+              operationId: 'context',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/request',
+            _$handleRequest,
+            metadata: const RouteMetadata(
+              operationId: 'request',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/layers',
+            const TraceLayer('route').toMiddleware()(_$handleLayers),
+            metadata: const RouteMetadata(
+              operationId: 'traceLayers',
+              summary: 'Show middleware order',
+              description: 'Returns the layer names observed by the generated handler.',
+              tags: ['todos', 'diagnostics'],
+              deprecated: true,
+              hidden: true,
+            ),
+          ),
+          Route(
+            'GET',
+            '/result',
+            _$handleResult,
+            metadata: const RouteMetadata(
+              operationId: 'result',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/option',
+            _$handleOption,
+            metadata: const RouteMetadata(
+              operationId: 'option',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'POST',
+            '/unit',
+            _$handleUnitResult,
+            metadata: const RouteMetadata(
+              operationId: 'unitResult',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/failure',
+            _$handleFailure,
+            metadata: const RouteMetadata(
+              operationId: 'failure',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/{id}',
+            _$handleRead,
+            metadata: const RouteMetadata(
+              operationId: 'read',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'DELETE',
+            '/',
+            _$handleClear,
+            metadata: const RouteMetadata(
+              operationId: 'clear',
+              tags: ['todos'],
+            ),
+          ),
+          Route(
+            'OPTIONS',
+            '/raw',
+            _$handleRaw,
+            metadata: const RouteMetadata(
+              operationId: 'raw',
+              tags: ['todos'],
+            ),
+          ),
         ],
-      );
+      )
+      ..layer(const TraceLayer('controller'));
+
+  Future<Response> _$handleRequiredAuth(Request request) async {
+    final Result<AuthUser, Rejection> _dustResult0 =
+        await const BearerAuth().extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<AuthUser, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).requiredAuth(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleOptionalAuth(Request request) async {
+    final Result<Option<AuthUser>, Rejection> _dustResult0 =
+        await const OptionalExtractable<AuthUser>(BearerAuth())
+            .extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<Option<AuthUser>, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).optionalAuth(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleOptionalPage(Request request) async {
+    final Result<Option<int>, Rejection> _dustResult0 =
+        await const OptionalExtractable<int>(QueryExtractable<int>('page'))
+            .extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<Option<int>, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).optionalPage(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleFallibleWriteAuth(Request request) async {
+    final Result<Result<AuthUser, Rejection>, Rejection> _dustResult0 =
+        await const FallibleExtractable<AuthUser>(TodosWrite())
+            .extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 =
+        (_dustResult0 as Ok<Result<AuthUser, Rejection>, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).fallibleWriteAuth(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleQuery(Request request) async {
+    final Result<int, Rejection> _dustResult0 =
+        await const QueryExtractable<int>('page').extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<int, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).query(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleCreate(Request request) async {
+    final Result<CreateTodo, Rejection> _dustResult0 =
+        await const ValidatedExtractable<CreateTodo>(
+      JsonExtractable<CreateTodo>(CreateTodo.deserialize),
+    ).extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<CreateTodo, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).create(_dustValue0),
+        status: 201,
+      ),
+    );
+  }
+
+  Future<Response> _$handleFormModel(Request request) async {
+    final Result<CreateTodo, Rejection> _dustResult0 =
+        await const ValidatedExtractable<CreateTodo>(
+      FormModelExtractable<CreateTodo>(CreateTodo.deserialize),
+    ).extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<CreateTodo, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).formModel(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleFormFields(Request request) async {
+    final Result<FormMap, Rejection> _dustBodyResult =
+        await const FormExtractable().extract(request);
+    if (_dustBodyResult case Err(:final error)) return error.intoResponse();
+    final _dustBody = (_dustBodyResult as Ok<FormMap, Rejection>).value;
+
+    final Result<String, Rejection> _dustResult0 =
+        _dustBody.field<String>('title');
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<String, Rejection>).value;
+
+    final Result<Option<int>, Rejection> _dustResult1 =
+        optionalExtractionResult<int>(_dustBody.field<int>('priority'));
+    if (_dustResult1 case Err(:final error)) return error.intoResponse();
+    final _dustValue1 = (_dustResult1 as Ok<Option<int>, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).formFields(
+          _dustValue0,
+          _dustValue1,
+        ),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleMultipart(Request request) async {
+    final Result<MultipartForm, Rejection> _dustBodyResult =
+        await const MultipartExtractable().extract(request);
+    if (_dustBodyResult case Err(:final error)) return error.intoResponse();
+    final _dustBody = (_dustBodyResult as Ok<MultipartForm, Rejection>).value;
+
+    final Result<String, Rejection> _dustResult0 =
+        _dustBody.field<String>('title');
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<String, Rejection>).value;
+
+    final Result<UploadedFile, Rejection> _dustResult1 =
+        _dustBody.file('file');
+    if (_dustResult1 case Err(:final error)) return error.intoResponse();
+    final _dustValue1 = (_dustResult1 as Ok<UploadedFile, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).multipart(
+          _dustValue0,
+          _dustValue1,
+        ),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleRawText(Request request) async {
+    final Result<String, Rejection> _dustResult0 =
+        await const TextBodyExtractable().extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<String, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).rawText(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleRawBytes(Request request) async {
+    final Result<Uint8List, Rejection> _dustResult0 =
+        await const RawBodyExtractable().extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<Uint8List, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).rawBytes(_dustValue0),
+        status: 202,
+      ),
+    );
+  }
+
+  Future<Response> _$handleRawStream(Request request) async {
+    final Result<Stream<List<int>>, Rejection> _dustResult0 =
+        await const StreamBodyExtractable().extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 =
+        (_dustResult0 as Ok<Stream<List<int>>, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).rawStream(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleContext(Request request) async {
+    final Result<String?, Rejection> _dustResult0 =
+        await const RawQueryExtractable().extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<String?, Rejection>).value;
+
+    final Result<TodoState, Rejection> _dustResult1 =
+        await const StateExtractable<TodoState>().extract(request);
+    if (_dustResult1 case Err(:final error)) return error.intoResponse();
+    final _dustValue1 = (_dustResult1 as Ok<TodoState, Rejection>).value;
+
+    final Result<PeerInfo, Rejection> _dustResult2 =
+        await const PeerExtractable().extract(request);
+    if (_dustResult2 case Err(:final error)) return error.intoResponse();
+    final _dustValue2 = (_dustResult2 as Ok<PeerInfo, Rejection>).value;
+
+    final _dustValue3 = RequestParts.of(request);
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).context(
+          _dustValue0,
+          _dustValue1,
+          _dustValue2,
+          _dustValue3,
+        ),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleRequest(Request request) async {
+    final _dustValue0 = request;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).request(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleLayers(Request request) async {
+    final _dustValue0 = request;
+
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).layers(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleResult(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).result(),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleOption(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).option(),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleUnitResult(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).unitResult(),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleFailure(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as TodoController).failure(),
+        status: 200,
+      ),
+    );
+  }
 
   Future<Response> _$handleRead(Request request) async {
     final Result<int, Rejection> _dustResult0 =
@@ -52,22 +574,6 @@ mixin _$TodoController {
     );
   }
 
-  Future<Response> _$handleCreate(Request request) async {
-    final Result<CreateTodo, Rejection> _dustResult0 =
-        await const JsonExtractable<CreateTodo>(
-      CreateTodo.deserialize,
-    ).extract(request);
-    if (_dustResult0 case Err(:final error)) return error.intoResponse();
-    final _dustValue0 = (_dustResult0 as Ok<CreateTodo, Rejection>).value;
-
-    return guard(
-      () async => responseFrom(
-        await (this as TodoController).create(_dustValue0),
-        status: 201,
-      ),
-    );
-  }
-
   Future<Response> _$handleClear(Request request) async {
     return guard(() async {
       await (this as TodoController).clear();
@@ -85,10 +591,28 @@ mixin _$TodoController {
   }
 }
 
+extension _CreateTodoValidation on CreateTodo {
+  static void _validateTitle(String title, List<ValidationError> errors) {
+    if (title.length < 1) {
+      errors.add(ValidationError(field: 'title', message: 'must not be empty'));
+    }
+  }
+
+}
+
 Router todoControllerRoutes() => Router.module(
       prefix: '',
       routes: [
-        Route('GET', '/health', _$handleHealth),
+        Route(
+          'GET',
+          '/health',
+          _$handleHealth,
+          metadata: const RouteMetadata(
+            operationId: 'health',
+            summary: 'Check fixture health',
+            tags: ['operations'],
+          ),
+        ),
       ],
     );
 

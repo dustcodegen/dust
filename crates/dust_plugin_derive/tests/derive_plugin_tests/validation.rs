@@ -54,6 +54,7 @@ fn copywith_requires_reconstructible_constructor() {
             constructors: vec![ConstructorIr {
                 name: None,
                 is_factory: false,
+                is_const: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
                 redirected_target: None,
@@ -133,6 +134,7 @@ fn copywith_rejects_abstract_classes() {
             constructors: vec![ConstructorIr {
                 name: None,
                 is_factory: false,
+                is_const: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
                 redirected_target: None,
@@ -212,6 +214,7 @@ fn rejects_mixin_class_targets() {
             constructors: vec![ConstructorIr {
                 name: None,
                 is_factory: false,
+                is_const: false,
                 redirected_target_source: None,
                 redirected_target_name: None,
                 redirected_target: None,

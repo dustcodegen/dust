@@ -75,4 +75,31 @@ void main() {
       expect(expectOk(outcome), isA<None<dynamic>>());
     });
   });
+
+  group('already evaluated extraction', () {
+    test('applies optional semantics without reading again', () {
+      expect(
+        optionalExtractionResult(const Ok<int, Rejection>(7)),
+        const Ok<Option<int>, Rejection>(Some(7)),
+      );
+      expect(
+        optionalExtractionResult(
+          const Err<int, Rejection>(Rejection.badRequest('missing')),
+        ),
+        const Ok<Option<int>, Rejection>(None<int>()),
+      );
+      expectStatus(
+        optionalExtractionResult(
+          const Err<int, Rejection>(Rejection.internal('broken')),
+        ),
+        500,
+      );
+    });
+
+    test('hands a fallible result through unchanged', () {
+      const input = Err<int, Rejection>(Rejection.badRequest('missing'));
+
+      expect(expectOk(fallibleExtractionResult(input)), same(input));
+    });
+  });
 }

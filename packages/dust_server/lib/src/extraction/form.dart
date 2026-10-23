@@ -6,6 +6,7 @@ import 'package:shelf/shelf.dart';
 import '../request/coercion.dart';
 import '../request/request_parts.dart';
 import '../response/rejection.dart';
+import '../response/validation.dart';
 import 'body_reader.dart';
 import 'extractable.dart';
 
@@ -69,6 +70,36 @@ final class FormExtractable implements FromRequest<FormMap> {
           return Err(
             Rejection.badRequest('malformed form body: ${error.message}'),
           );
+        }
+    }
+  }
+}
+
+/// Decodes a URL-encoded form into a model.
+///
+/// Generated `@FormUrlEncoded()` handlers use this for `@Body()` while
+/// `@Field()` handlers use [FormExtractable] once and read several values from
+/// the resulting [FormMap].
+final class FormModelExtractable<T> implements FromRequest<T> {
+  /// Creates a typed form decoder.
+  const FormModelExtractable(this.deserialize, {this.limit = defaultBodyLimit});
+
+  /// Builds the model from decoded form fields.
+  final T Function(Map<String, Object?> fields) deserialize;
+
+  /// The maximum body size, in bytes.
+  final int limit;
+
+  @override
+  Future<Result<T, Rejection>> extract(Request request) async {
+    switch (await FormExtractable(limit: limit).extract(request)) {
+      case Err(:final error):
+        return Err(error);
+      case Ok(:final value):
+        try {
+          return Ok(deserialize(value.fields.cast<String, Object?>()));
+        } on Object catch (error) {
+          return Err(decodeRejection(error, subject: 'form body'));
         }
     }
   }

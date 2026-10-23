@@ -6,12 +6,11 @@
 dart pub add dust_server
 ```
 
-It is a prerelease, so `pub add` will not pick it up without an explicit
-constraint. Pin the exact version — the API can still change before 1.0:
+The current stable line is 0.2.x. To state the minimum explicitly:
 
 ```yaml
 dependencies:
-  dust_server: 0.1.0-beta.2
+  dust_server: ^0.2.1
 ```
 
 Inside this workspace, depend on it by path instead:
@@ -64,29 +63,47 @@ folder decides what stays internal.
 
 ## Trying it
 
-Generate a controller:
+Generate a small function-based route module:
 
 ```dart
+@Routes('/items', name: 'itemRoutes')
+library;
+
 import 'package:dust_server/server.dart';
 
-part 'todo_controller.g.dart';
+part 'items.g.dart';
 
-@Controller('/todos')
-final class TodoController with _$TodoController {
-  @GET('/{id}')
-  Future<Map<String, Object?>> read(@Path() int id) async => {'id': id};
-}
+@GET('/{id}')
+Future<Map<String, Object?>> read(
+  @Path() int id, {
+  @Query('details') bool? details,
+}) async => {'id': id, 'details': details ?? false};
+
+@POST('/', status: 201)
+Future<Map<String, Object?>> create(@Query('name') String name) async =>
+    {'name': name};
+
+@DELETE('/{id}')
+Future<void> delete(@Path() int id) async {}
 ```
 
 ```bash
 dust build
 ```
 
-Mount `TodoController().routes()` with `Router.merge`. Phase 1 also supports
-top-level verb functions and `@Query`, `@Queries`, `@Header`, `@HeaderMap`, and
-`@Body`. It intentionally rejects later-phase extractors with a build
-diagnostic. A runnable GET/POST example and request tests live in
-[`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+Mount `itemRoutes()` with `Router.merge`. Use `@Controller` when class-owned
+dependencies make a class clearer. Generated handlers also support `@Queries`, `@Header`, `@HeaderMap`,
+`@Body`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`, bare
+`Request`/`RequestParts`, and `@Extract(Type)`. Declare an extractor parameter
+as `Option<T>` to collapse client rejections to `None`, or as
+`Result<T, Rejection>` to pass the outcome to the handler; the same wrappers
+work with built-in extractors. A runnable generated example and request tests
+live in [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+
+Automatic `Validate()` wrapping currently requires the body model and handler
+to be declared in the same Dart library. An imported body model still decodes,
+but validate it explicitly in the handler until cross-library derive facts are
+available.
 
 The runtime-only examples remain useful without generation:
 

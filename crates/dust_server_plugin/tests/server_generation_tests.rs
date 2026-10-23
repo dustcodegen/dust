@@ -1,8 +1,8 @@
-//! Server Phase-one generation and rejection contracts.
+//! Server generation and rejection contracts.
 
 use dust_ir::{
     AnnotationValueIr, ClassIr, ClassKindIr, ConfigApplicationIr, DartFileIr, MethodIr,
-    MethodParamIr, ParamKind, PartIr, SpanIr, SymbolId, TypeIr,
+    MethodParamIr, NameIr, ParamKind, PartIr, SpanIr, SymbolId, TypeIr,
 };
 use dust_plugin_api::{DustPlugin, PluginContext, SymbolPlan};
 use dust_server_plugin::register_plugin;
@@ -20,6 +20,15 @@ fn configured(symbol: &str, positional_args: Vec<AnnotationValueIr>) -> ConfigAp
         Default::default(),
         span(),
     )
+}
+
+fn member(source: &str) -> AnnotationValueIr {
+    AnnotationValueIr::Member(NameIr {
+        source: source.to_owned(),
+        short: source.rsplit('.').next().unwrap().to_owned(),
+        prefix: source.rsplit_once('.').map(|(prefix, _)| prefix.to_owned()),
+        span: span(),
+    })
 }
 
 fn param(name: &str, ty: TypeIr, config: ConfigApplicationIr) -> MethodParamIr {
@@ -117,7 +126,7 @@ fn generates_controller_routes_and_phase_one_extractors() {
     assert_eq!(members.len(), 2);
     assert_eq!(
         members[0],
-        "Router routes() => Router.module(\n      prefix: '/todos',\n      routes: [\n        Route('GET', '/{todoId}', _$handleGet),\n      ],\n    );"
+        "Router routes() => Router.module(\n      prefix: '/todos',\n      routes: [\n        Route(\n          'GET',\n          '/{todoId}',\n          _$handleGet,\n          metadata: const RouteMetadata(\n            operationId: 'get',\n          ),\n        ),\n      ],\n    );"
     );
     assert_eq!(
         members[1],
@@ -146,7 +155,83 @@ fn generates_controller_routes_and_phase_one_extractors() {
 }
 
 #[test]
-fn rejects_missing_path_key_and_later_phase_extractor() {
+fn generates_exact_custom_and_wrapped_extractor_code() {
+    let direct = param(
+        "user",
+        TypeIr::named("AuthUser"),
+        configured("dust_server::Extract", vec![member("auth.BearerAuth")]),
+    );
+    let optional = param(
+        "viewer",
+        TypeIr::generic("Option", vec![TypeIr::named("AuthUser")]),
+        configured("dust_server::Extract", vec![member("BearerAuth")]),
+    );
+    let fallible = param(
+        "write",
+        TypeIr::generic(
+            "Result",
+            vec![TypeIr::named("AuthUser"), TypeIr::named("Rejection")],
+        ),
+        configured("dust_server::Extract", vec![member("TodosWrite")]),
+    );
+    let page = param(
+        "page",
+        TypeIr::generic("Option", vec![TypeIr::int()]),
+        configured(
+            "dust_server::Query",
+            vec![AnnotationValueIr::String("page".to_owned())],
+        ),
+    );
+    let library = library(method(vec![direct, optional, fallible, page], "/"));
+    let plugin = register_plugin();
+    assert_eq!(plugin.validate(&library), []);
+    let plan = SymbolPlan::default();
+    let output = plugin.generate(&library, &PluginContext { symbol_plan: &plan });
+
+    assert_eq!(
+        output[0].mixin_members[0].members[1],
+        r#"Future<Response> _$handleGet(Request request) async {
+  final Result<AuthUser, Rejection> _dustResult0 =
+      await const auth.BearerAuth().extract(request);
+  if (_dustResult0 case Err(:final error)) return error.intoResponse();
+  final _dustValue0 = (_dustResult0 as Ok<AuthUser, Rejection>).value;
+
+  final Result<Option<AuthUser>, Rejection> _dustResult1 =
+      await const OptionalExtractable<AuthUser>(BearerAuth())
+          .extract(request);
+  if (_dustResult1 case Err(:final error)) return error.intoResponse();
+  final _dustValue1 = (_dustResult1 as Ok<Option<AuthUser>, Rejection>).value;
+
+  final Result<Result<AuthUser, Rejection>, Rejection> _dustResult2 =
+      await const FallibleExtractable<AuthUser>(TodosWrite())
+          .extract(request);
+  if (_dustResult2 case Err(:final error)) return error.intoResponse();
+  final _dustValue2 =
+      (_dustResult2 as Ok<Result<AuthUser, Rejection>, Rejection>).value;
+
+  final Result<Option<int>, Rejection> _dustResult3 =
+      await const OptionalExtractable<int>(QueryExtractable<int>('page'))
+          .extract(request);
+  if (_dustResult3 case Err(:final error)) return error.intoResponse();
+  final _dustValue3 = (_dustResult3 as Ok<Option<int>, Rejection>).value;
+
+  return guard(
+    () async => responseFrom(
+      await (this as Todos).get(
+        _dustValue0,
+        _dustValue1,
+        _dustValue2,
+        _dustValue3,
+      ),
+      status: 200,
+    ),
+  );
+}"#
+    );
+}
+
+#[test]
+fn rejects_missing_path_key_and_malformed_custom_extractor() {
     let path = param(
         "id",
         TypeIr::string(),
@@ -173,6 +258,6 @@ fn rejects_missing_path_key_and_later_phase_extractor() {
     assert!(
         messages
             .iter()
-            .any(|message| message.contains("not supported in server Phase 1"))
+            .any(|message| message.contains("requires one extractor type"))
     );
 }

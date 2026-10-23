@@ -87,6 +87,7 @@ fn decoded_calls_preserve_optional_slots_and_never_omit_required_nullables() {
         let constructor = ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,

@@ -55,6 +55,7 @@ fn main() {
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: false,
+            is_const: false,
             redirected_target_source: None,
             redirected_target_name: None,
             redirected_target: None,
@@ -91,6 +92,7 @@ fn main() {
         constructors: vec![ConstructorIr {
             name: None,
             is_factory: true,
+            is_const: false,
             redirected_target_source: Some("_$BenchDao".to_owned()),
             redirected_target_name: Some("_$BenchDao".to_owned()),
             redirected_target: None,

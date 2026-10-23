@@ -6,7 +6,8 @@ use tree_sitter::Node;
 
 use crate::annotations::{extract_annotation, extract_direct_annotations};
 use crate::syntax::{
-    direct_named_child, find_first_descendant, find_first_descendant_by, node_text, text_range,
+    direct_named_child, find_first_descendant, find_first_descendant_by, has_direct_child_kind,
+    node_text, text_range,
 };
 use crate::types::extract_type_before;
 
@@ -38,6 +39,7 @@ pub(super) fn extract_constructor(
         return ParsedConstructorSurface {
             name: None,
             is_factory: false,
+            is_const: false,
             annotations: annotations.to_vec(),
             redirected_target_source: None,
             redirected_target_name: None,
@@ -50,6 +52,9 @@ pub(super) fn extract_constructor(
         signature.kind(),
         "factory_constructor_signature" | "redirecting_factory_constructor_signature"
     );
+    let is_const = signature.kind() == "constant_constructor_signature"
+        || has_const_modifier(signature)
+        || has_const_modifier(node);
     let name = constructor_name(signature, source);
 
     let params = find_first_descendant(signature, "formal_parameter_list")
@@ -61,6 +66,7 @@ pub(super) fn extract_constructor(
     ParsedConstructorSurface {
         name,
         is_factory,
+        is_const,
         annotations: annotations.to_vec(),
         redirected_target_source,
         redirected_target_name,
@@ -68,6 +74,11 @@ pub(super) fn extract_constructor(
         params,
         span: text_range(signature),
     }
+}
+
+/// Recognizes the pinned grammar's named node and the listed grammar's token.
+pub(super) fn has_const_modifier(node: Node<'_>) -> bool {
+    has_direct_child_kind(node, "const_builtin") || has_direct_child_kind(node, "const")
 }
 
 /// Returns whether a tree-sitter kind represents a constructor signature.

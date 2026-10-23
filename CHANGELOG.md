@@ -8,6 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Server**: add an executable function-first GET/POST/DELETE example proving
+  path and query extraction without `@Controller` (#171).
+
+- **Server**: complete Phase 5 route metadata with inherited tags,
+  per-operation `RouteMetadata`, typed `describe()` recovery, and versioned
+  structured workspace facts for future documentation tooling (#185).
+
+- **Server**: complete Phase 4 generated composition with structured
+  controller/route middleware, a real `serve` entrypoint, nested-prefix proof,
+  body limits, request-scoped error reporting, and graceful shutdown (#183).
+
+- **Server**: complete Phase 3 generated-handler parity with form, multipart,
+  raw body/query, state, peer, request passthrough, validation, typed response
+  dispatch, guarded failures, body-order diagnostics, and executable
+  400/413/415/422/500 regression coverage (#182).
+
+- **Server**: generate custom `@Extract(Type)` parameters and structural
+  `Option<T>` / `Result<T, Rejection>` extractor wrappers, with early
+  diagnostics for invalid same-library extractor constructors (#173).
+
 - **Database**: explicitly opt into generated static `openBackground` for
   SQLite facades, using embedded migrations and an asynchronous worker-safe
   unsafe-SQL adapter. Existing synchronous-only output stays unchanged (#25).
@@ -18,9 +38,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Server**: report top-level functions that use server annotations or
+  extractors without declaring an HTTP verb instead of silently omitting them
+  when another valid route exists.
+
 - **dust_db_sqlite3**: verify exact migration checksums and missing history
   before pending SQL, serialize managed startup, and require an explicit
   reviewed baseline for old name-only history (#22).
+
+### Changed
+
+- **Server**: mark the 0.2.x runtime and generated server surface stable in
+  current-facing documentation. Operational soak, shutdown-under-load, and
+  deployment evidence remain tracked separately from API stability.
+
+- Repository development checks, including coverage floors, run from the local
+  pre-commit hook. GitHub Actions are reserved for Rust releases. The generated
+  server fixture is included in the hook's stale-output guard.
 
 ## [v0.2.1] - 2026-09-28
 

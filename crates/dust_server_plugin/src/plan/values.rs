@@ -5,6 +5,11 @@ use dust_ir::{AnnotationNumberKindIr, AnnotationValueIr, SpanIr};
 
 use super::model::Args;
 
+/// Route-documentation metadata parsing.
+mod metadata;
+
+pub(super) use metadata::{parse_route_metadata, parse_tags};
+
 #[cfg(test)]
 /// Focused annotation-value and route-path tests.
 mod tests;
@@ -67,6 +72,64 @@ pub(super) fn validate_named(args: &Args<'_>, allowed: &[&str], diagnostics: &mu
             "`middleware` must be a list",
             "use a const middleware list",
         ));
+    }
+}
+
+/// Returns middleware constants after rejecting shapes that cannot be emitted safely.
+pub(super) fn parse_middleware(
+    args: &Args<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> Vec<AnnotationValueIr> {
+    let Some(AnnotationValueIr::List(values)) = args.named().get("middleware") else {
+        return Vec::new();
+    };
+    values
+        .iter()
+        .filter_map(|value| {
+            if matches!(
+                value,
+                AnnotationValueIr::Constructor { .. } | AnnotationValueIr::Member(_)
+            ) && is_emittable_const(value)
+            {
+                Some(value.clone())
+            } else {
+                diagnostics.push(error(
+                    args.span(),
+                    "middleware entries must be structured const Layer values",
+                    "use a const constructor or constant reference",
+                ));
+                None
+            }
+        })
+        .collect()
+}
+
+/// Returns whether a constant can be rebuilt entirely from structured IR.
+fn is_emittable_const(value: &AnnotationValueIr) -> bool {
+    match value {
+        AnnotationValueIr::Null
+        | AnnotationValueIr::Bool(_)
+        | AnnotationValueIr::String(_)
+        | AnnotationValueIr::Number { .. }
+        | AnnotationValueIr::Member(_) => true,
+        AnnotationValueIr::List(values) | AnnotationValueIr::Set(values) => {
+            values.iter().all(is_emittable_const)
+        }
+        AnnotationValueIr::Map(values) => values
+            .iter()
+            .all(|(key, value)| is_emittable_const(key) && is_emittable_const(value)),
+        AnnotationValueIr::Record(values) => {
+            values.iter().all(|(_, value)| is_emittable_const(value))
+        }
+        AnnotationValueIr::Constructor {
+            positional_args,
+            named_args,
+            ..
+        } => {
+            positional_args.iter().all(is_emittable_const)
+                && named_args.values().all(is_emittable_const)
+        }
+        AnnotationValueIr::Expression(_) => false,
     }
 }
 
