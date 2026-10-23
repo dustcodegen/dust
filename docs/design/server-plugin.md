@@ -1,8 +1,9 @@
 # Server Plugin Design
 
-Status: proposal, with the runtime built. This document describes a Dust feature
-for generating Dart HTTP server wiring from annotated controller classes, with
-runtime route composition.
+Status: Phase 0 integrated, with the runtime built. Dust now owns and discovers
+the server annotations in production, then fails with a source-labelled
+diagnostic because handler generation begins in Phase 1. This document defines
+that generation and runtime route composition.
 
 `packages/dust_server` exists and has a local 100% line-coverage gate.
 That includes `test/generated/`, which hand-writes what the
@@ -10,10 +11,11 @@ plugin will emit for the [Worked Example](#worked-example) below, and the
 examples in `example/`, which exercise every extractor, layer, and response path
 the plugin will emit against.
 
-No plugin crate exists yet. Sections marked **runtime-checked** describe
-behavior that runs today rather than intent — and that distinction earned its
-keep: probing the runtime that way has turned up more than twenty defects, every
-one of which the generated code would otherwise have been built on top of.
+`crates/dust_server_plugin` implements the Phase-0 ownership boundary only.
+Sections marked **runtime-checked** describe behavior that runs today rather
+than intent — and that distinction earned its keep: probing the runtime that
+way has turned up more than twenty defects, every one of which the generated
+code would otherwise have been built on top of.
 
 Exact test counts are deliberately absent here. They have gone stale in this
 document four times; `packages/dust_server/CHANGELOG.md` pins the number for a
@@ -83,16 +85,14 @@ Serving entrypoints also import `dart:io` for `InternetAddress`; shelf's
 
 ## Engine Prerequisites
 
-Namespace ownership [#84](https://github.com/dustcodegen/dust/issues/84) blocks
-phase 0. The [approved policy](annotation-namespaces.md)
-requires actual import/declaration identity, not registration-order or prefix
-guesses. Catalog retention [#105](https://github.com/dustcodegen/dust/pull/105)
-[directive namespace facts](directive-namespace-facts.md), and the
-[shared literal decoder](static-dart-literals.md) are prerequisites, not the full
-binding fix. Do not enable the default server registry until graph/all-site
-binding, legacy compatibility and all ownership acceptance gates pass. The
-original regression spike [#85](https://github.com/dustcodegen/dust/pull/85)
-is not the full fix.
+Phase 0 follows the [approved namespace policy](annotation-namespaces.md):
+ownership comes from actual import/declaration identity, never registration
+order or prefix guesses. The production namespace graph covers all metadata
+sites, legacy compatibility, generated-library ownership, and real server
+barrels. The original regression spike
+[#85](https://github.com/dustcodegen/dust/pull/85) was not sufficient by itself;
+the production loader and command-level preservation tests are the enabling
+evidence.
 
 The runtime contract aligned in [#87](https://github.com/dustcodegen/dust/pull/87)
 is included here; the generator must follow that reviewed contract as well.
@@ -100,16 +100,15 @@ is included here; the generator must follow that reviewed contract as well.
 The [phase-0 ownership regressions](../../crates/dust_resolver/tests/namespace_cases/server_surface.rs)
 load the actual annotation declarations and annotation barrel, covering all
 24 server annotations, conflicting client names in both registration orders,
-and class/library/handler/parameter metadata coordinates. Their server catalog
-is test-only: passing them is not production plugin registration, generated
-handlers, or completion of #84's loader/ownership acceptance gates.
+and class/library/handler/parameter metadata coordinates. The default registry
+now uses the same exact declarations. Passing these tests proves ownership, not
+generated handlers.
 
 The [public-entrypoint controls](../../fixtures/namespace_server_barrel/README.md)
 also exercise the production loader against actual Dust runtime sources, with
-test-only server catalog claims and separate default-registry build/check,
-cache preservation and recovery. Real minimum/latest SDK consumers verify the
-unregistered-server case. These scoped checks still do not enable or complete
-default server integration or generated handlers.
+default-registry build/check, cache preservation and recovery. Server sources
+are discovered, retain server-owned identities, and fail before any output is
+created or replaced. These checks still do not implement generated handlers.
 
 ### Cleared: class interfaces in IR
 
@@ -1201,7 +1200,7 @@ Phase 6.
 
 | Phase | Scope | Exit criteria |
 | :--- | :--- | :--- |
-| 0 | Symbol-ownership spike. Resolve #84 before enabling crate/driver/registry integration; introduce shared IR when emission consumes it. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing client output. |
+| 0 | **Integrated.** Production symbol ownership and discovery; no placeholder IR or handler output. | Server and client ownership is independent of registration order and import prefixes; discovery finds both without changing client output. |
 | 1 | `@Controller` and verbs with the full argument set, for both class and top-level-function handlers. `@Path`, `@Query`, `@Queries`, `@Header`, `@HeaderMap`, `@Body`. Response dispatch for JSON, `void`, `Response`. Native path validation and the missing-path-key diagnostic. | Todo controller serves GET and POST. |
 | 2 | `@Extract(Type)` glue emission, zero-argument const-constructor diagnostic, `Option` and `Result` unwrapping, ordering, parameter diagnostics. | `BearerAuth` and `TodosWrite` both work. |
 | 3 | Full axum rejection taxonomy including 413 and 415. `@FormUrlEncoded`, `@MultiPart`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`. `status`, `Result<T, E>` returns, streams, bytes, text, `Validate` to 422, 500 guard. Body-ordering diagnostics. | Full todo controller; every row of the rejection table covered by a fixture. |
@@ -1239,10 +1238,9 @@ recursively; a new plugin directory is not discovered automatically.
 
 ## Open Questions
 
-The approved namespace-binding and legacy alias policy in #84 still needs
-implementation beyond the catalog foundation and remains blocking for phase 0.
-The runtime decisions below are settled, but do not prove that the generator or
-its engine prerequisites are complete.
+The runtime decisions below are settled. Phase 1 must still prove generated
+handlers against the executable Todo GET/POST exit gate before server codegen is
+presented as usable.
 
 ## Deferred
 

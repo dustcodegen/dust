@@ -7,6 +7,7 @@ use dust_plugin_api::{DustPlugin, MetadataOutput, PluginExecutionMode, PluginReg
 use dust_plugin_derive::register_plugin as register_derive_plugin;
 use dust_plugin_serde::register_plugin as register_serde_plugin;
 use dust_route_plugin::register_plugin as register_route_plugin;
+use dust_server_plugin::register_plugin as register_server_plugin;
 use dust_state_plugin::register_plugin as register_state_plugin;
 
 /// Selects which plugin registry should run for a command.
@@ -88,6 +89,10 @@ const BUILTIN_PLUGINS: &[PluginRegistration] = &[
         validating_factory: None,
     },
     PluginRegistration {
+        default_factory: boxed_server_plugin,
+        validating_factory: None,
+    },
+    PluginRegistration {
         default_factory: boxed_state_plugin,
         validating_factory: None,
     },
@@ -153,6 +158,11 @@ fn boxed_route_plugin() -> Box<dyn DustPlugin> {
     Box::new(register_route_plugin())
 }
 
+/// Creates the server ownership plugin behind the shared factory contract.
+fn boxed_server_plugin() -> Box<dyn DustPlugin> {
+    Box::new(register_server_plugin())
+}
+
 /// Creates the default State plugin behind the shared factory contract.
 fn boxed_state_plugin() -> Box<dyn DustPlugin> {
     Box::new(register_state_plugin())
@@ -206,5 +216,24 @@ mod tests {
                 .contains(&"SqlxDatabase")
         );
         assert!(!registry.all_supported_annotations().contains(&"HttpClient"));
+        assert!(!registry.all_supported_annotations().contains(&"Controller"));
+    }
+
+    #[test]
+    fn default_registry_keeps_client_and_server_symbols_distinct() {
+        let registry = registry_for_selection(RegistrySelection::All);
+        let symbols = registry.claimed_config_symbols();
+
+        for symbol in [
+            "dust_dart::GET",
+            "dust_dart::Query",
+            "dust_server::GET",
+            "dust_server::Query",
+            "dust_server::Controller",
+            "dust_server::Routes",
+        ] {
+            assert!(symbols.contains(&SymbolId::new(symbol)), "missing {symbol}");
+        }
+        assert!(registry.all_supported_annotations().contains(&"Controller"));
     }
 }
