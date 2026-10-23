@@ -141,6 +141,24 @@ fn discover_libraries_accepts_dust_package_imports() {
 }
 
 #[test]
+fn discover_libraries_accepts_dust_server_imports() {
+    let root = tempdir().unwrap();
+    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
+    write_file(&root.path().join(".dart_tool/package_config.json"), "{}\n");
+    let source = root.path().join("lib/controller.dart");
+    write_file(
+        &source,
+        "import 'package:dust_server/server.dart' as server;\n@server.Controller('/todos')\nclass Todos {}\n",
+    );
+
+    let libraries =
+        discover_libraries(root.path(), &SupportedAnnotations::new(["Controller"])).unwrap();
+
+    assert_eq!(libraries.len(), 1);
+    assert_eq!(libraries[0].source_path, source);
+}
+
+#[test]
 fn discover_libraries_accepts_dust_reexport_imports() {
     let root = tempdir().unwrap();
     write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");

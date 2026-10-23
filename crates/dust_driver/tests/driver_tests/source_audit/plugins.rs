@@ -13,6 +13,7 @@ fn production_plugins_use_canonical_ir_workspace_analysis() {
         "crates/dust_plugin_serde/src",
         "crates/dust_http_client_plugin/src",
         "crates/dust_route_plugin/src",
+        "crates/dust_server_plugin/src",
         "crates/dust_state_plugin/src",
         "crates/dust_db_plugin/src",
     ] {
@@ -45,6 +46,7 @@ fn production_plugins_use_generate_api() {
         "crates/dust_plugin_serde/src",
         "crates/dust_http_client_plugin/src",
         "crates/dust_route_plugin/src",
+        "crates/dust_server_plugin/src",
         "crates/dust_state_plugin/src",
         "crates/dust_db_plugin/src",
         "crates/dust_driver/src",
@@ -125,6 +127,7 @@ fn feature_plugins_do_not_parse_raw_dart_sources() {
         "crates/dust_plugin_derive/src",
         "crates/dust_http_client_plugin/src",
         "crates/dust_route_plugin/src",
+        "crates/dust_server_plugin/src",
         "crates/dust_state_plugin/src",
     ] {
         scan_dir(
@@ -182,6 +185,7 @@ fn codegen_tool_fingerprint_is_generated_from_source_roots() {
         "crates/dust_plugin_serde/src",
         "crates/dust_resolver/src",
         "crates/dust_route_plugin/src",
+        "crates/dust_server_plugin/src",
         "crates/dust_state_plugin/src",
         "crates/dust_workspace/src",
     ] {

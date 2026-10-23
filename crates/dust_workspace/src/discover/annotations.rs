@@ -157,7 +157,9 @@ fn block_comment_end(bytes: &[u8], start: usize) -> usize {
 
 /// Returns whether source imports or exports a Dust annotation package URI.
 pub(super) fn contains_dust_annotation_package(source: &str) -> bool {
-    source.contains("package:dust_dart/") || source.contains("package:dust_flutter/")
+    DUST_RUNTIME_PACKAGES
+        .iter()
+        .any(|(_, import_uri)| source.contains(import_uri))
 }
 
 /// Returns Dust runtime package imports found in source.

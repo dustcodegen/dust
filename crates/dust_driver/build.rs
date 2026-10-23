@@ -24,6 +24,7 @@ const CODEGEN_FINGERPRINT_ROOTS: &[&str] = &[
     "crates/dust_plugin_serde/src",
     "crates/dust_resolver/src",
     "crates/dust_route_plugin/src",
+    "crates/dust_server_plugin/src",
     "crates/dust_state_plugin/src",
     "crates/dust_workspace/src",
     "vendor/tree-sitter-dart/Cargo.toml",

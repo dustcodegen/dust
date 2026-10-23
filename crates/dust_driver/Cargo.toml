@@ -25,6 +25,7 @@ dust_plugin_derive = { path = "../dust_plugin_derive", version = "0.2.1" }
 dust_plugin_serde = { path = "../dust_plugin_serde", version = "0.2.1" }
 dust_http_client_plugin = { path = "../dust_http_client_plugin", version = "0.2.1" }
 dust_route_plugin = { path = "../dust_route_plugin", version = "0.2.1" }
+dust_server_plugin = { path = "../dust_server_plugin", version = "0.2.1" }
 dust_state_plugin = { path = "../dust_state_plugin", version = "0.2.1" }
 dust_db_plugin = { path = "../dust_db_plugin", version = "0.2.1" }
 dust_emitter = { path = "../dust_emitter", version = "0.2.1" }

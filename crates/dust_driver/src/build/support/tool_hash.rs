@@ -98,6 +98,7 @@ mod tests {
                 .contains("crates/dust_http_client_plugin/src/plugin/emit/test_file.rs")
         );
         assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("crates/dust_dart_syntax/src/lib.rs"));
+        assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("crates/dust_server_plugin/src/plugin.rs"));
     }
 
     #[test]

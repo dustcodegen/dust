@@ -99,9 +99,12 @@ fn real_declaration_origins_cover_every_effective_claim_in_all_profiles() {
         assert!(catalog.resolve_trait("Validate").is_some());
         assert!(catalog.resolve_config("Validate").is_some());
         assert_eq!(catalog.resolve("Derive"), None);
-        assert_eq!(
-            catalog.resolve_config("GET").unwrap().symbol.0,
-            "dust_dart::GET"
+        assert_eq!(catalog.resolve_config("GET"), None);
+        assert!(catalog.resolve_qualified_config("dust_dart::GET").is_some());
+        assert!(
+            catalog
+                .resolve_qualified_config("dust_server::GET")
+                .is_some()
         );
     }
 }

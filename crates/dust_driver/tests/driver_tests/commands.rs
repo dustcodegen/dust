@@ -92,6 +92,7 @@ fn doctor_reports_workspace_and_registered_plugins() {
             "dust_plugin_serde".to_owned(),
             "HttpClient".to_owned(),
             "Route".to_owned(),
+            "Server".to_owned(),
             "ViewModel".to_owned(),
             "Database".to_owned(),
         ]

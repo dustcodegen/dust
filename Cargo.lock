@@ -377,6 +377,7 @@ dependencies = [
  "dust_plugin_serde",
  "dust_resolver",
  "dust_route_plugin",
+ "dust_server_plugin",
  "dust_state_plugin",
  "dust_text",
  "dust_workspace",
@@ -508,6 +509,16 @@ dependencies = [
  "dust_text",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "dust_server_plugin"
+version = "0.2.1"
+dependencies = [
+ "dust_diagnostics",
+ "dust_ir",
+ "dust_plugin_api",
+ "dust_text",
 ]
 
 [[package]]
