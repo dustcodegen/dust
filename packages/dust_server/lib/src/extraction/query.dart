@@ -74,37 +74,64 @@ final class QueryParameters {
       };
 
   /// Coerces one present query value to [T].
-  void coerceOne<T>(Map<String, Object?> target, String key) {
-    final raw = values[key];
+  void coerceOne<T>(
+    Map<String, Object?> target,
+    String key, {
+    List<String> aliases = const [],
+  }) {
+    final selected = _selectedKey(key, aliases);
+    if (selected == null) return;
+    final raw = values[selected];
     if (raw == null || raw.isEmpty) return;
-    switch (coerce<T>(raw.last, source: 'query "$key"')) {
+    switch (coerce<T>(raw.last, source: 'query "$selected"')) {
       case Err(:final error):
         throw error;
       case Ok(:final value):
-        target[key] = value;
+        target[selected] = value;
     }
   }
 
   /// Coerces every present value for [key] to [T].
-  void coerceAll<T>(Map<String, Object?> target, String key) {
-    final raw = values[key];
+  void coerceAll<T>(
+    Map<String, Object?> target,
+    String key, {
+    List<String> aliases = const [],
+  }) {
+    final selected = _selectedKey(key, aliases);
+    if (selected == null) return;
+    final raw = values[selected];
     if (raw == null) return;
     final decoded = <T>[];
     for (final item in raw) {
-      switch (coerce<T>(item, source: 'query "$key"')) {
+      switch (coerce<T>(item, source: 'query "$selected"')) {
         case Err(:final error):
           throw error;
         case Ok(:final value):
           decoded.add(value);
       }
     }
-    target[key] = decoded;
+    target[selected] = decoded;
   }
 
   /// Copies every present value for [key] into a JSON list.
-  void copyAll(Map<String, Object?> target, String key) {
-    final raw = values[key];
-    if (raw != null) target[key] = List<String>.of(raw);
+  void copyAll(
+    Map<String, Object?> target,
+    String key, {
+    List<String> aliases = const [],
+  }) {
+    final selected = _selectedKey(key, aliases);
+    if (selected == null) return;
+    final raw = values[selected];
+    if (raw != null) target[selected] = List<String>.of(raw);
+  }
+
+  /// Selects the same primary-or-alias key as generated SerDe.
+  String? _selectedKey(String key, List<String> aliases) {
+    if (values.containsKey(key)) return key;
+    for (final alias in aliases) {
+      if (values.containsKey(alias)) return alias;
+    }
+    return null;
   }
 }
 

@@ -59,7 +59,7 @@ final class TodoFilter with _$TodoFilter {
   @Validate(range: Range(min: 1))
   final int page;
 
-  @SerDe(defaultValue: <String>[])
+  @SerDe(defaultValue: <String>[], aliases: ['labels'])
   final List<String> tags;
 }
 

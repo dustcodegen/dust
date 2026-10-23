@@ -101,18 +101,19 @@ fn plans_flat_models_with_serde_names_and_enums() {
             .iter()
             .map(|value| value.key.as_str())
             .collect::<Vec<_>>(),
-        ["query_page", "page", "tags", "ids"]
+        ["query_page", "tags", "ids"]
     );
+    assert_eq!(plan.conversions[0].aliases, ["page"]);
     assert!(matches!(
         plan.conversions[0].kind,
         QueryConversionKind::Scalar(_)
     ));
     assert!(matches!(
-        plan.conversions[2].kind,
+        plan.conversions[1].kind,
         QueryConversionKind::StringList
     ));
     assert!(matches!(
-        plan.conversions[3].kind,
+        plan.conversions[2].kind,
         QueryConversionKind::ScalarList(_)
     ));
 }

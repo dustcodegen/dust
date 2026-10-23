@@ -2,6 +2,7 @@ use dust_ir::{MethodParamIr, ParamKind, SpanIr, TypeIr};
 use dust_text::{FileId, TextRange};
 
 use super::*;
+use crate::plan::{QueryConversionKind, QueryConversionPlan, QueryModelPlan};
 
 /// Shared-body and request-passthrough emission contracts.
 mod shared;
@@ -185,14 +186,17 @@ fn renders_typed_query_model_exactly() {
             conversions: vec![
                 QueryConversionPlan {
                     key: "done".to_owned(),
+                    aliases: vec!["completed".to_owned()],
                     kind: QueryConversionKind::Scalar(TypeIr::bool().nullable()),
                 },
                 QueryConversionPlan {
                     key: "tags".to_owned(),
+                    aliases: vec!["labels".to_owned()],
                     kind: QueryConversionKind::StringList,
                 },
                 QueryConversionPlan {
                     key: "ids".to_owned(),
+                    aliases: Vec::new(),
                     kind: QueryConversionKind::ScalarList(TypeIr::int()),
                 },
             ],
@@ -203,7 +207,7 @@ fn renders_typed_query_model_exactly() {
 
     assert_eq!(
         render_extractor(&query),
-        "ValidatedExtractable<TodoFilter>(\n    QueryModelExtractable<TodoFilter>((query) {\n      final values = query.toObjectMap();\n      query.coerceOne<bool?>(values, 'done');\n      query.copyAll(values, 'tags');\n      query.coerceAll<int>(values, 'ids');\n      return _$TodoFilterDeserialize(values);\n    }),\n  )"
+        "ValidatedExtractable<TodoFilter>(\n    QueryModelExtractable<TodoFilter>((query) {\n      final values = query.toObjectMap();\n      query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);\n      query.copyAll(values, 'tags', aliases: const ['labels']);\n      query.coerceAll<int>(values, 'ids');\n      return _$TodoFilterDeserialize(values);\n    }),\n  )"
     );
 }
 

@@ -103,6 +103,63 @@ void main() {
       expect(values['id'], [1, 2]);
     });
 
+    test('uses the primary key without coercing a lower-priority alias', () {
+      const query = QueryParameters({
+        'done': ['true'],
+        'completed': ['not-a-boolean'],
+      });
+      final values = query.toObjectMap();
+
+      query.coerceOne<bool>(
+        values,
+        'done',
+        aliases: const ['completed'],
+      );
+
+      expect(values, {
+        'done': true,
+        'completed': 'not-a-boolean',
+      });
+    });
+
+    test('uses the first present alias for repeated values', () {
+      const query = QueryParameters({
+        'legacy_ids': ['1', '2'],
+        'older_ids': ['not-an-integer'],
+      });
+      final values = query.toObjectMap();
+
+      query.coerceAll<int>(
+        values,
+        'ids',
+        aliases: const ['legacy_ids', 'older_ids'],
+      );
+
+      expect(values, {
+        'legacy_ids': [1, 2],
+        'older_ids': 'not-an-integer',
+      });
+    });
+
+    test('copies only the selected repeated string key', () {
+      const query = QueryParameters({
+        'tag': ['new'],
+        'legacy_tag': ['old'],
+      });
+      final values = query.toObjectMap();
+
+      query.copyAll(
+        values,
+        'tag',
+        aliases: const ['legacy_tag'],
+      );
+
+      expect(values, {
+        'tag': ['new'],
+        'legacy_tag': 'old',
+      });
+    });
+
     test('throws the field rejection when scalar coercion fails', () {
       const query = QueryParameters({
         'page': ['many'],

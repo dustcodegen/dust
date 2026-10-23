@@ -1,13 +1,13 @@
 use dust_dart_emit::{DYNAMIC_TYPES, dart_string_literal};
 use dust_ir::TypeIr;
 
-use crate::plan::{
-    BodyFormat, Extraction, ExtractionWrapper, ParamPlan, QueryConversionKind, QueryConversionPlan,
-    QueryModelPlan, RawBodyFormat,
-};
+use crate::plan::{BodyFormat, Extraction, ExtractionWrapper, ParamPlan, RawBodyFormat};
 
+/// Typed query-model adapter emission.
+mod query;
 #[cfg(test)]
 mod tests;
+use query::render_query_model;
 
 /// Stateful parameter emitter so form and multipart bodies are read once.
 #[derive(Default)]
@@ -227,37 +227,6 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         | Extraction::Part { .. }
         | Extraction::Request
         | Extraction::RequestParts => unreachable!("handled before extractor rendering"),
-    }
-}
-
-/// Renders the adapter from URI pairs to the generated SerDe decoder.
-fn render_query_model(plan: &ParamPlan<'_>, query: &QueryModelPlan, ty: &str) -> String {
-    let decoder = render_decoder(plan, ty);
-    let mut lines = vec![
-        format!("QueryModelExtractable<{ty}>((query) {{"),
-        "  final values = query.toObjectMap();".to_owned(),
-    ];
-    for conversion in &query.conversions {
-        lines.push(render_query_conversion(conversion));
-    }
-    lines.push(format!("  return {decoder}(values);"));
-    lines.push("})".to_owned());
-    lines.join("\n")
-}
-
-/// Renders one field conversion inside a query-model adapter.
-fn render_query_conversion(conversion: &QueryConversionPlan) -> String {
-    let key = dart_string_literal(&conversion.key);
-    match &conversion.kind {
-        QueryConversionKind::Scalar(value) => format!(
-            "  query.coerceOne<{}>(values, {key});",
-            DYNAMIC_TYPES.render(value)
-        ),
-        QueryConversionKind::StringList => format!("  query.copyAll(values, {key});"),
-        QueryConversionKind::ScalarList(value) => format!(
-            "  query.coerceAll<{}>(values, {key});",
-            DYNAMIC_TYPES.render(value)
-        ),
     }
 }
 

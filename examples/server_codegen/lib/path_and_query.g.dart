@@ -73,6 +73,7 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
     'completed',
     'page',
     'tags',
+    'labels',
     'order',
   };
   for (final key in json.keys) {
@@ -94,8 +95,16 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
       ? null
       : JsonHelper.as<bool>(rawCompleted, rawCompletedKey, 'bool');
   final pageValue = json.containsKey('page') ? JsonHelper.as<int>(json['page'], 'page', 'int') : 1;
-  final tagsValue = json.containsKey('tags')
-      ? JsonHelper.decodeList(json['tags'], 'tags',
+  var rawTagsKey = 'tags';
+  Object? rawTags;
+  if (json.containsKey('tags')) {
+    rawTags = json['tags'];
+  } else if (json.containsKey('labels')) {
+    rawTagsKey = 'labels';
+    rawTags = json['labels'];
+  }
+  final tagsValue = json.containsKey('tags') || json.containsKey('labels')
+      ? JsonHelper.decodeList(rawTags, rawTagsKey,
       (item, itemKey) => JsonHelper.as<String>(item, itemKey, 'String'))
       : <String>[];
   final orderValue = json.containsKey('order')
@@ -152,10 +161,9 @@ Future<Response> _$handleSearchTodos(Request request) async {
       await ValidatedExtractable<TodoFilter>(
     QueryModelExtractable<TodoFilter>((query) {
       final values = query.toObjectMap();
-      query.coerceOne<bool?>(values, 'done');
-      query.coerceOne<bool?>(values, 'completed');
+      query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);
       query.coerceOne<int>(values, 'page');
-      query.copyAll(values, 'tags');
+      query.copyAll(values, 'tags', aliases: const ['labels']);
       return _$TodoFilterDeserialize(values);
     }),
   ).extract(request);

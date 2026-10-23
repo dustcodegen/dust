@@ -175,8 +175,10 @@ pub(crate) struct QueryModelPlan {
 
 /// One query key converted before the generated SerDe decoder runs.
 pub(crate) struct QueryConversionPlan {
-    /// Primary serialized field name or alias.
+    /// Primary serialized field name.
     pub(crate) key: String,
+    /// Accepted legacy keys in SerDe precedence order.
+    pub(crate) aliases: Vec<String>,
     /// Conversion required by the field's JSON representation.
     pub(crate) kind: QueryConversionKind,
 }

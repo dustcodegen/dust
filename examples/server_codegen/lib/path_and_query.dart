@@ -55,7 +55,7 @@ final class TodoFilter with _$TodoFilter {
   final int page;
 
   /// Repeated tag filters.
-  @SerDe(defaultValue: <String>[])
+  @SerDe(defaultValue: <String>[], aliases: ['labels'])
   final List<String> tags;
 
   /// Result order.

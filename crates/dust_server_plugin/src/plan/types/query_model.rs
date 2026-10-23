@@ -74,14 +74,9 @@ pub(in crate::plan) fn query_model_plan(
         let primary = serde_field_name(&field.name, serde, class.serde.as_ref());
         conversions.push(QueryConversionPlan {
             key: primary,
-            kind: kind.clone(),
+            aliases: serde.map(|value| value.aliases.clone()).unwrap_or_default(),
+            kind,
         });
-        for alias in serde.into_iter().flat_map(|value| &value.aliases) {
-            conversions.push(QueryConversionPlan {
-                key: alias.clone(),
-                kind: kind.clone(),
-            });
-        }
     }
     QueryModelPlan { conversions }
 }
