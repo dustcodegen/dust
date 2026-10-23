@@ -72,7 +72,9 @@ Future<void> delete(@Path() int id) async {}
 
 Run `dust build`, then mount `itemRoutes()` in the application router. Use
 `@Controller` only when a class is the clearer home for shared dependencies.
-The complete generated Phase 5 fixture is
+Start with the focused
+[`examples/server_codegen`](../../examples/server_codegen/README.md); the
+complete internal Phase 5 regression fixture is
 [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
 
 Metadata declared on a verb is available after normal mounting:
@@ -104,12 +106,12 @@ all on one router.
 
 ## Examples
 
-[`example/`](example/README.md) holds one file per question — under 60 lines
-each, named after the question it answers, so the answer is not buried in an
-application. The index lists them by area.
+[`example/`](example/README.md) holds the handwritten, non-codegen examples.
+[`examples/server_codegen`](../../examples/server_codegen/README.md) holds the
+matching generated style. Both indexes link the equivalent use cases.
 
-Every one is served over a loopback socket by `test/example/` and driven with a
-real client, which is what keeps a directory that size from rotting.
+Both tracks are served over loopback sockets and driven with real clients,
+which keeps the examples from rotting.
 
 ## Tests
 

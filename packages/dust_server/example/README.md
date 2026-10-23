@@ -2,6 +2,10 @@
 
 Two sizes, and the small one is the point.
 
+These are the handwritten, non-codegen examples. For the equivalent annotated
+handlers and generated routing, see
+[`examples/server_codegen`](../../../examples/server_codegen/README.md).
+
 **One-question examples** are single files under 60 lines. Each answers exactly
 one question and nothing else, so the answer is not buried in an application.
 Named after the question you would type into a search box — `handle_head_request`,

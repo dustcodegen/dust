@@ -66,7 +66,8 @@ Examples:
 
 | Where | Shows |
 | :--- | :--- |
-| [`packages/dust_server/example`](../../packages/dust_server/example/README.md) | 51 files, one question each, under 60 lines each |
+| [`examples/server_codegen`](../../examples/server_codegen/README.md) | annotated handlers, generated routing, and matching runtime examples |
+| [`packages/dust_server/example`](../../packages/dust_server/example/README.md) | handwritten runtime examples, one question per file |
 
-Every one is driven over a real socket by `test/example/`, so an example that
-stops compiling fails the build.
+Both tracks are driven over real loopback sockets by their test suites, so an
+example that stops compiling fails the build.

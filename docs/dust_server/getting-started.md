@@ -97,15 +97,17 @@ dependencies make a class clearer. Generated handlers also support `@Queries`, `
 `Request`/`RequestParts`, and `@Extract(Type)`. Declare an extractor parameter
 as `Option<T>` to collapse client rejections to `None`, or as
 `Result<T, Rejection>` to pass the outcome to the handler; the same wrappers
-work with built-in extractors. A runnable generated example and request tests
-live in [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+work with built-in extractors. Runnable focused examples and request tests live
+in [`examples/server_codegen`](../../examples/server_codegen/README.md). The
+exhaustive internal regression fixture remains in
+[`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
 
 Automatic `Validate()` wrapping currently requires the body model and handler
 to be declared in the same Dart library. An imported body model still decodes,
 but validate it explicitly in the handler until cross-library derive facts are
 available.
 
-The runtime-only examples remain useful without generation:
+The existing handwritten examples remain the non-codegen track:
 
 ```bash
 cd packages/dust_server

@@ -160,6 +160,8 @@ server generator is not part of the published 0.2.1 binaries or packages.
 
 ## Examples
 
+- [Server codegen](examples/server_codegen/README.md): generated HTTP routes,
+  extraction, validation, state, authentication, and uploads.
 - [Product showcase](examples/product_showcase/README.md): Dart models, JSON,
   validation, HTTP clients, and row mapping.
 - [Shopping app](examples/shopping_app/README.md): end-to-end Flutter routing,
