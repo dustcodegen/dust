@@ -229,20 +229,7 @@ fn render_decoder(plan: &ParamPlan<'_>, ty: &str) -> String {
             .value_type
             .name()
             .expect("Serde-derived request models are named types");
-        let arguments = if plan.value_type.args().is_empty() {
-            String::new()
-        } else {
-            format!(
-                "<{}>",
-                plan.value_type
-                    .args()
-                    .iter()
-                    .map(|argument| DYNAMIC_TYPES.render(argument))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        };
-        format!("_${name}Deserialize{arguments}")
+        format!("_${name}Deserialize")
     } else {
         format!("{ty}.deserialize")
     }

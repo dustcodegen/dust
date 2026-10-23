@@ -92,6 +92,18 @@ A request body is read once. Pick the representation the endpoint owns:
 See [forms_and_raw.dart](lib/forms_and_raw.dart) and
 [multipart_form.dart](lib/multipart_form.dart).
 
+### Why `@FormUrlEncoded()` stays separate
+
+`@POST` declares transport: method, path, status, metadata, and middleware.
+`@FormUrlEncoded` selects how the one request body is decoded. Keeping those
+jobs separate matches Retrofit and lets the same body mode work with `POST`,
+`PUT`, or `PATCH` without adding flags to every verb.
+
+Do not collapse it into `@POST('/form', formUrlEncoded: true)`. Multipart would
+need another Boolean, making the impossible combination `formUrlEncoded: true,
+multipart: true` representable. The two annotations make that conflict visible
+to Dust and produce one clear build diagnostic.
+
 ## 5. Choose extraction failure behavior
 
 ```dart
@@ -125,7 +137,39 @@ Generated handlers dispatch common response shapes directly:
 
 See [verbs_and_responses.dart](lib/verbs_and_responses.dart).
 
-## 7. Generate, check, and test
+## 7. Compose generated routes for production
+
+Generation stops at the router boundary. The application still owns limits,
+operational layers, serving, and shutdown:
+
+```dart
+import 'dart:io';
+
+final app = Router(
+  bodyLimit: 64 * 1024,
+  onError: (error, stack) => stderr.writeln('$error\n$stack'),
+)
+  ..layer(const RequestId())
+  ..layer(AccessLog((record) => stdout.writeln(record)))
+  ..layer(const SecurityHeaders())
+  ..layer(const RequestTimeout(Duration(seconds: 10)))
+  ..merge(noteRoutes());
+```
+
+The generated extraction contract stays stable at the edge:
+
+| Failure | Status |
+| :--- | :--- |
+| Wrong `content-type` | 415 |
+| Malformed JSON/form/multipart syntax | 400 |
+| Decoded value has the wrong shape | 422 |
+| `Validate()` constraint fails | 422 |
+| Body exceeds the configured limit | 413 |
+| Handwritten handler throws unexpectedly | 500, detail reported only through `onError` |
+
+See [production_app.dart](lib/production_app.dart) for the runnable composition.
+
+## 8. Generate, check, and test
 
 ```bash
 dust build

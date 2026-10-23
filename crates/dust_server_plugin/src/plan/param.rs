@@ -176,7 +176,7 @@ pub(super) fn parse_param<'a>(
     };
     let validated =
         matches!(extraction, Extraction::Body(_)) && derives_validate(value_type, classes);
-    let serde_deserialized = matches!(extraction, Extraction::Body(_) | Extraction::Queries)
+    let serde_deserialized = matches!(extraction, Extraction::Body(BodyFormat::Json))
         && derives_deserialize(value_type, classes);
     Some(ParamPlan {
         param,

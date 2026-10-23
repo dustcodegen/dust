@@ -136,29 +136,15 @@ fn renders_validated_json_and_form_bodies_exactly() {
         "const ValidatedExtractable<CreateTodo>(\n    FormModelExtractable<CreateTodo>(CreateTodo.deserialize),\n  )"
     );
 
-    let mut queries = plan(
+    let queries = plan(
         &input,
         &input.ty,
         ExtractionWrapper::Required,
         Extraction::Queries,
     );
-    queries.serde_deserialized = true;
     assert_eq!(
         render_extractor(&queries),
-        "const QueriesExtractable<CreateTodo>(\n    _$CreateTodoDeserialize,\n  )"
-    );
-
-    let page = param("page", TypeIr::generic("Page", vec![TypeIr::named("Todo")]));
-    let mut generic = plan(
-        &page,
-        &page.ty,
-        ExtractionWrapper::Required,
-        Extraction::Body(BodyFormat::Json),
-    );
-    generic.serde_deserialized = true;
-    assert_eq!(
-        render_extractor(&generic),
-        "const JsonExtractable<Page<Todo>>(\n    _$PageDeserialize<Todo>,\n  )"
+        "const QueriesExtractable<CreateTodo>(\n    CreateTodo.deserialize,\n  )"
     );
 
     let fields = param(

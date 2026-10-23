@@ -1,3 +1,4 @@
+import 'package:dust_server/server.dart' show AccessRecord;
 import 'package:http/http.dart' as http;
 import 'package:server_codegen/bearer_auth.dart' as bearer_auth;
 import 'package:server_codegen/controller_state.dart' as controller_state;
@@ -6,6 +7,7 @@ import 'package:server_codegen/hello_world.dart' as hello_world;
 import 'package:server_codegen/json_body.dart' as json_body;
 import 'package:server_codegen/multipart_form.dart' as multipart_form;
 import 'package:server_codegen/path_and_query.dart' as path_and_query;
+import 'package:server_codegen/production_app.dart' as production_app;
 import 'package:server_codegen/request_data.dart' as request_data;
 import 'package:server_codegen/verbs_and_responses.dart' as verbs_and_responses;
 import 'package:test/test.dart';
@@ -43,6 +45,23 @@ void main() {
     expect(created.statusCode, 201);
     expect(app.json(created), {'title': 'Ship'});
     expect(invalid.statusCode, 422);
+  });
+
+  test('generated JSON body preserves the rejection contract', () async {
+    final app = await serveExample(json_body.buildApp());
+
+    final wrongMedia = await app.send(
+      'POST',
+      '/notes',
+      body: '{}',
+      headers: {'content-type': 'text/plain'},
+    );
+    final malformed = await app.send('POST', '/notes', body: '{');
+    final wrongShape = await app.send('POST', '/notes', body: {'title': 1});
+
+    expect(wrongMedia.statusCode, 415);
+    expect(malformed.statusCode, 400);
+    expect(wrongShape.statusCode, 422);
   });
 
   test('generated controller reads typed router state', () async {
@@ -183,5 +202,48 @@ void main() {
 
     expect(response.statusCode, greaterThanOrEqualTo(400));
     expect(response.statusCode, lessThan(500));
+  });
+
+  test('multipart handler rejects invalid UTF-8 text', () async {
+    final app = await serveExample(multipart_form.buildApp());
+    final uri = Uri.parse(
+      'http://${app.server.address.host}:${app.server.port}/upload',
+    );
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(http.MultipartFile.fromBytes('caption', [0xff]))
+      ..files.add(
+        http.MultipartFile.fromString('file', 'Dust', filename: 'dust.txt'),
+      );
+
+    final response = await http.Response.fromStream(await request.send());
+
+    expect(response.statusCode, 400);
+  });
+
+  test('production composition applies limits and operational layers',
+      () async {
+    final records = <AccessRecord>[];
+    final app = await serveExample(
+      production_app.buildApp(onRecord: records.add),
+    );
+
+    final created = await app.send(
+      'POST',
+      '/notes',
+      body: {'title': 'Ship'},
+      headers: {'x-request-id': 'example-request'},
+    );
+    final tooLarge = await app.send(
+      'POST',
+      '/notes',
+      body: List<int>.filled(64 * 1024 + 1, 0),
+      headers: {'content-type': 'application/json'},
+    );
+
+    expect(created.statusCode, 201);
+    expect(created.headers['x-request-id'], 'example-request');
+    expect(created.headers['x-content-type-options'], 'nosniff');
+    expect(tooLarge.statusCode, 413);
+    expect(records.map((record) => record.status), [201, 413]);
   });
 }

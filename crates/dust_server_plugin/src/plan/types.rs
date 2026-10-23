@@ -28,7 +28,7 @@ pub(super) fn require_queries_type(ty: &TypeIr, span: SpanIr, diagnostics: &mut 
         diagnostics.push(error(
             span,
             "Queries requires Map<String, String> or a non-nullable model",
-            "use a string map or a model deriving Deserialize or exposing static deserialize",
+            "use a string map or a model exposing static deserialize",
         ));
     }
 }

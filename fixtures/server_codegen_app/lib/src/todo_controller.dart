@@ -51,6 +51,11 @@ final class CreateTodo with _$CreateTodo {
   /// Creates a todo payload.
   const CreateTodo({required this.title});
 
+  /// Decodes URL-encoded form values; JSON uses the generated Serde decoder.
+  factory CreateTodo.deserialize(Map<String, Object?> fields) {
+    return CreateTodo(title: fields['title']! as String);
+  }
+
   /// Requested title.
   @Validate(length: Length(min: 1), message: 'must not be empty')
   final String title;

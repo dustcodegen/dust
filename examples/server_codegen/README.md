@@ -24,6 +24,7 @@ runnable reference.
 | Query/header maps, peer and request parts | [`lib/request_data.dart`](lib/request_data.dart) | [`query_params.dart`](../../packages/dust_server/example/query_params.dart), [`headers_and_host.dart`](../../packages/dust_server/example/headers_and_host.dart), and [`client_ip.dart`](../../packages/dust_server/example/client_ip.dart) |
 | URL-encoded forms and raw bodies | [`lib/forms_and_raw.dart`](lib/forms_and_raw.dart) | [`form_body.dart`](../../packages/dust_server/example/form_body.dart) and [`parse_body_by_content_type.dart`](../../packages/dust_server/example/parse_body_by_content_type.dart) |
 | PUT/PATCH/DELETE/HEAD/OPTIONS and response wrappers | [`lib/verbs_and_responses.dart`](lib/verbs_and_responses.dart) | [`routing.dart`](../../packages/dust_server/example/routing.dart), [`handle_head_request.dart`](../../packages/dust_server/example/handle_head_request.dart), and [`error_handling.dart`](../../packages/dust_server/example/error_handling.dart) |
+| Production composition around generated routes | [`lib/production_app.dart`](lib/production_app.dart) | [`body_limits.dart`](../../packages/dust_server/example/body_limits.dart), [`access_log.dart`](../../packages/dust_server/example/access_log.dart), and [`graceful_shutdown.dart`](../../packages/dust_server/example/graceful_shutdown.dart) |
 
 Each source file includes its own `curl` commands and a `buildApp()` used by
 the loopback socket tests:
@@ -39,5 +40,7 @@ extractors, responses, and serving runtime.
 Codegen now has runnable coverage for route modules, controllers, every HTTP
 verb, route metadata and middleware, built-in parameter/body extraction,
 required/optional/fallible extraction, validation, and standard response
-dispatch. Operational runtime features remain handwritten by design; the
+dispatch. The production composition example proves generated routes keep the
+runtime's limits, request ids, access logs, safe headers, timeouts, and graceful
+shutdown. Deployment policy remains handwritten by design; the
 [tutorial](TUTORIAL.md#what-stays-handwritten) names that boundary.

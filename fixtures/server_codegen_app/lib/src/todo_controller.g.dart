@@ -347,7 +347,7 @@ mixin _$TodoController {
   Future<Response> _$handleFormModel(Request request) async {
     final Result<CreateTodo, Rejection> _dustResult0 =
         await const ValidatedExtractable<CreateTodo>(
-      FormModelExtractable<CreateTodo>(_$CreateTodoDeserialize),
+      FormModelExtractable<CreateTodo>(CreateTodo.deserialize),
     ).extract(request);
     if (_dustResult0 case Err(:final error)) return error.intoResponse();
     final _dustValue0 = (_dustResult0 as Ok<CreateTodo, Rejection>).value;
