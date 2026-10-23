@@ -47,8 +47,12 @@ a long file.
 | `test/router/hardening/` | pathological input, untrusted request fields |
 | `test/extraction/`, `test/request/`, `test/response/` | one file per extractor and encoder |
 | `test/layers/`, `test/serving/`, `test/ws/`, `test/templating/` | the rest of the surface |
-| `test/generated/` | what the plugin will emit, hand-written until it exists |
+| `test/generated/` | runtime contracts for generated handler shapes, including later phases |
 | `test/example/` | the example application, over a socket |
+
+`fixtures/server_codegen_app` is the generator proof: local checks run
+`dust build --clean`, `dust check`, `dart analyze --fatal-infos`, and request
+tests for generated GET, POST, extraction, status, and rejection behavior.
 
 Three habits are worth copying:
 

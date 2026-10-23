@@ -1,4 +1,4 @@
-//! Real public runtime exports with Phase-0 ownership and no network IO.
+//! Real public runtime exports with server ownership and Phase-1 generation.
 
 use super::*;
 
@@ -6,8 +6,7 @@ use super::*;
 #[path = "../../../../../fixtures/namespace_server_barrel/workspace.rs"]
 mod public_fixture;
 
-const UNSUPPORTED: &str =
-    "Dust server annotations are recognized, but handler generation is not available";
+const INVALID_HANDLER: &str = "server annotations do not declare a Phase 1 handler";
 
 /// Replace only owned fixture dependencies with the actual runtime source trees.
 fn public_workspace() -> tempfile::TempDir {
@@ -51,7 +50,7 @@ fn server_annotations_fail_clearly_without_replacing_client_output_or_cache() {
             .iter()
             .map(|diagnostic| diagnostic.message.as_str())
             .collect::<Vec<_>>(),
-        [UNSUPPORTED]
+        [INVALID_HANDLER]
     );
     assert_eq!(fs::read(root.join("lib/model.g.dart")).unwrap(), expected);
     assert_eq!(fs::read(&cache_path).unwrap(), cache);
@@ -68,7 +67,7 @@ fn server_annotations_fail_clearly_without_replacing_client_output_or_cache() {
             .iter()
             .map(|diagnostic| diagnostic.message.as_str())
             .collect::<Vec<_>>(),
-        [UNSUPPORTED]
+        [INVALID_HANDLER]
     );
     assert_eq!(fs::read(root.join("lib/model.g.dart")).unwrap(), expected);
     assert_eq!(fs::read(&cache_path).unwrap(), cache);
@@ -106,7 +105,7 @@ fn server_dependency_edits_preserve_success_and_recover_ownership_diagnostics() 
                 .iter()
                 .map(|diagnostic| diagnostic.message.as_str())
                 .collect::<Vec<_>>(),
-            [UNSUPPORTED]
+            [INVALID_HANDLER]
         );
         let dependency = root.join("deps/dust_server/lib").join(relative);
         let original = fs::read_to_string(&dependency).unwrap();
@@ -148,7 +147,7 @@ fn server_dependency_edits_preserve_success_and_recover_ownership_diagnostics() 
                 .iter()
                 .map(|diagnostic| diagnostic.message.as_str())
                 .collect::<Vec<_>>(),
-            [UNSUPPORTED]
+            [INVALID_HANDLER]
         );
         assert_eq!(fs::read(&output_path).unwrap(), output);
         assert_eq!(fs::read(&cache_path).unwrap(), cache);
@@ -157,9 +156,18 @@ fn server_dependency_edits_preserve_success_and_recover_ownership_diagnostics() 
 
 #[test]
 fn library_and_top_level_server_annotations_are_discovered() {
-    for source in [
-        "@Routes('/todos')\nlibrary todos;\nimport 'package:dust_server/server.dart';\n",
-        "import 'package:dust_server/server.dart';\n@GET('/todos')\nString listTodos() => 'ok';\n",
+    for (source, expected) in [
+        (
+            "@Routes('/todos')\nlibrary todos;\nimport 'package:dust_server/server.dart';\n",
+            vec![INVALID_HANDLER],
+        ),
+        (
+            "import 'package:dust_server/server.dart';\n@GET('/todos')\nString listTodos() => 'ok';\n",
+            vec![
+                "handler return type is not supported in server Phase 1",
+                "missing generated `part` directive for server handlers",
+            ],
+        ),
     ] {
         let workspace = public_workspace();
         write_file(&workspace.path().join("lib/model.dart"), source);
@@ -170,9 +178,49 @@ fn library_and_top_level_server_annotations_are_discovered() {
                 .iter()
                 .map(|diagnostic| diagnostic.message.as_str())
                 .collect::<Vec<_>>(),
-            [UNSUPPORTED],
+            expected,
             "source: {source}"
         );
         assert!(!workspace.path().join("lib/model.g.dart").exists());
     }
+}
+
+#[test]
+fn controller_handlers_generate_routes_and_extractors() {
+    let workspace = public_workspace();
+    let root = workspace.path();
+    write_file(
+        &root.join("lib/model.dart"),
+        r#"import 'package:dust_server/server.dart';
+
+part 'model.g.dart';
+
+@Controller('/todos')
+class TodoController with _$TodoController {
+  @GET('/{id}')
+  Future<Map<String, Object?>> get(@Path() String id) async => {'id': id};
+
+  @POST('/', status: 201)
+  Future<void> create(@Body() CreateTodo input) async {}
+}
+
+class CreateTodo {
+  const CreateTodo();
+  static CreateTodo deserialize(Map<String, Object?> json) => const CreateTodo();
+}
+"#,
+    );
+
+    let result = build(root);
+    assert_eq!(result.diagnostics, []);
+    let generated = fs::read_to_string(root.join("lib/model.g.dart")).unwrap();
+    assert!(generated.contains("mixin _$TodoController"));
+    assert!(generated.contains("Route('GET', '/{id}', _$handleGet)"));
+    assert!(generated.contains("const PathExtractable<String>('id')"));
+    assert!(generated.contains("Route('POST', '/', _$handleCreate)"));
+    assert!(generated.contains(
+        "const JsonExtractable<CreateTodo>(\n      CreateTodo.deserialize,\n    ).extract(request)"
+    ));
+    assert!(generated.contains("await (this as TodoController).create(_dustValue0);"));
+    assert!(generated.contains("return noContent();"));
 }

@@ -12,6 +12,8 @@ while IFS= read -r package; do
 done < <("$ROOT_DIR/scripts/workspace_packages.sh" dart)
 # Independent Pub resolution is intentional; keep this consumer outside workspace.
 TARGETS+=("fixtures/sqlite_sdk_consumer")
+# Workspace discovery lists packages only, so include the executable fixture.
+TARGETS+=("fixtures/server_codegen_app")
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

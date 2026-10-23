@@ -9,16 +9,8 @@
 ///
 /// @Controller('/todos', tags: ['todos'])
 /// class TodoController with _$TodoController {
-///   TodoController(this._repo);
-///
-///   final TodoRepo _repo;
-///
 ///   @GET('/{id}')
-///   Future<Result<Todo, NotFound>> get(
-///     @Extract(BearerAuth) AuthUser user,
-///     @Path() String id,
-///   ) =>
-///       _repo.find(user.id, id);
+///   Future<Map<String, Object?>> get(@Path() int id) async => {'id': id};
 /// }
 /// ```
 ///
