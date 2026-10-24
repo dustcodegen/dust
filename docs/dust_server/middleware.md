@@ -122,7 +122,7 @@ than `layer`, so a path that does not exist still answers 404.
 | Layer | Example | The bit worth reading |
 | :--- | :--- | :--- |
 | `Cors` | `cors.dart` | a preflight answers 204 without reaching a handler; `Vary: Origin` is set; credentials with `any()` throws at construction |
-| `Compression` | `compression.dart` | `gzip;q=0` is a refusal, not an absence; under 1 KB is left alone |
+| `Compression` | `compression.dart` | explicit `gzip` overrides `*`; malformed or zero quality refuses it; under 1 KB is left alone |
 | `RequestId` | `request_id.dart` | a client-supplied id is kept, so one id spans every hop |
 | `AccessLog` | `access_log.dart` | records the 404 too, and the recorded path carries no query string |
 | `SecurityHeaders` | `security_headers.dart` | CSP and HSTS have no defaults, and why; two nested routers scope one policy to each half |

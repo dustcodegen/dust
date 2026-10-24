@@ -86,6 +86,16 @@ void main() {
       expect(response.headers['content-encoding'], 'gzip');
     });
 
+    test('an explicit gzip offer overrides an earlier wildcard refusal',
+        () async {
+      final response = await send(
+        serve(body: large),
+        accept: '*;q=0, gzip;q=1',
+      );
+
+      expect(response.headers['content-encoding'], 'gzip');
+    });
+
     test('decodes back to what the handler wrote', () async {
       final response = await send(serve(body: large));
 
@@ -134,6 +144,30 @@ void main() {
       final response = await send(serve(body: large), accept: 'gzip;q=0');
 
       expect(response.headers, isNot(contains('content-encoding')));
+    });
+
+    test('when explicit gzip refusal overrides a wildcard offer', () async {
+      final response = await send(
+        serve(body: large),
+        accept: 'gzip;q=0, *;q=1',
+      );
+
+      expect(response.headers, isNot(contains('content-encoding')));
+    });
+
+    test('when the gzip quality value is malformed', () async {
+      for (final quality in ['NaN', 'Infinity', '-1', '2', '0.1234', 'bad']) {
+        final response = await send(
+          serve(body: large),
+          accept: 'gzip;q=$quality',
+        );
+
+        expect(
+          response.headers,
+          isNot(contains('content-encoding')),
+          reason: 'q=$quality',
+        );
+      }
     });
 
     test('when the type is not worth compressing', () async {
