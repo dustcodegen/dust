@@ -30,9 +30,10 @@ pub(crate) use model::{
 
 use handler::parse_handler;
 use identifier::is_emittable_identifier;
+pub(crate) use library::generated_handler_name;
 use library::{
-    default_routes_name, find_config, first_server_span, is_server_config, validate_part,
-    validate_unique_routes, verb_config,
+    default_routes_name, first_server_span, is_server_config, validate_generated_names,
+    validate_part, validate_unique_routes, verb_config,
 };
 use model::{Args, GroupPlan, VERBS};
 use values::{
@@ -46,21 +47,40 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
     let mut controllers = Vec::new();
     let mut routes = None;
 
-    for annotation in &file.library_annotations {
-        if annotation
+    let route_groups = file.library_annotations.iter().filter(|annotation| {
+        annotation
             .resolved_symbol
             .as_ref()
             .map(|value| value.0.as_str())
             == Some("dust_server::Routes")
-        {
+    });
+    for (index, annotation) in route_groups.enumerate() {
+        if index == 0 {
             routes = parse_group(Args::Annotation(annotation), "Routes", &mut diagnostics);
+        } else {
+            diagnostics.push(error(
+                annotation.span,
+                "libraries accept only one @Routes annotation",
+                "remove the extra @Routes annotation",
+            ));
         }
     }
 
     for class in &file.classes {
-        let Some(config) = find_config(&class.configs, "dust_server::Controller") else {
+        let mut controller_groups = class
+            .configs
+            .iter()
+            .filter(|config| config.symbol.0 == "dust_server::Controller");
+        let Some(config) = controller_groups.next() else {
             continue;
         };
+        for duplicate in controller_groups {
+            diagnostics.push(error(
+                duplicate.span,
+                "server classes accept only one @Controller annotation",
+                "remove the extra @Controller annotation",
+            ));
+        }
         if !class.type_parameters.is_empty() {
             diagnostics.push(error(
                 class.span,
@@ -134,6 +154,13 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
             "use a non-reserved Dart identifier in @Routes(name: ...)",
         ));
     }
+    validate_generated_names(
+        file,
+        &controllers,
+        &functions,
+        &function_name,
+        &mut diagnostics,
+    );
     if !diagnostics.is_empty() {
         return Err(diagnostics);
     }
