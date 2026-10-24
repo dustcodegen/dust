@@ -117,9 +117,10 @@ Keyed extractors coerce to `String`, `int`, `double`, `num`, `bool`, `BigInt`,
 `1`, `0`, and a bare flag. Anything else is a programming error and throws
 rather than rejecting.
 
-Integers are **decimal only**. `int.tryParse` reads `0x10` as 16 by default,
-which would make `?id=0x10` and `?id=16` name the same record while a check
-written against the text sees two different strings.
+`int`, `BigInt`, and integer-form `num` values are **decimal only**. Dart's
+integer and `num` parsers read `0x10` as 16 by default, which would make
+`?id=0x10` and `?id=16` name the same record while a check written against the
+text sees two different strings.
 
 `double` and `num` accept finite values only. `NaN` and positive or negative
 infinity reject with 400 because they are not valid JSON numbers.

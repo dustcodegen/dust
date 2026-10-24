@@ -98,7 +98,7 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
   final pageValue = json.containsKey('page') ? JsonHelper.as<int>(json['page'], 'page', 'int') : 1;
   final scoreValue = json['score'] == null
       ? null
-      : JsonHelper.as<num>(json['score'], 'score', 'num').toDouble();
+      : JsonHelper.as<num>(json['score'], 'score', 'num');
   var rawTagsKey = 'tags';
   Object? rawTags;
   if (json.containsKey('tags')) {
@@ -168,7 +168,7 @@ Future<Response> _$handleSearchTodos(Request request) async {
       final values = query.toObjectMap();
       query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);
       query.coerceOne<int>(values, 'page');
-      query.coerceOne<double?>(values, 'score');
+      query.coerceOne<num?>(values, 'score');
       query.copyAll(values, 'tags', aliases: const ['labels']);
       return _$TodoFilterDeserialize(values);
     }),

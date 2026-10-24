@@ -42,7 +42,9 @@ Result<T, Rejection> coerce<T>(String raw, {required String source}) {
         : Ok(value as T);
   }
   if (T == num || T == typeOf<num?>()) {
-    final value = _padded(raw) ? null : num.tryParse(raw);
+    final value = _padded(raw)
+        ? null
+        : int.tryParse(raw, radix: 10) ?? double.tryParse(raw);
     return value == null || !value.isFinite
         ? Err(bad('number'))
         : Ok(value as T);

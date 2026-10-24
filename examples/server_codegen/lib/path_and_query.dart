@@ -56,7 +56,7 @@ final class TodoFilter with _$TodoFilter {
   final int page;
 
   /// Optional finite relevance score.
-  final double? score;
+  final num? score;
 
   /// Repeated tag filters.
   @SerDe(defaultValue: <String>[], aliases: ['labels'])

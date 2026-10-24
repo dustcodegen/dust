@@ -37,6 +37,10 @@ void main() {
       'GET',
       '/todos/search?owner=ada&score=NaN',
     );
+    final hexadecimal = await app.send(
+      'GET',
+      '/todos/search?owner=ada&score=0x10',
+    );
     final unknown = await app.send(
       'GET',
       '/todos/search?owner=ada&extra=value',
@@ -68,6 +72,8 @@ void main() {
     expect(invalid.statusCode, 422);
     expect(nonFinite.statusCode, 400);
     expect(app.json(nonFinite)['error'], contains('query "score"'));
+    expect(hexadecimal.statusCode, 400);
+    expect(app.json(hexadecimal)['error'], contains('query "score"'));
     expect(unknown.statusCode, 400);
   });
 }

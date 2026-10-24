@@ -44,6 +44,11 @@ void main() {
       expectStatus(coerce<num>('x', source: 'q'), 400);
     });
 
+    test('parses nums in base 10 only', () {
+      expectStatus(coerce<num>('0x10', source: 'query "n"'), 400);
+      expect(expectOk(coerce<num>('16', source: 'q')), 16);
+    });
+
     test('rejects non-finite doubles and nums', () {
       for (final raw in ['NaN', 'Infinity', '-Infinity', '1e400']) {
         expectStatus(coerce<double>(raw, source: 'q'), 400);
