@@ -180,3 +180,42 @@ fn rejects_unsupported_shapes() {
         );
     }
 }
+
+#[test]
+fn rejects_keys_shared_by_different_fields() {
+    let class = query_class(
+        vec![
+            field(
+                "page",
+                TypeIr::int(),
+                Some(SerdeFieldConfigIr {
+                    aliases: vec!["q".to_owned()],
+                    ..Default::default()
+                }),
+            ),
+            field(
+                "term",
+                TypeIr::string(),
+                Some(SerdeFieldConfigIr {
+                    rename: Some("q".to_owned()),
+                    ..Default::default()
+                }),
+            ),
+        ],
+        vec![trait_("dust_dart::Deserialize")],
+    );
+    let mut diagnostics = Vec::new();
+
+    let _ = query_model_plan(
+        &TypeIr::named("Filter"),
+        &[class],
+        &[],
+        span(),
+        &mut diagnostics,
+    );
+
+    assert_eq!(diagnostics.len(), 1);
+    assert!(diagnostics[0].message.contains("query key `q`"));
+    assert!(diagnostics[0].message.contains("`page`"));
+    assert!(diagnostics[0].message.contains("`term`"));
+}

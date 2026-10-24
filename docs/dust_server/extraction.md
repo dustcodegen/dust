@@ -121,6 +121,9 @@ Integers are **decimal only**. `int.tryParse` reads `0x10` as 16 by default,
 which would make `?id=0x10` and `?id=16` name the same record while a check
 written against the text sees two different strings.
 
+`double` and `num` accept finite values only. `NaN` and positive or negative
+infinity reject with 400 because they are not valid JSON numbers.
+
 ## Wrapping
 
 ```dart

@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use dust_diagnostics::Diagnostic;
 use dust_ir::{ClassIr, EnumIr, SpanIr, TypeIr, serde_field_name};
 
@@ -54,6 +56,7 @@ pub(in crate::plan) fn query_model_plan(
     }
 
     let mut conversions = Vec::new();
+    let mut query_keys = BTreeMap::<String, String>::new();
     for field in &class.fields {
         let serde = field.serde.as_ref();
         if serde.is_some_and(|value| value.skip_deserializing) {
@@ -67,16 +70,35 @@ pub(in crate::plan) fn query_model_plan(
             ));
             continue;
         }
-        let Some(kind) = query_conversion(&field.ty, enums, field.span, diagnostics).flatten()
-        else {
+        let Some(kind) = query_conversion(&field.ty, enums, field.span, diagnostics) else {
             continue;
         };
         let primary = serde_field_name(&field.name, serde, class.serde.as_ref());
-        conversions.push(QueryConversionPlan {
-            key: primary,
-            aliases: serde.map(|value| value.aliases.clone()).unwrap_or_default(),
-            kind,
-        });
+        for key in
+            std::iter::once(&primary).chain(serde.into_iter().flat_map(|value| &value.aliases))
+        {
+            if let Some(previous) = query_keys.get(key) {
+                if previous != &field.name {
+                    diagnostics.push(error(
+                        field.span,
+                        format!(
+                            "query key `{key}` is accepted by both `{previous}` and `{}`",
+                            field.name
+                        ),
+                        "give every deserialized query field a unique name and aliases",
+                    ));
+                }
+            } else {
+                query_keys.insert(key.clone(), field.name.clone());
+            }
+        }
+        if let Some(kind) = kind {
+            conversions.push(QueryConversionPlan {
+                key: primary,
+                aliases: serde.map(|value| value.aliases.clone()).unwrap_or_default(),
+                kind,
+            });
+        }
     }
     QueryModelPlan { conversions }
 }

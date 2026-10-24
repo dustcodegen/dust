@@ -72,7 +72,8 @@ Future<List<Todo>> search(@Query() TodoFilter filter) async => repository.search
 - `List<T>` on `@Query(...)` reads repeated values.
 - `@Query() TodoFilter filter` decodes a flat `Deserialize()` model, including
   SerDe names, aliases, defaults, enums, and repeated lists. A derived
-  `Validate()` contract runs after decoding.
+  `Validate()` contract runs after decoding. Every field name and alias must be
+  unique across the model so one query key cannot populate two fields.
 - `@Queries()` remains source-compatible for existing dynamic-map handlers;
   new typed handlers should use `@Query()`.
 - `@HeaderMap()`, `@RawQuery()`, `@Peer()`, `Request`, and

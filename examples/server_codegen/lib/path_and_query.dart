@@ -38,6 +38,7 @@ final class TodoFilter with _$TodoFilter {
     required this.owner,
     this.completed,
     this.page = 1,
+    this.score,
     this.tags = const [],
     this.order = TodoOrder.recent,
   });
@@ -54,6 +55,9 @@ final class TodoFilter with _$TodoFilter {
   @Validate(range: Range(min: 1), message: 'must be at least 1')
   final int page;
 
+  /// Optional finite relevance score.
+  final double? score;
+
   /// Repeated tag filters.
   @SerDe(defaultValue: <String>[], aliases: ['labels'])
   final List<String> tags;
@@ -69,6 +73,7 @@ Future<Map<String, Object?>> searchTodos(@Query() TodoFilter filter) async => {
       'owner': filter.owner,
       'completed': filter.completed,
       'page': filter.page,
+      'score': filter.score,
       'tags': filter.tags,
       'order': filter.order.name,
     };

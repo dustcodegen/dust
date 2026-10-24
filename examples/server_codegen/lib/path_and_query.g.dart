@@ -72,6 +72,7 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
     'done',
     'completed',
     'page',
+    'score',
     'tags',
     'labels',
     'order',
@@ -95,6 +96,9 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
       ? null
       : JsonHelper.as<bool>(rawCompleted, rawCompletedKey, 'bool');
   final pageValue = json.containsKey('page') ? JsonHelper.as<int>(json['page'], 'page', 'int') : 1;
+  final scoreValue = json['score'] == null
+      ? null
+      : JsonHelper.as<num>(json['score'], 'score', 'num').toDouble();
   var rawTagsKey = 'tags';
   Object? rawTags;
   if (json.containsKey('tags')) {
@@ -115,6 +119,7 @@ TodoFilter _$TodoFilterDeserialize(Map<String, Object?> json) {
     owner: ownerValue,
     completed: completedValue,
     page: pageValue,
+    score: scoreValue,
     tags: tagsValue,
     order: orderValue,
   );
@@ -163,6 +168,7 @@ Future<Response> _$handleSearchTodos(Request request) async {
       final values = query.toObjectMap();
       query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);
       query.coerceOne<int>(values, 'page');
+      query.coerceOne<double?>(values, 'score');
       query.copyAll(values, 'tags', aliases: const ['labels']);
       return _$TodoFilterDeserialize(values);
     }),

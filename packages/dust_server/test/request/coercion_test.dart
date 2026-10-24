@@ -44,6 +44,13 @@ void main() {
       expectStatus(coerce<num>('x', source: 'q'), 400);
     });
 
+    test('rejects non-finite doubles and nums', () {
+      for (final raw in ['NaN', 'Infinity', '-Infinity', '1e400']) {
+        expectStatus(coerce<double>(raw, source: 'q'), 400);
+        expectStatus(coerce<num>(raw, source: 'q'), 400);
+      }
+    });
+
     test('parses the accepted boolean spellings', () {
       expect(expectOk(coerce<bool>('true', source: 'q')), isTrue);
       expect(expectOk(coerce<bool>('TRUE', source: 'q')), isTrue);

@@ -9,7 +9,7 @@ void main() {
 
     final valid = await app.send(
       'GET',
-      '/todos/search?owner=ada&done=true&page=2&tags=server&tags=dart&labels=ignored&order=oldest',
+      '/todos/search?owner=ada&done=true&page=2&score=4.5&tags=server&tags=dart&labels=ignored&order=oldest',
     );
     final defaults = await app.send('GET', '/todos/search?owner=ada');
     final alias = await app.send(
@@ -33,6 +33,10 @@ void main() {
       'GET',
       '/todos/search?owner=ada&page=0',
     );
+    final nonFinite = await app.send(
+      'GET',
+      '/todos/search?owner=ada&score=NaN',
+    );
     final unknown = await app.send(
       'GET',
       '/todos/search?owner=ada&extra=value',
@@ -42,6 +46,7 @@ void main() {
       'owner': 'ada',
       'completed': true,
       'page': 2,
+      'score': 4.5,
       'tags': ['server', 'dart'],
       'order': 'oldest',
     });
@@ -49,6 +54,7 @@ void main() {
       'owner': 'ada',
       'completed': null,
       'page': 1,
+      'score': null,
       'tags': <Object?>[],
       'order': 'recent',
     });
@@ -60,6 +66,8 @@ void main() {
     expect(app.json(missing)['error'], contains('owner'));
     expect(malformed.statusCode, 400);
     expect(invalid.statusCode, 422);
+    expect(nonFinite.statusCode, 400);
+    expect(app.json(nonFinite)['error'], contains('query "score"'));
     expect(unknown.statusCode, 400);
   });
 }
