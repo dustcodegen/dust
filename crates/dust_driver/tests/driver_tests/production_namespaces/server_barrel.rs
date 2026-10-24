@@ -223,5 +223,5 @@ class CreateTodo {
         "const JsonExtractable<CreateTodo>(\n      CreateTodo.deserialize,\n    ).extract(request)"
     ));
     assert!(generated.contains("await (this as TodoController).create(_dustValue0);"));
-    assert!(generated.contains("return noContent();"));
+    assert!(generated.contains("return Response(201);"));
 }

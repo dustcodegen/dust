@@ -50,6 +50,10 @@ const defaultCompressibleTypes = <String>{
 /// `Vary: Accept-Encoding` is always added, compressed or not: without it a
 /// shared cache can hand a gzipped body to a client that never asked for one.
 final class Compression implements Layer {
+  static final _qualityValue = RegExp(
+    r'^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$',
+  );
+
   /// Compresses text-ish responses over [minimumBytes].
   const Compression({
     this.minimumBytes = 1024,
@@ -108,20 +112,28 @@ final class Compression implements Layer {
   static bool _acceptsGzip(String? header) {
     if (header == null) return false;
 
+    double? gzipWeight;
+    double? wildcardWeight;
     for (final part in header.split(',')) {
       final pieces = part.trim().split(';');
       final coding = pieces.first.trim().toLowerCase();
       if (coding != 'gzip' && coding != '*') continue;
 
+      var weight = 1.0;
       for (final parameter in pieces.skip(1)) {
         final trimmed = parameter.trim().toLowerCase();
         if (!trimmed.startsWith('q=')) continue;
-        final weight = double.tryParse(trimmed.substring(2)) ?? 1;
-        if (weight <= 0) return false;
+        final raw = trimmed.substring(2);
+        weight = _qualityValue.hasMatch(raw) ? double.parse(raw) : 0;
+        break;
       }
-      return true;
+      if (coding == 'gzip') {
+        gzipWeight = weight;
+      } else {
+        wildcardWeight = weight;
+      }
     }
-    return false;
+    return (gzipWeight ?? wildcardWeight ?? 0) > 0;
   }
 
   bool _worthCompressing(Response response) {

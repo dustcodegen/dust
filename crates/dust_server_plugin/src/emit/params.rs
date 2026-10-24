@@ -3,8 +3,11 @@ use dust_ir::TypeIr;
 
 use crate::plan::{BodyFormat, Extraction, ExtractionWrapper, ParamPlan, RawBodyFormat};
 
+/// Typed query-model adapter emission.
+mod query;
 #[cfg(test)]
 mod tests;
+use query::render_query_model;
 
 /// Stateful parameter emitter so form and multipart bodies are read once.
 #[derive(Default)]
@@ -135,13 +138,18 @@ fn push_unwrap(lines: &mut Vec<String>, index: usize, ty: &str) {
 pub(super) fn render_extractor(plan: &ParamPlan<'_>) -> String {
     let (mut inner, is_const) = render_base_extractor(plan);
     let value_type = DYNAMIC_TYPES.render(plan.value_type);
+    let decoder = render_decoder(plan, &value_type);
     if plan.validated {
         inner = match plan.extraction {
             Extraction::Body(BodyFormat::Json) => format!(
-                "ValidatedExtractable<{value_type}>(\n    JsonExtractable<{value_type}>({value_type}.deserialize),\n  )"
+                "ValidatedExtractable<{value_type}>(\n    JsonExtractable<{value_type}>({decoder}),\n  )"
             ),
             Extraction::Body(BodyFormat::Form) => format!(
-                "ValidatedExtractable<{value_type}>(\n    FormModelExtractable<{value_type}>({value_type}.deserialize),\n  )"
+                "ValidatedExtractable<{value_type}>(\n    FormModelExtractable<{value_type}>({decoder}),\n  )"
+            ),
+            Extraction::QueryModel(_) => format!(
+                "ValidatedExtractable<{value_type}>(\n    {},\n  )",
+                inner.replace('\n', "\n    ")
             ),
             _ => inner,
         };
@@ -163,6 +171,7 @@ pub(super) fn render_extractor(plan: &ParamPlan<'_>) -> String {
 /// Renders the unwrapped extractor constructor.
 fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
     let ty = DYNAMIC_TYPES.render(plan.value_type);
+    let decoder = render_decoder(plan, &ty);
     match &plan.extraction {
         Extraction::Path(key) => (
             format!("PathExtractable<{ty}>({})", dart_string_literal(key)),
@@ -179,12 +188,13 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
                 true,
             )
         }
+        Extraction::QueryModel(query) => (render_query_model(plan, query, &ty), false),
         Extraction::Queries if is_string_map(plan.value_type) => (
             "QueriesExtractable<Map<String, String>>((queries) => queries)".to_owned(),
             false,
         ),
         Extraction::Queries => (
-            format!("QueriesExtractable<{ty}>(\n    {ty}.deserialize,\n  )"),
+            format!("QueriesExtractable<{ty}>(\n    {decoder},\n  )"),
             true,
         ),
         Extraction::Header(name) => (
@@ -195,16 +205,15 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         Extraction::Body(BodyFormat::Json) if is_json_map(plan.value_type) => {
             (format!("JsonExtractable<{ty}>((json) => json)"), false)
         }
-        Extraction::Body(BodyFormat::Json) => (
-            format!("JsonExtractable<{ty}>(\n    {ty}.deserialize,\n  )"),
-            true,
-        ),
+        Extraction::Body(BodyFormat::Json) => {
+            (format!("JsonExtractable<{ty}>(\n    {decoder},\n  )"), true)
+        }
         Extraction::Body(BodyFormat::Form) if is_json_map(plan.value_type) => (
             format!("FormModelExtractable<{ty}>((fields) => fields)"),
             false,
         ),
         Extraction::Body(BodyFormat::Form) => (
-            format!("FormModelExtractable<{ty}>(\n    {ty}.deserialize,\n  )"),
+            format!("FormModelExtractable<{ty}>(\n    {decoder},\n  )"),
             true,
         ),
         Extraction::Custom(name) => (format!("{name}()"), true),
@@ -218,6 +227,19 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         | Extraction::Part { .. }
         | Extraction::Request
         | Extraction::RequestParts => unreachable!("handled before extractor rendering"),
+    }
+}
+
+/// Renders the generated Serde decoder or the model's compatibility fallback.
+fn render_decoder(plan: &ParamPlan<'_>, ty: &str) -> String {
+    if plan.serde_deserialized {
+        let name = plan
+            .value_type
+            .name()
+            .expect("Serde-derived request models are named types");
+        format!("_${name}Deserialize")
+    } else {
+        format!("{ty}.deserialize")
     }
 }
 

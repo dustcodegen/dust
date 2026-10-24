@@ -5,9 +5,10 @@ server-rendered HTML, static files, and serving across isolates.
 
 > [!IMPORTANT]
 > The server runtime is stable on the 0.2.x line. The current source checkout
-> completes all six generator phases described in
-> [Server Plugin Design](../design/server-plugin.md), including production-
-> shaped composition and route metadata.
+> also generates controller and top-level route wiring, including typed
+> extraction, validation, middleware, response dispatch, production-shaped
+> composition, and route metadata. The generator is not in the published 0.2.1
+> binaries yet.
 
 ## Sections
 
@@ -66,7 +67,8 @@ Examples:
 
 | Where | Shows |
 | :--- | :--- |
-| [`packages/dust_server/example`](../../packages/dust_server/example/README.md) | 51 files, one question each, under 60 lines each |
+| [`examples/server_codegen`](../../examples/server_codegen/README.md) | annotated handlers, generated routing, and matching runtime examples |
+| [`packages/dust_server/example`](../../packages/dust_server/example/README.md) | handwritten runtime examples, one question per file |
 
-Every one is driven over a real socket by `test/example/`, so an example that
-stops compiling fails the build.
+Both tracks are driven over real loopback sockets by their test suites, so an
+example that stops compiling fails the build.

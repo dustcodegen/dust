@@ -56,6 +56,7 @@ void main() {
     expect(debug, isA<DeriveTrait>());
     expect(const CopyWith(), isA<DeriveTrait>());
     expect(const Eq(), isA<DeriveTrait>());
+    expect(const Validate(), isA<DeriveTrait>());
   });
 
   test('validation option value objects compare by value', () {

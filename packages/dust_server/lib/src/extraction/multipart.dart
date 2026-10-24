@@ -62,7 +62,13 @@ final class MultipartForm {
       if (null is T) return Ok(null as T);
       return Err(Rejection.badRequest('multipart part "$name" is required'));
     }
-    return coerce<T>(part.asText, source: 'multipart part "$name"');
+    try {
+      return coerce<T>(part.asText, source: 'multipart part "$name"');
+    } on FormatException {
+      return Err(
+        Rejection.badRequest('multipart part "$name" is not valid UTF-8'),
+      );
+    }
   }
 }
 

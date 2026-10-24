@@ -142,6 +142,7 @@ fn binding(extraction: &Extraction) -> (&'static str, Option<String>) {
         Extraction::Path(name) => ("path", Some(name.clone())),
         Extraction::Query(name) => ("query", Some(name.clone())),
         Extraction::QueryList(name) => ("query-list", Some(name.clone())),
+        Extraction::QueryModel(_) => ("query-model", None),
         Extraction::Queries => ("queries", None),
         Extraction::Header(name) => ("header", Some(name.clone())),
         Extraction::HeaderMap => ("header-map", None),

@@ -121,8 +121,7 @@ fn rejects_duplicate_routes_per_group() {
 
 #[test]
 fn resolves_config_verb_and_server_ownership() {
-    let configs = vec![config("dust_server::GET"), config("dust_dart::GET")];
-    assert!(find_config(&configs, "dust_server::GET").is_some());
+    let configs = [config("dust_server::GET"), config("dust_dart::GET")];
     assert_eq!(verb_config(&configs[0]), Some("GET"));
     assert_eq!(verb_config(&configs[1]), None);
     assert!(is_server_config(&configs[0]));

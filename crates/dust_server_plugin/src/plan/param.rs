@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, MethodParamIr, TypeIr};
+use dust_ir::{ClassIr, EnumIr, MethodParamIr, TypeIr};
 
 use super::{
     BodyFormat, RawBodyFormat,
@@ -9,9 +9,9 @@ use super::{
     model::{Args, Extraction, ExtractionWrapper, ParamPlan},
     param::custom::custom,
     types::{
-        derives_validate, is_map_of, is_peer_info, is_uploaded_file, raw_body_format,
-        require_body_type, require_queries_type, require_raw_query_type, require_scalar,
-        require_state_type,
+        derives_deserialize, derives_validate, is_map_of, is_peer_info, is_uploaded_file,
+        raw_body_format, require_body_type, require_queries_type, require_raw_query_type,
+        require_scalar, require_state_type,
     },
     values::{error, optional_string, required_string, validate_no_args, validate_zero_named},
 };
@@ -22,6 +22,9 @@ mod custom;
 mod local_tests;
 #[cfg(test)]
 mod phase_three_tests;
+/// Query parameter planning.
+mod query;
+use query::query;
 /// Extractor planning tests.
 #[cfg(test)]
 mod tests;
@@ -32,6 +35,7 @@ pub(super) fn parse_param<'a>(
     placeholders: &BTreeSet<String>,
     media: BodyMedia,
     classes: &[ClassIr],
+    enums: &[EnumIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<ParamPlan<'a>> {
     let (value_type, wrapper) = parameter_shape(&param.ty, param, diagnostics)?;
@@ -56,7 +60,7 @@ pub(super) fn parse_param<'a>(
     let args = Args::Config(config);
     let extraction = match symbol {
         "dust_server::Path" => path(param, value_type, placeholders, &args, diagnostics),
-        "dust_server::Query" => query(param, value_type, &args, diagnostics)?,
+        "dust_server::Query" => query(param, value_type, &args, classes, enums, diagnostics)?,
         "dust_server::Queries" => {
             validate_no_args(&args, diagnostics);
             require_queries_type(value_type, param.span, diagnostics);
@@ -174,14 +178,19 @@ pub(super) fn parse_param<'a>(
             return None;
         }
     };
-    let validated =
-        matches!(extraction, Extraction::Body(_)) && derives_validate(value_type, classes);
+    let model_extraction = matches!(extraction, Extraction::QueryModel(_));
+    let validated = (matches!(extraction, Extraction::Body(_)) || model_extraction)
+        && derives_validate(value_type, classes);
+    let serde_deserialized = (matches!(extraction, Extraction::Body(BodyFormat::Json))
+        || model_extraction)
+        && derives_deserialize(value_type, classes);
     Some(ParamPlan {
         param,
         value_type,
         wrapper,
         extraction,
         validated,
+        serde_deserialized,
     })
 }
 
@@ -218,6 +227,7 @@ fn passthrough<'a>(
         wrapper,
         extraction,
         validated: false,
+        serde_deserialized: false,
     })
 }
 
@@ -271,22 +281,4 @@ fn path(
     }
     require_scalar(value_type, param.span, diagnostics);
     Extraction::Path(key)
-}
-
-/// Selects scalar or repeated-query extraction from the declared type.
-fn query(
-    param: &MethodParamIr,
-    value_type: &TypeIr,
-    args: &Args<'_>,
-    diagnostics: &mut Vec<Diagnostic>,
-) -> Option<Extraction> {
-    let key = required_string(args, 0, "query name", diagnostics)?;
-    validate_zero_named(args, diagnostics);
-    if value_type.is_named("List") && value_type.args().len() == 1 {
-        require_scalar(&value_type.args()[0], param.span, diagnostics);
-        Some(Extraction::QueryList(key))
-    } else {
-        require_scalar(value_type, param.span, diagnostics);
-        Some(Extraction::Query(key))
-    }
 }

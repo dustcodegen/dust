@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show HeaderValue;
+import 'dart:io' show HeaderValue, HttpException;
 import 'dart:typed_data';
 
 import 'package:dust_dart/fp.dart';
@@ -74,9 +74,14 @@ final class MultipartPart {
     return builder.takeBytes();
   }
 
-  /// Collects the part as UTF-8 text.
-  Future<String> readText({int limit = defaultBodyLimit}) async =>
-      utf8.decode(await readBytes(limit: limit));
+  /// Collects the part as UTF-8 text, rejecting invalid input with 400.
+  Future<String> readText({int limit = defaultBodyLimit}) async {
+    try {
+      return utf8.decode(await readBytes(limit: limit));
+    } on FormatException {
+      throw Rejection.badRequest('multipart part "$name" is not valid UTF-8');
+    }
+  }
 
   /// Writes the part into [sink] without holding it in memory.
   ///
@@ -223,10 +228,18 @@ final class StreamedMultipartExtractable
     });
   }
 
-  Stream<MultipartPart> _partsOf(Stream<List<int>> body, String boundary) {
+  Stream<MultipartPart> _partsOf(
+    Stream<List<int>> body,
+    String boundary,
+  ) {
     return body.transform(MimeMultipartTransformer(boundary)).map((part) {
-      final disposition =
-          HeaderValue.parse(part.headers['content-disposition'] ?? '');
+      final HeaderValue disposition;
+      try {
+        disposition =
+            HeaderValue.parse(part.headers['content-disposition'] ?? '');
+      } on HttpException catch (error) {
+        throw Rejection.badRequest('malformed multipart body: $error');
+      }
 
       return MultipartPart(
         name: disposition.parameters['name'] ?? '',
@@ -234,7 +247,13 @@ final class StreamedMultipartExtractable
         filename: disposition.parameters['filename'],
         contentType: part.headers['content-type'],
       );
-    });
+    }).handleError(
+      (dynamic error) => throw Rejection.badRequest(
+        'malformed multipart body: '
+        '${(error as MimeMultipartException).message}',
+      ),
+      test: (error) => error is MimeMultipartException,
+    );
   }
 
   static Rejection _tooLarge(int limit) =>

@@ -331,7 +331,7 @@ mixin _$TodoController {
   Future<Response> _$handleCreate(Request request) async {
     final Result<CreateTodo, Rejection> _dustResult0 =
         await const ValidatedExtractable<CreateTodo>(
-      JsonExtractable<CreateTodo>(CreateTodo.deserialize),
+      JsonExtractable<CreateTodo>(_$CreateTodoDeserialize),
     ).extract(request);
     if (_dustResult0 case Err(:final error)) return error.intoResponse();
     final _dustValue0 = (_dustResult0 as Ok<CreateTodo, Rejection>).value;
@@ -532,7 +532,7 @@ mixin _$TodoController {
     return guard(
       () async => responseFrom(
         await (this as TodoController).unitResult(),
-        status: 200,
+        status: 204,
       ),
     );
   }
@@ -599,6 +599,22 @@ extension _CreateTodoValidation on CreateTodo {
   }
 
 }
+final class $CreateTodoDeserializer implements Deserializer<CreateTodo, Map<String, Object?>> {
+  const $CreateTodoDeserializer();
+
+  @override
+  CreateTodo deserialize(Map<String, Object?> json) => _$CreateTodoDeserialize(json);
+}
+
+// factory CreateTodo.fromJson(Map<String, Object?> json) => _$CreateTodoFromJson(json);
+CreateTodo _$CreateTodoDeserialize(Map<String, Object?> json) {
+  final titleValue = JsonHelper.as<String>(json['title'], 'title', 'String');
+
+  return CreateTodo(title: titleValue);
+}
+
+CreateTodo _$CreateTodoFromJson(Map<String, Object?> json) =>
+    _$CreateTodoDeserialize(json);
 
 Router todoControllerRoutes() => Router.module(
       prefix: '',

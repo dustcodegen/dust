@@ -56,7 +56,12 @@ class FormatBootstrapTests(unittest.TestCase):
             path = self.root / relative
             path.write_text(source)
             path.chmod(0o755)
-        for relative in ("packages/runtime", CONSUMER, "examples/product_showcase"):
+        for relative in (
+            "packages/runtime",
+            CONSUMER,
+            "fixtures/server_codegen_app",
+            "examples/product_showcase",
+        ):
             target = self.root / relative
             target.mkdir(parents=True)
             (target / "example.dart").write_text("void main() {}\n")

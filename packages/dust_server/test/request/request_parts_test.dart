@@ -46,12 +46,27 @@ void main() {
       expect(RequestParts.of(request('GET', '/')).mediaType, isNull);
     });
 
-    test('parses content-length and tolerates a malformed one', () {
+    test('parses a decimal content-length', () {
       final present = RequestParts.of(
         request('POST', '/', headers: {'content-length': '12'}, body: 'x' * 12),
       );
 
       expect(present.contentLength, 12);
+    });
+
+    test('rejects content-length outside the HTTP decimal grammar', () {
+      for (final raw in ['', '0x10', '+12', '-1', ' 12', '12 ']) {
+        final parts = RequestParts.of(
+          request(
+            'POST',
+            '/',
+            headers: {'content-length': raw},
+            body: Stream<List<int>>.value([120]),
+          ),
+        );
+
+        expect(parts.contentLength, isNull, reason: 'content-length: $raw');
+      }
     });
 
     test('exposes router path parameters', () {

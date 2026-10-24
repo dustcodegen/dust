@@ -89,11 +89,11 @@ not a published feature or general generic-plugin guarantee. Pass the model's
 arguments to the generated mixin:
 
 ```dart
-@Derive([Validate<Object?>()])
+@Derive([Validate()])
 class RequiredValue<T> with _$RequiredValue<T> {
   const RequiredValue(this.value);
 
-  @Validate<Object?>(required: true)
+  @Validate(required: true)
   final T value;
 }
 
@@ -101,9 +101,10 @@ RequiredValue<int>(1).validate();         // Valid
 RequiredValue<String?>(null).validate();  // Invalid: value is required
 ```
 
-The explicit annotation argument supplies context for strict inference.
-Type arguments can make an unbounded `T` nullable even without a field `?`. Optional nulls skip custom
-and nested validators; `required: true` reports them. String/length/range rules
+The field declaration supplies the validation type; do not repeat it on the
+annotation. Model type arguments can make an unbounded `T` nullable even
+without a field `?`. Optional nulls skip custom and nested validators;
+`required: true` reports them. String/length/range rules
 still require their supported concrete types: a parameter named `String` is not
 the core `String` type. Concrete Flutter input helpers retain ordinary tearoffs;
 must-match helpers take the typed model receiver. No pool, wrapper, handwritten
@@ -215,7 +216,7 @@ An `Address.zipCode` failure is returned as `address.zipCode` on `Profile`.
 A custom validator returns one error or `null`:
 
 ```dart
-@Validate<String>(custom: validateBusinessEmail)
+@Validate(custom: validateBusinessEmail)
 final String email;
 
 ValidationError? validateBusinessEmail(String value) {

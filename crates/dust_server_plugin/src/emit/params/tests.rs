@@ -2,6 +2,7 @@ use dust_ir::{MethodParamIr, ParamKind, SpanIr, TypeIr};
 use dust_text::{FileId, TextRange};
 
 use super::*;
+use crate::plan::{QueryConversionKind, QueryConversionPlan, QueryModelPlan};
 
 /// Shared-body and request-passthrough emission contracts.
 mod shared;
@@ -36,6 +37,7 @@ fn plan<'a>(
         wrapper,
         extraction,
         validated: false,
+        serde_deserialized: false,
     }
 }
 
@@ -117,9 +119,10 @@ fn renders_validated_json_and_form_bodies_exactly() {
         Extraction::Body(BodyFormat::Json),
     );
     json.validated = true;
+    json.serde_deserialized = true;
     assert_eq!(
         render_extractor(&json),
-        "const ValidatedExtractable<CreateTodo>(\n    JsonExtractable<CreateTodo>(CreateTodo.deserialize),\n  )"
+        "const ValidatedExtractable<CreateTodo>(\n    JsonExtractable<CreateTodo>(_$CreateTodoDeserialize),\n  )"
     );
 
     let mut form = plan(
@@ -132,6 +135,17 @@ fn renders_validated_json_and_form_bodies_exactly() {
     assert_eq!(
         render_extractor(&form),
         "const ValidatedExtractable<CreateTodo>(\n    FormModelExtractable<CreateTodo>(CreateTodo.deserialize),\n  )"
+    );
+
+    let queries = plan(
+        &input,
+        &input.ty,
+        ExtractionWrapper::Required,
+        Extraction::Queries,
+    );
+    assert_eq!(
+        render_extractor(&queries),
+        "const QueriesExtractable<CreateTodo>(\n    CreateTodo.deserialize,\n  )"
     );
 
     let fields = param(
@@ -158,6 +172,42 @@ fn renders_validated_json_and_form_bodies_exactly() {
     assert_eq!(
         render_extractor(&impossible_validation),
         "const StateExtractable<CreateTodo>()"
+    );
+}
+
+#[test]
+fn renders_typed_query_model_exactly() {
+    let input = param("filter", TypeIr::named("TodoFilter"));
+    let mut query = plan(
+        &input,
+        &input.ty,
+        ExtractionWrapper::Required,
+        Extraction::QueryModel(QueryModelPlan {
+            conversions: vec![
+                QueryConversionPlan {
+                    key: "done".to_owned(),
+                    aliases: vec!["completed".to_owned()],
+                    kind: QueryConversionKind::Scalar(TypeIr::bool().nullable()),
+                },
+                QueryConversionPlan {
+                    key: "tags".to_owned(),
+                    aliases: vec!["labels".to_owned()],
+                    kind: QueryConversionKind::StringList,
+                },
+                QueryConversionPlan {
+                    key: "ids".to_owned(),
+                    aliases: Vec::new(),
+                    kind: QueryConversionKind::ScalarList(TypeIr::int()),
+                },
+            ],
+        }),
+    );
+    query.validated = true;
+    query.serde_deserialized = true;
+
+    assert_eq!(
+        render_extractor(&query),
+        "ValidatedExtractable<TodoFilter>(\n    QueryModelExtractable<TodoFilter>((query) {\n      final values = query.toObjectMap();\n      query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);\n      query.copyAll(values, 'tags', aliases: const ['labels']);\n      query.coerceAll<int>(values, 'ids');\n      return _$TodoFilterDeserialize(values);\n    }),\n  )"
     );
 }
 

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use dust_dart_emit::{named_argument_name, render_class_type};
-use dust_ir::{ClassIr, ConstructorIr, ParamKind, SerdeFieldConfigIr};
+use dust_ir::{ClassIr, ConstructorIr, ParamKind, SerdeFieldConfigIr, serde_field_name};
 
 /// Dart's standard formatter line width.
 const DART_LINE_WIDTH: usize = 80;
@@ -26,14 +26,7 @@ pub(crate) fn json_key(
     field_name: &str,
     field_serde: Option<&SerdeFieldConfigIr>,
 ) -> String {
-    if let Some(rename) = field_serde.and_then(|serde| serde.rename.as_deref()) {
-        return rename.to_owned();
-    }
-
-    match class.serde.as_ref().and_then(|serde| serde.rename_all) {
-        Some(rule) => crate::writer_type::apply_rename_rule(field_name, rule),
-        None => field_name.to_owned(),
-    }
+    serde_field_name(field_name, field_serde, class.serde.as_ref())
 }
 
 /// Returns every primary and alias key accepted during deserialization.
