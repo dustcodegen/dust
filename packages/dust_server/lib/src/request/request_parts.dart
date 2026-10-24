@@ -60,7 +60,15 @@ final class RequestParts {
 
   /// The `content-length` header as an integer, or `null` when absent or
   /// malformed.
-  int? get contentLength => int.tryParse(headers['content-length'] ?? '');
+  int? get contentLength {
+    final raw = headers['content-length'];
+    if (raw == null || raw.isEmpty) return null;
+    for (var index = 0; index < raw.length; index++) {
+      final codeUnit = raw.codeUnitAt(index);
+      if (codeUnit < 0x30 || codeUnit > 0x39) return null;
+    }
+    return int.tryParse(raw, radix: 10);
+  }
 }
 
 /// The context key captured path parameters travel under.
