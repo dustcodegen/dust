@@ -110,6 +110,10 @@ Use the class when you want the `Result` rather than the throw.
 | `RawBodyExtractable`, `TextBodyExtractable`, `StreamBodyExtractable` | `rawBody`, `textBody`, `bodyStream` |
 | `StateExtractable<T>`, `ContextExtractable<T>`, `PeerExtractable` | `state<T>`, —, `peer` |
 
+Both multipart extractors reject malformed MIME syntax with 400. In the
+streaming form, `MultipartPart.readText()` also rejects invalid UTF-8 with 400;
+binary uploads should use `content`, `readBytes()`, or `writeTo()` instead.
+
 ## Coercion
 
 Keyed extractors coerce to `String`, `int`, `double`, `num`, `bool`, `BigInt`,

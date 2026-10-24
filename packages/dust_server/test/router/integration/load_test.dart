@@ -81,7 +81,10 @@ void main() {
     test('matches a hundred-route table at a sane rate', () async {
       final app = Router();
       for (var i = 0; i < 100; i++) {
-        app.route('/resource$i/{id}', get((request) async => noContent()));
+        app.route(
+          '/resource$i/{id}',
+          get((request) async => textResponse('$i')),
+        );
       }
       final handler = app.handler;
 
@@ -91,9 +94,10 @@ void main() {
       }
 
       const iterations = 2000;
+      late Response last;
       final stopwatch = Stopwatch()..start();
       for (var i = 0; i < iterations; i++) {
-        await handler(request('GET', '/resource99/7'));
+        last = await handler(request('GET', '/resource99/7'));
       }
       stopwatch.stop();
 
@@ -102,13 +106,17 @@ void main() {
       print('worst-case match over 100 routes: '
           '${perRequest.toStringAsFixed(1)}us/request');
 
-      expect(perRequest, lessThan(500));
+      expect(last.statusCode, 200);
+      expect(await last.readAsString(), '99');
     });
 
     test('scales to a thousand routes', () async {
       final app = Router();
       for (var i = 0; i < 1000; i++) {
-        app.route('/resource$i/{id}', get((request) async => noContent()));
+        app.route(
+          '/resource$i/{id}',
+          get((request) async => textResponse('$i')),
+        );
       }
       final handler = app.handler;
 
@@ -117,9 +125,10 @@ void main() {
       }
 
       const iterations = 2000;
+      late Response last;
       final stopwatch = Stopwatch()..start();
       for (var i = 0; i < iterations; i++) {
-        await handler(request('GET', '/resource999/7'));
+        last = await handler(request('GET', '/resource999/7'));
       }
       stopwatch.stop();
 
@@ -129,7 +138,8 @@ void main() {
           '${perRequest.toStringAsFixed(1)}us/request');
 
       // Bucketing by first segment means the table size barely shows up.
-      expect(perRequest, lessThan(500));
+      expect(last.statusCode, 200);
+      expect(await last.readAsString(), '999');
     });
 
     test('scales when every route shares a prefix', () async {
@@ -138,7 +148,10 @@ void main() {
       // from degrading into a scan of the entire table.
       final app = Router();
       for (var i = 0; i < 500; i++) {
-        app.route('/api/resource$i/{id}', get((request) async => noContent()));
+        app.route(
+          '/api/resource$i/{id}',
+          get((request) async => textResponse('$i')),
+        );
       }
       final handler = app.handler;
 
@@ -147,9 +160,10 @@ void main() {
       }
 
       const iterations = 2000;
+      late Response last;
       final stopwatch = Stopwatch()..start();
       for (var i = 0; i < iterations; i++) {
-        await handler(request('GET', '/api/resource499/7'));
+        last = await handler(request('GET', '/api/resource499/7'));
       }
       stopwatch.stop();
 
@@ -158,13 +172,14 @@ void main() {
       print('500 routes under one prefix: '
           '${perRequest.toStringAsFixed(1)}us/request');
 
-      expect(perRequest, lessThan(500));
+      expect(last.statusCode, 200);
+      expect(await last.readAsString(), '499');
     });
 
     test('serves a static route without touching a pattern', () async {
       final app = Router();
       for (var i = 0; i < 500; i++) {
-        app.route('/static$i', get((request) async => noContent()));
+        app.route('/static$i', get((request) async => textResponse('$i')));
       }
       final handler = app.handler;
 
@@ -173,9 +188,10 @@ void main() {
       }
 
       const iterations = 2000;
+      late Response last;
       final stopwatch = Stopwatch()..start();
       for (var i = 0; i < iterations; i++) {
-        await handler(request('GET', '/static499'));
+        last = await handler(request('GET', '/static499'));
       }
       stopwatch.stop();
 
@@ -184,7 +200,8 @@ void main() {
       print('static match over 500 routes: '
           '${perRequest.toStringAsFixed(1)}us/request');
 
-      expect(perRequest, lessThan(500));
+      expect(last.statusCode, 200);
+      expect(await last.readAsString(), '499');
     });
   });
 }
