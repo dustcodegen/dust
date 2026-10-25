@@ -34,15 +34,21 @@ Router buildApp({
   void Function(AccessRecord)? onRecord,
   void Function(Object error, StackTrace stack)? onError,
 }) {
-  return Router(bodyLimit: 64 * 1024, onError: onError)
-    ..layer(const RequestId())
-    ..layer(AccessLog(onRecord ?? _printAccess))
-    ..layer(const SecurityHeaders())
-    ..layer(const RequestTimeout(Duration(seconds: 10)))
-    ..merge(noteRoutes());
+  return productionRouter(
+    bodyLimit: 64 * 1024,
+    maxConcurrentRequests: 64,
+    maxQueuedRequests: 64,
+    requestTimeout: const Duration(seconds: 10),
+    onRecord: onRecord ?? _printAccess,
+    onError: onError ?? _printError,
+  )..merge(noteRoutes());
 }
 
 /// Writes one bounded access record without query-string secrets.
 // coverage:ignore-start
 void _printAccess(AccessRecord record) => stdout.writeln(record);
+
+/// Reports full failures outside the HTTP response.
+void _printError(Object error, StackTrace stack) =>
+    stderr.writeln('$error\n$stack');
 // coverage:ignore-end

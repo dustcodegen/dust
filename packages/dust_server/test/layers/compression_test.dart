@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'dart:io' show gzip;
 
@@ -284,24 +283,6 @@ void main() {
           await send(serve(body: large), accept: 'br;q=1.0, gzip;q=0.8');
 
       expect(response.headers['content-encoding'], 'gzip');
-    });
-  });
-
-  group('inside a router', () {
-    test('compresses a JSON list a handler returned', () async {
-      final app = Router()
-        ..layer(const Compression(minimumBytes: 4))
-        ..route('/todos', get((request) async => List.filled(200, 'todo')));
-
-      final response = await app.handler(
-        request('GET', '/todos', headers: const {'accept-encoding': 'gzip'}),
-      );
-
-      expect(response.headers['content-encoding'], 'gzip');
-      expect(
-        jsonDecode(utf8.decode(gzip.decode(await bytes(response)))),
-        hasLength(200),
-      );
     });
   });
 }

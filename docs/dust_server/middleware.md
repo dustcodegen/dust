@@ -26,6 +26,7 @@ Nothing is installed by default.
 | Layer | Purpose |
 | :--- | :--- |
 | `RequestTimeout(budget, {onTimeout})` | answers 503 past the budget |
+| `ConcurrencyLimit(maxConcurrentRequests:, maxQueuedRequests:)` | bounds executing and queued work, then answers 503 with `Retry-After` |
 | `RequestId({header, generate})` | keeps an inbound `x-request-id` or assigns a UUID, and echoes it |
 | `AccessLog(onRecord)` | reports method, path, status, duration, and request id |
 
@@ -33,8 +34,12 @@ Nothing is installed by default.
 is the application's decision.
 
 `RequestTimeout` bounds how long a handler may take, which the body limit does
-not. It cannot **cancel** the handler: Dart has no cancellation, so the work
-keeps running with nobody waiting for it.
+not. Dart cannot forcibly cancel an arbitrary future, so work that ignores
+cancellation keeps running. Cooperative handlers can read
+`RequestCancellation` with `requestCancellationOf(request)` or generate it as
+`@Extract(RequestCancellationExtractable)`. In `productionRouter`, concurrency
+sits inside the timeout: non-cooperative work keeps its slot until it really
+ends, and a queued request whose deadline passes never enters its handler.
 
 It also bounds *producing* the response, not sending it. A handler that returns
 straight away with a streamed body — an event stream, a large download — has
@@ -127,6 +132,7 @@ than `layer`, so a path that does not exist still answers 404.
 | `AccessLog` | `access_log.dart` | records the 404 too, and the recorded path carries no query string |
 | `SecurityHeaders` | `security_headers.dart` | CSP and HSTS have no defaults, and why; two nested routers scope one policy to each half |
 | `RequestTimeout` | `request_timeout.dart` | the 503 goes back while the handler keeps running |
+| `ConcurrencyLimit` | `concurrency_limit.dart` | one request executes, one waits, and the next receives 503 with `Retry-After` |
 
 ```bash
 curl -sI localhost:8080/rows -H 'accept-encoding: gzip'      # content-encoding: gzip
@@ -137,6 +143,33 @@ curl -si localhost:8080/slow                                 # 503 after ~200ms
 `AccessLog` is the one to point somewhere real. It hands you an `AccessRecord`
 rather than printing, so a service that wants JSON on stdout, a counter, and a
 sampled trace does not have to fork the layer to get them.
+
+## Production policy
+
+Use one outer router for handwritten and generated modules:
+
+```dart
+final app = productionRouter(
+  bodyLimit: 64 * 1024,
+  maxConcurrentRequests: 64,
+  maxQueuedRequests: 64,
+  requestTimeout: const Duration(seconds: 10),
+  onRecord: logger.info,
+  onError: logger.error,
+)
+  ..merge(generatedRoutes())
+  ..nest('/manual', handwrittenRoutes);
+```
+
+The function installs request ids, access records, security headers, timeout
+cancellation, and bounded concurrency. Its capacity, body, and deadline values
+are required because a database-backed API and a streaming service do not have
+the same safe limits. CORS, compression, CSP, HSTS, tracing, and authentication
+remain application policy.
+
+This is application-level admission: the request has already reached Dart, but
+routing, extraction and handler work have not run. Bound connections and header
+parsing at the trusted reverse proxy when overload must be rejected earlier.
 
 ## Writing one
 

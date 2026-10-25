@@ -15,8 +15,10 @@ part 'request_data.g.dart';
 /// ```
 Future<void> main() => runExample(buildApp()); // coverage:ignore-line
 
-/// Mounts the generated request-data routes.
-Router buildApp() => requestDataRoutes();
+/// Mounts the generated routes below the same timeout used in production.
+Router buildApp() => Router()
+  ..layer(const RequestTimeout(Duration(seconds: 5)))
+  ..merge(requestDataRoutes());
 
 /// Returns the request values generated code extracted before this call.
 @GET('/inspect', summary: 'Inspect request data', tags: ['diagnostics'])
@@ -26,6 +28,7 @@ Future<Map<String, Object?>> inspect(
   @Header('x-request-id') String? requestId,
   @HeaderMap() Map<String, String> headers,
   @Peer() PeerInfo peer,
+  @Extract(RequestCancellationExtractable) RequestCancellation cancellation,
   RequestParts parts,
 ) async =>
     {
@@ -36,4 +39,5 @@ Future<Map<String, Object?>> inspect(
       'host': headers['host'],
       'peer': peer.remoteAddress,
       'method': parts.method,
+      'cancelled': cancellation.isCancelled,
     };

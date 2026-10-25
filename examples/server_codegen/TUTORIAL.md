@@ -173,16 +173,21 @@ operational layers, serving, and shutdown:
 ```dart
 import 'dart:io';
 
-final app = Router(
+final app = productionRouter(
   bodyLimit: 64 * 1024,
+  maxConcurrentRequests: 64,
+  maxQueuedRequests: 64,
+  requestTimeout: const Duration(seconds: 10),
+  onRecord: (record) => stdout.writeln(record),
   onError: (error, stack) => stderr.writeln('$error\n$stack'),
 )
-  ..layer(const RequestId())
-  ..layer(AccessLog((record) => stdout.writeln(record)))
-  ..layer(const SecurityHeaders())
-  ..layer(const RequestTimeout(Duration(seconds: 10)))
   ..merge(noteRoutes());
 ```
+
+`productionRouter` applies the same body, overload, deadline, request-id,
+logging, and safe-header policy to generated and handwritten routes. Values are
+explicit because safe capacity depends on the deployment. A full queue answers
+503 with `Retry-After`; a queued request whose deadline expires never starts.
 
 The generated extraction contract stays stable at the edge:
 

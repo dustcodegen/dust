@@ -41,7 +41,8 @@ Codegen now has runnable coverage for route modules, controllers, all seven
 supported HTTP verbs, route metadata and middleware, built-in parameter/body
 extraction, required/optional/fallible extraction, validation, and standard
 response dispatch. The production composition example proves generated routes
-keep the runtime's limits, request ids, access logs, safe headers, and timeouts;
-it also demonstrates graceful shutdown wiring. Deployment policy remains
+keep the runtime's body, concurrency and queue limits, request ids, access logs,
+safe headers, cancellation-aware timeouts, and 503 overload responses; it also
+demonstrates graceful shutdown wiring. Deployment policy remains
 handwritten by design; the [tutorial](TUTORIAL.md#what-stays-handwritten) names
 that boundary.

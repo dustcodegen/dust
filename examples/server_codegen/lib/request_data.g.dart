@@ -56,7 +56,13 @@ Future<Response> _$handleInspect(Request request) async {
   if (_dustResult4 case Err(:final error)) return error.intoResponse();
   final _dustValue4 = (_dustResult4 as Ok<PeerInfo, Rejection>).value;
 
-  final _dustValue5 = RequestParts.of(request);
+  final Result<RequestCancellation, Rejection> _dustResult5 =
+      await const RequestCancellationExtractable().extract(request);
+  if (_dustResult5 case Err(:final error)) return error.intoResponse();
+  final _dustValue5 =
+      (_dustResult5 as Ok<RequestCancellation, Rejection>).value;
+
+  final _dustValue6 = RequestParts.of(request);
 
   return guard(
     () async => responseFrom(
@@ -67,6 +73,7 @@ Future<Response> _$handleInspect(Request request) async {
         _dustValue3,
         _dustValue4,
         _dustValue5,
+        _dustValue6,
       ),
       status: 200,
     ),

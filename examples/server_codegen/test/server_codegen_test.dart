@@ -90,6 +90,7 @@ void main() {
     expect(body['host'], isNotEmpty);
     expect(body['peer'], '127.0.0.1');
     expect(body['method'], 'GET');
+    expect(body['cancelled'], isFalse);
   });
 
   test('generated form fields share one body read', () async {

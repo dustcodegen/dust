@@ -107,5 +107,35 @@ void main() {
 
       expect(await server.close(drain: const Duration(seconds: 5)), isTrue);
     });
+
+    test('drains sustained accepted traffic during shutdown', () async {
+      const requestCount = 20;
+      final allStarted = Completer<void>();
+      final release = Completer<void>();
+      var started = 0;
+      final app = Router()
+        ..route('/work', get((request) async {
+          started++;
+          if (started == requestCount) allStarted.complete();
+          await release.future;
+          return noContent();
+        }));
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+      final uri = Uri.parse(
+        'http://${server.address.host}:${server.port}/work',
+      );
+      final requests = List.generate(requestCount, (_) => http.get(uri));
+      await allStarted.future;
+
+      final closing = server.close(drain: const Duration(seconds: 5));
+      release.complete();
+
+      expect(await closing, isTrue);
+      expect(
+        (await Future.wait(requests)).map((response) => response.statusCode),
+        everyElement(204),
+      );
+      expect(server.inFlight, 0);
+    });
   });
 }

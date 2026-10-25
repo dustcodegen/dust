@@ -1,6 +1,6 @@
 use dust_ir::{
-    ClassIr, ClassKindIr, EnumIr, FieldIr, SerdeClassConfigIr, SerdeFieldConfigIr,
-    SerdeRenameRuleIr, SpanIr, SymbolId, TraitApplicationIr, TypeIr,
+    ClassIr, ClassKindIr, EnumIr, FieldIr, NameIr, SerdeClassConfigIr, SerdeFieldConfigIr,
+    SerdeRenameRuleIr, SpanIr, SymbolId, TraitApplicationIr, TypeIr, TypeParamIr,
 };
 use dust_text::{FileId, TextRange};
 
@@ -137,6 +137,11 @@ fn rejects_unsupported_shapes() {
                 None,
             ),
             field("order", TypeIr::named("Order"), None),
+            field(
+                "map",
+                TypeIr::generic("Map", vec![TypeIr::string(), TypeIr::string()]),
+                None,
+            ),
         ],
         Vec::new(),
     );
@@ -164,7 +169,7 @@ fn rejects_unsupported_shapes() {
         &mut diagnostics,
     );
 
-    assert_eq!(diagnostics.len(), 6);
+    assert_eq!(diagnostics.len(), 7);
     for expected in [
         "derive Deserialize",
         "custom SerDe codec",
@@ -179,6 +184,36 @@ fn rejects_unsupported_shapes() {
             "missing diagnostic: {expected}"
         );
     }
+}
+
+#[test]
+fn rejects_generic_query_model_declarations() {
+    let mut class = query_class(
+        vec![field("value", TypeIr::string(), None)],
+        vec![trait_("dust_dart::Deserialize")],
+    );
+    class.type_parameters.push(TypeParamIr {
+        name: NameIr {
+            source: "T".to_owned(),
+            short: "T".to_owned(),
+            prefix: None,
+            span: span(),
+        },
+        bound: Some(TypeIr::named("Object")),
+        span: span(),
+    });
+    let mut diagnostics = Vec::new();
+
+    let _ = query_model_plan(
+        &TypeIr::named("Filter"),
+        &[class],
+        &[],
+        span(),
+        &mut diagnostics,
+    );
+
+    assert_eq!(diagnostics.len(), 1);
+    assert!(diagnostics[0].message.contains("generic query models"));
 }
 
 #[test]

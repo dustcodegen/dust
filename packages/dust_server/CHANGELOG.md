@@ -20,6 +20,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `ConcurrencyLimit` bounds executing work and an optional FIFO queue, then
+  answers overload with 503 and `Retry-After` before routing or extraction.
+  `RequestTimeout` now exposes cooperative `RequestCancellation`, and
+  `productionRouter` applies body, concurrency, deadline, request-id, access-log,
+  and security-header policy consistently to handwritten and generated routes.
+- `tool/server_soak.dart` provides an opt-in sustained local traffic, RSS,
+  failure, and graceful-drain probe without adding development CI.
+
 - The generated fixture and getting-started guide now lead with top-level GET,
   POST, and DELETE functions using path and query parameters. `@Controller`
   remains available for class-owned dependencies.

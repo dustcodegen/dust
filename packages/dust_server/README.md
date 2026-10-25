@@ -92,6 +92,23 @@ final app = Router()
 final server = await serve(app, InternetAddress.anyIPv4, 8080);
 ```
 
+For an internet-facing application, wrap generated and handwritten modules in
+one explicit policy:
+
+```dart
+final app = productionRouter(
+  bodyLimit: 64 * 1024,
+  maxConcurrentRequests: 64,
+  maxQueuedRequests: 64,
+  requestTimeout: const Duration(seconds: 10),
+  onRecord: logger.info,
+  onError: logger.error,
+)..merge(itemRoutes());
+```
+
+The overload limit runs before routing, extraction and handlers. Timeout
+cancellation is cooperative; arbitrary Dart futures cannot be forcibly stopped.
+
 HTTP, WebSockets, server-rendered HTML, static assets, and isolate clustering,
 all on one router.
 
@@ -111,4 +128,5 @@ reserved for Rust releases.
 
 ```bash
 dart test
+dart run tool/server_soak.dart 3600 32 64
 ```

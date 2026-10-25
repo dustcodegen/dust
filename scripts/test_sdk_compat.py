@@ -10,7 +10,7 @@ from unittest.mock import patch
 from sdk_compat import (
     ROOT, check_unsupported, core_floor, core_lints, generated_hashes,
     latest_flutter_version, require_deterministic_generation, require_version,
-    run_command, stable_dart_version,
+    require_server_determinism, run_command, stable_dart_version,
     stage_example,
 )
 
@@ -73,6 +73,26 @@ class SdkCompatibilityTests(unittest.TestCase):
     def test_benchmark_declares_the_test_package_used_by_generated_http_tests(self) -> None:
         manifest = (ROOT / "examples/benchmark_project/pubspec.yaml").read_text()
         self.assertIn("\n  test: ^1.25.15\n", manifest)
+
+    def test_server_consumer_stages_both_runtime_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as name:
+            app, required = stage_example(
+                Path(name), "examples/server_codegen", "7.0.0")
+            overrides = (app / "pubspec_overrides.yaml").read_text()
+            self.assertIn('"dust_dart":', overrides)
+            self.assertIn('"dust_server":', overrides)
+            self.assertIn("lib/json_body.g.dart", required)
+
+    def test_server_generation_must_match_both_dart_ends(self) -> None:
+        rows = [
+            {"target": "dart", "serverGenerated": {"routes.g.dart": "hash"}},
+            {"target": "flutter", "serverGenerated": {}},
+            {"target": "dart", "serverGenerated": {"routes.g.dart": "hash"}},
+        ]
+        require_server_determinism(rows)
+        rows[-1]["serverGenerated"] = {"routes.g.dart": "different"}
+        with self.assertRaises(ValueError):
+            require_server_determinism(rows)
 
     def test_flutter_gates_rebuild_shopping_database_offline_after_clean(self) -> None:
         expected = [

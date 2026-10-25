@@ -118,6 +118,7 @@ is over a socket.
 | Question | File |
 | :--- | :--- |
 | Shutting down without dropping requests in flight | [`graceful_shutdown.dart`](graceful_shutdown.dart) |
+| Bounding concurrent work and shedding overload | [`concurrency_limit.dart`](concurrency_limit.dart) |
 | Work that outlives the response | [`background_tasks.dart`](background_tasks.dart) |
 | Spans, and continuing a trace that started upstream | [`tracing.dart`](tracing.dart) |
 | Using every core | [`several_isolates.dart`](several_isolates.dart) |

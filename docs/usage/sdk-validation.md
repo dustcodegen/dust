@@ -54,7 +54,9 @@ lint tooling. Production constraints, source files, root locks and SDK defaults
 are unchanged. Pub resolves allowed dependencies independently; this is not
 the repository lock running on every SDK.
 
-1. Copy the real Dart product showcase and Flutter benchmark consumers.
+1. Copy the real Dart product showcase, Dart server-codegen example, and
+   Flutter benchmark consumers. The server consumer proves the same production
+   runtime policy around freshly generated routes at both standalone Dart ends.
 2. Remove their copied `.g.dart` files and Dust-banner-marked HTTP auxiliary
    tests, including legacy plain `.dart` test filenames. Stale
    committed output cannot rescue missing generation. Originals are untouched.

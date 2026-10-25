@@ -27,6 +27,8 @@ from sdk_unsupported import check_unsupported
 from sdk_static_strings import check_static_strings
 from sdk_lexical_scopes import check_lexical_scopes
 from sdk_callback_formals import check_callback_formals
+from sdk_server_codegen import check_server_codegen, require_server_determinism
+from sdk_process import run_command
 
 
 def stable_dart_version(output: str) -> str:
@@ -75,16 +77,6 @@ def core_lints(version: str) -> str:
     return "7.0.0" if tuple(map(int, actual.split("."))) < (3, 10, 0) else compatible_lints(version)
 
 
-def run_command(command: list[str], cwd: Path, log: Path, expected: int = 0,
-                env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-    """Persist both streams; unexpected success is also a failure for negative probes."""
-    result = subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, timeout=900)
-    log.write_text(result.stdout + result.stderr, encoding="utf-8")
-    if result.returncode != expected:
-        raise RuntimeError(f"Expected exit {expected}, got {result.returncode}: {command}; see {log}")
-    return result
-
-
 def run_matrix(args: argparse.Namespace, output: Path) -> None:
     """Execute independent consumers without changing selected SDKs or production locks."""
     log_number = 0
@@ -126,6 +118,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
             raise ValueError(f"Missing fresh Dart outputs: {required - hashes.keys()}")
         run([str(dart), "analyze", "--fatal-infos"], app, env=env)
         run([str(dart), "test", "--reporter=expanded"], app, env=env)
+        server_hashes = check_server_codegen(
+            run, dust, dart, output / role / "server", core_lints(version_text), env)
         check_generic_analysis(run, dart, app, output / role / "dart/analysis_options.yaml",
                                "lib/models", env)
         negatives = check_generic_types(run, dart, app, output / role / "generic-negative",
@@ -145,7 +139,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         sealed = check_generic_sealed(run, dust, dart, app, output / role / "sealed",
                                       output / role / "dart/analysis_options.yaml", "product_showcase", env)
         rows.append({"role": role, "target": "dart", "version": version,
-                     "generated": hashes, "genericNegative": negatives, "genericNames": names,
+                     "generated": hashes, "serverGenerated": server_hashes,
+                     "genericNegative": negatives, "genericNames": names,
                      "staticStrings": strings, "lexicalScopes": lexical, "callbacks": callbacks,
                      "genericValidation": validation, "genericSerde": serde,
                      "genericInheritance": inheritance, "genericSealed": sealed})
@@ -185,6 +180,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
                      "genericValidation": validation, "genericSerde": serde, "genericInheritance": inheritance, "genericSealed": sealed})
 
     require_deterministic_generation(rows)
+    require_server_determinism(rows)
     primary = {
         "dart": check_primary(run, dust, args.latest_dart.resolve(), output),
         "flutter": check_primary(run, dust, flutter_dart, output, flutter=flutter),
