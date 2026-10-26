@@ -112,9 +112,10 @@ router revalidation. Run it on each supported native target before release.
 - `/product/:productId`
 - `/support/chat`
 
-The app calls `usePathUrlStrategy()` at startup. For deployed web builds,
-configure the host to serve `index.html` for unknown paths so direct deep links
-such as `/product/7` load the Flutter app. Host examples are covered in the
+The app installs `PathUrlStrategy(BrowserPlatformLocation(), true)` at startup
+so clean path URLs retain fragments for generated routes. For deployed web
+builds, configure the host to serve `index.html` for unknown paths so direct
+deep links such as `/product/7` load the Flutter app. Host examples are in the
 [deep-link guide](../../docs/usage/routing-deep-links.md#flutter-web-urls).
 
 Android and iOS also register the example custom scheme. With the app installed,

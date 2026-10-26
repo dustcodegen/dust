@@ -25,7 +25,7 @@ import 'route.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  usePathUrlStrategy();
+  setUrlStrategy(PathUrlStrategy(BrowserPlatformLocation(), true));
   final prefs = await SharedPreferences.getInstance();
   runApp(
     AppI18n(

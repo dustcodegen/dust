@@ -1,4 +1,7 @@
-use std::{thread, time::Duration};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use crate::helpers::run_cli;
 
@@ -100,8 +103,13 @@ fn cli_watch_reports_rebuilt_library() {
 
     let root = workspace.path().to_path_buf();
     let user_path = root.join("lib/user.dart");
+    let generated_path = root.join("lib/user.g.dart");
     let modifier = thread::spawn(move || {
-        thread::sleep(Duration::from_millis(80));
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while !generated_path.exists() {
+            assert!(Instant::now() < deadline, "initial watch build timed out");
+            thread::sleep(Duration::from_millis(10));
+        }
         write_dust_file(
             &user_path,
             &[DustImport::Derive],

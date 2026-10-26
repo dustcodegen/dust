@@ -70,6 +70,17 @@ void main() {
     expect(ios, contains('<string>shopping</string>'));
   });
 
+  test('web path URLs retain URI fragments for generated routes', () {
+    final main = File('lib/main.dart').readAsStringSync();
+
+    expect(
+      main,
+      contains(
+        'setUrlStrategy(PathUrlStrategy(BrowserPlatformLocation(), true));',
+      ),
+    );
+  });
+
   test('Apple projects use the supported deployment floors', () {
     final iosPodfile = File('ios/Podfile').readAsStringSync();
     final iosProject = File(

@@ -84,19 +84,23 @@ return LoginRoute(redirectPath: route.location);
 ## Flutter Web URLs
 
 Flutter web uses hash URLs such as `/#/products/42` by default. For normal path
-URLs, add the Flutter SDK web plugins dependency and call `usePathUrlStrategy()`
-before `runApp`:
+URLs that retain URI fragments, add the Flutter SDK web plugins dependency and
+install `PathUrlStrategy` before `runApp`:
 
 ```dart
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 void main() {
-  usePathUrlStrategy();
+  setUrlStrategy(PathUrlStrategy(BrowserPlatformLocation(), true));
 
   final router = ShopRouter();
   runApp(MaterialApp.router(routerConfig: router.config));
 }
 ```
+
+The second `PathUrlStrategy` argument enables hash retention. Flutter's
+`usePathUrlStrategy()` shorthand leaves it disabled, so the browser removes a
+fragment before Dust can preserve it in `route.location`.
 
 > [!IMPORTANT]
 > Path URLs also need the web host to serve `index.html` for unknown app paths,
