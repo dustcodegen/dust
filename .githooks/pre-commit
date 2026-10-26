@@ -14,9 +14,9 @@ run_without_git_env() {
 }
 
 ensure_generated_outputs_are_staged() {
-  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app fixtures/server_codegen_app; then
+  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app; then
     echo "error: Dust generated proof outputs changed during pre-commit." >&2
-    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app fixtures/server_codegen_app" >&2
+    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app" >&2
     echo "Then rerun your commit." >&2
     exit 1
   fi
@@ -28,6 +28,7 @@ run_without_git_env ./scripts/flutter/format.sh --check
 run_without_git_env ./scripts/dart/format.sh --check --examples
 run_without_git_env ./scripts/flutter/format.sh --check --examples
 ./scripts/rust/lint.sh
+run_without_git_env ./scripts/security/audit.sh
 python3 scripts/validate_compatibility_contract.py --self-test
 python3 scripts/validate_compatibility_contract.py
 run_without_git_env ./scripts/dart/lint.sh

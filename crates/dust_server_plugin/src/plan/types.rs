@@ -3,6 +3,10 @@ use dust_ir::{BuiltinType, ClassIr, SpanIr, TypeIr};
 
 use super::{model::RawBodyFormat, values::error};
 
+/// Typed query-model validation and conversion planning.
+mod query_model;
+pub(super) use query_model::query_model_plan;
+
 #[cfg(test)]
 /// Focused extractor and response type tests.
 mod tests;
@@ -40,7 +44,7 @@ pub(super) fn require_body_type(ty: &TypeIr, span: SpanIr, diagnostics: &mut Vec
         diagnostics.push(error(
             span,
             "Body requires a JSON map or a non-nullable model",
-            "use Map<String, Object?> or a model exposing static deserialize",
+            "use Map<String, Object?> or a model deriving Deserialize or exposing static deserialize",
         ));
     }
 }
@@ -93,6 +97,16 @@ pub(super) fn is_uploaded_file(ty: &TypeIr) -> bool {
 
 /// Returns whether a same-library model derives `Validate()`.
 pub(super) fn derives_validate(ty: &TypeIr, classes: &[ClassIr]) -> bool {
+    derives(ty, classes, "dust_dart::Validate")
+}
+
+/// Returns whether a same-library model derives Dust deserialization.
+pub(super) fn derives_deserialize(ty: &TypeIr, classes: &[ClassIr]) -> bool {
+    derives(ty, classes, "dust_dart::Deserialize")
+}
+
+/// Returns whether a same-library model derives the requested Dust trait.
+fn derives(ty: &TypeIr, classes: &[ClassIr], symbol: &str) -> bool {
     let Some(name) = ty.name().filter(|name| !name.contains('.')) else {
         return false;
     };
@@ -103,7 +117,7 @@ pub(super) fn derives_validate(ty: &TypeIr, classes: &[ClassIr]) -> bool {
             class
                 .traits
                 .iter()
-                .any(|application| application.symbol.0 == "dust_dart::Validate")
+                .any(|application| application.symbol.0 == symbol)
         })
 }
 

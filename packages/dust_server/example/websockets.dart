@@ -54,8 +54,15 @@ const allowedOrigins = {'http://localhost:3000'};
 Router buildApp() {
   return Router()
     ..routeLayer(guardUpgrade)
-    ..route('/echo', ws(echo))
-    ..route('/greeter', ws(greeter, protocols: ['greeting.v2', 'greeting.v1']));
+    ..route('/echo', ws(echo, allowedOrigins: allowedOrigins))
+    ..route(
+      '/greeter',
+      ws(
+        greeter,
+        protocols: ['greeting.v2', 'greeting.v1'],
+        allowedOrigins: allowedOrigins,
+      ),
+    );
 }
 
 /// Echoes text back, and stops when the client goes away.
@@ -78,19 +85,12 @@ Future<void> greeter(WebSocketSession session) async {
   await session.close();
 }
 
-/// Refuses an upgrade that is unauthenticated or cross-origin.
+/// Refuses an upgrade that is unauthenticated.
 ///
 /// A `routeLayer`, so it runs before the upgrade while a status code can still
 /// be sent, and only for routes that exist.
 Handler guardUpgrade(Handler inner) {
   return (Request request) async {
-    final origin = request.headers['origin'];
-    // A non-browser client sends no Origin, which is why absent is allowed here
-    // and a *wrong* one is not. If only browsers should connect, require it.
-    if (origin != null && !allowedOrigins.contains(origin)) {
-      return const Rejection.forbidden('origin not allowed').intoResponse();
-    }
-
     // The token rides in the query because a browser cannot set headers on a
     // WebSocket handshake. It therefore lands in access logs — use a short-lived
     // ticket fetched over HTTPS, not the session token.

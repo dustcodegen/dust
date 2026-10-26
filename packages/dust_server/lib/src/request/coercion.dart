@@ -37,11 +37,17 @@ Result<T, Rejection> coerce<T>(String raw, {required String source}) {
   }
   if (T == double || T == typeOf<double?>()) {
     final value = _padded(raw) ? null : double.tryParse(raw);
-    return value == null ? Err(bad('number')) : Ok(value as T);
+    return value == null || !value.isFinite
+        ? Err(bad('number'))
+        : Ok(value as T);
   }
   if (T == num || T == typeOf<num?>()) {
-    final value = _padded(raw) ? null : num.tryParse(raw);
-    return value == null ? Err(bad('number')) : Ok(value as T);
+    final value = _padded(raw)
+        ? null
+        : int.tryParse(raw, radix: 10) ?? double.tryParse(raw);
+    return value == null || !value.isFinite
+        ? Err(bad('number'))
+        : Ok(value as T);
   }
   if (T == bool || T == typeOf<bool?>()) {
     final value = switch (raw.toLowerCase()) {

@@ -87,10 +87,10 @@ pub(super) fn validate_sqlx_describe(
     diagnostics.extend(warnings.into_iter().map(Diagnostic::warning));
     match validated {
         Ok(metadata) => {
-            if matches!(options.execution.metadata, MetadataOutput::Write) {
-                if let Err(error) = write_query_cache(library, metadata) {
-                    diagnostics.push(Diagnostic::warning(error));
-                }
+            if matches!(options.execution.metadata, MetadataOutput::Write)
+                && let Err(error) = write_query_cache(library, metadata)
+            {
+                diagnostics.push(Diagnostic::warning(error));
             }
         }
         Err(error) => diagnostics.push(Diagnostic::error(error)),

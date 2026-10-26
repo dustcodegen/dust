@@ -144,6 +144,7 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
                 wrapper: ExtractionWrapper::Required,
                 extraction,
                 validated: false,
+                serde_deserialized: false,
             })
             .collect(),
         middleware: Vec::new(),
@@ -194,6 +195,10 @@ fn emits_every_phase_one_extractor_and_both_callable_kinds() {
     assert!(top_level.contains("await health(),"));
     assert!(top_level.contains("status: 202,"));
 
+    plan.controllers[0].handlers[0].status = 200;
+    let explicit_void_status = emit_server(&plan).mixin_members[0].members.join("\n");
+    assert!(explicit_void_status.contains("return Response(200);"));
+
     plan.functions.clear();
     assert!(emit_server(&plan).top_level_functions.is_empty());
 }
@@ -243,6 +248,7 @@ fn emits_custom_extractors_and_parameter_wrappers() {
             wrapper: ExtractionWrapper::Required,
             extraction: Extraction::Custom("BearerAuth".to_owned()),
             validated: false,
+            serde_deserialized: false,
         },
         ParamPlan {
             param: &method.params[1],
@@ -250,6 +256,7 @@ fn emits_custom_extractors_and_parameter_wrappers() {
             wrapper: ExtractionWrapper::Optional,
             extraction: Extraction::Custom("BearerAuth".to_owned()),
             validated: false,
+            serde_deserialized: false,
         },
         ParamPlan {
             param: &method.params[2],
@@ -257,6 +264,7 @@ fn emits_custom_extractors_and_parameter_wrappers() {
             wrapper: ExtractionWrapper::Fallible,
             extraction: Extraction::Custom("TodosWrite".to_owned()),
             validated: false,
+            serde_deserialized: false,
         },
         ParamPlan {
             param: &method.params[3],
@@ -264,6 +272,7 @@ fn emits_custom_extractors_and_parameter_wrappers() {
             wrapper: ExtractionWrapper::Optional,
             extraction: Extraction::Query("page".to_owned()),
             validated: false,
+            serde_deserialized: false,
         },
     ];
     let output = emit_handler(

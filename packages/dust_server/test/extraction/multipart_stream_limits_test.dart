@@ -197,6 +197,69 @@ void main() {
 
       expectStatus(outcome, 400);
     });
+
+    test('malformed multipart syntax throws a 400 rejection', () async {
+      final body = await _extract(_request(utf8.encode('not multipart')));
+
+      await expectLater(
+        body.forEachPart((_) async {}),
+        throwsA(isA<Rejection>().having((r) => r.status, 'status', 400)),
+      );
+    });
+
+    test('malformed part headers throw a 400 rejection', () async {
+      final body = await _extract(
+        _request(
+          utf8.encode(
+            '--$_boundary\r\n'
+            'content-disposition: form-data; name="unterminated\r\n\r\n'
+            'value\r\n'
+            '--$_boundary--\r\n',
+          ),
+        ),
+      );
+
+      await expectLater(
+        body.forEachPart((_) async {}),
+        throwsA(isA<Rejection>().having((r) => r.status, 'status', 400)),
+      );
+    });
+
+    test('invalid UTF-8 text throws a 400 rejection', () async {
+      final body = await _extract(
+        _request(_body([
+          ('caption', null, [0xff])
+        ])),
+      );
+
+      await expectLater(
+        body.forEachPart((part) => part.readText()),
+        throwsA(isA<Rejection>().having((r) => r.status, 'status', 400)),
+      );
+    });
+
+    test('an unexpected request-stream error stays a server error', () async {
+      final request = Request(
+        'POST',
+        Uri.parse('http://localhost/upload'),
+        headers: const {
+          'content-type': 'multipart/form-data; boundary=$_boundary',
+        },
+        body: Stream<List<int>>.error(StateError('socket failed')),
+      );
+      final body = await _extract(request);
+
+      await expectLater(
+        body.forEachPart((_) async {}),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'socket failed',
+          ),
+        ),
+      );
+    });
   });
 }
 

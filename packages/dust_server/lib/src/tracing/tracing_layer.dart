@@ -93,8 +93,6 @@ final class Tracing implements Layer {
           attributes: {
             'http.request.method': parts.method,
             'url.path': request.requestedUri.path,
-            if (request.requestedUri.query.isNotEmpty)
-              'url.query': request.requestedUri.query,
             if (serviceName != null) 'service.name': serviceName,
           },
         );

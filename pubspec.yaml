@@ -15,6 +15,7 @@ workspace:
   - fixtures/postgres_app
   - examples/product_showcase
   - examples/benchmark_project
+  - examples/server_codegen
 
 hooks:
   user_defines:

@@ -4,15 +4,15 @@ import 'package:shelf/shelf.dart';
 ///
 /// `middleware:` on `@Controller` and on a verb only accepts const values, so
 /// there has to be a way to get from one of those to a shelf [Middleware].
-/// Dust emits `const RateLimit(perMinute: 30).toMiddleware()`. The name follows
+/// Dust calls [Layer.toMiddleware] on each configured object. The name follows
 /// axum's `Layer`, and `Router.layer` takes either this or a bare shelf
 /// [Middleware].
 ///
 /// ```dart
-/// final class RateLimit implements Layer {
-///   const RateLimit({required this.perMinute});
+/// final class RequireHeader implements Layer {
+///   const RequireHeader(this.name);
 ///
-///   final int perMinute;
+///   final String name;
 ///
 ///   @override
 ///   Middleware toMiddleware() => ...;

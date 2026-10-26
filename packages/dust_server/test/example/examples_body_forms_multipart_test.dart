@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import '../../example/multipart_form.dart' as multipart_form;
 import '../../example/multipart_stream.dart' as multipart_stream;
@@ -78,12 +79,17 @@ void main() {
 
   group('multipart_stream', () {
     /// A multipart body with one field and one file of [bytes] bytes.
-    ({String type, List<int> body}) upload({int bytes = 200000}) {
+    ({String type, List<int> body}) upload({
+      int bytes = 200000,
+      List<int>? caption,
+    }) {
       const boundary = 'X-DUST-STREAM';
       final out = <int>[
         ...utf8.encode('--$boundary\r\n'
-            'content-disposition: form-data; name="caption"\r\n\r\n'
-            'a big one\r\n'),
+            'content-disposition: form-data; name="caption"\r\n\r\n'),
+        ...?caption,
+        if (caption == null) ...utf8.encode('a big one'),
+        ...utf8.encode('\r\n'),
         ...utf8.encode('--$boundary\r\n'
             'content-disposition: form-data; name="file"; '
             'filename="../../etc/passwd"\r\n'
@@ -93,6 +99,17 @@ void main() {
       ];
 
       return (type: 'multipart/form-data; boundary=$boundary', body: out);
+    }
+
+    Future<http.Response> sendBytes(
+      ExampleApp app,
+      List<int> body,
+      String contentType,
+    ) async {
+      final request = http.Request('POST', app.uri('/upload'))
+        ..headers['content-type'] = contentType
+        ..bodyBytes = body;
+      return http.Response.fromStream(await request.send());
     }
 
     Future<String> directory() async {
@@ -175,6 +192,32 @@ void main() {
       );
 
       expect(response.statusCode, 413);
+    });
+
+    test('malformed multipart syntax is a 400', () async {
+      final root = await directory();
+      final app = await example(multipart_stream.buildApp(root));
+
+      final response = await app.send(
+        'POST',
+        '/upload',
+        body: 'not multipart',
+        headers: const {
+          'content-type': 'multipart/form-data; boundary=X-DUST-STREAM',
+        },
+      );
+
+      expect(response.statusCode, 400);
+    });
+
+    test('invalid UTF-8 text is a 400', () async {
+      final root = await directory();
+      final app = await example(multipart_stream.buildApp(root));
+      final sent = upload(bytes: 0, caption: [0xff]);
+
+      final response = await sendBytes(app, sent.body, sent.type);
+
+      expect(response.statusCode, 400);
     });
   });
 }

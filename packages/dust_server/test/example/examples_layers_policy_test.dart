@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dust_server/server.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import '../../example/disposable_layers.dart' as disposable_layers;
+import '../../example/concurrency_limit.dart' as concurrency_limit;
 import '../../example/normalize_path.dart' as normalize_path;
+import '../../example/rate_limit.dart' as rate_limit;
 import '../../example/request_timeout.dart' as request_timeout;
 import '../../example/route_layer.dart' as route_layer;
 import '../../example/security_headers.dart' as security_headers;
@@ -203,6 +206,52 @@ void main() {
       await app.get('/slow');
 
       expect(timedOut, ['slow']);
+    });
+  });
+
+  group('concurrency_limit', () {
+    test('runs one, queues one, and sheds the next request', () async {
+      final started = Completer<void>();
+      final release = Completer<void>();
+      var calls = 0;
+      final app = await example(
+        concurrency_limit.buildApp(work: () async {
+          calls++;
+          if (calls == 1) started.complete();
+          await release.future;
+        }),
+      );
+
+      final first = app.get('/work');
+      await started.future;
+      final second = app.get('/work');
+      final rejected = await app.get('/work');
+      release.complete();
+
+      expect(rejected.statusCode, 503);
+      expect(rejected.headers['retry-after'], '1');
+      expect((await first).statusCode, 200);
+      expect((await second).statusCode, 200);
+      expect(calls, 2);
+    });
+  });
+
+  group('rate_limit', () {
+    test('limits one API key without blocking another', () async {
+      final app = await example(rate_limit.buildApp());
+
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'first'})).statusCode,
+        200,
+      );
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'first'})).statusCode,
+        429,
+      );
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'second'})).statusCode,
+        200,
+      );
     });
   });
 

@@ -7,25 +7,11 @@
 Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 
 > [!IMPORTANT]
-> **0.2.1 stable runtime.** The current source checkout retains the documented
-> handwritten APIs while completing generated server wiring through Phase 5.
->
-> top-level handlers: the typed request extractors, validation, custom
-> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
-> failures, plus controller/route middleware and production-shaped runtime
-> composition proof. Generated routes expose format-neutral `RouteMetadata`
-> through `Router.describe()`; OpenAPI generation remains a separate package.
-> Controllers and top-level handlers support typed request extractors,
-> validation, custom `@Extract(Type)` values, extractor wrappers, response
-> dispatch, guarded failures, middleware, and production-shaped composition.
-> Generated routes expose format-neutral `RouteMetadata` through
-> `Router.describe()`; OpenAPI generation remains a separate package.
-> top-level handlers: the typed request extractors, validation, custom
-> `@Extract(Type)` values, extractor wrappers, response dispatch, and guarded
-> failures, plus controller/route middleware and production-shaped runtime
-> composition proof. Generated routes expose format-neutral `RouteMetadata`
-> through `Router.describe()`; OpenAPI generation remains a separate package.
-> See the [design phases](../../docs/design/server-plugin.md#phases).
+> **0.2.1 stable runtime.** The current source checkout also generates wiring
+> for controllers and top-level route modules: typed extraction, validation,
+> response dispatch, middleware, guarded failures, and `RouteMetadata` visible
+> through `Router.describe()`. The generator is not in the published 0.2.1
+> binaries yet. OpenAPI generation remains a separate package.
 
 ## Documentation
 
@@ -42,6 +28,7 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 | [Serving](../../docs/dust_server/serving.md) | draining, TLS, isolate clustering |
 | [Middleware](../../docs/dust_server/middleware.md) | layers, ordering, what ships |
 | [Testing](../../docs/dust_server/testing.md) | running the suite, testing an application |
+| [Security](../../docs/dust_server/security.md) | production baseline, OWASP ownership, dependency audits |
 | [Dependencies](../../docs/dust_server/dependencies.md) | what is reused, and what is not |
 
 ## At a glance
@@ -70,9 +57,16 @@ Future<Map<String, Object?>> create(@Query('name') String name) async =>
 Future<void> delete(@Path() int id) async {}
 ```
 
+Use `@Query() Filter filter` for a flat same-library model deriving
+`Deserialize()`. Generated code applies SerDe names, aliases, defaults, enums,
+and repeated list values; deriving `Validate()` adds post-decode validation.
+Named `@Query('details')` parameters remain the smallest choice for one value.
+
 Run `dust build`, then mount `itemRoutes()` in the application router. Use
-`@Controller` only when a class is the clearer home for shared dependencies.
-The complete generated Phase 5 fixture is
+`@Controller(...)` only when a class is the clearer home for shared dependencies.
+Start with the focused
+[`examples/server_codegen`](../../examples/server_codegen/README.md); the
+complete internal regression fixture is
 [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
 
 Metadata declared on a verb is available after normal mounting:
@@ -91,7 +85,10 @@ Runtime composition remains available directly:
 final app = Router()
   ..layer(const RequestId())
   ..route('/todos/{id}', get(readTodo))
-  ..route('/chat/{room}', ws(joinRoom))
+  ..route(
+    '/chat/{room}',
+    ws(joinRoom, allowedOrigins: const {'https://app.example'}),
+  )
   ..mount('/assets', staticFiles('web/assets'))
   ..withState(repository)
   ..fallback(singlePageApp('web/index.html'));
@@ -99,23 +96,47 @@ final app = Router()
 final server = await serve(app, InternetAddress.anyIPv4, 8080);
 ```
 
+For an internet-facing application, wrap generated and handwritten modules in
+one explicit policy:
+
+```dart
+final app = productionRouter(
+  bodyLimit: 64 * 1024,
+  maxConcurrentRequests: 64,
+  maxQueuedRequests: 64,
+  requestTimeout: const Duration(seconds: 10),
+  onRecord: logger.info,
+  onError: logger.error,
+)
+  ..layer(RateLimit(
+    maxRequests: 60,
+    window: const Duration(minutes: 1),
+    keyBy: (request) => request.headers['x-api-key'] ?? 'anonymous',
+  ))
+  ..merge(itemRoutes());
+```
+
+The overload limit runs before routing, extraction and handlers. Timeout
+cancellation is cooperative; arbitrary Dart futures cannot be forcibly stopped.
+
 HTTP, WebSockets, server-rendered HTML, static assets, and isolate clustering,
 all on one router.
 
 ## Examples
 
-[`example/`](example/README.md) holds one file per question — under 60 lines
-each, named after the question it answers, so the answer is not buried in an
-application. The index lists them by area.
+[`example/`](example/README.md) holds the handwritten, non-codegen examples.
+[`examples/server_codegen`](../../examples/server_codegen/README.md) holds the
+matching generated style. Both indexes link the equivalent use cases.
 
-Every one is served over a loopback socket by `test/example/` and driven with a
-real client, which is what keeps a directory that size from rotting.
+Both tracks are served over loopback sockets and driven with real clients,
+which keeps the examples from rotting.
 
 ## Tests
 
-The historical coverage gate targets 100% line coverage. Dart coverage CI is
-disabled during the repository migration; only manual Rust release CI is enabled.
+The local pre-commit gate requires 100% line coverage. GitHub Actions are
+reserved for Rust releases.
 
 ```bash
 dart test
+dart run tool/server_soak.dart 3600 32 64
 ```

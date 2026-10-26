@@ -36,13 +36,13 @@ pub(super) fn plan(
                 source: root.uri.clone(),
                 producer: output.producer,
             };
-            if let Some(previous) = claims.insert(path.clone(), claim) {
-                if claims[&path] != previous {
-                    return Err(Diagnostic::error(format!(
-                        "generated library `{}` has conflicting producers",
-                        path.display()
-                    )));
-                }
+            if let Some(previous) = claims.insert(path.clone(), claim)
+                && claims[&path] != previous
+            {
+                return Err(Diagnostic::error(format!(
+                    "generated library `{}` has conflicting producers",
+                    path.display()
+                )));
             }
         }
     }

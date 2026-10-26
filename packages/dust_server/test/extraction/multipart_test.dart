@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dust_server/server.dart';
 import 'package:test/test.dart';
@@ -166,6 +167,17 @@ void main() {
       );
 
       expect(expectOk(form.field<String?>('missing')), isNull);
+    });
+
+    test('rejects an invalid UTF-8 text field with 400', () {
+      final form = MultipartForm({
+        'title': UploadedFile(name: 'title', bytes: Uint8List.fromList([0xff])),
+      });
+
+      expect(
+        expectStatus(form.field<String>('title'), 400).message,
+        'multipart part "title" is not valid UTF-8',
+      );
     });
   });
 }

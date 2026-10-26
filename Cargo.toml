@@ -29,7 +29,7 @@ exclude = ["vendor/tree-sitter-dart", "crates/dust_parser_dart_ts/parity"]
 version = "0.2.1"
 edition = "2024"
 license = "MIT"
-rust-version = "1.85"
+rust-version = "1.89"
 repository = "https://github.com/dustcodegen/dust"
 homepage = "https://github.com/dustcodegen/dust"
 

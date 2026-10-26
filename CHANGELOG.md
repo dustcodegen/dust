@@ -6,8 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Tooling**: replace the deprecated `serde_yaml`/`unsafe-libyaml` parser with
+  safe-Rust `serde-saphyr`, pin release toolchains and actions, and set the Rust
+  workspace minimum to 1.89.
+
 ### Added
 
+- **Server**: add per-identity rate limiting, WebSocket origin enforcement,
+  replay-safe webhook guidance, observer isolation, query-safe tracing, and
+  streamed-response drain/capacity accounting.
 - **Server**: add an executable function-first GET/POST/DELETE example proving
   path and query extraction without `@Controller` (#171).
 
@@ -48,6 +57,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Release-only CI pins Rust, Dart, Flutter, and action revisions. Local commits
+  and releases audit Rust and Dart dependency advisories; the Rust workspace
+  minimum is 1.89 after replacing the unmaintained YAML backend.
 - **Server**: mark the 0.2.x runtime and generated server surface stable in
   current-facing documentation. Operational soak, shutdown-under-load, and
   deployment evidence remain tracked separately from API stability.

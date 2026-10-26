@@ -1,5 +1,7 @@
 /// Handler body-media and ordering validation.
 mod body;
+/// Shared handler validation and planning.
+mod handler;
 /// Dart identifier validation for generated declarations.
 mod identifier;
 /// Library-level lookup and validation.
@@ -18,25 +20,25 @@ mod values;
 mod tests;
 
 use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, DartFileIr, FunctionIr, MethodIr};
+use dust_ir::{ClassIr, DartFileIr, EnumIr, FunctionIr, MethodIr};
 
 pub(crate) use model::{
     BodyFormat, Callable, ControllerPlan, Extraction, ExtractionWrapper, HandlerPlan, ParamPlan,
-    RawBodyFormat, RouteMetadataPlan, ServerPlan,
+    QueryConversionKind, QueryConversionPlan, QueryModelPlan, RawBodyFormat, RouteMetadataPlan,
+    ServerPlan,
 };
 
-use body::{parse_body_media, validate_body_order};
+use handler::parse_handler;
 use identifier::is_emittable_identifier;
+pub(crate) use library::generated_handler_name;
 use library::{
-    default_routes_name, find_config, first_server_span, is_server_config, validate_part,
-    validate_unique_routes, verb_config,
+    default_routes_name, first_server_span, is_server_config, validate_generated_names,
+    validate_part, validate_unique_routes, verb_config,
 };
 use model::{Args, GroupPlan, VERBS};
-use param::parse_param;
-use types::unsupported_return;
 use values::{
-    error, parse_middleware, parse_route_metadata, parse_status, parse_tags, path_keys,
-    required_string, string_value, validate_named, validate_route_path,
+    error, parse_middleware, parse_tags, required_string, string_value, validate_named,
+    validate_route_path,
 };
 
 /// Builds the validated server plan for one Dart library.
@@ -45,21 +47,40 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
     let mut controllers = Vec::new();
     let mut routes = None;
 
-    for annotation in &file.library_annotations {
-        if annotation
+    let route_groups = file.library_annotations.iter().filter(|annotation| {
+        annotation
             .resolved_symbol
             .as_ref()
             .map(|value| value.0.as_str())
             == Some("dust_server::Routes")
-        {
+    });
+    for (index, annotation) in route_groups.enumerate() {
+        if index == 0 {
             routes = parse_group(Args::Annotation(annotation), "Routes", &mut diagnostics);
+        } else {
+            diagnostics.push(error(
+                annotation.span,
+                "libraries accept only one @Routes annotation",
+                "remove the extra @Routes annotation",
+            ));
         }
     }
 
     for class in &file.classes {
-        let Some(config) = find_config(&class.configs, "dust_server::Controller") else {
+        let mut controller_groups = class
+            .configs
+            .iter()
+            .filter(|config| config.symbol.0 == "dust_server::Controller");
+        let Some(config) = controller_groups.next() else {
             continue;
         };
+        for duplicate in controller_groups {
+            diagnostics.push(error(
+                duplicate.span,
+                "server classes accept only one @Controller annotation",
+                "remove the extra @Controller annotation",
+            ));
+        }
         if !class.type_parameters.is_empty() {
             diagnostics.push(error(
                 class.span,
@@ -72,7 +93,15 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
         let handlers = class
             .methods
             .iter()
-            .filter_map(|method| parse_method(method, &group.tags, &file.classes, &mut diagnostics))
+            .filter_map(|method| {
+                parse_method(
+                    method,
+                    &group.tags,
+                    &file.classes,
+                    &file.enums,
+                    &mut diagnostics,
+                )
+            })
             .collect();
         controllers.push(ControllerPlan {
             class,
@@ -91,6 +120,7 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
                 function,
                 &function_group.tags,
                 &file.classes,
+                &file.enums,
                 &mut diagnostics,
             )
         })
@@ -124,6 +154,13 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
             "use a non-reserved Dart identifier in @Routes(name: ...)",
         ));
     }
+    validate_generated_names(
+        file,
+        &controllers,
+        &functions,
+        &function_name,
+        &mut diagnostics,
+    );
     if !diagnostics.is_empty() {
         return Err(diagnostics);
     }
@@ -142,6 +179,7 @@ fn parse_method<'a>(
     method: &'a MethodIr,
     inherited_tags: &[String],
     classes: &[ClassIr],
+    enums: &[EnumIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = method
@@ -179,6 +217,7 @@ fn parse_method<'a>(
             .collect(),
         inherited_tags,
         classes,
+        enums,
         diagnostics,
     )
 }
@@ -188,6 +227,7 @@ fn parse_function<'a>(
     function: &'a FunctionIr,
     inherited_tags: &[String],
     classes: &[ClassIr],
+    enums: &[EnumIr],
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = function
@@ -226,70 +266,9 @@ fn parse_function<'a>(
         verbs,
         inherited_tags,
         classes,
+        enums,
         diagnostics,
     )
-}
-
-/// Validates shared handler arguments and builds its route plan.
-fn parse_handler<'a>(
-    callable: Callable<'a>,
-    verbs: Vec<(Args<'a>, &'static str)>,
-    inherited_tags: &[String],
-    classes: &[ClassIr],
-    diagnostics: &mut Vec<Diagnostic>,
-) -> Option<HandlerPlan<'a>> {
-    if verbs.len() != 1 {
-        diagnostics.push(error(
-            callable.span(),
-            "server handlers require exactly one HTTP verb",
-            "remove the extra verb annotation",
-        ));
-        return None;
-    }
-    let (args, method) = &verbs[0];
-    validate_named(
-        args,
-        &[
-            "status",
-            "summary",
-            "description",
-            "tags",
-            "middleware",
-            "operationId",
-            "deprecated",
-            "hidden",
-        ],
-        diagnostics,
-    );
-    let path = required_string(args, 0, "verb path", diagnostics)?;
-    validate_route_path(&path, args.span(), diagnostics);
-    let status = parse_status(args, diagnostics).unwrap_or(200);
-    let middleware = parse_middleware(args, diagnostics);
-    let metadata = parse_route_metadata(args, inherited_tags, callable.name());
-    let placeholders = path_keys(&path);
-    let body_media = parse_body_media(callable, diagnostics);
-    let params = callable
-        .params()
-        .iter()
-        .filter_map(|param| parse_param(param, &placeholders, body_media, classes, diagnostics))
-        .collect::<Vec<_>>();
-    validate_body_order(callable, body_media, &params, diagnostics);
-    if unsupported_return(callable.return_type()) {
-        diagnostics.push(error(
-            callable.span(),
-            "handler return type is not supported by generated server handlers",
-            "use JSON data, Result, Option, text, bytes, a byte stream, Unit, void, or Response",
-        ));
-    }
-    Some(HandlerPlan {
-        callable,
-        method,
-        path,
-        status,
-        params,
-        middleware,
-        metadata,
-    })
 }
 
 /// Reads a controller or top-level route-group annotation.

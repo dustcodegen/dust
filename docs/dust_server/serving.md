@@ -87,6 +87,11 @@ proxy. When they do, the proxy's `X-Forwarded-*` headers are ordinary headers
 here: nothing reads them automatically, and nothing should, since trusting them
 without knowing the proxy is a spoofing hole.
 
+The same proxy should bound open connections and request headers.
+`ConcurrencyLimit` rejects excess application work before routing and body
+extraction, but HTTP acceptance and parsing have already happened inside
+`HttpServer`.
+
 ## Trying it
 
 `dart run example/graceful_shutdown.dart`, then from another terminal:
@@ -113,6 +118,11 @@ that example are worth copying rather than rediscovering:
 Draining waits; it does not cancel. Dart has no cancellation, so a request still
 running when the budget expires keeps running until the process dies underneath
 it.
+
+A synchronously wedged isolate is a process-supervision boundary. The cluster
+reports reduced `alive` capacity and calls `onIsolateError`, while bounded close
+still returns; Dart may retain that isolate's shared socket until the process
+exits. Replace the process rather than attempting an in-process worker restart.
 
 ### Work that outlives the response
 

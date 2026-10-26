@@ -230,15 +230,14 @@ impl<'a> Loader<'a> {
                     .or_default()
                     .insert(uri.to_owned());
             }
-            if generated {
-                if let Some(previous) = self.generated.insert(target.uri.clone(), uri.to_owned()) {
-                    if previous != uri {
-                        return Err(format!(
-                            "generated part `{}` has conflicting owners",
-                            target.uri
-                        ));
-                    }
-                }
+            if generated
+                && let Some(previous) = self.generated.insert(target.uri.clone(), uri.to_owned())
+                && previous != uri
+            {
+                return Err(format!(
+                    "generated part `{}` has conflicting owners",
+                    target.uri
+                ));
             }
             if !self.units.contains_key(&target.uri)
                 || (generated

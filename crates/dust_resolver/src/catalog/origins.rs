@@ -33,13 +33,13 @@ impl SymbolCatalog {
                 origin.symbol
             )));
         }
-        if let Some(previous) = self.annotation_origin(origin.symbol) {
-            if previous != &origin {
-                return Err(Diagnostic::error(format!(
-                    "conflicting declaration origins for symbol `{}`",
-                    origin.symbol
-                )));
-            }
+        if let Some(previous) = self.annotation_origin(origin.symbol)
+            && previous != &origin
+        {
+            return Err(Diagnostic::error(format!(
+                "conflicting declaration origins for symbol `{}`",
+                origin.symbol
+            )));
         }
         self.origins.insert(origin.symbol.to_owned(), origin);
         Ok(())

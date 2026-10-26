@@ -110,6 +110,10 @@ Use the class when you want the `Result` rather than the throw.
 | `RawBodyExtractable`, `TextBodyExtractable`, `StreamBodyExtractable` | `rawBody`, `textBody`, `bodyStream` |
 | `StateExtractable<T>`, `ContextExtractable<T>`, `PeerExtractable` | `state<T>`, —, `peer` |
 
+Both multipart extractors reject malformed MIME syntax with 400. In the
+streaming form, `MultipartPart.readText()` also rejects invalid UTF-8 with 400;
+binary uploads should use `content`, `readBytes()`, or `writeTo()` instead.
+
 ## Coercion
 
 Keyed extractors coerce to `String`, `int`, `double`, `num`, `bool`, `BigInt`,
@@ -117,9 +121,13 @@ Keyed extractors coerce to `String`, `int`, `double`, `num`, `bool`, `BigInt`,
 `1`, `0`, and a bare flag. Anything else is a programming error and throws
 rather than rejecting.
 
-Integers are **decimal only**. `int.tryParse` reads `0x10` as 16 by default,
-which would make `?id=0x10` and `?id=16` name the same record while a check
-written against the text sees two different strings.
+`int`, `BigInt`, and integer-form `num` values are **decimal only**. Dart's
+integer and `num` parsers read `0x10` as 16 by default, which would make
+`?id=0x10` and `?id=16` name the same record while a check written against the
+text sees two different strings.
+
+`double` and `num` accept finite values only. `NaN` and positive or negative
+infinity reject with 400 because they are not valid JSON numbers.
 
 ## Wrapping
 
@@ -145,7 +153,7 @@ Future<void> read(
 ) async {}
 ```
 
-`@Extract` takes a type with an unnamed zero-argument `const` constructor. Dust
+`@Extract(Type)` takes a type with an unnamed zero-argument `const` constructor. Dust
 checks extractors declared in the same library before writing output; imported
 extractors remain checked by `dart analyze` at the generated call site.
 
@@ -184,14 +192,15 @@ whether to try the next extractor, and a throw sails past it and ends the
 request.
 
 Configuration is expressed by subclassing, the way axum encodes it in the type,
-because an extractor named in `@Extract` needs a zero-argument `const`
+because an extractor named in `@Extract(Type)` needs a zero-argument `const`
 constructor.
 
 ## Bodies
 
 A body can only be read once, so at most one body extractor runs per handler and
 it runs last. `FormExtractable` and `MultipartExtractable` read the body once and
-hand back a `FormMap` or `MultipartForm`, which every `@Field` and `@Part` then
+hand back a `FormMap` or `MultipartForm`, which every `@Field(...)` and
+`@Part(...)` then
 reads from.
 
 `readBody` refuses an oversized `content-length` before reading anything, and

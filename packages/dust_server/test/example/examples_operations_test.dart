@@ -208,6 +208,22 @@ void main() {
       expect(app.object(response), {'received': 'invoice.paid'});
     });
 
+    test('the same signed request is accepted only once', () async {
+      final app = await example(webhooks.buildApp(secret: secret));
+      const body = '{"event":"invoice.paid"}';
+      final at = stamp();
+      final signature = sign(body, at);
+
+      expect(
+        (await send(app, body, signature: signature, timestamp: at)).statusCode,
+        200,
+      );
+      expect(
+        (await send(app, body, signature: signature, timestamp: at)).statusCode,
+        401,
+      );
+    });
+
     test('a wrong signature is refused', () async {
       final app = await example(webhooks.buildApp(secret: secret));
 

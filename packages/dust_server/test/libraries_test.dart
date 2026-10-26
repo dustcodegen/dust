@@ -94,6 +94,9 @@ void main() {
       expect(server.Rejection, isNotNull);
       expect(server.Controller, isNotNull);
       expect(server.PathExtractable, isNotNull);
+      expect(server.ConcurrencyLimit, isNotNull);
+      expect(server.RequestCancellation, isNotNull);
+      expect(server.productionRouter, isA<Function>());
     });
   });
 }

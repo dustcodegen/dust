@@ -13,6 +13,8 @@ def stage_example(output: Path, relative: str, lint_version: str) -> tuple[Path,
     """Remove only copied generated files in owned staging; source files stay intact."""
     if relative == "fixtures/primary_sdk_consumer":
         packages = ("dust_dart", "dust_db_sqlite3")
+    elif relative == "examples/server_codegen":
+        packages = ("dust_dart", "dust_server")
     elif relative in ("examples/benchmark_project", "fixtures/primary_flutter_consumer"):
         packages = ("dust_dart", "dust_flutter")
     else:

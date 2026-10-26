@@ -37,6 +37,21 @@ pub fn apply_serde_rename_rule(source: &str, rule: SerdeRenameRuleIr) -> String 
     }
 }
 
+/// Resolves one field's serialized name from field and class metadata.
+pub fn serde_field_name(
+    field_name: &str,
+    field: Option<&SerdeFieldConfigIr>,
+    class: Option<&SerdeClassConfigIr>,
+) -> String {
+    if let Some(rename) = field.and_then(|value| value.rename.as_deref()) {
+        return rename.to_owned();
+    }
+    match class.and_then(|value| value.rename_all) {
+        Some(rule) => apply_serde_rename_rule(field_name, rule),
+        None => field_name.to_owned(),
+    }
+}
+
 /// Normalized serde-related configuration attached to a class.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SerdeClassConfigIr {

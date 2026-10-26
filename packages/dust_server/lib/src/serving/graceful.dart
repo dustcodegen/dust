@@ -127,9 +127,13 @@ Future<ServerHandle> serve(
     (request) async {
       inFlight.enter();
       try {
-        return _flushIfStreamed(await handler(request));
-      } finally {
+        final response = await handler(request);
+        return _flushIfStreamed(
+          response.change(body: _track(response.read(), inFlight.leave)),
+        );
+      } on Object {
         inFlight.leave();
+        rethrow;
       }
     },
     address,
@@ -139,6 +143,17 @@ Future<ServerHandle> serve(
   );
 
   return ServerHandle._(server, inFlight, tasks, disposableLayersIn(router));
+}
+
+Stream<List<int>> _track(
+  Stream<List<int>> body,
+  void Function() finished,
+) async* {
+  try {
+    yield* body;
+  } finally {
+    finished();
+  }
 }
 
 /// Turns off output buffering for a response whose length is not known.

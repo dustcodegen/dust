@@ -30,7 +30,7 @@ pull in annotations, and a handler file does not pull in the server.
 | Library | Contents |
 | :--- | :--- |
 | `package:dust_server/server.dart` | everything below |
-| `package:dust_server/annotations.dart` | `@Controller`, the verbs, parameter annotations, `@Routes` |
+| `package:dust_server/annotations.dart` | `@Controller(...)`, the verbs, parameter annotations, `@Routes(...)` |
 | `package:dust_server/extraction.dart` | `FromRequestParts`, `FromRequest`, the built-in extractors, coercion |
 | `package:dust_server/response.dart` | `Rejection`, `IntoResponse`, encoders, `guard`, `ServerErrors` |
 | `package:dust_server/router.dart` | `Router`, `Route`, `MethodRouter`, the verb builders, `Layer` |
@@ -91,21 +91,54 @@ Future<void> delete(@Path() int id) async {}
 dust build
 ```
 
-Mount `itemRoutes()` with `Router.merge`. Use `@Controller` when class-owned
-dependencies make a class clearer. Generated handlers also support `@Queries`, `@Header`, `@HeaderMap`,
-`@Body`, `@Field`, `@Part`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`, bare
+Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
+dependencies make a class clearer. Generated handlers also support typed
+`@Query()` models, compatibility `@Queries()` maps, `@Header(...)`,
+`@HeaderMap()`, `@Body()`, `@Field(...)`,
+`@Part(...)`, `@RawBody()`, `@RawQuery()`, `@State()`, `@Peer()`, bare
 `Request`/`RequestParts`, and `@Extract(Type)`. Declare an extractor parameter
 as `Option<T>` to collapse client rejections to `None`, or as
 `Result<T, Rejection>` to pass the outcome to the handler; the same wrappers
-work with built-in extractors. A runnable generated example and request tests
-live in [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
+work with built-in extractors. Runnable focused examples and request tests live
+in [`examples/server_codegen`](../../examples/server_codegen/README.md). The
+exhaustive internal regression fixture remains in
+[`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
 
 Automatic `Validate()` wrapping currently requires the body model and handler
 to be declared in the same Dart library. An imported body model still decodes,
 but validate it explicitly in the handler until cross-library derive facts are
 available.
 
-The runtime-only examples remain useful without generation:
+## Generated annotation reference
+
+These are the 24 annotations currently consumed by server codegen. The forms
+below match their Dart declarations exactly.
+
+| Target | Supported annotations |
+| :--- | :--- |
+| Library | `@Routes(path, name:, tags:, middleware:)` |
+| Class | `@Controller(path, tags:, middleware:)` |
+| Method or function | `@GET(path, ...)`, `@POST(path, ...)`, `@PUT(path, ...)`, `@PATCH(path, ...)`, `@DELETE(path, ...)`, `@HEAD(path, ...)`, `@OPTIONS(path, ...)` |
+| Body mode | `@FormUrlEncoded()`, `@MultiPart()` |
+| Parameter | `@Extract(Type)`, `@Path([name])`, `@Query([name])`, `@Queries()`, `@RawQuery()`, `@Header(name)`, `@HeaderMap()`, `@Body()`, `@Field(name)`, `@Part(name)`, `@RawBody()`, `@State()`, `@Peer()` |
+
+Every verb accepts `status:`, `summary:`, `description:`, `tags:`,
+`middleware:`, `operationId:`, `deprecated:`, and `hidden:`. A handler has one
+verb and at most one body mode. `@FormUrlEncoded()` and `@MultiPart()` stay
+separate from the verb because the encoding is independent of the HTTP method.
+
+`@Query(name)` reads and coerces one scalar or repeated list. An unnamed
+`@Query()` decodes the complete query string into a same-library model deriving
+`Deserialize()`, using its SerDe names, aliases, defaults, enums, and flat list
+fields. A model deriving `Validate()` is validated after decoding. Existing
+`@Queries()` map handlers remain compatible, but new typed handlers use
+`@Query()`.
+
+A same-library JSON `@Body()` model deriving `Deserialize()` uses its generated
+private decoder. Imported JSON and form models expose a compatible static
+`deserialize` function; form values are strings rather than JSON values.
+
+The existing handwritten examples remain the non-codegen track:
 
 ```bash
 cd packages/dust_server

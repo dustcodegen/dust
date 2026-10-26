@@ -1,6 +1,7 @@
 use dust_ir::{
-    AnnotationIr, ConfigApplicationIr, DartFileIr, FunctionIr, MethodParamIr, NameIr, PartIr,
-    SpanIr, SymbolId, TypeIr,
+    AnnotationIr, ConfigApplicationIr, DartFileIr, EnumIr, ExtensionIr, ExtensionTypeIr, FieldIr,
+    FunctionIr, MethodParamIr, MixinIr, NameIr, PartIr, SpanIr, SymbolId, TopLevelVariableIr,
+    TypeIr, TypedefIr,
 };
 use dust_text::{FileId, TextRange};
 
@@ -120,9 +121,110 @@ fn rejects_duplicate_routes_per_group() {
 }
 
 #[test]
+fn rejects_route_factory_colliding_with_named_extension() {
+    let function = function();
+    let handlers = vec![HandlerPlan {
+        callable: Callable::Function(&function),
+        method: "GET",
+        path: "/".to_owned(),
+        status: 200,
+        params: Vec::new(),
+        middleware: Vec::new(),
+        metadata: RouteMetadataPlan {
+            operation_id: "read".to_owned(),
+            summary: None,
+            description: None,
+            tags: Vec::new(),
+            deprecated: false,
+            hidden: false,
+        },
+    }];
+    let mut library = file();
+    library.extensions.push(ExtensionIr {
+        name: Some(NameIr {
+            source: "todoRoutes".to_owned(),
+            short: "todoRoutes".to_owned(),
+            prefix: None,
+            span: span(),
+        }),
+        on_type: TypeIr::named("Object"),
+        annotations: Vec::new(),
+        span: span(),
+    });
+    let mut diagnostics = Vec::new();
+
+    validate_generated_names(&library, &[], &handlers, "todoRoutes", &mut diagnostics);
+
+    assert_eq!(diagnostics.len(), 1);
+    assert!(
+        diagnostics[0]
+            .message
+            .contains("route factory `todoRoutes`")
+    );
+}
+
+#[test]
+fn lists_every_top_level_declaration_kind() {
+    let named = |name: &str| NameIr {
+        source: name.to_owned(),
+        short: name.to_owned(),
+        prefix: None,
+        span: span(),
+    };
+    let mut library = file();
+    library.variables.push(TopLevelVariableIr {
+        name: named("variable"),
+        ty: TypeIr::string(),
+        initializer: None,
+        annotations: Vec::new(),
+        span: span(),
+    });
+    library.mixins.push(MixinIr {
+        name: named("Mixin"),
+        annotations: Vec::new(),
+        fields: Vec::new(),
+        span: span(),
+    });
+    library.extension_types.push(ExtensionTypeIr {
+        name: named("ExtensionType"),
+        annotations: Vec::new(),
+        representation: FieldIr {
+            name: "value".to_owned(),
+            ty: TypeIr::string(),
+            span: span(),
+            has_default: false,
+            serde: None,
+            configs: Vec::new(),
+        },
+        span: span(),
+    });
+    library.typedefs.push(TypedefIr {
+        name: named("Alias"),
+        aliased_type: TypeIr::string(),
+        annotations: Vec::new(),
+        span: span(),
+    });
+    library.enums.push(EnumIr {
+        name: "Choice".to_owned(),
+        span: span(),
+        variants: Vec::new(),
+        traits: Vec::new(),
+        serde: None,
+    });
+
+    let names = top_level_declarations(&library)
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        names,
+        ["variable", "Mixin", "ExtensionType", "Alias", "Choice"]
+    );
+}
+
+#[test]
 fn resolves_config_verb_and_server_ownership() {
-    let configs = vec![config("dust_server::GET"), config("dust_dart::GET")];
-    assert!(find_config(&configs, "dust_server::GET").is_some());
+    let configs = [config("dust_server::GET"), config("dust_dart::GET")];
     assert_eq!(verb_config(&configs[0]), Some("GET"));
     assert_eq!(verb_config(&configs[1]), None);
     assert!(is_server_config(&configs[0]));

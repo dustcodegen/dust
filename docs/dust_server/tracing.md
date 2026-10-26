@@ -34,7 +34,7 @@ can quote it in a bug report and an operator can find the request.
 | Attribute | From |
 | :--- | :--- |
 | `http.request.method` | the request |
-| `url.path`, `url.query` | the request; the query is omitted when empty |
+| `url.path` | the request path; query values are deliberately never exported |
 | `http.response.status_code` | the response |
 | `http.route` | `nameSpan(...)`, when called |
 | `service.name` | `Tracing(serviceName:)` |

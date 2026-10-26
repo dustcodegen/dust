@@ -32,8 +32,9 @@ import 'rejection.dart';
 /// A bare [String] is text, not JSON — axum's rule. To send a JSON string
 /// specifically, wrap it in a list or a map, or call `jsonResponse`.
 ///
-/// [status] applies only to the last row and to `Ok`, so a create can answer
-/// 201 without the failure path inheriting it.
+/// [status] applies to successful text, bytes, streams, JSON, `Ok`, and `Some`.
+/// Values that already own response semantics (`Response`, `IntoResponse`,
+/// `Err`, `None`, `null`, and `Unit`) keep their own status.
 Response responseFrom(Object? value, {int status = 200}) {
   return switch (value) {
     null => noContent(),

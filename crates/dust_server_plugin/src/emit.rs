@@ -7,7 +7,7 @@ use dust_dart_emit::dart_string_literal;
 use dust_ir::{ParamKind, TypeIr};
 use dust_plugin_api::PluginContribution;
 
-use crate::plan::{HandlerPlan, RouteMetadataPlan, ServerPlan};
+use crate::plan::{HandlerPlan, RouteMetadataPlan, ServerPlan, generated_handler_name};
 use const_value::render_const;
 use params::ParamEmitter;
 #[cfg(test)]
@@ -173,7 +173,11 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
             &arguments,
             ";",
         );
-        lines.push("    return noContent();".to_owned());
+        if handler.status == 204 {
+            lines.push("    return noContent();".to_owned());
+        } else {
+            lines.push(format!("    return Response({});", handler.status));
+        }
         lines.push("  });".to_owned());
     } else {
         lines.push("  return guard(".to_owned());
@@ -192,17 +196,6 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
     }
     lines.push("}".to_owned());
     lines.join("\n")
-}
-
-/// Derives a private generated handler name from a Dart callable.
-fn generated_handler_name(name: &str) -> String {
-    let mut chars = name.chars();
-    let title = chars
-        .next()
-        .map(|value| value.to_uppercase().collect::<String>())
-        .unwrap_or_default()
-        + chars.as_str();
-    format!("_$handle{title}")
 }
 
 /// Appends an awaited call using Dart formatter-compatible line breaks.

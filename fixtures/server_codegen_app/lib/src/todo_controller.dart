@@ -46,18 +46,18 @@ final class TodosWrite extends BearerAuth {
 }
 
 /// Request payload used by generated JSON and form body extractors.
-@Derive([Validate<Object?>()])
+@Derive([Deserialize(), Validate()])
 final class CreateTodo with _$CreateTodo {
   /// Creates a todo payload.
   const CreateTodo({required this.title});
 
-  /// Decodes a todo payload from JSON.
-  factory CreateTodo.deserialize(Map<String, Object?> json) {
-    return CreateTodo(title: json['title']! as String);
+  /// Decodes URL-encoded form values; JSON uses the generated Serde decoder.
+  factory CreateTodo.deserialize(Map<String, Object?> fields) {
+    return CreateTodo(title: fields['title']! as String);
   }
 
   /// Requested title.
-  @Validate<String>(length: Length(min: 1), message: 'must not be empty')
+  @Validate(length: Length(min: 1), message: 'must not be empty')
   final String title;
 }
 

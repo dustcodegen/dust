@@ -48,30 +48,28 @@ pub(crate) fn apply_indexed_outcomes(
         let has_error = diagnostics.iter().any(|diagnostic| diagnostic.is_error());
         let has_labels = diagnostics.iter().any(Diagnostic::has_labels);
 
-        if let Some(expected_output_hash) = expected_output_hash.filter(|_| !has_error) {
-            if let (Some(source_hash), Some(tool_hash)) = (source_hash, tool_hash) {
-                cache.insert(
-                    config.cache_root,
-                    &library.source_path,
-                    CacheEntry {
-                        source_hash,
-                        package_config_hash: config.package_config_hash,
-                        tool_hash,
-                        expected_output_hash,
-                        auxiliary_output_paths: artifact.auxiliary_output_paths.clone(),
-                        suppress_primary_output,
-                        workspace_analysis_hash: config.workspace_analysis_hash,
-                        analysis_snapshot,
-                    },
-                );
-            }
+        if let Some(expected_output_hash) = expected_output_hash.filter(|_| !has_error)
+            && let (Some(source_hash), Some(tool_hash)) = (source_hash, tool_hash)
+        {
+            cache.insert(
+                config.cache_root,
+                &library.source_path,
+                CacheEntry {
+                    source_hash,
+                    package_config_hash: config.package_config_hash,
+                    tool_hash,
+                    expected_output_hash,
+                    auxiliary_output_paths: artifact.auxiliary_output_paths.clone(),
+                    suppress_primary_output,
+                    workspace_analysis_hash: config.workspace_analysis_hash,
+                    analysis_snapshot,
+                },
+            );
         }
 
         result.diagnostics.extend(diagnostics);
-        if has_labels {
-            if let Some(diagnostic_file) = diagnostic_file {
-                result.diagnostic_files.push(diagnostic_file);
-            }
+        if has_labels && let Some(diagnostic_file) = diagnostic_file {
+            result.diagnostic_files.push(diagnostic_file);
         }
         if let Some(paths) = rebuilt_libraries.as_deref_mut() {
             paths.push(artifact.source_path.clone());

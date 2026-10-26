@@ -188,14 +188,13 @@ fn skip_parameter_prefix(mut text: &str) -> (usize, &str) {
 /// Strips one leading keyword from a parameter prefix.
 fn strip_leading_keyword<'a>(text: &'a str, keywords: &[&str]) -> Option<(usize, &'a str)> {
     for keyword in keywords {
-        if let Some(after_keyword) = text.strip_prefix(keyword) {
-            if after_keyword
+        if let Some(after_keyword) = text.strip_prefix(keyword)
+            && after_keyword
                 .chars()
                 .next()
                 .is_none_or(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
-            {
-                return Some((keyword.len(), after_keyword));
-            }
+        {
+            return Some((keyword.len(), after_keyword));
         }
     }
     None

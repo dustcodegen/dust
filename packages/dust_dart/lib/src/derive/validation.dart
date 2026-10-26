@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import 'base.dart';
 
@@ -6,6 +7,10 @@ import 'base.dart';
 typedef FieldValidator<T> = ValidationError? Function(T value);
 
 /// Generates validation methods and configures field validators.
+///
+/// Source annotations can omit [T]; generated code applies rules and custom
+/// callbacks to the annotated field's declared type.
+@optionalTypeArgs
 final class Validate<T> extends DeriveTrait {
   /// Creates one validation derive marker or field-level validator config.
   const Validate({

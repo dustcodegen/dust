@@ -2,6 +2,10 @@
 
 Two sizes, and the small one is the point.
 
+These are the handwritten, non-codegen examples. For the equivalent annotated
+handlers and generated routing, see
+[`examples/server_codegen`](../../../examples/server_codegen/README.md).
+
 **One-question examples** are single files under 60 lines. Each answers exactly
 one question and nothing else, so the answer is not buried in an application.
 Named after the question you would type into a search box — `handle_head_request`,
@@ -114,6 +118,8 @@ is over a socket.
 | Question | File |
 | :--- | :--- |
 | Shutting down without dropping requests in flight | [`graceful_shutdown.dart`](graceful_shutdown.dart) |
+| Bounding concurrent work and shedding overload | [`concurrency_limit.dart`](concurrency_limit.dart) |
+| Limiting requests per trusted client identity | [`rate_limit.dart`](rate_limit.dart) |
 | Work that outlives the response | [`background_tasks.dart`](background_tasks.dart) |
 | Spans, and continuing a trace that started upstream | [`tracing.dart`](tracing.dart) |
 | Using every core | [`several_isolates.dart`](several_isolates.dart) |
@@ -131,9 +137,9 @@ supplies the layer and the cookie extractor and stops there — the same boundar
 that keeps authorization out of it.
 
 Every question in this index has a file, and every file is served over a real
-socket by [`../test/example/`](../test/example) — 216 tests, one group per
-example. An example that stops compiling fails the suite, which is what keeps a
-directory this size from rotting.
+socket by [`../test/example/`](../test/example), one group per example. An
+example that stops compiling fails the suite, which is what keeps a directory
+this size from rotting.
 
 ## Running them
 

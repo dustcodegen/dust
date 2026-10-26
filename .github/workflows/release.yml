@@ -128,9 +128,46 @@ jobs:
             echo "package_targets=$package_targets"
           } >> "$GITHUB_OUTPUT"
 
+  security-audit:
+    name: Dependency security audit
+    needs: release-inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-inputs.outputs.checkout_ref }}
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+        with:
+          sdk: 3.13.7
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.47.8
+
+      - name: Setup Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
+
+      - name: Install Rust audit tool
+        shell: bash
+        run: cargo install cargo-audit --version 0.22.1 --locked
+
+      - name: Audit locked dependencies
+        shell: bash
+        run: ./scripts/security/audit.sh
+
   build-binaries:
     name: ${{ matrix.asset_name }}
-    needs: release-inputs
+    needs:
+      - release-inputs
+      - security-audit
     if: needs.release-inputs.outputs.binary_targets != 'none'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
@@ -223,8 +260,8 @@ jobs:
         if: steps.select.outputs.selected == 'true'
         shell: bash
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
 
       - name: Build binary (Unix)
         if: steps.select.outputs.selected == 'true' && matrix.archive_ext == 'tar.gz'
@@ -512,7 +549,9 @@ jobs:
 
   package-dry-run:
     name: Package dry-run
-    needs: release-inputs
+    needs:
+      - release-inputs
+      - security-audit
     if: needs.release-inputs.outputs.package_mode == 'dry-run'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -523,12 +562,14 @@ jobs:
           ref: ${{ needs.release-inputs.outputs.checkout_ref }}
 
       - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          channel: stable
+          flutter-version: 3.47.8
 
       - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+        with:
+          sdk: 3.13.7
 
       - name: Publish dry-run packages
         shell: bash
@@ -586,12 +627,14 @@ jobs:
           ref: ${{ needs.release-inputs.outputs.release_tag }}
 
       - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          channel: stable
+          flutter-version: 3.47.8
 
       - name: Setup Dart SDK
-        uses: dart-lang/setup-dart@v1
+        uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+        with:
+          sdk: 3.13.7
 
       - name: Publish packages
         shell: bash

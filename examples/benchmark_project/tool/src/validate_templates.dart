@@ -32,7 +32,7 @@ class BenchmarkSignupValidation with _$BenchmarkSignupValidation {
   });
 
   @Validate(email: true, message: 'Email is invalid')
-  @Validate<String>(custom: validateBenchmarkEmail)
+  @Validate(custom: validateBenchmarkEmail)
   final String email;
 
   @Validate(length: Length(min: 8), message: 'Password is too short')
@@ -127,7 +127,7 @@ class BenchmarkRulesValidation with _$BenchmarkRulesValidation {
   @Validate(nested: true)
   final BenchmarkAddressValidation address;
 
-  @Validate<String>(custom: validateBenchmarkCustomValue)
+  @Validate(custom: validateBenchmarkCustomValue)
   final String customValue;
 
   @Validate(required: true, message: 'Required rule')

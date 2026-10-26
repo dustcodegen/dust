@@ -43,7 +43,7 @@ fn parse<'a>(
     media: BodyMedia,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> ParamPlan<'a> {
-    parse_param(param, &BTreeSet::new(), media, &[], diagnostics).unwrap()
+    parse_param(param, &BTreeSet::new(), media, &[], &[], diagnostics).unwrap()
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn rejects_invalid_phase_three_extractor_contracts() {
     ];
     let mut diagnostics = Vec::new();
     for (param, media) in cases.iter().zip(media) {
-        let _ = parse_param(param, &BTreeSet::new(), media, &[], &mut diagnostics);
+        let _ = parse_param(param, &BTreeSet::new(), media, &[], &[], &mut diagnostics);
     }
 
     assert_eq!(diagnostics.len(), 10);

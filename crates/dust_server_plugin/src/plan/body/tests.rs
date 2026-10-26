@@ -82,6 +82,7 @@ fn plans<'a>(
             wrapper: ExtractionWrapper::Required,
             extraction,
             validated: false,
+            serde_deserialized: false,
         })
         .collect()
 }

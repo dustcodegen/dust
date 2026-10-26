@@ -280,10 +280,14 @@ final todos = Router()
   ..route('/', get(listTodos).post(createTodo, status: 201))
   ..route('/{id}', get(readTodo).patch(completeTodo).delete(deleteTodo));
 
-final app = Router(onError: (error, stack) => stderr.writeln(error))
-  ..layer(const RequestTimeout(Duration(seconds: 10)))
-  ..layer(const RequestId())
-  ..layer(AccessLog(stdout.writeln))
+final app = productionRouter(
+  bodyLimit: 64 * 1024,
+  maxConcurrentRequests: 64,
+  maxQueuedRequests: 64,
+  requestTimeout: const Duration(seconds: 10),
+  onRecord: stdout.writeln,
+  onError: (error, stack) => stderr.writeln(error),
+)
   ..nest('/api/v1', Router()..nest('/todos', todos))
   ..route('/health', get(health))
   ..withState(repository);

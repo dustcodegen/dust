@@ -51,6 +51,135 @@ pub(super) fn validate_unique_routes(
     }
 }
 
+/// Rejects source and generated declarations that share an emitted name.
+pub(super) fn validate_generated_names(
+    file: &DartFileIr,
+    controllers: &[ControllerPlan<'_>],
+    functions: &[HandlerPlan<'_>],
+    function_name: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for controller in controllers {
+        let source_names = controller
+            .class
+            .fields
+            .iter()
+            .map(|field| field.name.as_str())
+            .chain(
+                controller
+                    .class
+                    .methods
+                    .iter()
+                    .map(|method| method.name.as_str()),
+            )
+            .collect::<BTreeSet<_>>();
+        if source_names.contains("routes") {
+            diagnostics.push(error(
+                controller.class.span,
+                "handwritten declaration conflicts with generated controller member `routes`",
+                "rename the handwritten member",
+            ));
+        }
+        validate_handler_names(&controller.handlers, &source_names, "member", diagnostics);
+    }
+
+    if !functions.is_empty()
+        && let Some(span) = top_level_declaration_span(file, function_name)
+    {
+        diagnostics.push(error(
+            span,
+            format!(
+                "handwritten declaration conflicts with generated route factory `{function_name}`"
+            ),
+            "rename the declaration or configure a different @Routes name",
+        ));
+    }
+    let source_names = top_level_declarations(file)
+        .map(|(name, _)| name)
+        .collect::<BTreeSet<_>>();
+    validate_handler_names(functions, &source_names, "function", diagnostics);
+}
+
+/// Rejects handler adapters that collide with source or earlier generated names.
+fn validate_handler_names(
+    handlers: &[HandlerPlan<'_>],
+    source_names: &BTreeSet<&str>,
+    declaration_kind: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut generated = BTreeSet::new();
+    for handler in handlers {
+        let name = generated_handler_name(handler.callable.name());
+        let conflict = source_names.contains(name.as_str()) || !generated.insert(name.clone());
+        if conflict {
+            diagnostics.push(error(
+                handler.callable.span(),
+                format!("handler conflicts with generated handler {declaration_kind} `{name}`"),
+                "rename the handler or conflicting handwritten declaration",
+            ));
+        }
+    }
+}
+
+/// Finds the source span for one handwritten top-level declaration.
+fn top_level_declaration_span(file: &DartFileIr, name: &str) -> Option<SpanIr> {
+    top_level_declarations(file).find_map(|(candidate, span)| (candidate == name).then_some(span))
+}
+
+/// Returns every named declaration in the library's top-level namespace.
+fn top_level_declarations(file: &DartFileIr) -> impl Iterator<Item = (&str, SpanIr)> {
+    file.functions
+        .iter()
+        .map(|value| (value.name.short.as_str(), value.span))
+        .chain(
+            file.variables
+                .iter()
+                .map(|value| (value.name.short.as_str(), value.span)),
+        )
+        .chain(
+            file.classes
+                .iter()
+                .map(|value| (value.name.as_str(), value.span)),
+        )
+        .chain(
+            file.mixins
+                .iter()
+                .map(|value| (value.name.short.as_str(), value.span)),
+        )
+        .chain(file.extensions.iter().filter_map(|value| {
+            value
+                .name
+                .as_ref()
+                .map(|name| (name.short.as_str(), value.span))
+        }))
+        .chain(
+            file.extension_types
+                .iter()
+                .map(|value| (value.name.short.as_str(), value.span)),
+        )
+        .chain(
+            file.typedefs
+                .iter()
+                .map(|value| (value.name.short.as_str(), value.span)),
+        )
+        .chain(
+            file.enums
+                .iter()
+                .map(|value| (value.name.as_str(), value.span)),
+        )
+}
+
+/// Derives a private generated handler name from a Dart callable.
+pub(crate) fn generated_handler_name(name: &str) -> String {
+    let mut chars = name.chars();
+    let title = chars
+        .next()
+        .map(|value| value.to_uppercase().collect::<String>())
+        .unwrap_or_default()
+        + chars.as_str();
+    format!("_$handle{title}")
+}
+
 /// Derives the top-level router factory from a source basename.
 pub(super) fn default_routes_name(source_path: &str) -> String {
     let stem = Path::new(source_path)
@@ -71,14 +200,6 @@ pub(super) fn default_routes_name(source_path: &str) -> String {
         }
     }
     format!("{result}Routes")
-}
-
-/// Finds one resolved configuration by canonical symbol.
-pub(super) fn find_config<'a>(
-    configs: &'a [ConfigApplicationIr],
-    symbol: &str,
-) -> Option<&'a ConfigApplicationIr> {
-    configs.iter().find(|value| value.symbol.0 == symbol)
 }
 
 /// Maps a server verb configuration to its HTTP method.

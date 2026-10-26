@@ -1,6 +1,7 @@
 import 'package:shelf/shelf.dart';
 
 import '../request/request_parts.dart';
+import '../response/error_reporting.dart';
 import '../router/middleware.dart';
 import 'request_id.dart';
 
@@ -83,10 +84,10 @@ final class AccessLog implements Layer {
           // connection never reaches the log at all — you cannot see who
           // connected, when, or from where. 101 is what went on the wire.
           stopwatch.stop();
-          onRecord(
+          _report(
             AccessRecord(
               method: request.method,
-              path: '/${request.url.path}',
+              path: _safePath(request),
               status: 101,
               duration: stopwatch.elapsed,
               requestId: requestIdOf(request),
@@ -97,10 +98,10 @@ final class AccessLog implements Layer {
         }
         stopwatch.stop();
 
-        onRecord(
+        _report(
           AccessRecord(
             method: request.method,
-            path: '/${request.url.path}',
+            path: _safePath(request),
             status: response.statusCode,
             duration: stopwatch.elapsed,
             requestId: requestIdOf(request),
@@ -111,4 +112,17 @@ final class AccessLog implements Layer {
       };
     };
   }
+
+  void _report(AccessRecord record) {
+    try {
+      onRecord(record);
+    } on Object catch (error, stack) {
+      ServerErrors.report(error, stack);
+    }
+  }
 }
+
+String _safePath(Request request) => request.requestedUri.path.replaceAll(
+      RegExp(r'[\u0000-\u001f\u007f]'),
+      '\uFFFD',
+    );

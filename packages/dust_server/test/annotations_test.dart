@@ -74,6 +74,24 @@ void main() {
     });
   });
 
+  group('Routes', () {
+    test('defaults its optional arguments', () {
+      const routes = Routes('/api');
+
+      expect(routes.path, '/api');
+      expect(routes.name, isNull);
+      expect(routes.tags, isEmpty);
+      expect(routes.middleware, isEmpty);
+    });
+
+    test('carries its complete argument set', () {
+      const routes = Routes('/api', name: 'apiRoutes', tags: ['public']);
+
+      expect(routes.name, 'apiRoutes');
+      expect(routes.tags, ['public']);
+    });
+  });
+
   group('parameter annotations', () {
     test('Extract carries the extractor type, not an instance', () {
       const extract = Extract(_Bearer);
@@ -87,8 +105,12 @@ void main() {
       expect(const Path('todo_id').name, 'todo_id');
     });
 
-    test('keyed annotations require an explicit key', () {
+    test('Query supports named values and typed models', () {
+      expect(const Query().name, isNull);
       expect(const Query('done').name, 'done');
+    });
+
+    test('other keyed annotations require an explicit key', () {
       expect(const Header('x-request-id').name, 'x-request-id');
       expect(const Field('email').name, 'email');
       expect(const Part('avatar').name, 'avatar');
