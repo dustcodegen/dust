@@ -46,6 +46,15 @@ class RepositoryMetadataTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text()
         self.assertIn("codecov.io/gh/dustcodegen/dust/graph/badge.svg", readme)
         self.assertIn("github/v/release/dustcodegen/dust", readme)
+        self.assertIn("github/downloads/dustcodegen/dust/total", readme)
+        for package in (
+            "dust_dart",
+            "dust_flutter",
+            "dust_db_sqlite3",
+            "dust_db_postgres",
+            "dust_server",
+        ):
+            self.assertIn(f"img.shields.io/pub/v/{package}", readme)
         self.assertNotIn("sonarcloud.io/api/project_badges", readme)
 
 
