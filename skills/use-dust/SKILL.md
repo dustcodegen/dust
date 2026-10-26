@@ -1,12 +1,23 @@
 ---
 name: use-dust
-description: Add, migrate, validate, or troubleshoot Dust code generation in Dart and Flutter application projects. Use for Dust setup, Dust annotations, generated .g.dart files, dust build/check/watch, data classes, JSON, validation, HTTP clients, Flutter routing/state/i18n, Dust Database, or dust_server runtime and codegen. Do not use for developing Dust's Rust engine or for unrelated code-generation tools.
+description: Use or contribute to Dust, the Rust-powered code generator for Dart and Flutter. Use for Dust setup, annotations, generated .g.dart files, build/check/watch, data classes, JSON, validation, HTTP clients, Flutter routing/state/i18n, Database, dust_server, or changes to Dust's Rust engine, plugins, runtimes, tests, architecture, and repository quality gates. Do not use for unrelated code-generation tools.
 ---
 
 # Use Dust
 
-Work from the Dart package or Flutter application root. Preserve handwritten
-application APIs unless the user explicitly requests a migration.
+First decide which mode applies:
+
+- **Application mode:** work from a Dart package or Flutter application root.
+  Preserve handwritten application APIs unless the user explicitly requests a
+  migration. Continue with this file.
+- **Contributor mode:** when the current repository is Dust itself or the task
+  changes its Rust engine, generators, packages, examples, or repository
+  policy, read
+  [references/contributor-architecture.md](references/contributor-architecture.md)
+  and
+  [references/repository-quality-gates.md](references/repository-quality-gates.md),
+  then follow the repository's `AGENTS.md` and `CONTRIBUTING.md`. Application
+  commands below apply only when those contributor references call for them.
 
 ## 1. Inspect the project
 
@@ -23,15 +34,12 @@ application APIs unless the user explicitly requests a migration.
    their annotations until the requested migration has matching behavior and
    verified call sites.
 5. Read [references/feature-map.md](references/feature-map.md) for the package,
-   import, authoring contract, and command family for the feature.
+   import, authoring contract, command family, and focused package guide for
+   the feature. Load only the package guide needed by the task.
 6. For Flutter routing or state work, also read
    [references/flutter-routing-state.md](references/flutter-routing-state.md).
 
 If the task is not explicitly about Dust, do not migrate the project to Dust.
-If the request targets Dust's Rust workspace or generator internals, state that
-this skill does not apply and stop using it. Continue only under that
-repository's contributor instructions, without carrying this skill's workflow
-into the engine task.
 
 ## 2. Choose the smallest feature surface
 

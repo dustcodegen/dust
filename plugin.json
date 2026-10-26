@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dust",
+  "version": "0.1.0",
+  "description": "Use and contribute to Dust code generation for Dart and Flutter.",
+  "author": {
+    "name": "dustcodegen",
+    "url": "https://github.com/dustcodegen"
+  },
+  "homepage": "https://dustcodegen.github.io/",
+  "repository": "https://github.com/dustcodegen/dust",
+  "license": "MIT",
+  "keywords": ["dart", "flutter", "code-generation", "rust"]
+}

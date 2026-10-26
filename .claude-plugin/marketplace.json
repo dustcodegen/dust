@@ -1,0 +1,16 @@
+{
+  "name": "dustcodegen",
+  "owner": {
+    "name": "dustcodegen",
+    "url": "https://github.com/dustcodegen"
+  },
+  "description": "Official dust plugins for Dart and Flutter development.",
+  "plugins": [
+    {
+      "name": "dust",
+      "source": "./",
+      "category": "Developer Tools",
+      "tags": ["dart", "flutter", "rust", "code-generation"]
+    }
+  ]
+}

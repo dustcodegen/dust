@@ -106,13 +106,35 @@ flutter pub add dust_flutter
 See the [Flutter package guide](packages/dust_flutter/README.md) for routing,
 state, and i18n setup.
 
-## Agent Skill
+## Agent Skill And Plugin
 
-Install the [use-dust Agent Skill](skills/use-dust/SKILL.md):
+Install the portable [use-dust Agent Skill](skills/use-dust/SKILL.md) in an
+Agent Skills-compatible client:
 
 ```bash
 npx skills add dustcodegen/dust --skill use-dust
 ```
+
+Install the plugin for Codex CLI and the ChatGPT/Codex desktop marketplace:
+
+```bash
+codex plugin marketplace add dustcodegen/dust
+codex plugin add dust@dustcodegen
+```
+
+Install the same skill as a Claude Code plugin:
+
+```bash
+claude plugin marketplace add dustcodegen/dust
+claude plugin install dust@dustcodegen
+```
+
+The standard `skills/use-dust/SKILL.md` is the single instruction source for
+every client; platform manifests only make that skill discoverable. The plugin
+adds no `CLAUDE.md`/`CODEX.md`, MCP server, credentials, or hosted CI. In
+application repositories it guides Dust setup and diagnosis; in this repository
+it also loads the contributor architecture, 300-line source rule, coverage
+floors, local pre-commit gate, and release-only CI policy.
 
 ## Features
 

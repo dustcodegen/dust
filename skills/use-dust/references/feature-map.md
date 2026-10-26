@@ -4,18 +4,13 @@ Use the project's installed package and CLI versions as the source of truth.
 The linked guides describe the current source authoring surface; a source-only
 feature may not exist in the latest published binaries or packages.
 
-| Feature | Packages | Focused import | Guide |
+| Feature | Packages | Focused import | Package guide |
 | :--- | :--- | :--- | :--- |
-| Data classes | `dust_dart` | `package:dust_dart/derive.dart` | [Derive](https://github.com/dustcodegen/dust/blob/main/docs/usage/derive.md) |
-| JSON | `dust_dart` | `package:dust_dart/serde.dart` | [Serde](https://github.com/dustcodegen/dust/blob/main/docs/usage/serde.md) |
-| Validation | `dust_dart` | `package:dust_dart/derive.dart` | [Validation](https://github.com/dustcodegen/dust/blob/main/docs/usage/validation.md) |
-| HTTP clients | `dust_dart` | `package:dust_dart/http.dart` | [HTTP](https://github.com/dustcodegen/dust/blob/main/docs/usage/http.md) |
-| Routing | `dust_flutter` | `package:dust_flutter/route.dart` | [Routing](https://github.com/dustcodegen/dust/blob/main/docs/usage/routing.md) |
-| State | `dust_flutter`, often `dust_dart` | `package:dust_flutter/state.dart` | [State](https://github.com/dustcodegen/dust/blob/main/docs/usage/state.md) |
-| i18n | `dust_flutter` | `package:dust_flutter/i18n.dart` | [i18n](https://github.com/dustcodegen/dust/blob/main/docs/usage/i18n.md) |
-| SQLite Database | `dust_dart`, `dust_db_sqlite3` | `package:dust_dart/db.dart` | [Database](https://github.com/dustcodegen/dust/blob/main/docs/usage/db.md) |
-| PostgreSQL Database | `dust_dart`, `dust_db_postgres` | `package:dust_dart/db.dart` | [PostgreSQL](https://github.com/dustcodegen/dust/blob/main/packages/dust_db_postgres/README.md) |
-| HTTP servers | `dust_server` | `package:dust_server/server.dart` | [Server](https://github.com/dustcodegen/dust/blob/main/docs/dust_server/README.md) |
+| Data classes, JSON, validation, HTTP clients | `dust_dart` | focused `dust_dart` library | [dust_dart](dust-dart.md) |
+| Routing, state, i18n | `dust_flutter`, often `dust_dart` | focused `dust_flutter` library | [dust_flutter](dust-flutter.md) |
+| SQLite Database | `dust_dart`, `dust_db_sqlite3` | `package:dust_dart/db.dart` | [dust_db_sqlite3](dust-db-sqlite3.md) |
+| PostgreSQL Database | `dust_dart`, `dust_db_postgres` | `package:dust_dart/db.dart` | [dust_db_postgres](dust-db-postgres.md) |
+| HTTP servers | `dust_server` | `package:dust_server/server.dart` | [dust_server](dust-server.md) |
 
 `dust_server` is a Dart runtime on `shelf` whose API is modelled on Rust's
 axum. It is not built on axum, and no Rust dependency is involved.
