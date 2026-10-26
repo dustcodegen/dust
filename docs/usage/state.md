@@ -3,6 +3,10 @@
 Dust generates typed Flutter ViewModel scopes, selectors, listeners, and async
 state helpers from `@ViewModel`.
 
+The documented authoring contract is stable. Scope ownership, effect delivery,
+and async cancellation boundaries are recorded in the
+[routing and state architecture](../design/flutter-routing-state.md).
+
 ## Add the Packages
 
 Install the Dust CLI from the [root guide](../../README.md#installation), then

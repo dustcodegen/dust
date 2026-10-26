@@ -4,11 +4,11 @@ Runtime for Dart HTTP servers: routing, extraction, responses, WebSockets,
 server-rendered HTML, static files, and serving across isolates.
 
 > [!IMPORTANT]
-> The server runtime is stable on the 0.2.x line. The current source checkout
-> also generates controller and top-level route wiring, including typed
+> The server runtime is stable on the 0.2.x line. Dust v0.3.0 is scheduled to
+> add generated controller and top-level route wiring, including typed
 > extraction, validation, middleware, response dispatch, production-shaped
-> composition, and route metadata. The generator is not in the published 0.2.1
-> binaries yet.
+> composition, and route metadata. Until v0.3.0 is published, use the matching
+> current-source CLI and package together.
 
 ## Sections
 

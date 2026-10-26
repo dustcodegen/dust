@@ -160,6 +160,24 @@ void main() {
     expect(router.stackChanges, ['[/safe] => [/login]']);
   });
 
+  test('direct push follows a guard redirect before committing', () async {
+    final delegate = GeneratedRouterDelegate<TestRoute>(
+      runtimeConfig(
+        resolveGuards: (route) => route.location == '/guard-private'
+            ? [const LoginGuard()]
+            : const [],
+      ),
+    );
+    await delegate.debugWaitForScheduledRefresh();
+
+    final result = delegate.push<void>(const TestRoute('/guard-private'));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(delegate.stack.map((route) => route.location), ['/safe', '/login']);
+    expect(delegate.pop(), isTrue);
+    await expectLater(result, completion(isNull));
+  });
+
   test('navigation fails closed when a guard implements neither interface',
       () async {
     final delegate = GeneratedRouterDelegate<TestRoute>(

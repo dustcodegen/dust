@@ -4,6 +4,10 @@ Dust generates a typed Flutter Navigator 2.0 router from annotated widgets.
 One `@AppRouter` class and one `@AppRoute` per page produce the parser, the
 delegate, guards, shells, and typed navigation helpers.
 
+The documented authoring contract is stable. Its ownership boundaries and
+local validation matrix are recorded in the
+[routing and state architecture](../design/flutter-routing-state.md).
+
 ## Add the Package
 
 Install the Dust CLI from the [root guide](../../README.md#installation), then

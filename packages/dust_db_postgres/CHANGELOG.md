@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-26
+
+### Changed
+
+- Move with the lockstep Dust 0.3.0 release; the PostgreSQL runtime has no
+  public API or behavior change from 0.2.1.
+
 ## [0.2.1] - 2026-09-28
 
 ### Migrating

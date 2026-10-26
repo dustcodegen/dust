@@ -184,7 +184,7 @@ still apply. Bounds do not imply a JSON conversion. A parameter named `DateTime`
 another SDK type is still a parameter, not that SDK type; Dust reports the field
 instead of guessing its conversion. No generic decoder-callback API is added.
 
-This is unreleased, scoped support under
+This is scoped support scheduled for v0.3.0 under
 [#128](https://github.com/dustcodegen/dust/issues/128), not general generic-model
 readiness. Same-library applied inheritance under
 [#133](https://github.com/dustcodegen/dust/issues/133) now retains actual inherited
@@ -258,7 +258,7 @@ below. Generated constructors retain required positional arguments, optional
 key-presence validation: nullable wire values retain the existing decoding rules.
 Declared target constructors may have extra optional arguments not backed by
 fields; decoding omits them and retains their Dart defaults. Source spans and
-binders are unchanged. This is unreleased scope, not all-constructor production
+binders are unchanged. This is v0.3.0 scope, not all-constructor production
 certification. See the [generic-model design](../design/generic-models.md),
 [sealed fixtures](../../fixtures/generic_sealed) and
 [ordinary generic JSON fixtures](../../fixtures/generic_serde).

@@ -2,8 +2,8 @@
 
 This non-publishable fixture deliberately stays outside Dust's Pub workspace.
 Its overrides use the actual source runtime packages and pin the already-tested
-sqlite3 3.5.2 binding. Worker opening is unreleased source functionality; these
-unchanged numeric Dust versions do not make it available in published 0.2.1.
+sqlite3 3.5.2 binding. Worker opening is v0.3.0 source functionality and remains
+unavailable in published 0.2.1 until the coordinated release is published.
 
 From this directory, with the project SDK:
 

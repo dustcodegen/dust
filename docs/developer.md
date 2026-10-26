@@ -41,6 +41,8 @@ Feature generation lives in:
 | `dust_dart` | Dart-only annotations and runtime APIs for derives, JSON, validation, HTTP, and Database. |
 | `dust_flutter` | Flutter-only state, routing, form validation, and i18n APIs. |
 | `dust_db_sqlite3` | Native SQLite `Executor` implementation for generated Database code. |
+| `dust_db_postgres` | PostgreSQL `Executor` and pool implementation for generated Database code. |
+| `dust_server` | Dart HTTP server runtime consumed by generated server wiring. |
 
 ## Build Pipeline
 
@@ -140,7 +142,7 @@ bug and whose contract is covered by tests.
 - Use `.dart.snapshot` for generator fixtures and exact snapshot assertions for
   generated contracts.
 
-CI also runs `scripts/strict_generated_analyze.py` against
+The local test gate also runs `scripts/strict_generated_analyze.py` against
 `fixtures/serde_json_app`, `fixtures/http_client_app`, and
 `examples/shopping_app`. That temporary pass includes `.g.dart` files, removes
 Dust's broad `type=lint` generated-file ignore, and treats analyzer warnings as
@@ -152,6 +154,27 @@ header.
 Do not add a second workspace scan inside a plugin. Extend shared workspace
 analysis and persist the minimum facts needed by cached libraries. Any new
 cross-file dependency also needs an explicit cache invalidation rule.
+
+### Flutter routing and state
+
+Routing source annotations are resolved into structured route facts before
+`dust_route_plugin` validates names, parameters, guards, shells, branches, and
+imports. The plugin emits route data, parsing, navigation, and page assembly;
+`dust_flutter` owns only the Navigator 2.0 runtime and shared contracts. The
+application owns platform link setup, incoming-host policy, authentication
+state, and deployment rewrites.
+
+State annotations follow the same pipeline through `dust_state_plugin`.
+Generated bases and scopes connect application ViewModels to the small
+`dust_flutter` runtime. A created scope owns `init` and `dispose`; a `.value`
+scope observes but never disposes its external ViewModel. Dependencies remain
+in typed args, UI values remain in immutable state, and generated watch/select
+APIs are the subscription boundary.
+
+Neither runtime invents persistence or I/O cancellation. Route locations are
+the durable navigation representation. Applications decide what state survives
+process death, and resource-specific clients cancel network, database, stream,
+or isolate work.
 
 ## Where to Make a Change
 

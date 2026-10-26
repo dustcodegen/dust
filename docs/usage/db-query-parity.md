@@ -38,8 +38,8 @@ still run on the caller isolate; background SQL results are materialized and
 copied. Keep queries bounded.
 
 Generated background opening and the query-only discovery fix described here
-are **unreleased**. Use the matching source CLI/runtime, not the published
-0.2.1 artifacts. No versions have been bumped.
+are scheduled for v0.3.0. Until it is published, use the matching current-source
+CLI/runtime rather than the published 0.2.1 artifacts.
 
 ## Terminal behavior
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-26
+
+### Changed
+
+- Mark `Validate<T>` with `@optionalTypeArgs`, so source annotations can use
+  `@Validate(...)` without repeating the annotated field's declared type.
+
 ## [0.2.1] - 2026-09-28
 
 ### Migrating

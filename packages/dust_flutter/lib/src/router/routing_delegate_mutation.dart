@@ -33,7 +33,7 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
         committed = replacement.committed;
         replacement.replaced?.complete(null);
       case NavigationMode.restore:
-        final routes = restored ?? <T>[route];
+        final routes = restored!;
         _completeEntries(_history.replaceWithRoutes(routes));
         committed = _history.entries.last;
     }

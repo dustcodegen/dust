@@ -111,7 +111,7 @@ pub(crate) fn prepare(root: &Path, package_root: &Path, package_name: &str) {
     ] {
         write(
             &root.join(format!("deps/{name}/pubspec.yaml")),
-            &format!("name: {name}\nversion: 0.2.1\n"),
+            &format!("name: {name}\nversion: 0.3.0\n"),
         );
     }
     let relative = package_root

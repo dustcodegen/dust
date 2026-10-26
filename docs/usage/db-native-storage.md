@@ -109,7 +109,7 @@ dependency repaired: rows: 1
 It uses a deferred foreign key, not a native fault injector. The failed pending
 migration leaves no partial row; the app reconciles the missing parent before
 explicitly reopening with the same migration bundle. This diagnostic fix and
-the new examples are unreleased source changes, not published 0.2.1 behavior.
+the new examples are scheduled for v0.3.0, not published 0.2.1 behavior.
 
 Rust SQLx build-time validation still matters: it checks SQL/schema shape, not
 native storage health or whether application data satisfies a deferred

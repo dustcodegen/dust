@@ -210,7 +210,7 @@ certify all OS suspension policies, low-memory kills, long-running workloads or
 storage devices. Windows and physical-device results remain explicit #19 gates
 until run and recorded; SDK consumer execution is documented separately above.
 
-For application usage, follow [background opening](db.md#generated-background-opening-unreleased)
+For application usage, follow [background opening](db.md#generated-background-opening)
 and the SQLx-backed checked query/DAO guide. The probe's runtime SQL is test
 instrumentation; it does not turn arbitrary runtime SQL into checked SQL.
 

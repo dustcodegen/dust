@@ -7,21 +7,20 @@ Dust's packages bring Rust-inspired, batteries-included tooling to data
 classes, JSON, validation, HTTP clients, routing, state management,
 localization, SQL, and Dart servers—without `build_runner`.
 
+[![Release](https://img.shields.io/github/v/release/dustcodegen/dust?logo=github&color=blue)](https://github.com/dustcodegen/dust/releases)
+[![Coverage](https://codecov.io/gh/dustcodegen/dust/graph/badge.svg?branch=main)](https://app.codecov.io/gh/dustcodegen/dust)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 [Website](https://dustcodegen.github.io/) · [Source](https://github.com/dustcodegen/dust)
 
-This source snapshot comes from cached mainline revision
-`45349afab66f25b5092b4a0e7189a785ff578020` of the original repository.
-The original remote is unavailable, so its current state cannot be verified.
-Versions are unchanged. The original `v0.2.1` source was rebuilt through
+The original `v0.2.1` source was rebuilt through
 [Rust-only release CI](https://github.com/dustcodegen/dust/actions/workflows/rust-release.yml)
 with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
-Only manual Rust release CI is enabled, not Dart/Flutter publishing or the
-inherited general CI/Scorecard workflows. Original CI history and external
-quality integrations are not migrated. Current documentation and package
-metadata use `dustcodegen/dust`; already-published pub.dev metadata stays
-unchanged until a future package release.
+Development validation runs locally; GitHub Actions is reserved for releases.
+Current documentation and package metadata use `dustcodegen/dust`;
+already-published pub.dev metadata stays unchanged until the v0.3.0 release.
+This source branch prepares the CLI and all five runtime packages at 0.3.0;
+no tag or package publication is implied by the source version.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you
@@ -106,13 +105,35 @@ flutter pub add dust_flutter
 See the [Flutter package guide](packages/dust_flutter/README.md) for routing,
 state, and i18n setup.
 
-## Agent Skill
+## Agent Skill And Plugin
 
-Install the [use-dust Agent Skill](skills/use-dust/SKILL.md):
+Install the portable [use-dust Agent Skill](skills/use-dust/SKILL.md) in an
+Agent Skills-compatible client:
 
 ```bash
 npx skills add dustcodegen/dust --skill use-dust
 ```
+
+Install the plugin for Codex CLI and the ChatGPT/Codex desktop marketplace:
+
+```bash
+codex plugin marketplace add dustcodegen/dust
+codex plugin add dust@dustcodegen
+```
+
+Install the same skill as a Claude Code plugin:
+
+```bash
+claude plugin marketplace add dustcodegen/dust
+claude plugin install dust@dustcodegen
+```
+
+The standard `skills/use-dust/SKILL.md` is the single instruction source for
+every client; platform manifests only make that skill discoverable. The plugin
+adds no `CLAUDE.md`/`CODEX.md`, MCP server, credentials, or hosted CI. In
+application repositories it guides Dust setup and diagnosis; in this repository
+it also loads the contributor architecture, 300-line source rule, coverage
+floors, local pre-commit gate, and release-only CI policy.
 
 ## Features
 
@@ -123,8 +144,8 @@ npx skills add dustcodegen/dust --skill use-dust
 | Validation | Stable | [Validation guide](docs/usage/validation.md) |
 | HTTP clients | Stable | [HTTP guide](docs/usage/http.md) |
 | Primary constructors | Supported in source (Dart 3.13+) | [Usage and limits](docs/usage/primary-constructors.md) |
-| Routing | Beta | [Routing guide](docs/usage/routing.md) |
-| State management | Beta | [State guide](docs/usage/state.md) |
+| Routing | Stable | [Routing guide](docs/usage/routing.md) |
+| State management | Stable | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
 | Database | Beta | [Database guide](docs/usage/db.md) |
 | HTTP servers | Stable runtime; source codegen available | [Server guide](docs/dust_server/README.md) |
@@ -135,15 +156,15 @@ Stable features keep their documented authoring APIs compatible. Breaking
 changes require an explicit migration note. Features marked Beta may still
 receive API refinements.
 
-Primary-constructor support is available from the current source checkout, not
-the published 0.2.1 binaries or packages. Traditional constructors remain
-supported on the documented minimum Dart and Flutter SDKs.
+Primary-constructor support is scheduled for v0.3.0. Until that release is
+published, use the matching current-source CLI and packages together. Traditional
+constructors remain supported on the documented minimum Dart and Flutter SDKs.
 
-The current source checkout generates `dust_server` controllers and top-level
+The v0.3.0 source generates `dust_server` controllers and top-level
 route modules with typed path, query, header, JSON, form, multipart, raw-body,
 state, peer, request, and custom extraction; validation; extractor wrappers;
-response dispatch; guarded failures; middleware; and route metadata. This
-server generator is not part of the published 0.2.1 binaries or packages.
+response dispatch; guarded failures; middleware; and route metadata. Until
+v0.3.0 is published, use the matching current-source CLI and packages together.
 
 ## Documentation
 

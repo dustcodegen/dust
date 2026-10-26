@@ -6,11 +6,12 @@
 dart pub add dust_server
 ```
 
-The current stable line is 0.2.x. To state the minimum explicitly:
+This source tree targets 0.3.x. To state the minimum explicitly after v0.3.0 is
+published:
 
 ```yaml
 dependencies:
-  dust_server: ^0.2.1
+  dust_server: ^0.3.0
 ```
 
 Inside this workspace, depend on it by path instead:
@@ -181,5 +182,5 @@ real application's HTTP checkout flow over loopback with the worker connection.
 This is not a live-service load test or device/crash evidence. Worker ownership
 still fails fast for unrelated work during a transaction; this feature adds no
 queue, retry policy or pool. See the
-[opt-in and compatibility guide](../usage/db.md#generated-background-opening-unreleased).
-Use matching unreleased CLI/runtime sources, not published 0.2.1 artifacts.
+[opt-in and compatibility guide](../usage/db.md#generated-background-opening).
+Until v0.3.0 is published, use matching current-source CLI/runtime packages.

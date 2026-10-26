@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dust_server/server.dart';
 import 'package:test/test.dart';
 import '../../example/background_tasks.dart' as background_tasks;
@@ -113,7 +115,17 @@ void main() {
   group('background_tasks', () {
     test('the response does not wait for the task', () async {
       final tasks = BackgroundTasks(onError: (_, __) {});
-      final app = await example(background_tasks.buildApp(tasks));
+      final releaseReceipt = Completer<void>();
+      addTearDown(() async {
+        if (!releaseReceipt.isCompleted) releaseReceipt.complete();
+        await tasks.settled(const Duration(seconds: 2));
+      });
+      final app = await example(
+        background_tasks.buildApp(
+          tasks,
+          waitForReceipt: () => releaseReceipt.future,
+        ),
+      );
 
       final response =
           await app.post('/orders', const {'email': 'ada@example.com'});
@@ -122,6 +134,7 @@ void main() {
       expect(app.object(response), {'placed': true, 'receiptQueued': true});
       // Not sent yet: the handler returned before the work finished.
       expect(app.object(await app.get('/receipts'))['sent'], isEmpty);
+      releaseReceipt.complete();
     });
 
     test('the task finishes afterwards', () async {

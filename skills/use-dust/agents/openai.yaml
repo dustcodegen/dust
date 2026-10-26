@@ -1,4 +1,4 @@
 interface:
-  display_name: "Use Dust"
-  short_description: "Add and troubleshoot Dust code generation"
-  default_prompt: "Use $use-dust to add the appropriate Dust workflow to this Dart or Flutter project."
+  display_name: "Use dust"
+  short_description: "Use or contribute to Dust code generation"
+  default_prompt: "Use $use-dust to work on this Dust application or repository with the correct architecture and local quality gates."

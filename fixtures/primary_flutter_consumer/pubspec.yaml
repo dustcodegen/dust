@@ -6,8 +6,8 @@ environment:
   sdk: ">=3.13.0 <4.0.0"
 
 dependencies:
-  dust_dart: ^0.2.1
-  dust_flutter: ^0.2.1
+  dust_dart: ^0.3.0
+  dust_flutter: ^0.3.0
   flutter:
     sdk: flutter
 

@@ -35,6 +35,17 @@ final class NullableAsyncViewModel extends AsyncViewModelBase<int?, TestArgs> {
 }
 
 void main() {
+  test('init uses the async view model load contract', () async {
+    final viewModel = TestAsyncViewModel();
+
+    final init = viewModel.init();
+    expect(viewModel.loads, hasLength(1));
+    viewModel.loads.single.complete(7);
+    await init;
+
+    expect(viewModel.data, 7);
+  });
+
   test('load moves initial to data', () async {
     final viewModel = TestAsyncViewModel();
 

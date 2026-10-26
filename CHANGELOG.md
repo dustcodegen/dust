@@ -6,13 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-10-26
+
 ### Changed
+
+- **Validation**: allow `@Validate(...)` to omit its type argument while the
+  generator continues to apply rules and custom callbacks to the annotated
+  field's declared type.
 
 - **Tooling**: replace the deprecated `serde_yaml`/`unsafe-libyaml` parser with
   safe-Rust `serde-saphyr`, pin release toolchains and actions, and set the Rust
   workspace minimum to 1.89.
 
 ### Added
+
+- **Dart language**: support class-header primary constructors across Dust's
+  documented generator surface while keeping traditional declarations fully
+  supported.
+- **Generation**: preserve structured generic bounds, inherited type
+  substitutions, sealed variants, callback types, and annotation provenance
+  through parsing, resolution, IR, and emission.
+- **Parser**: move to the Tree-sitter-listed Dart grammar after extraction
+  parity, with precise diagnostics for parsed syntax Dust does not generate.
+
+- **Flutter**: certify the documented routing and state authoring contracts as
+  stable with 100% runtime line coverage, native integration smoke coverage,
+  platform link configuration, and a real shopping-app proof under local gates
+  (#197).
 
 - **Server**: add per-identity rate limiting, WebSocket origin enforcement,
   replay-safe webhook guidance, observer isolation, query-safe tracing, and
@@ -46,6 +66,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unchanged (#24).
 
 ### Fixed
+
+- **Server examples**: replace the background-task response timing assertion
+  with an explicit delivery gate so the local suite stays deterministic under
+  load (#198).
+- **Shopping app**: register its documented custom link scheme, align iOS and
+  macOS deployment targets with the supported Flutter/Xcode toolchain, and
+  accept Flutter's generated iOS Swift-package plugin integration.
 
 - **Server**: report top-level functions that use server annotations or
   extractors without declaring an HTTP verb instead of silently omitting them

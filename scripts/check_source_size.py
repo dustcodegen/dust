@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Keep hand-written Dust source files small.
+"""Keep every hand-written Dust source and test file small.
 
 CONTRIBUTING's "Small & Clean" rule has no teeth without a number. This check
-supplies one: every hand-written production source file stays under
+supplies one: every hand-written source and test file stays under
 ``LINE_LIMIT`` lines.
 
 Every hand-written Rust, Dart, Python and shell file counts, wherever it lives:
@@ -64,7 +64,7 @@ SOURCE_GLOBS = (
 
 
 def source_files(root: Path) -> list[Path]:
-    """Returns the hand-written production sources under `root`, sorted."""
+    """Returns the hand-written source and test files under `root`, sorted."""
     found: set[Path] = set()
     for directory, pattern in SOURCE_GLOBS:
         for path in (root / directory).glob(pattern):

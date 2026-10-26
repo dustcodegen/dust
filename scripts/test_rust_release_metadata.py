@@ -36,12 +36,17 @@ class RepositoryMetadataTests(unittest.TestCase):
             with self.subTest(document=str(document.relative_to(ROOT))):
                 text = document.read_text()
                 self.assertFalse("y3l1n4ung/dust" in text, "Historical repository link")
-                self.assertFalse("codecov.io/gh/" in text, "Unmigrated coverage badge")
                 for url in re.findall(r"https://github\.com/dustcodegen/dust[^\s)<>\"`|]*", text):
                     path = unquote(urlsplit(url).path)
                     for prefix in ("/dustcodegen/dust/blob/main/", "/dustcodegen/dust/tree/main/"):
                         if path.startswith(prefix):
                             self.assertTrue((ROOT / path.removeprefix(prefix)).exists(), url)
+
+    def test_readme_uses_canonical_public_badges(self):
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("codecov.io/gh/dustcodegen/dust/graph/badge.svg", readme)
+        self.assertIn("github/v/release/dustcodegen/dust", readme)
+        self.assertNotIn("sonarcloud.io/api/project_badges", readme)
 
 
 if __name__ == "__main__":

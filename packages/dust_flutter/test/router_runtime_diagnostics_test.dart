@@ -155,4 +155,39 @@ void main() {
       debugPrint = previousDebugPrint;
     }
   });
+
+  test('router diagnostics survive a location formatting failure', () async {
+    final messages = <String>[];
+    final previousDebugPrint = debugPrint;
+    debugPrint = (message, {wrapWidth}) {
+      if (message != null) messages.add(message);
+    };
+    var throwNext = false;
+
+    try {
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          router: DebugRouter(),
+          routeLocation: (route) {
+            if (throwNext) {
+              throwNext = false;
+              throw StateError('cannot format');
+            }
+            return route.location;
+          },
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
+      messages.clear();
+      throwNext = true;
+
+      delegate.go(const TestRoute('/detail'));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(messages.first, 'AppRouter: go /detail');
+      expect(delegate.currentRoute.location, '/detail');
+    } finally {
+      debugPrint = previousDebugPrint;
+    }
+  });
 }
