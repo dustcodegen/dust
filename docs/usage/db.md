@@ -1,23 +1,33 @@
 # Database
 
-Dust Database generates typed SQLite access from raw SQL and validates static
-queries against your migrations with Rust SQLx. It is not an ORM or query
-builder.
+Dust Database generates typed SQLite and PostgreSQL access from raw SQL and
+validates static queries against your migrations with Rust SQLx. It is not an
+ORM or query builder.
 
-Database is currently beta. SQLite through `package:sqlite3` is the supported
-runtime; PostgreSQL annotations are reserved for future support.
+Database is currently beta. SQLite uses `dust_db_sqlite3`; PostgreSQL uses
+`dust_db_postgres`. This guide uses SQLite for its main walkthrough because it
+can run locally without a database server. The
+[PostgreSQL runtime guide](../../packages/dust_db_postgres/README.md) documents
+pooling, migrations, transactions, arrays and production configuration.
 
 ## Add the Packages
 
 Install the Dust CLI from the [root guide](../../README.md#installation), then
-add the annotations and SQLite runtime:
+add the annotations and the runtime your application uses:
 
 ```bash
 dart pub add dust_dart dust_db_sqlite3
 ```
 
+For PostgreSQL:
+
+```bash
+dart pub add dust_dart dust_db_postgres
+```
+
 The SQLite package uses native libraries through Dart FFI and is intended for
-native Dart and Flutter targets, not web.
+native Dart and Flutter targets, not web. PostgreSQL is also native-only and
+connects to a server over a socket.
 
 Execution is opt-in per connection. Existing `Sqlite3Driver` and generated
 `AppDatabase.open` remain synchronous. For native opening, migration checks,
@@ -28,7 +38,7 @@ the caller; direct executor SQL remains unchecked. Static `queryAs`,
 `queryScalar` and `queryExecute` calls can still be validated without a DAO. See the
 [background connection guide](../../packages/dust_db_sqlite3/README.md#optional-background-connection)
 for usage, ownership, failure recovery and limits. Generated async opening is
-an explicit [opt-in](#generated-background-opening-unreleased).
+an explicit [opt-in](#generated-background-opening).
 
 For ordinary functions with an explicit executor, all five terminals, and the
 online/offline validation boundary, see [SQLite query parity](db-query-parity.md).
@@ -151,12 +161,13 @@ await database.connection.close();
 > normal derives such as `FromRow`; `dust db build` owns `@SqlxDatabase`,
 > `@SqlxDao`, and `@Query` output.
 
-## Generated Background Opening (Unreleased)
+## Generated Background Opening
 
-This source-tree feature needs a CLI built from this change and the matching
-unreleased SQLite runtime. It is not available in the published 0.2.1 artifacts;
-versions have not been bumped. Existing synchronous-only declarations generate
-the same output as before. See [compatibility](compatibility.md#unreleased-background-opening).
+This feature is scheduled for v0.3.0. Until that release is published, use the
+matching current-source CLI and SQLite runtime together; published 0.2.1
+artifacts do not include it. Existing synchronous-only declarations generate
+the same output as before. See
+[compatibility](compatibility.md#v030-background-opening).
 
 Add a static forwarding method to your SQLite database declaration:
 

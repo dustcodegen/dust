@@ -33,7 +33,9 @@ and contributor documentation.
 
 ### Database
 
-- [SQLite query validation and generated DAOs](./usage/db.md)
+- [SQL validation and generated DAOs](./usage/db.md)
+- [SQLite runtime](../packages/dust_db_sqlite3/README.md)
+- [PostgreSQL runtime](../packages/dust_db_postgres/README.md)
 
 ### Server
 
@@ -48,6 +50,8 @@ and contributor documentation.
   validation, and i18n APIs.
 - [`dust_db_sqlite3`](../packages/dust_db_sqlite3/README.md): native SQLite
   runtime for generated Database code.
+- [`dust_db_postgres`](../packages/dust_db_postgres/README.md): PostgreSQL pool
+  and executor runtime for generated Database code.
 - [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
   generated route modules on `shelf`, shaped after axum.
 

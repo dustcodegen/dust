@@ -33,7 +33,7 @@ checks non-DAO terminals, async unsafe SQL, options, drift refusal and legacy
 baselining. Normal app startup remains synchronous. These are native Flutter
 tests, not device frame-time or crash-recovery evidence. The background facade
 requires the matching unreleased CLI/runtime source; see the
-[opt-in guide](../../docs/usage/db.md#generated-background-opening-unreleased).
+[opt-in guide](../../docs/usage/db.md#generated-background-opening).
 
 The app uses sqlite3's bundled native assets (`source: sqlite3`), not a desktop
 system-library override. Android does not provide `libsqlite3.so` for this app;

@@ -15,10 +15,11 @@ Each guide shows the handwritten API first and links to a working example.
 | Configure Navigator 2.0 routing | [Routing](./routing.md), [deep links](./routing-deep-links.md), [shells](./routing-shells.md), [guards](./routing-guards.md) | `dust_flutter` |
 | Maintain ARB translations | [Internationalization](./i18n.md) | `dust_flutter` |
 | Validate SQLite queries | [Database](./db.md) | `dust_dart`, `dust_db_sqlite3` |
+| Run validated PostgreSQL queries | [PostgreSQL runtime](../../packages/dust_db_postgres/README.md) | `dust_dart`, `dust_db_postgres` |
 
-The guides above describe Dust-generated application features. `dust_server`
-also supports generated controllers and top-level route modules in the current
-source checkout; its runtime and codegen guides live in
+The guides above describe Dust-generated application features. Dust v0.3.0 is
+scheduled to add generated `dust_server` controllers and top-level route
+modules; its runtime and codegen guides live in
 [docs/dust_server](../dust_server/README.md).
 
 Install the CLI from the [installation guide](../../README.md#installation).
@@ -37,8 +38,8 @@ When changing Dust versions, check the
 | `dust doctor` | Reports workspace and plugin readiness. |
 | `dust route table` | Prints the app route table without writing files. |
 | `dust upgrade` | Checks, verifies, and upgrades the installed CLI binary. |
-| `dust db build` | Validates static SQLite queries and writes database/DAO output. |
-| `dust check --db` | Checks database/DAO output and SQL without writing. |
+| `dust db build` | Validates static SQLite/PostgreSQL queries and writes database/DAO output. |
+| `dust check --db` | Checks SQLite/PostgreSQL database and DAO output without writing. |
 | `dust i18n scan` | Reports statically discoverable translation calls. |
 | `dust i18n build` | Reconciles ARB files and refreshes the Flutter bootstrap. |
 | `dust i18n check` | Validates ARB files and localization setup without writing. |

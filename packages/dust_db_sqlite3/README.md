@@ -232,12 +232,12 @@ DAO SQL is still checked by Dust/Rust SQLx at generation time; direct runtime
 SQL remains unchecked. No DAO is required to use `fetchOne`, `fetchOptional`,
 `fetchAll`, `fetchScalar` or `execute`. Generated `AppDatabase.open` remains
 synchronous. For generated `openBackground`, add the explicit static forwarding
-method shown in the [generated background guide](../../docs/usage/db.md#generated-background-opening-unreleased).
+method shown in the [generated background guide](../../docs/usage/db.md#generated-background-opening).
 It uses the facade's embedded migrations and a worker-safe asynchronous
-`unsafe` adapter, with no native-handle casts. This is an **unreleased** API:
-use a CLI built from this change and the matching source runtime, not the
-published 0.2.1 artifacts. Without a generated facade, supply the same reviewed
-migration bundle yourself when opening a worker.
+`unsafe` adapter, with no native-handle casts. This API is scheduled for v0.3.0;
+until it is published, use the matching current-source CLI and runtime together.
+Without a generated facade, supply the same reviewed migration bundle yourself
+when opening a worker.
 
 Prefer ordinary functions taking `Executor db` when no DAO is needed; no
 handwritten executor extension is required. The
@@ -273,8 +273,8 @@ connection reuse. Real cleanup failures still require reopening. Run
 [disk-full recovery](example/disk_full_recovery.dart) for a safe temporary-database
 demonstration. A separate [bounded-volume ENOSPC gate](../../docs/usage/db-filesystem-full.md)
 tests actual filesystem exhaustion on a disposable macOS image. Devices, other
-filesystems and power loss remain separate validation boundaries; these source
-changes are unreleased.
+filesystems and power loss remain separate validation boundaries; these changes
+are scheduled for v0.3.0.
 
 Run [background opening](example/open_in_background.dart) and
 [background commit recovery](example/background_commit_recovery.dart), or see

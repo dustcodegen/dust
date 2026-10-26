@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Validation**: allow `@Validate(...)` to omit its type argument while the
+  generator continues to apply rules and custom callbacks to the annotated
+  field's declared type.
+
 - **Tooling**: replace the deprecated `serde_yaml`/`unsafe-libyaml` parser with
   safe-Rust `serde-saphyr`, pin release toolchains and actions, and set the Rust
   workspace minimum to 1.89.

@@ -35,16 +35,16 @@ comments or string contents. For example, a regex containing `[.,]` is not a
 dot shorthand, and documentation or a supported `...?items` spread is not a
 Dart 3.8 null-aware element. Actual interpolation code is still checked:
 `'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic fix is
-unreleased and does not enable otherwise unsupported code generation.
+scheduled for v0.3.0 and does not enable otherwise unsupported code generation.
 
 The current source supports class-header primary constructors for Dart language
 version 3.13 and newer across the documented Dart and Flutter feature surface.
 Fresh Dart 3.13.6 and Flutter 3.47.7 consumers build, analyze and test alongside
 traditional Dart 3.6.0 and Flutter 3.29.0 consumers. See the
-[usage and limits](primary-constructors.md). This source support is not included
-in the published 0.2.1 binaries or packages, so released installations must keep
-traditional in-body constructors and explicit fields. Constructor calls in
-application code do not need to change.
+[usage and limits](primary-constructors.md). This support is scheduled for
+v0.3.0; until it is published, primary-constructor projects must use the
+matching current-source CLI and packages. Constructor calls in application code
+do not need to change, and traditional declarations remain supported.
 
 The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
 This source checkout uses the pinned listed upstream after extraction parity;
@@ -63,19 +63,18 @@ normal build/check. Preserved output is stale, not evidence of successful
 generation: fix the input and rerun both commands. Explicit `--clean` removes
 generated files before building and does not promise to preserve them.
 
-## Unreleased Background Opening
+## v0.3.0 Background Opening
 
-Generated SQLite `AppDatabase.openBackground` is a source-tree feature, not part
-of the published 0.2.1 release. Opting in requires a CLI built from the change
-and the matching `dust_db_sqlite3` source containing `Sqlite3WorkerDriver` and
-`Sqlite3WorkerUnsafeSql`. Numeric version checks cannot distinguish these
-unreleased APIs while versions are intentionally unchanged. Do not combine
-opt-in generated code with the published 0.2.1 SQLite runtime or assume the
-current release binaries generate the new opener. Ordinary synchronous-only
-database declarations keep their existing generated output.
+Generated SQLite `AppDatabase.openBackground` is scheduled for v0.3.0. Until
+that release is published, opting in requires the matching current-source CLI
+and `dust_db_sqlite3` runtime containing `Sqlite3WorkerDriver` and
+`Sqlite3WorkerUnsafeSql`. Numeric version checks cannot distinguish these source
+APIs while versions remain 0.2.1. Do not combine opt-in generated code with the
+published 0.2.1 SQLite runtime. Ordinary synchronous-only database declarations
+keep their existing generated output.
 
-No versions or compatibility ranges are changed in this work. A coordinated
-version/compatibility update is a required gate before publishing this feature.
+The active compatibility contract remains 0.2.1. The v0.3.0 row and package
+ranges must be added in the coordinated lockstep release-preparation change.
 
 ## Dust CLI 0.2.1
 
