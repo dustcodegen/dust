@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-10-26
+
 ### Changed
 
 - **Validation**: allow `@Validate(...)` to omit its type argument while the
@@ -17,6 +19,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   workspace minimum to 1.89.
 
 ### Added
+
+- **Dart language**: support class-header primary constructors across Dust's
+  documented generator surface while keeping traditional declarations fully
+  supported.
+- **Generation**: preserve structured generic bounds, inherited type
+  substitutions, sealed variants, callback types, and annotation provenance
+  through parsing, resolution, IR, and emission.
+- **Parser**: move to the Tree-sitter-listed Dart grammar after extraction
+  parity, with precise diagnostics for parsed syntax Dust does not generate.
 
 - **Flutter**: certify the documented routing and state authoring contracts as
   stable with 100% runtime line coverage, native integration smoke coverage,

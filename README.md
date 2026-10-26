@@ -19,6 +19,8 @@ with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-r
 Development validation runs locally; GitHub Actions is reserved for releases.
 Current documentation and package metadata use `dustcodegen/dust`;
 already-published pub.dev metadata stays unchanged until the v0.3.0 release.
+This source branch prepares the CLI and all five runtime packages at 0.3.0;
+no tag or package publication is implied by the source version.
 
 Dust is Rust-powered code generation for Dart and Flutter, built for human
 developers and AI coding agents. It handles repetitive and complex code so you

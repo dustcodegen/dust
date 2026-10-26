@@ -50,7 +50,7 @@ fn workspace() -> tempfile::TempDir {
     );
     write_file(
         &root.join("deps/dust_dart/pubspec.yaml"),
-        "name: dust_dart\nversion: 0.2.1\n",
+        "name: dust_dart\nversion: 0.3.0\n",
     );
     write_file(
         &root.join("deps/dust_dart/lib/derive.dart"),

@@ -69,12 +69,20 @@ Generated SQLite `AppDatabase.openBackground` is scheduled for v0.3.0. Until
 that release is published, opting in requires the matching current-source CLI
 and `dust_db_sqlite3` runtime containing `Sqlite3WorkerDriver` and
 `Sqlite3WorkerUnsafeSql`. Numeric version checks cannot distinguish these source
-APIs while versions remain 0.2.1. Do not combine opt-in generated code with the
-published 0.2.1 SQLite runtime. Ordinary synchronous-only database declarations
-keep their existing generated output.
+APIs require the matching v0.3.0 CLI and runtime. Do not combine opt-in
+generated code with the published 0.2.1 SQLite runtime. Ordinary
+synchronous-only database declarations keep their existing generated output.
 
-The active compatibility contract remains 0.2.1. The v0.3.0 row and package
-ranges must be added in the coordinated lockstep release-preparation change.
+## Dust CLI 0.3.0
+
+| Dust CLI | `dust_dart` | `dust_flutter` | `dust_db_sqlite3` | `dust_db_postgres` | `dust_server` |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `0.3.0` | `>=0.3.0 <0.4.0` | `>=0.3.0 <0.4.0` | `>=0.3.0 <0.4.0` | `>=0.3.0 <0.4.0` | `>=0.3.0 <0.4.0` |
+
+0.3.0 is a lockstep minor release. It adds primary-constructor parsing and
+generation, production server codegen, stable Flutter routing/state contracts,
+and SQLite migration, recovery and background-worker hardening. Traditional
+Dart constructors and synchronous SQLite opening remain supported.
 
 ## Dust CLI 0.2.1
 
