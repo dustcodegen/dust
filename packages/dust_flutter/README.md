@@ -82,11 +82,14 @@ CounterViewModelScope(
 
 | Feature | Status | Provides |
 | :--- | :--- | :--- |
-| Routing | Beta | Typed route data, deep links, guards, redirects, shells, and transitions on Navigator 2.0. |
-| State management | Beta | Typed ViewModel bases, scopes, selectors, effects, and async state. |
+| Routing | Stable | Typed route data, deep links, guards, redirects, shells, and transitions on Navigator 2.0. |
+| State management | Stable | Typed ViewModel bases, scopes, selectors, effects, and async state. |
 | i18n | Beta | ARB loading, locale fallback, generated app setup, and translated widgets. |
 
-Beta APIs may still receive refinements while these features are hardened.
+Stable APIs keep their documented authoring contracts compatible. Beta APIs may
+still receive refinements while they are hardened. See the
+[routing and state readiness contract](https://github.com/dustcodegen/dust/blob/main/docs/design/flutter-routing-state.md)
+for tested boundaries and application-owned responsibilities.
 
 ## Examples
 

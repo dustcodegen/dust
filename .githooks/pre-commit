@@ -35,6 +35,12 @@ run_without_git_env ./scripts/dart/coverage.sh packages/dust_dart 100
 run_without_git_env ./scripts/dart/coverage.sh packages/dust_db_sqlite3 96
 run_without_git_env ./scripts/dart/coverage.sh packages/dust_server 100
 run_without_git_env ./scripts/flutter/coverage.sh packages/dust_flutter 90
+python3 scripts/check_lcov_floor.py \
+  packages/dust_flutter/coverage/lcov.info 100 \
+  --include-prefix lib/src/router/
+python3 scripts/check_lcov_floor.py \
+  packages/dust_flutter/coverage/lcov.info 100 \
+  --include-prefix lib/src/state/
 ensure_generated_outputs_are_staged
 
 echo "==> Pre-commit checks passed"

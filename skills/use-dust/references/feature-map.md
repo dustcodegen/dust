@@ -1,7 +1,8 @@
 # Dust Feature Map
 
-Use the project's installed package version as the source of truth. These links
-describe the current public `0.1.x` authoring surface:
+Use the project's installed package and CLI versions as the source of truth.
+The linked guides describe the current source authoring surface; a source-only
+feature may not exist in the latest published binaries or packages.
 
 | Feature | Packages | Focused import | Guide |
 | :--- | :--- | :--- | :--- |
@@ -12,8 +13,9 @@ describe the current public `0.1.x` authoring surface:
 | Routing | `dust_flutter` | `package:dust_flutter/route.dart` | [Routing](https://github.com/dustcodegen/dust/blob/main/docs/usage/routing.md) |
 | State | `dust_flutter`, often `dust_dart` | `package:dust_flutter/state.dart` | [State](https://github.com/dustcodegen/dust/blob/main/docs/usage/state.md) |
 | i18n | `dust_flutter` | `package:dust_flutter/i18n.dart` | [i18n](https://github.com/dustcodegen/dust/blob/main/docs/usage/i18n.md) |
-| Database | `dust_dart`, `dust_db_sqlite3` | `package:dust_dart/db.dart` | [Database](https://github.com/dustcodegen/dust/blob/main/docs/usage/db.md) |
-| HTTP servers *(no generation)* | `dust_server` | `package:dust_server/server.dart` | [Server](https://github.com/dustcodegen/dust/blob/main/docs/dust_server/README.md) |
+| SQLite Database | `dust_dart`, `dust_db_sqlite3` | `package:dust_dart/db.dart` | [Database](https://github.com/dustcodegen/dust/blob/main/docs/usage/db.md) |
+| PostgreSQL Database | `dust_dart`, `dust_db_postgres` | `package:dust_dart/db.dart` | [PostgreSQL](https://github.com/dustcodegen/dust/blob/main/packages/dust_db_postgres/README.md) |
+| HTTP servers | `dust_server` | `package:dust_server/server.dart` | [Server](https://github.com/dustcodegen/dust/blob/main/docs/dust_server/README.md) |
 
 `dust_server` is a Dart runtime on `shelf` whose API is modelled on Rust's
 axum. It is not built on axum, and no Rust dependency is involved.
@@ -35,8 +37,8 @@ with the [compatibility guide](https://github.com/dustcodegen/dust/blob/main/doc
   and a redirecting factory to `_$Client`. Annotate one HTTP verb per method
   and map parameters with `@Path`, `@Query`, `@Body`, and related annotations.
 - **Routing:** create one `lib/route.dart` entrypoint that imports/exports
-  `route.g.dart`, extend the generated `$RootRouter`, and annotate route widgets with
-  `@AppRoute`.
+  `route/routes.g.dart`, extend the generated `$RootRouter`, and annotate route
+  widgets with `@AppRoute`.
 - **State:** annotate a ViewModel with `@ViewModel`, extend its generated base,
   keep UI values in state, and put dependencies in typed args.
 - **i18n:** configure locales in `dust.yaml`, use literal namespaced keys,
@@ -45,12 +47,11 @@ with the [compatibility guide](https://github.com/dustcodegen/dust/blob/main/doc
 - **Database:** keep row models and database roots in separate libraries. Use
   `@Derive([FromRow()])`, `@SqlxDatabase`, `@SqlxDao`, raw static `@Query` SQL,
   and migrations. SQLite is native-only; it does not support web.
-- **HTTP servers:** `dust_server` is a Dart HTTP runtime on `shelf`, with an
-  API modelled on Rust's axum — `Router` with `route`, `nest`, `merge`,
-  `mount`, `layer`, `routeLayer`, `withState`, and `fallback`;
-  `FromRequestParts` and `FromRequest` extractors; `IntoResponse` and
-  `Rejection`. Nothing is generated, so compose the router by hand and serve
-  it. Native-only; no web support.
+- **HTTP servers:** use the handwritten `Router` API when codegen is not
+  wanted. With matching current source, annotate a library with `@Routes` or a
+  class with `@Controller`, add its `.g.dart` part, and run `dust build`.
+  Handler bodies and deployment policy stay handwritten. Native-only; no web
+  support.
 
 ## Command routing
 
@@ -63,12 +64,12 @@ with the [compatibility guide](https://github.com/dustcodegen/dust/blob/main/doc
 | Offline Database validation | `dust db build --offline` | `dust check --db --offline` |
 | Translation inventory | — | `dust i18n scan` |
 | ARB/bootstrap reconciliation | `dust i18n build` | `dust i18n check` |
+| Generated server modules *(current source)* | `dust build` | `dust check` |
 
 An offline Database command requires compatible query metadata written by a
 successful online database build. Normal `dust build` does not generate
 `@SqlxDatabase`, `@SqlxDao`, or `@Query` output.
 
-No Dust command generates server code.
-
-Firebase, Supabase, PostgreSQL runtime support, and ORM/query-builder behavior
+Published 0.2.1 does not contain the current source server generator or other
+unreleased source features. Firebase, Supabase, and ORM/query-builder behavior
 are not current Dust features. Do not generate examples that imply otherwise.

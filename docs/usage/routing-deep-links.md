@@ -55,6 +55,20 @@ final class ShopRouter extends $ShopRouter {
 Use this hook for host allow-listing, subdirectory deploy prefixes, and legacy
 URL migrations. Use `redirect` for decisions that depend on app state.
 
+## Native Link Registration
+
+Generated parsing does not register an application with Android or iOS. The app
+owns that platform configuration. For a custom `shopping://open/...` link, add
+an Android `VIEW` intent filter with `BROWSABLE`, scheme `shopping`, and host
+`open`. On iOS, register `shopping` under `CFBundleURLTypes`. Keep Flutter deep
+link handling enabled on both platforms.
+
+The [shopping app manifest](../../examples/shopping_app/android/app/src/main/AndroidManifest.xml)
+and [Info.plist](../../examples/shopping_app/ios/Runner/Info.plist) are runnable
+examples. HTTPS app links additionally require domain association files and
+production signing owned by the application; Dust cannot generate or verify
+those deployment credentials.
+
 ## Safe Redirect Locations
 
 Redirect routes often store the blocked destination:

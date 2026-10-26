@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 RouterRuntimeConfig<TestRoute> runtimeConfig({
   RouterBase<TestRoute>? router,
   RouteGuardResolver<TestRoute>? resolveGuards,
+  RouteLocation<TestRoute>? routeLocation,
+  RouteBranch<TestRoute>? routeBranch,
   RouteStackRestorer<TestRoute>? restoreStack,
   Widget Function(BuildContext context, TestRoute route)? buildChild,
   PageTransitionsBuilder? Function(TestRoute route)? transitionForRoute,
@@ -13,12 +15,13 @@ RouterRuntimeConfig<TestRoute> runtimeConfig({
     router: router ?? NoRedirectRouter(),
     initialRoute: const TestRoute('/safe'),
     parseRoute: (uri) => TestRoute(uri.toString()),
-    routeLocation: (route) => route.location,
+    routeLocation: routeLocation ?? (route) => route.location,
     requiresAuth: (_) => false,
-    routeBranch: (route) => switch (route.location) {
-      '/branch' => 'mainTabs',
-      _ => null,
-    },
+    routeBranch: routeBranch ??
+        (route) => switch (route.location) {
+              '/branch' => 'mainTabs',
+              _ => null,
+            },
     resolveGuards: resolveGuards ?? (_) => const [],
     restoreStack: restoreStack,
     buildPage: (route, key, onPopInvoked) => generatedPage<Object?>(

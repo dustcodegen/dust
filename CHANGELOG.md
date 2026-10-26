@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Flutter**: certify the documented routing and state authoring contracts as
+  stable with 100% runtime line coverage, native integration smoke coverage,
+  platform link configuration, and a real shopping-app proof under local gates
+  (#197).
+
 - **Server**: add per-identity rate limiting, WebSocket origin enforcement,
   replay-safe webhook guidance, observer isolation, query-safe tracing, and
   streamed-response drain/capacity accounting.
@@ -46,6 +51,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unchanged (#24).
 
 ### Fixed
+
+- **Server examples**: replace the background-task response timing assertion
+  with an explicit delivery gate so the local suite stays deterministic under
+  load (#198).
+- **Shopping app**: register its documented custom link scheme, align iOS and
+  macOS deployment targets with the supported Flutter/Xcode toolchain, and
+  accept Flutter's generated iOS Swift-package plugin integration.
 
 - **Server**: report top-level functions that use server annotations or
   extractors without declaring an HTTP verb instead of silently omitting them

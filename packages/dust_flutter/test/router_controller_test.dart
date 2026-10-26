@@ -72,6 +72,35 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  testWidgets('controller forwards go and replace navigation', (tester) async {
+    late RouterController<_Route> controller;
+    final delegate = GeneratedRouterDelegate<_Route>(
+      _runtimeConfig(
+        buildChild: (context, route) {
+          controller = RouterController.of<_Route>(context);
+          return Text(route.location);
+        },
+      ),
+    );
+
+    await tester.pumpWidget(_routerApp(delegate));
+    await tester.pumpAndSettle();
+
+    controller.go(const _Route('/first'));
+    await tester.pumpAndSettle();
+    expect(controller.stack.map((route) => route.location), ['/first']);
+
+    final pushed = controller.push<void>(const _Route('/detail'));
+    await tester.pumpAndSettle();
+    controller.replace(const _Route('/replacement'));
+    await tester.pumpAndSettle();
+    expect(controller.stack.map((route) => route.location), [
+      '/first',
+      '/replacement',
+    ]);
+    await expectLater(pushed, completion(isNull));
+  });
 }
 
 Widget _routerApp(GeneratedRouterDelegate<_Route> delegate) {

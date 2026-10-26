@@ -40,6 +40,7 @@ fi
 
 python3 scripts/check_source_size.py --self-test
 python3 scripts/check_coverage_reports.py --self-test
+python3 scripts/check_lcov_floor.py --self-test
 python3 scripts/check_workflow_paths.py --self-test
 python3 scripts/strict_generated_analyze.py --self-test
 python3 -m unittest discover -s scripts -p 'test_sqlite*.py'

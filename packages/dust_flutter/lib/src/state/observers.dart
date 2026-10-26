@@ -29,16 +29,18 @@ final class LoggingStateObserver implements StateObserver {
 
   @override
   void onChanged(Object viewModel, Object? previous, Object? next) {
-    if (!kDebugMode) return;
-    debugPrint('STATE CHANGE: ${viewModel.runtimeType}');
-    debugPrint('FROM: $previous');
-    debugPrint('TO:   $next');
+    if (kDebugMode) {
+      debugPrint('STATE CHANGE: ${viewModel.runtimeType}');
+      debugPrint('FROM: $previous');
+      debugPrint('TO:   $next');
+    }
   }
 
   @override
   void onEffect(Object viewModel, Object effect) {
-    if (!kDebugMode) return;
-    debugPrint('EFFECT: ${viewModel.runtimeType} -> $effect');
+    if (kDebugMode) {
+      debugPrint('EFFECT: ${viewModel.runtimeType} -> $effect');
+    }
   }
 }
 

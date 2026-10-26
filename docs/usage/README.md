@@ -16,8 +16,9 @@ Each guide shows the handwritten API first and links to a working example.
 | Maintain ARB translations | [Internationalization](./i18n.md) | `dust_flutter` |
 | Validate SQLite queries | [Database](./db.md) | `dust_dart`, `dust_db_sqlite3` |
 
-Every guide above describes a feature Dust generates. `dust_server` is a runtime
-with no generation yet, so its guides live separately in
+The guides above describe Dust-generated application features. `dust_server`
+also supports generated controllers and top-level route modules in the current
+source checkout; its runtime and codegen guides live in
 [docs/dust_server](../dust_server/README.md).
 
 Install the CLI from the [installation guide](../../README.md#installation).

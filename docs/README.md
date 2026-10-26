@@ -28,6 +28,7 @@ and contributor documentation.
 
 - [State management](./usage/state.md)
 - [Typed routing](./usage/routing.md)
+- [Routing and state architecture](./design/flutter-routing-state.md)
 - [Internationalization](./usage/i18n.md)
 
 ### Database
@@ -36,12 +37,8 @@ and contributor documentation.
 
 ### Server
 
-- [dust_server guides](./dust_server/README.md): routing, extraction, responses,
-  middleware, serving, WebSockets, and testing
-
-  Phase 3 generation covers controllers and top-level handlers with the typed
-  request extractors, validation, response dispatch, and rejection taxonomy.
-  Route-composition generation remains tracked in the server design.
+- [dust_server guides](./dust_server/README.md): runtime and generated routing,
+  extraction, responses, middleware, serving, WebSockets, and testing
 
 ## Package References
 
@@ -52,7 +49,7 @@ and contributor documentation.
 - [`dust_db_sqlite3`](../packages/dust_db_sqlite3/README.md): native SQLite
   runtime for generated Database code.
 - [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
-  Phase 3 handler generation on `shelf`, shaped after axum.
+  generated route modules on `shelf`, shaped after axum.
 
 ## Examples
 

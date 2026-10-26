@@ -56,6 +56,35 @@ void main() {
       ],
     );
   });
+
+  test('native projects register the documented shopping link scheme', () {
+    final android = File(
+      'android/app/src/main/AndroidManifest.xml',
+    ).readAsStringSync();
+    final ios = File('ios/Runner/Info.plist').readAsStringSync();
+
+    expect(android, contains('android:name="flutter_deeplinking_enabled"'));
+    expect(android, contains('android:scheme="shopping"'));
+    expect(android, contains('android:host="open"'));
+    expect(ios, contains('<key>FlutterDeepLinkingEnabled</key>'));
+    expect(ios, contains('<string>shopping</string>'));
+  });
+
+  test('Apple projects use the supported deployment floors', () {
+    final iosPodfile = File('ios/Podfile').readAsStringSync();
+    final iosProject = File(
+      'ios/Runner.xcodeproj/project.pbxproj',
+    ).readAsStringSync();
+    final macosPodfile = File('macos/Podfile').readAsStringSync();
+    final macosProject = File(
+      'macos/Runner.xcodeproj/project.pbxproj',
+    ).readAsStringSync();
+
+    expect(iosPodfile, contains("platform :ios, '15.0'"));
+    expect(iosProject, contains('IPHONEOS_DEPLOYMENT_TARGET = 15.0;'));
+    expect(macosPodfile, contains("platform :osx, '12.0'"));
+    expect(macosProject, contains('MACOSX_DEPLOYMENT_TARGET = 12.0;'));
+  });
 }
 
 List<({String directive, String file, String uri})>

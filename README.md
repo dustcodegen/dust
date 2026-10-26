@@ -123,8 +123,8 @@ npx skills add dustcodegen/dust --skill use-dust
 | Validation | Stable | [Validation guide](docs/usage/validation.md) |
 | HTTP clients | Stable | [HTTP guide](docs/usage/http.md) |
 | Primary constructors | Supported in source (Dart 3.13+) | [Usage and limits](docs/usage/primary-constructors.md) |
-| Routing | Beta | [Routing guide](docs/usage/routing.md) |
-| State management | Beta | [State guide](docs/usage/state.md) |
+| Routing | Stable | [Routing guide](docs/usage/routing.md) |
+| State management | Stable | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
 | Database | Beta | [Database guide](docs/usage/db.md) |
 | HTTP servers | Stable runtime; source codegen available | [Server guide](docs/dust_server/README.md) |

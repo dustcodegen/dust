@@ -1,11 +1,11 @@
 {
-    "name": "state_management_prototype",
-    "short_name": "state_management_prototype",
+    "name": "Dust Shopping App",
+    "short_name": "Dust Shop",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Dust routing, state, HTTP, i18n, and database showcase.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

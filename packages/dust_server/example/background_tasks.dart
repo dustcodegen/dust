@@ -63,12 +63,15 @@ Future<void> main() async {
 }
 
 /// Assembles the application, kept apart from `main` so tests can serve it.
-Router buildApp(BackgroundTasks tasks) {
+Router buildApp(
+  BackgroundTasks tasks, {
+  Future<void> Function()? waitForReceipt,
+}) {
   return Router()
     ..route('/orders', post(placeOrder, status: 201))
     ..route('/receipts', get(sentReceipts))
     ..withState(tasks)
-    ..withState(Receipts());
+    ..withState(Receipts(waitForReceipt));
 }
 
 /// `POST /orders` — answers immediately, sends the receipt afterwards.
@@ -81,7 +84,7 @@ Future<Map<String, Object?>> placeOrder(Request request) async {
   // the registry is draining, which is worth acting on: the order was placed and
   // the receipt will not be sent, so it belongs in an outbox rather than lost.
   final accepted = tasks.run('receipt', () async {
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+    await receipts.waitForDelivery();
     receipts.sent.add(email);
   });
 
@@ -97,6 +100,17 @@ Future<Map<String, Object?>> sentReceipts(Request request) async {
 
 /// Stands in for a mail server's outbox.
 final class Receipts {
+  /// Uses [waitForDelivery] when a test or adapter needs a delivery boundary.
+  Receipts([Future<void> Function()? waitForDelivery])
+      : _waitForDelivery = waitForDelivery ?? _defaultReceiptDelay;
+
+  final Future<void> Function() _waitForDelivery;
+
   /// Who has been sent one.
   final sent = <String>[];
+
+  Future<void> waitForDelivery() => _waitForDelivery();
 }
+
+Future<void> _defaultReceiptDelay() =>
+    Future<void>.delayed(const Duration(milliseconds: 20));

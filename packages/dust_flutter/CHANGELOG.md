@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Mark the documented routing and state management authoring contracts stable.
+  The local commit gate now requires 100% line coverage for their runtime
+  sources and exercises generated routing/state together on Flutter hosts.
+
+### Fixed
+
+- Remove unreachable routing branches and keep release observers silent without
+  leaving uncovered control flow.
+
 ## [0.2.1] - 2026-09-28
 
 ### Added

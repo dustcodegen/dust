@@ -1,6 +1,6 @@
 ---
 name: use-dust
-description: Add, migrate, validate, or troubleshoot Dust code generation in Dart and Flutter application projects. Use for Dust setup, Dust annotations, generated .g.dart files, dust build/check/watch, data classes, JSON, validation, HTTP clients, Flutter routing/state/i18n, or Dust Database. Also covers the dust_server HTTP runtime, which is handwritten rather than generated. Do not use for developing Dust's Rust engine or for unrelated code-generation tools.
+description: Add, migrate, validate, or troubleshoot Dust code generation in Dart and Flutter application projects. Use for Dust setup, Dust annotations, generated .g.dart files, dust build/check/watch, data classes, JSON, validation, HTTP clients, Flutter routing/state/i18n, Dust Database, or dust_server runtime and codegen. Do not use for developing Dust's Rust engine or for unrelated code-generation tools.
 ---
 
 # Use Dust
@@ -24,6 +24,8 @@ application APIs unless the user explicitly requests a migration.
    verified call sites.
 5. Read [references/feature-map.md](references/feature-map.md) for the package,
    import, authoring contract, and command family for the feature.
+6. For Flutter routing or state work, also read
+   [references/flutter-routing-state.md](references/flutter-routing-state.md).
 
 If the task is not explicitly about Dust, do not migrate the project to Dust.
 If the request targets Dust's Rust workspace or generator internals, state that
@@ -37,13 +39,14 @@ into the engine task.
   annotations.
 - Use `dust_flutter` only for Flutter routing, state, and i18n.
 - Add `dust_db_sqlite3` only for native SQLite runtime access.
-- Use `dust_server` for HTTP servers: a Dart runtime on `shelf` whose API is
-  modelled on Rust's axum. It is a runtime, not a generator — routes, handlers,
-  and extractors are handwritten, and `dust build` produces no server output.
-  Do not add `part 'x.g.dart';` for it or promise generated routing.
-- Treat routing, state, i18n, Database, and the server runtime as beta. Do not
-  present Firebase, Supabase, PostgreSQL runtime support, or other planned
-  features as available.
+- Add `dust_db_postgres` only for native PostgreSQL runtime access.
+- Use `dust_server` for HTTP servers on `shelf`. Current source supports both
+  handwritten routers and generated `@Routes`/`@Controller` modules. Check the
+  installed CLI/package version before choosing codegen; published 0.2.1 does
+  not include the current source generator.
+- Treat routing, state, data classes, JSON, validation, HTTP clients, and the
+  server runtime as stable. Treat i18n and Database as beta. Do not present
+  Firebase, Supabase, or other planned features as available.
 - Prefer focused imports such as `derive.dart`, `serde.dart`, `http.dart`,
   `route.dart`, `state.dart`, `i18n.dart`, or `db.dart`.
 
@@ -81,7 +84,8 @@ Run only the command family required by the selected feature:
 - i18n: preview with `dust i18n scan`, write with `dust i18n build`, then run
   `dust i18n check`.
 - Iteration: use `dust watch` only for normal generation.
-- Server: no Dust command applies. Verify with `dart analyze` and `dart test`.
+- Generated server modules: `dust build`, then `dust check`. Handwritten-only
+  server projects need no Dust command.
 
 After generation, run `dart analyze` and `dart test` for Dart packages or
 `flutter analyze` and `flutter test` for Flutter projects. Inspect the diff and
@@ -109,6 +113,11 @@ Treat write boundaries explicitly:
   non-empty translations, placeholder metadata, and Flutter asset entries.
 - Analyzer failure: fix handwritten or generated-contract inputs; do not hide
   warnings or rely on `dart format` to repair generator output.
+- Routing failure: verify the single `route.dart` entrypoint, default-protected
+  guard policy, URL-compatible constructor fields, and app-owned platform link
+  registration before changing generated output.
+- State failure: verify scope ownership, typed args, immutable state, and use of
+  subscribing versus non-subscribing context helpers before adding wrappers.
 
 Do not delete caches, generated files, translations, migrations, or user code
 as a first troubleshooting step.

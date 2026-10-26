@@ -76,7 +76,12 @@ cd examples/shopping_app
 flutter analyze
 flutter test
 flutter build web
+flutter test integration_test/routing_state_smoke_test.dart -d <device>
 ```
+
+The integration smoke uses the generated router and ViewModel scope together.
+It verifies platform URL startup, a public state update, an auth redirect, and
+router revalidation. Run it on each supported native target before release.
 
 ## Generated Surfaces
 
@@ -110,7 +115,12 @@ flutter build web
 The app calls `usePathUrlStrategy()` at startup. For deployed web builds,
 configure the host to serve `index.html` for unknown paths so direct deep links
 such as `/product/7` load the Flutter app. Host examples are covered in the
-[routing guide](../../docs/usage/routing.md#web-urls).
+[deep-link guide](../../docs/usage/routing-deep-links.md#flutter-web-urls).
+
+Android and iOS also register the example custom scheme. With the app installed,
+`shopping://open/product/7?campaign=device#reviews` reaches the same generated
+parser. Production HTTPS links still need application-owned domain association
+and signing.
 
 ## Route Entrypoint
 

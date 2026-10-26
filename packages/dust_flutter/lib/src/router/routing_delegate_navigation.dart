@@ -48,12 +48,6 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
         'Check redirect() for a cycle or return null to allow navigation.',
       );
     }
-    assert(
-      redirects < maxRedirects,
-      'Router hit the redirect cap ($maxRedirects) navigating to '
-      '"${config.routeLocation(requested)}". Check for a redirect cycle.',
-    );
-
     if (epoch != _navigationEpoch) return null;
 
     if (mode == NavigationMode.restore) {
