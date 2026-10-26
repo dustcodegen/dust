@@ -29,16 +29,16 @@ To contribute to Dust, you'll need both the Rust and Dart toolchains installed o
    git config core.hooksPath .githooks
    ```
 
-   The hook delegates to the shared scripts:
+   The hook delegates formatting, analysis, source-size, generated-output, and
+   test work to the shared scripts:
    ```bash
    scripts/lint.sh
    scripts/test.sh
    ```
 
-   By default, the hook runs the full repo gate: Rust formatting, workspace
-   tests, clippy, Dust freshness checks, and Dart/Flutter package and example
-   analysis/tests. Use `--scope packages` or `--scope rust` only for focused
-   local development checks.
+   It then runs the repository security, compatibility, and coverage gates.
+   Use `--scope packages` or `--scope rust` only for focused local development
+   checks; a commit still requires the complete hook.
 
 ---
 
@@ -73,7 +73,7 @@ cargo run -p dust_cli -- build --root examples/benchmark_project
 Before submitting a PR, ensure all checks pass:
 
 ```bash
-# Full repo gate, matching CI and the pre-commit hook
+# Full local gate used by pre-commit and release preparation
 scripts/lint.sh
 scripts/test.sh
 
@@ -91,12 +91,13 @@ formatting do not resolve the consumer.
 
 `packages/` contains publishable Dart and Flutter runtime packages. If a PR
 changes a package's `lib/` source, public API, dependency constraints, runtime
-behavior, or compatibility with generated code, update the same package's
-`pubspec.yaml` version and `CHANGELOG.md` in that PR.
+behavior, or compatibility with generated code, record it under that package's
+`[Unreleased]` changelog section. Do not bump one package by itself. The CLI
+and every publishable package move together in an explicitly approved
+release-preparation change.
 
-Docs-only and tests-only edits inside a package do not require a package version
-bump unless they document or validate behavior that will ship in a new package
-release.
+Docs-only and tests-only edits do not need a changelog entry unless they change
+the documented public contract.
 
 When generated code depends on a package version, also update
 [`compatibility/dust-cli-packages.json`](compatibility/dust-cli-packages.json)
@@ -150,12 +151,11 @@ To keep Dust fast and maintainable, please follow these core principles:
   that page does not exist until the package does, so a tag cannot publish a
   name pub.dev has never seen. `scripts/check_publish_readiness.py` checks this
   in the release job before anything is published.
-- **Small Files:** Hand-written source under `crates/*/src` and `packages/*/lib`
-  stays under 300 lines. `scripts/check_source_size.py` enforces it in the lint
-  gate and in CI; tests and generated Dart are not counted. Every file in the
-  repository is under the limit, and the script's `BASELINE` is empty. It can pin
-  a file at its current size while a split is in progress, but a pin may only
-  shrink and must be removed once the file is under the limit.
+- **Small Files:** Every handwritten Rust, Dart, Python, shell, test, example,
+  fixture, and native test source stays at or below 300 lines.
+  `scripts/check_source_size.py` enforces this in the local lint gate.
+  Generated Dart is excluded. The script's `BASELINE` stays empty;
+  split a growing file by responsibility instead of adding an exemption.
 
 ---
 
