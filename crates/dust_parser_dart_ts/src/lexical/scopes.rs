@@ -63,17 +63,17 @@ pub(super) fn callable(
     let name = signature
         .child_by_field_name("name")
         .or_else(|| direct_named_child(signature, "identifier"));
-    if scopes[parent].kind == Scope::Type {
-        if let Some(name) = name {
-            declare(
-                parent,
-                name,
-                text_range(node),
-                Declaration::Member,
-                source,
-                scopes,
-            );
-        }
+    if scopes[parent].kind == Scope::Type
+        && let Some(name) = name
+    {
+        declare(
+            parent,
+            name,
+            text_range(node),
+            Declaration::Member,
+            source,
+            scopes,
+        );
     }
     let index = if let Some(parameters) = direct_named_child(signature, "type_parameters") {
         let index = scopes.len();
@@ -129,35 +129,33 @@ fn primary_fields(
     scopes: &mut [ParsedLexicalScope],
 ) {
     if node.kind() == "formal_parameter" {
-        if has_direct_child_kind(node, "final_builtin")
-            || has_direct_child_kind(node, "inferred_type")
+        if (has_direct_child_kind(node, "final_builtin")
+            || has_direct_child_kind(node, "inferred_type"))
+            && let Some(name) = crate::classes::parameter_name_node(node)
         {
-            if let Some(name) = crate::classes::parameter_name_node(node) {
-                declare(
-                    parent,
-                    name,
-                    text_range(node),
-                    Declaration::Member,
-                    source,
-                    scopes,
-                );
-            }
+            declare(
+                parent,
+                name,
+                text_range(node),
+                Declaration::Member,
+                source,
+                scopes,
+            );
         }
         return;
     }
     if matches!(
         node.kind(),
         "representation_declaration" | "extension_type_representation"
-    ) {
-        if let Some(name) = node.child_by_field_name("name") {
-            let span = node
-                .child_by_field_name("type")
-                .map_or(text_range(name), |ty| {
-                    TextRange::new(text_range(ty).start(), text_range(name).end())
-                });
-            declare(parent, name, span, Declaration::Member, source, scopes);
-            return;
-        }
+    ) && let Some(name) = node.child_by_field_name("name")
+    {
+        let span = node
+            .child_by_field_name("type")
+            .map_or(text_range(name), |ty| {
+                TextRange::new(text_range(ty).start(), text_range(name).end())
+            });
+        declare(parent, name, span, Declaration::Member, source, scopes);
+        return;
     }
     let mut cursor = node.walk();
     for child in node

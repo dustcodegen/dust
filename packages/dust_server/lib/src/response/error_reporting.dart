@@ -40,6 +40,10 @@ abstract final class ServerErrors {
 
   /// Reports an error that escaped a handler.
   static void report(Object error, StackTrace stack) {
-    reporter?.call(error, stack);
+    try {
+      reporter?.call(error, stack);
+    } on Object {
+      // Observability must not replace the application error being reported.
+    }
   }
 }

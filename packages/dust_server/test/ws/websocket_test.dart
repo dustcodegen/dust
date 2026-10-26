@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dust_server/server.dart';
 import 'package:test/test.dart';
 import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// WebSockets are served by the same router as HTTP, so these run over a real
 /// socket: a handshake that never leaves the process proves nothing.
@@ -60,6 +61,10 @@ void main() {
         await session.close();
       }))
       ..route('/boom', ws((session) async => throw StateError('boom')))
+      ..route(
+        '/browser',
+        ws(_echo, allowedOrigins: const {'https://app.example'}),
+      )
       ..route('/http', get((request) async => textResponse('plain')))
       ..withState('shared');
 
@@ -158,6 +163,27 @@ void main() {
           .then((request) => request.close());
 
       expect(response.statusCode, 404);
+    });
+
+    test('accepts a configured browser origin', () async {
+      final socket = IOWebSocketChannel.connect(
+        Uri.parse('ws://${server.address.host}:${server.port}/browser'),
+        headers: const {'origin': 'https://app.example'},
+      );
+      socket.sink.add('hello');
+
+      expect(await socket.stream.first, 'echo:hello');
+      await socket.sink.close();
+    });
+
+    test('refuses a foreign browser origin before upgrade', () async {
+      final socket = IOWebSocketChannel.connect(
+        Uri.parse('ws://${server.address.host}:${server.port}/browser'),
+        headers: const {'origin': 'https://evil.example'},
+      );
+
+      await expectLater(
+          socket.ready, throwsA(isA<WebSocketChannelException>()));
     });
   });
 }

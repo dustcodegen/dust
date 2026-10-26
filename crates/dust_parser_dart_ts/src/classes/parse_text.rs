@@ -29,10 +29,10 @@ pub(crate) fn parameter_name_node<'tree>(node: Node<'tree>) -> Option<Node<'tree
         "constructor_param",
         "super_formal_parameter",
     ] {
-        if let Some(child) = direct_named_child(node, wrapper) {
-            if let Some(name) = parameter_name_node(child) {
-                return Some(name);
-            }
+        if let Some(child) = direct_named_child(node, wrapper)
+            && let Some(name) = parameter_name_node(child)
+        {
+            return Some(name);
         }
     }
 

@@ -26,6 +26,7 @@ server-rendered HTML, static files, and serving across isolates.
 | [Serving](serving.md) | running, draining, TLS, and isolate clustering |
 | [Middleware](middleware.md) | layers, `routeLayer`, CORS, compression, and the rest |
 | [Tracing](tracing.md) | spans, W3C trace context, exporters |
+| [Security](security.md) | production baseline, OWASP ownership, dependency audits |
 | [Testing](testing.md) | how the package is tested, and how to test an application built on it |
 | [Dependencies](dependencies.md) | what is reused, and why each was chosen over writing it |
 | [Production readiness](../design/server-production-readiness.md) | what is proven, what is missing |

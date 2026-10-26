@@ -26,6 +26,7 @@ typedef WebSocketHandler = FutureOr<void> Function(WebSocketSession session);
 MethodRouter ws(
   WebSocketHandler handler, {
   Iterable<String>? protocols,
+  Iterable<String>? allowedOrigins,
   Duration? pingInterval,
 }) {
   return get(
@@ -46,6 +47,7 @@ MethodRouter ws(
           }
         },
         protocols: protocols,
+        allowedOrigins: allowedOrigins,
         pingInterval: pingInterval,
       );
       return upgrade(request);

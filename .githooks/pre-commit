@@ -28,6 +28,7 @@ run_without_git_env ./scripts/flutter/format.sh --check
 run_without_git_env ./scripts/dart/format.sh --check --examples
 run_without_git_env ./scripts/flutter/format.sh --check --examples
 ./scripts/rust/lint.sh
+run_without_git_env ./scripts/security/audit.sh
 python3 scripts/validate_compatibility_contract.py --self-test
 python3 scripts/validate_compatibility_contract.py
 run_without_git_env ./scripts/dart/lint.sh

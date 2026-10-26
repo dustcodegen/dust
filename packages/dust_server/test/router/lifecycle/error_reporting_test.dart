@@ -80,5 +80,18 @@ void main() {
 
       expect((await app.handler(request('GET', '/boom'))).statusCode, 500);
     });
+
+    test('a failing reporter does not replace the controlled 500', () async {
+      final app = Router(onError: (error, stack) => throw StateError('sink'))
+        ..route('/boom', get(_throws(StateError('handler'))));
+
+      final response = await app.handler(request('GET', '/boom'));
+
+      expect(response.statusCode, 500);
+      expect(
+        jsonDecode(await response.readAsString()),
+        {'error': 'Internal server error'},
+      );
+    });
   });
 }

@@ -244,10 +244,10 @@ fn strip_banner_and_time(source: &str) -> String {
         .lines()
         .map(str::to_owned)
         .collect::<Vec<_>>();
-    if let Some(first) = lines.first_mut() {
-        if let Some((prefix, _)) = first.rsplit_once("time: ") {
-            *first = format!("{prefix}time: <ms>");
-        }
+    if let Some(first) = lines.first_mut()
+        && let Some((prefix, _)) = first.rsplit_once("time: ")
+    {
+        *first = format!("{prefix}time: <ms>");
     }
     format!("{}\n", lines.join("\n"))
 }

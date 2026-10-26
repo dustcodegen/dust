@@ -98,7 +98,9 @@ final class RequireScope implements FromRequestParts<Caller> {
 }
 ```
 
-**403, not 401.** They proved who they are; authenticating again would not help.
+An unknown, expired, or revoked bearer token is **401** with
+`WWW-Authenticate: Bearer error="invalid_token"`. Reserve **403** for a valid
+credential that lacks permission, such as a required scope.
 
 ## Trying it
 
@@ -115,13 +117,12 @@ curl -si localhost:8080/me -H 'authorization: Bearer nope'
 200 {"user":"ada"}
 401 WWW-Authenticate: Bearer   {"error":"expected a bearer token"}
 401 WWW-Authenticate: Bearer   {"error":"expected a bearer token"}
-403                            {"error":"unknown token"}
+401 WWW-Authenticate: Bearer error="invalid_token"   {"error":"unknown token"}
 ```
 
-The last two are the pair to read. A wrong **scheme** is a 401 — no credential
-was presented, so presenting one may work. A wrong **token** is a 403 — one was
-presented and it is not allowed, so retrying is pointless. Answer 401 for both
-and a client that retries on 401 loops forever.
+The last two are the pair to read. Both are 401, but the invalid credential
+includes the OAuth bearer error. A client should replace or refresh that token;
+it must not retry the same credential forever.
 
 Four schemes behind one interface — `dart run example/credential_schemes.dart`:
 

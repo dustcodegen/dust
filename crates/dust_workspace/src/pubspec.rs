@@ -11,15 +11,15 @@ struct Pubspec {
     name: Option<String>,
     /// Package dependencies.
     #[serde(default)]
-    dependencies: BTreeMap<String, serde_yaml::Value>,
+    dependencies: BTreeMap<String, serde_json::Value>,
     /// Package development dependencies.
     #[serde(default)]
-    dev_dependencies: BTreeMap<String, serde_yaml::Value>,
+    dev_dependencies: BTreeMap<String, serde_json::Value>,
     /// Dart environment constraints.
     #[serde(default)]
-    environment: BTreeMap<String, serde_yaml::Value>,
+    environment: BTreeMap<String, serde_json::Value>,
     /// Pub workspace members declared by the root package.
-    workspace: Option<serde_yaml::Value>,
+    workspace: Option<serde_json::Value>,
     /// Optional Flutter-specific configuration.
     flutter: Option<FlutterPubspec>,
 }
@@ -129,9 +129,9 @@ fn parse_pubspec(path: &Path) -> Result<Pubspec, Diagnostic> {
 }
 
 /// Converts a scalar pubspec value into a string slice when supported.
-fn pubspec_string_value(value: &serde_yaml::Value) -> Option<&str> {
+fn pubspec_string_value(value: &serde_json::Value) -> Option<&str> {
     match value {
-        serde_yaml::Value::String(value) => Some(value.as_str()),
+        serde_json::Value::String(value) => Some(value.as_str()),
         _ => None,
     }
 }

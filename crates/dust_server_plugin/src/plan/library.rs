@@ -83,16 +83,16 @@ pub(super) fn validate_generated_names(
         validate_handler_names(&controller.handlers, &source_names, "member", diagnostics);
     }
 
-    if !functions.is_empty() {
-        if let Some(span) = top_level_declaration_span(file, function_name) {
-            diagnostics.push(error(
-                span,
-                format!(
-                    "handwritten declaration conflicts with generated route factory `{function_name}`"
-                ),
-                "rename the declaration or configure a different @Routes name",
-            ));
-        }
+    if !functions.is_empty()
+        && let Some(span) = top_level_declaration_span(file, function_name)
+    {
+        diagnostics.push(error(
+            span,
+            format!(
+                "handwritten declaration conflicts with generated route factory `{function_name}`"
+            ),
+            "rename the declaration or configure a different @Routes name",
+        ));
     }
     let source_names = top_level_declarations(file)
         .map(|(name, _)| name)

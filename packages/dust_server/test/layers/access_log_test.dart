@@ -88,5 +88,29 @@ void main() {
 
       expect(record.toString(), 'GET /a 200 12ms [abc]');
     });
+
+    test('does not let a failing sink replace the response', () async {
+      final errors = <Object>[];
+      final app = Router(onError: (error, stack) => errors.add(error))
+        ..layer(AccessLog((_) => throw StateError('log unavailable')))
+        ..route('/a', get((request) async => textResponse('ok')));
+
+      final response = await app.handler(request('GET', '/a'));
+
+      expect(response.statusCode, 200);
+      expect(errors.single, isA<StateError>());
+    });
+
+    test('keeps encoded control characters out of text logs', () async {
+      final records = <AccessRecord>[];
+      final app = Router()
+        ..layer(AccessLog(records.add))
+        ..route('/a', get((request) async => noContent()));
+
+      await app.handler(request('GET', '/a%0Ab'));
+
+      expect(records.single.path, isNot(contains('\n')));
+      expect(records.single.toString(), isNot(contains('\n')));
+    });
   });
 }

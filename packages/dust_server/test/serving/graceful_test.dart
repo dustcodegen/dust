@@ -101,6 +101,35 @@ void main() {
       await pending;
     });
 
+    test('drains a streamed body after its handler returned', () async {
+      final release = Completer<void>();
+      final app = Router()
+        ..route(
+          '/stream',
+          get((request) async => Response.ok(() async* {
+                yield [1];
+                await release.future;
+                yield [2];
+              }())),
+        );
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+      final client = HttpClient();
+      final response = await client
+          .getUrl(Uri.parse(
+            'http://${server.address.host}:${server.port}/stream',
+          ))
+          .then((request) => request.close());
+
+      expect(server.inFlight, 1);
+      final closing = server.close(drain: const Duration(seconds: 2));
+      release.complete();
+      await response.drain<void>();
+
+      expect(await closing, isTrue);
+      expect(server.inFlight, 0);
+      client.close(force: true);
+    });
+
     test('returns immediately when nothing is in flight', () async {
       final app = Router()..route('/a', get((request) async => noContent()));
       final server = await serve(app, InternetAddress.loopbackIPv4, 0);

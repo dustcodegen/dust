@@ -10,13 +10,8 @@ import 'package:dust_server/server.dart';
 /// absent or malformed. What a token *means* — which user, which permissions —
 /// is yours, because that is a product decision and no runtime can make it.
 ///
-/// The two statuses are not interchangeable:
-///
-/// * **401** — no credential, or one that is not a credential. Retry with one.
-/// * **403** — a real credential that is not allowed here. Retrying is pointless.
-///
-/// A client that retries on 401 loops forever against a wrong token if you
-/// answer 401 for both.
+/// An unknown, expired, or revoked bearer token is a 401 with `invalid_token`.
+/// A valid token that lacks a required scope is a 403.
 ///
 /// > **Compare secrets in constant time.** `==` stops at the first wrong byte,
 /// > and the timing difference leaks the token one character at a time. This is
@@ -28,7 +23,7 @@ import 'package:dust_server/server.dart';
 /// curl -s localhost:8080/me -H 'authorization: Bearer t-ada'
 /// curl -i localhost:8080/me                                  # 401 + challenge
 /// curl -i localhost:8080/me -H 'authorization: Basic abc'     # 401, wrong scheme
-/// curl -i localhost:8080/me -H 'authorization: Bearer nope'   # 403
+/// curl -i localhost:8080/me -H 'authorization: Bearer nope'   # 401
 /// curl -s localhost:8080/public
 /// ```
 Future<void> main() async {
@@ -103,7 +98,12 @@ final class TokenAuth implements FromRequestParts<String> {
       case Ok(value: final token):
         final user = tokens.userFor(token);
         return user == null
-            ? const Err(Rejection.forbidden('unknown token'))
+            ? const Err(
+                Rejection.unauthorized(
+                  'unknown token',
+                  challenge: 'Bearer error="invalid_token"',
+                ),
+              )
             : Ok(user);
     }
   }

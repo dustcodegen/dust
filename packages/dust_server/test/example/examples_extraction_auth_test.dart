@@ -84,9 +84,7 @@ void main() {
       expect(response.statusCode, 401);
     });
 
-    test('a real credential that is not allowed is 403', () async {
-      // A client that retries on 401 loops forever if a wrong token answers
-      // 401. The distinction is what tells it to stop.
+    test('an unknown bearer token is 401 with invalid_token', () async {
       final app = await example(bearer_auth.buildApp());
 
       final response = await app.get(
@@ -94,7 +92,11 @@ void main() {
         headers: {'authorization': 'Bearer nope'},
       );
 
-      expect(response.statusCode, 403);
+      expect(response.statusCode, 401);
+      expect(
+        response.headers['www-authenticate'],
+        'Bearer error="invalid_token"',
+      );
     });
 
     test('a route that asks for no credential requires none', () async {

@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Tracing no longer exports query strings, access/error observers cannot replace
+  application responses when they throw, and streamed bodies remain in-flight
+  until completion for capacity limits and graceful shutdown.
+- Bearer and webhook examples now follow OAuth `invalid_token` semantics and
+  reject duplicate signed deliveries inside the timestamp window.
 - Current-source generation reports a top-level function that uses server
   annotations or extractors without an HTTP verb instead of silently omitting
   it when the same library contains another valid route.
@@ -20,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `RateLimit` provides bounded per-identity token buckets with 429 and
+  `Retry-After`; `ws` forwards `allowedOrigins` to the WebSocket handshake.
 - `ConcurrencyLimit` bounds executing work and an optional FIFO queue, then
   answers overload with 503 and `Retry-After` before routing or extraction.
   `RequestTimeout` now exposes cooperative `RequestCancellation`, and

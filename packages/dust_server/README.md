@@ -28,6 +28,7 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 | [Serving](../../docs/dust_server/serving.md) | draining, TLS, isolate clustering |
 | [Middleware](../../docs/dust_server/middleware.md) | layers, ordering, what ships |
 | [Testing](../../docs/dust_server/testing.md) | running the suite, testing an application |
+| [Security](../../docs/dust_server/security.md) | production baseline, OWASP ownership, dependency audits |
 | [Dependencies](../../docs/dust_server/dependencies.md) | what is reused, and what is not |
 
 ## At a glance
@@ -84,7 +85,10 @@ Runtime composition remains available directly:
 final app = Router()
   ..layer(const RequestId())
   ..route('/todos/{id}', get(readTodo))
-  ..route('/chat/{room}', ws(joinRoom))
+  ..route(
+    '/chat/{room}',
+    ws(joinRoom, allowedOrigins: const {'https://app.example'}),
+  )
   ..mount('/assets', staticFiles('web/assets'))
   ..withState(repository)
   ..fallback(singlePageApp('web/index.html'));
@@ -103,7 +107,13 @@ final app = productionRouter(
   requestTimeout: const Duration(seconds: 10),
   onRecord: logger.info,
   onError: logger.error,
-)..merge(itemRoutes());
+)
+  ..layer(RateLimit(
+    maxRequests: 60,
+    window: const Duration(minutes: 1),
+    keyBy: (request) => request.headers['x-api-key'] ?? 'anonymous',
+  ))
+  ..merge(itemRoutes());
 ```
 
 The overload limit runs before routing, extraction and handlers. Timeout

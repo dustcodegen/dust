@@ -124,10 +124,10 @@ impl ConfigApplicationIr {
 
     /// Returns one top-level positional string map literal by index.
     pub fn positional_string_map(&self, index: usize) -> Option<Vec<(String, String)>> {
-        if let Some(value) = self.positional_argument_value(index) {
-            if let Some(values) = string_map_value(value) {
-                return Some(values);
-            }
+        if let Some(value) = self.positional_argument_value(index)
+            && let Some(values) = string_map_value(value)
+        {
+            return Some(values);
         }
         parse_string_map(self.positional_argument_source(index)?)
     }
@@ -165,10 +165,10 @@ impl ConfigApplicationIr {
 
     /// Returns one top-level named list of string literals.
     pub fn named_string_list(&self, name: &str) -> Option<Vec<String>> {
-        if let Some(value) = self.named_argument_value(name) {
-            if let Some(values) = string_list_value(value) {
-                return Some(values);
-            }
+        if let Some(value) = self.named_argument_value(name)
+            && let Some(values) = string_list_value(value)
+        {
+            return Some(values);
         }
         parse_string_list(self.named_argument_source(name)?)
     }
@@ -204,20 +204,20 @@ impl ConfigApplicationIr {
 
     /// Returns one top-level named list of type references.
     pub fn named_type_list(&self, name: &str) -> Option<Vec<String>> {
-        if let Some(value) = self.named_argument_value(name) {
-            if let Some(values) = type_list_value(value) {
-                return Some(values);
-            }
+        if let Some(value) = self.named_argument_value(name)
+            && let Some(values) = type_list_value(value)
+        {
+            return Some(values);
         }
         parse_type_list(self.named_argument_source(name)?)
     }
 
     /// Returns one top-level named string map literal.
     pub fn named_string_map(&self, name: &str) -> Option<Vec<(String, String)>> {
-        if let Some(value) = self.named_argument_value(name) {
-            if let Some(values) = string_map_value(value) {
-                return Some(values);
-            }
+        if let Some(value) = self.named_argument_value(name)
+            && let Some(values) = string_map_value(value)
+        {
+            return Some(values);
         }
         parse_string_map(self.named_argument_source(name)?)
     }

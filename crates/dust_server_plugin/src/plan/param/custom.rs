@@ -28,25 +28,25 @@ pub(super) fn custom(
         ));
         return None;
     };
-    if name.prefix.is_none() {
-        if let Some(class) = classes.iter().find(|class| class.name == name.short) {
-            let callable = !class.is_abstract
-                && class.constructors.iter().any(|constructor| {
-                    constructor.name.is_none()
-                        && constructor.is_const
-                        && constructor.params.iter().all(|param| !param.is_required)
-                });
-            if !callable {
-                diagnostics.push(error(
-                    name.span,
-                    format!(
-                        "local extractor `{}` cannot be constructed with const {}()",
-                        name.short, name.short
-                    ),
-                    "declare a concrete class with an unnamed const constructor whose parameters are optional",
-                ));
-                return None;
-            }
+    if name.prefix.is_none()
+        && let Some(class) = classes.iter().find(|class| class.name == name.short)
+    {
+        let callable = !class.is_abstract
+            && class.constructors.iter().any(|constructor| {
+                constructor.name.is_none()
+                    && constructor.is_const
+                    && constructor.params.iter().all(|param| !param.is_required)
+            });
+        if !callable {
+            diagnostics.push(error(
+                name.span,
+                format!(
+                    "local extractor `{}` cannot be constructed with const {}()",
+                    name.short, name.short
+                ),
+                "declare a concrete class with an unnamed const constructor whose parameters are optional",
+            ));
+            return None;
         }
     }
     Some(Extraction::Custom(name.source.clone()))

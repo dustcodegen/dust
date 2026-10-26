@@ -46,7 +46,7 @@ impl<'a> FixtureCatalog<'a> {
         match ty {
             TypeIr::Builtin { kind, .. } => Some(sample_builtin(*kind)),
             TypeIr::Dynamic | TypeIr::Unknown => Some(SampleValue::new("'dust'", Some("dust"))),
-            TypeIr::Named { name, nullable, .. } if *nullable => {
+            TypeIr::Named { nullable, .. } if *nullable => {
                 Some(SampleValue::new("null", Some("null")))
             }
             TypeIr::Named { name, .. } if name.as_ref() == DART_STRING => {

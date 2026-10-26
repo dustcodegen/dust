@@ -57,8 +57,9 @@ void main() {
       expect(exporter.spans.single.parentSpanId, isNull);
     });
 
-    test('carries the method and path', () async {
-      await send(build(), '/todos/7?full=1');
+    test('carries the method and path without sensitive query values',
+        () async {
+      await send(build(), '/todos/7?token=secret');
 
       expect(
           exporter.spans.single.attributes,
@@ -67,12 +68,6 @@ void main() {
             'GET',
           ));
       expect(exporter.spans.single.attributes['url.path'], '/todos/7');
-      expect(exporter.spans.single.attributes['url.query'], 'full=1');
-    });
-
-    test('omits the query when there is none', () async {
-      await send(build(), '/todos/7');
-
       expect(exporter.spans.single.attributes, isNot(contains('url.query')));
     });
 

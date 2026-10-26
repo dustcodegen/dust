@@ -149,5 +149,23 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('holds a slot until a streamed body is consumed', () async {
+      final app = Router()
+        ..layer(const ConcurrencyLimit(maxConcurrentRequests: 1))
+        ..route(
+          '/stream',
+          get((request) async => Response.ok(Stream.value([1]))),
+        );
+
+      final first = await app.handler(request('GET', '/stream'));
+      final overloaded = await app.handler(request('GET', '/stream'));
+      await first.read().drain<void>();
+      final after = await app.handler(request('GET', '/stream'));
+
+      expect(overloaded.statusCode, 503);
+      expect(after.statusCode, 200);
+      await after.read().drain<void>();
+    });
   });
 }

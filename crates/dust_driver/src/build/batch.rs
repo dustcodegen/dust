@@ -157,22 +157,22 @@ pub(crate) fn prepare_and_process_batch(
             }
         };
 
-        if let Some(entry) = config.cache.get(config.cache_root, &library.source_path) {
-            if crate::build::support::matches_cache_metadata(
+        if let Some(entry) = config.cache.get(config.cache_root, &library.source_path)
+            && crate::build::support::matches_cache_metadata(
                 entry,
                 &input,
                 config.package_config_hash,
-            ) && input.checked_output_hash == Some(Some(entry.expected_output_hash))
-            {
-                workspace_analysis.merge_snapshot(&entry.analysis_snapshot);
-                tentative_hits.push(TentativeHit {
-                    index,
-                    library,
-                    entry: entry.clone(),
-                    input,
-                });
-                continue;
-            }
+            )
+            && input.checked_output_hash == Some(Some(entry.expected_output_hash))
+        {
+            workspace_analysis.merge_snapshot(&entry.analysis_snapshot);
+            tentative_hits.push(TentativeHit {
+                index,
+                library,
+                entry: entry.clone(),
+                input,
+            });
+            continue;
         }
 
         cache_report.misses += 1;

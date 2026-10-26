@@ -6,6 +6,7 @@ import 'package:test/test.dart';
 import '../../example/disposable_layers.dart' as disposable_layers;
 import '../../example/concurrency_limit.dart' as concurrency_limit;
 import '../../example/normalize_path.dart' as normalize_path;
+import '../../example/rate_limit.dart' as rate_limit;
 import '../../example/request_timeout.dart' as request_timeout;
 import '../../example/route_layer.dart' as route_layer;
 import '../../example/security_headers.dart' as security_headers;
@@ -232,6 +233,25 @@ void main() {
       expect((await first).statusCode, 200);
       expect((await second).statusCode, 200);
       expect(calls, 2);
+    });
+  });
+
+  group('rate_limit', () {
+    test('limits one API key without blocking another', () async {
+      final app = await example(rate_limit.buildApp());
+
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'first'})).statusCode,
+        200,
+      );
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'first'})).statusCode,
+        429,
+      );
+      expect(
+        (await app.get('/work', headers: {'x-api-key': 'second'})).statusCode,
+        200,
+      );
     });
   });
 

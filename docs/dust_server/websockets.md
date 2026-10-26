@@ -5,7 +5,10 @@ same router as the HTTP API.
 
 ```dart
 final app = Router()
-  ..route('/chat/{room}', ws(joinRoom))
+  ..route(
+    '/chat/{room}',
+    ws(joinRoom, allowedOrigins: const {'https://app.example'}),
+  )
   ..route('/health', get(health))
   ..withState(hub);
 
@@ -18,7 +21,8 @@ Future<void> joinRoom(WebSocketSession session) async {
 ```
 
 The handshake is `shelf_web_socket`'s; this package adds the session and the
-route.
+route. `allowedOrigins` is forwarded to the handshake and rejects a browser
+origin outside the set before the connection is upgraded.
 
 ## The session
 
@@ -80,16 +84,19 @@ curl -si --http1.1 'localhost:8080/echo?token=t-ada' \
 
 ```
 401 {"error":"a ticket is required"}
-403 {"error":"origin not allowed"}
+403 (upgrade rejected: invalid origin)
 ```
 
 Both are checked at the upgrade, while it is still HTTP and a status code can
 still be sent. After the handshake there is no status code left to send.
 
-**The `Origin` check is not optional.** The same-origin policy does not apply to
-WebSockets: any page on the internet may open one to your server carrying the
-user's cookies, and the server will accept it unless you look. That is cross-site
-WebSocket hijacking, and this check is the whole defence.
+**The `Origin` check is not optional for browser sessions.** The same-origin
+policy does not apply to WebSockets: any page on the internet may open one to
+your server carrying the user's cookies. Pass the trusted browser origins to
+`ws(allowedOrigins: ...)`. An absent origin remains allowed for non-browser
+clients; require it in an upgrade guard when an endpoint is browser-only.
+`ConcurrencyLimit` covers only the HTTP upgrade. Bound active WebSocket
+connections per identity in the application or at the trusted reverse proxy.
 
 The credential rides in the query string because a browser cannot set headers on
 a WebSocket handshake. It therefore lands in access logs — so use a short-lived

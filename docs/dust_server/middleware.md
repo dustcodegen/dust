@@ -27,6 +27,7 @@ Nothing is installed by default.
 | :--- | :--- |
 | `RequestTimeout(budget, {onTimeout})` | answers 503 past the budget |
 | `ConcurrencyLimit(maxConcurrentRequests:, maxQueuedRequests:)` | bounds executing and queued work, then answers 503 with `Retry-After` |
+| `RateLimit(maxRequests:, window:, keyBy:)` | token-bucket limit per trusted application identity, then answers 429 |
 | `RequestId({header, generate})` | keeps an inbound `x-request-id` or assigns a UUID, and echoes it |
 | `AccessLog(onRecord)` | reports method, path, status, duration, and request id |
 
@@ -46,7 +47,9 @@ straight away with a streamed body — an event stream, a large download — has
 already met the budget, and the stream then runs for as long as it likes. Put
 this layer above an SSE endpoint and it protects nothing there. Bound those in
 the stream itself, with `take`, a timeout on the source, or a keep-alive the
-client has to answer.
+client has to answer. `ConcurrencyLimit` keeps its slot until an unknown-length
+response stream ends or is cancelled, so abandoned streams cannot bypass the
+capacity limit.
 
 ## Trying it
 
@@ -133,6 +136,7 @@ than `layer`, so a path that does not exist still answers 404.
 | `SecurityHeaders` | `security_headers.dart` | CSP and HSTS have no defaults, and why; two nested routers scope one policy to each half |
 | `RequestTimeout` | `request_timeout.dart` | the 503 goes back while the handler keeps running |
 | `ConcurrencyLimit` | `concurrency_limit.dart` | one request executes, one waits, and the next receives 503 with `Retry-After` |
+| `RateLimit` | `rate_limit.dart` | one API key receives 429 without spending another key's quota |
 
 ```bash
 curl -sI localhost:8080/rows -H 'accept-encoding: gzip'      # content-encoding: gzip
@@ -171,6 +175,23 @@ This is application-level admission: the request has already reached Dart, but
 routing, extraction and handler work have not run. Bound connections and header
 parsing at the trusted reverse proxy when overload must be rejected earlier.
 
+Add a per-client rate limit separately because only the application knows what
+identity is trustworthy:
+
+```dart
+String clientKey(Request request) => request.headers['x-api-key'] ?? 'anonymous';
+
+app.layer(const RateLimit(
+  maxRequests: 60,
+  window: Duration(minutes: 1),
+  keyBy: clientKey,
+));
+```
+
+Do not key directly from `x-forwarded-for` unless a trusted proxy strips and
+rebuilds it. `maxKeys` bounds memory; once full, unknown identities fail closed
+with 429 rather than evicting a bucket and giving an attacker a fresh quota.
+
 ## Writing one
 
 Two forms are accepted. A bare `shelf` `Middleware`:
@@ -182,10 +203,10 @@ app.layer(logRequests());
 Or a `Layer`, which is const-expressible so a generated annotation can carry it:
 
 ```dart
-final class RateLimit implements Layer {
-  const RateLimit({required this.perMinute});
+final class RequireHeader implements Layer {
+  const RequireHeader(this.name);
 
-  final int perMinute;
+  final String name;
 
   @override
   Middleware toMiddleware() => ...;

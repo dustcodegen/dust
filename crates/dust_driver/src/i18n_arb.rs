@@ -190,13 +190,13 @@ fn ensure_message(
 ) -> Result<MessageUpdate, Diagnostic> {
     if let Some(existing) = arb.get(&entry.local_key) {
         if existing.is_string() {
-            if sync_source && is_fallback {
-                if let Some(default_text) = &entry.default_text {
-                    if existing.as_str() != Some(default_text) {
-                        arb.insert(entry.local_key.clone(), Value::String(default_text.clone()));
-                        return Ok(MessageUpdate::Synced);
-                    }
-                }
+            if sync_source
+                && is_fallback
+                && let Some(default_text) = &entry.default_text
+                && existing.as_str() != Some(default_text)
+            {
+                arb.insert(entry.local_key.clone(), Value::String(default_text.clone()));
+                return Ok(MessageUpdate::Synced);
             }
             return Ok(MessageUpdate::None);
         }

@@ -26,17 +26,15 @@ impl NamespaceGraph {
                         .units
                         .values()
                         .find(|unit| unit.file_id == declaration.file_id)
-                    {
-                        if let Some(value) = unit
+                        && let Some(value) = unit
                             .lexical_scopes
                             .iter()
                             .filter(|scope| scope.kind == ParsedLexicalScopeKind::Library)
                             .flat_map(|scope| &scope.declarations)
                             .find(|value| value.name.name == declaration.name)
-                        {
-                            inspected = true;
-                            return self.constant(&declaration.uri, unit, value, catalog, active);
-                        }
+                    {
+                        inspected = true;
+                        return self.constant(&declaration.uri, unit, value, catalog, active);
                     }
                 }
                 self.bind_world(world, short, catalog, &mut BTreeSet::new())

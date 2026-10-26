@@ -35,7 +35,12 @@ final class DemoAuth implements FromRequestParts<String> {
     return switch (token) {
       Err(:final error) => Err(error),
       Ok(value: 'demo-token') => const Ok('Ada'),
-      Ok() => const Err(Rejection.forbidden('unknown token')),
+      Ok() => const Err(
+          Rejection.unauthorized(
+            'unknown token',
+            challenge: 'Bearer error="invalid_token"',
+          ),
+        ),
     };
   }
 }

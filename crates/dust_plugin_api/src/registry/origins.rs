@@ -50,13 +50,13 @@ impl PluginRegistry {
             {
                 continue;
             }
-            if let Some(previous) = known.insert(origin.symbol, *origin) {
-                if previous != *origin {
-                    return Err(Diagnostic::error(format!(
-                        "conflicting declaration origins for symbol `{}`",
-                        origin.symbol
-                    )));
-                }
+            if let Some(previous) = known.insert(origin.symbol, *origin)
+                && previous != *origin
+            {
+                return Err(Diagnostic::error(format!(
+                    "conflicting declaration origins for symbol `{}`",
+                    origin.symbol
+                )));
             }
             validated.push(*origin);
         }

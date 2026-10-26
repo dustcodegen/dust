@@ -64,13 +64,31 @@ final class ConcurrencyLimit implements Layer {
         if (admission == null) return _overloaded(retryAfter);
         if (!await admission) return _overloaded(retryAfter);
 
+        var release = true;
         try {
-          return await inner(request);
+          final response = await inner(request);
+          if (response.contentLength != null) return response;
+
+          release = false;
+          return response.change(
+            body: _releaseWhenDone(response.read(), gate.leave),
+          );
         } finally {
-          gate.leave();
+          if (release) gate.leave();
         }
       };
     };
+  }
+}
+
+Stream<List<int>> _releaseWhenDone(
+  Stream<List<int>> body,
+  void Function() release,
+) async* {
+  try {
+    yield* body;
+  } finally {
+    release();
   }
 }
 

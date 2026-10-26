@@ -75,6 +75,17 @@ fn release_workflow_validates_compatibility_contract() {
     assert!(workflow.contains("Validate compatibility contract"));
     assert!(workflow.contains("scripts/validate_compatibility_contract.py"));
     assert!(workflow.contains("--release-tag \"$RELEASE_TAG\""));
+    assert!(workflow.contains("name: Dependency security audit"));
+    assert!(workflow.contains("./scripts/security/audit.sh"));
+    assert_eq!(
+        workflow.matches("rustup toolchain install 1.89.0").count(),
+        2
+    );
+    assert!(workflow.contains("flutter-version: 3.47.8"));
+    assert!(workflow.contains("sdk: 3.13.7"));
+    assert!(!workflow.contains("flutter-action@v"));
+    assert!(!workflow.contains("setup-dart@v"));
+    assert!(!workflow.contains("toolchain install stable"));
 }
 
 #[test]
@@ -84,6 +95,7 @@ fn pre_commit_runs_compatibility_script_self_test_and_real_check() {
 
     assert!(hook.contains("scripts/validate_compatibility_contract.py --self-test"));
     assert!(hook.contains("scripts/validate_compatibility_contract.py"));
+    assert!(hook.contains("run_without_git_env ./scripts/security/audit.sh"));
 }
 
 #[test]
@@ -190,13 +202,12 @@ fn workspace_version(path: &Path) -> String {
             in_workspace_package = trimmed == "[workspace.package]";
             continue;
         }
-        if in_workspace_package {
-            if let Some(version) = trimmed
+        if in_workspace_package
+            && let Some(version) = trimmed
                 .strip_prefix("version = \"")
                 .and_then(|value| value.strip_suffix('"'))
-            {
-                return version.to_owned();
-            }
+        {
+            return version.to_owned();
         }
     }
 

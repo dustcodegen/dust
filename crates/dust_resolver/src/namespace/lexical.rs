@@ -53,21 +53,20 @@ impl NamespaceGraph {
                     Vec::new(),
                 );
             };
-            if current.kind != ParsedLexicalScopeKind::Library || !active.is_empty() {
-                if let Some(declaration) = current
+            if (current.kind != ParsedLexicalScopeKind::Library || !active.is_empty())
+                && let Some(declaration) = current
                     .declarations
                     .iter()
                     .find(|declaration| declaration.name.name == first)
-                {
-                    if name != first {
-                        return unsupported(
-                            unit,
-                            declaration,
-                            "qualified access through a lexical value is unsupported",
-                        );
-                    }
-                    return self.constant(uri, unit, declaration, catalog, active);
+            {
+                if name != first {
+                    return unsupported(
+                        unit,
+                        declaration,
+                        "qualified access through a lexical value is unsupported",
+                    );
                 }
+                return self.constant(uri, unit, declaration, catalog, active);
             }
             scope = current.parent;
         }

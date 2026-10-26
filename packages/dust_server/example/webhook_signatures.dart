@@ -20,6 +20,10 @@ import 'package:dust_server/server.dart';
 /// * **Not checking the timestamp.** Without it a captured request can be
 ///   replayed forever. Signing the timestamp alongside the body is what makes
 ///   the window enforceable — a bare timestamp header can just be edited.
+/// * **Accepting the same signature twice.** A timestamp only narrows the replay
+///   window. A single process must also remember accepted signatures; a
+///   clustered service must claim the provider's event id atomically in shared
+///   storage before doing the work.
 ///
 /// The 401 says nothing useful, deliberately. "Signature mismatch" versus
 /// "timestamp too old" tells an attacker which half to work on.
@@ -104,6 +108,7 @@ final class WebhookVerifier {
   final Duration tolerance;
 
   final DateTime Function() _now;
+  final _acceptedUntil = <String, DateTime>{};
 
   /// Whether [body] carries a valid, recent signature.
   bool accepts(List<int> body, {String? signature, String? timestamp}) {
@@ -124,7 +129,13 @@ final class WebhookVerifier {
     final expected =
         base64.encode(Hmac(sha256, utf8.encode(secret)).convert(signed).bytes);
 
-    return _constantTimeEquals(signature, expected);
+    if (!_constantTimeEquals(signature, expected)) return false;
+
+    final now = _now();
+    _acceptedUntil.removeWhere((_, expires) => !expires.isAfter(now));
+    if (_acceptedUntil.containsKey(signature)) return false;
+    _acceptedUntil[signature] = now.add(tolerance);
+    return true;
   }
 
   /// Compares without stopping at the first difference.

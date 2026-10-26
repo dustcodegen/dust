@@ -156,20 +156,19 @@ impl DustPlugin for HttpClientPlugin {
         if generated_any {
             contribution.shared_helpers.extend(render_shared_helpers());
         }
-        if !generated_test_specs.is_empty() {
-            if let Some(source) = render_test_file(library, &generated_test_specs) {
-                if let Ok(output_path) = generated_test_output_path(
-                    std::path::Path::new(&library.package_root),
-                    std::path::Path::new(&library.source_path),
-                ) {
-                    contribution
-                        .auxiliary_outputs
-                        .push(AuxiliaryOutputContribution {
-                            output_path,
-                            source,
-                        });
-                }
-            }
+        if !generated_test_specs.is_empty()
+            && let Some(source) = render_test_file(library, &generated_test_specs)
+            && let Ok(output_path) = generated_test_output_path(
+                std::path::Path::new(&library.package_root),
+                std::path::Path::new(&library.source_path),
+            )
+        {
+            contribution
+                .auxiliary_outputs
+                .push(AuxiliaryOutputContribution {
+                    output_path,
+                    source,
+                });
         }
 
         vec![contribution]
