@@ -115,9 +115,13 @@ extension _Sqlite3DriverOperations on Sqlite3Driver {
       _database,
       rewrite.sql,
     );
-    return statement.select(
-      _encodeListParameters(orderParameters(rewrite, parameters)),
-    );
+    try {
+      return statement.select(
+        _encodeListParameters(orderParameters(rewrite, parameters)),
+      );
+    } finally {
+      statement.reset();
+    }
   }
 
   ExecResult _executeUnchecked(String sql, List<Object?> parameters) {
@@ -127,9 +131,13 @@ extension _Sqlite3DriverOperations on Sqlite3Driver {
       _database,
       rewrite.sql,
     );
-    statement.execute(
-      _encodeListParameters(orderParameters(rewrite, parameters)),
-    );
+    try {
+      statement.execute(
+        _encodeListParameters(orderParameters(rewrite, parameters)),
+      );
+    } finally {
+      statement.reset();
+    }
     return ExecResult(
       rowsAffected: _database.updatedRows,
       lastInsertId: _database.lastInsertRowId,
