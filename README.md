@@ -1,36 +1,57 @@
-# dust
+<h1 align="center">dust</h1>
 
-**Rust-powered, full-stack code generation for Dart and Flutter—from apps to
-servers.**
+<p align="center">
+  <strong>Rust-powered, full-stack code generation for Dart and Flutter—from apps to servers.</strong>
+</p>
 
 Dust's packages bring Rust-inspired, batteries-included tooling to data
 classes, JSON, validation, HTTP clients, routing, state management,
 localization, SQL, and Dart servers—without `build_runner`.
 
-[![Release](https://img.shields.io/github/v/release/dustcodegen/dust?logo=github&color=blue)](https://github.com/dustcodegen/dust/releases)
-[![Coverage](https://codecov.io/gh/dustcodegen/dust/graph/badge.svg?branch=main)](https://app.codecov.io/gh/dustcodegen/dust)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+<p align="center">
+  <a href="https://github.com/dustcodegen/dust/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/dustcodegen/dust?style=flat-square&amp;logo=github&amp;color=2563eb"></a>
+  <a href="https://github.com/dustcodegen/dust/releases"><img alt="Release downloads" src="https://img.shields.io/github/downloads/dustcodegen/dust/total?style=flat-square&amp;logo=github"></a>
+  <a href="https://app.codecov.io/gh/dustcodegen/dust"><img alt="Coverage" src="https://codecov.io/gh/dustcodegen/dust/graph/badge.svg?branch=main"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square"></a>
+</p>
 
-[Website](https://dustcodegen.github.io/) · [Source](https://github.com/dustcodegen/dust)
+<p align="center">
+  <a href="https://pub.dev/packages/dust_dart"><img alt="dust_dart on pub.dev" src="https://img.shields.io/pub/v/dust_dart?style=flat-square&amp;logo=dart&amp;label=dust_dart"></a>
+  <a href="https://pub.dev/packages/dust_flutter"><img alt="dust_flutter on pub.dev" src="https://img.shields.io/pub/v/dust_flutter?style=flat-square&amp;logo=flutter&amp;label=dust_flutter"></a>
+  <a href="https://pub.dev/packages/dust_db_sqlite3"><img alt="dust_db_sqlite3 on pub.dev" src="https://img.shields.io/pub/v/dust_db_sqlite3?style=flat-square&amp;logo=sqlite&amp;label=dust_db_sqlite3"></a>
+  <a href="https://pub.dev/packages/dust_db_postgres"><img alt="dust_db_postgres on pub.dev" src="https://img.shields.io/pub/v/dust_db_postgres?style=flat-square&amp;logo=postgresql&amp;label=dust_db_postgres"></a>
+  <a href="https://pub.dev/packages/dust_server"><img alt="dust_server on pub.dev" src="https://img.shields.io/pub/v/dust_server?style=flat-square&amp;logo=dart&amp;label=dust_server"></a>
+</p>
 
-The original `v0.2.1` source was rebuilt through
-[Rust-only release CI](https://github.com/dustcodegen/dust/actions/workflows/rust-release.yml)
-with new binaries and checksums; see [rebuild provenance](docs/releases/v0.2.1-rebuild.md).
-Development validation runs locally; GitHub Actions is reserved for releases.
-Current documentation and package metadata use `dustcodegen/dust`;
-already-published pub.dev metadata stays unchanged until the v0.3.0 release.
-This source branch prepares the CLI and all five runtime packages at 0.3.0;
-no tag or package publication is implied by the source version.
-
-Dust is Rust-powered code generation for Dart and Flutter, built for human
-developers and AI coding agents. It handles repetitive and complex code so you
-can focus on your product.
+<p align="center">
+  <a href="https://dustcodegen.github.io/">Website</a> ·
+  <a href="docs/usage/README.md">Documentation</a> ·
+  <a href="https://github.com/dustcodegen/dust/releases/tag/v0.3.0">v0.3.0 release</a> ·
+  <a href="examples/">Examples</a>
+</p>
 
 ## How Dust Works
 
 1. Add Dust annotations to normal Dart or Flutter code.
 2. Run `dust build` to generate the typed implementation.
 3. Use the generated API from your application code.
+
+## v0.3.0 Highlights
+
+- **Latest Dart syntax:** generate from class-header primary constructors on
+  Dart 3.13+ while keeping traditional constructors supported.
+- **Flutter:** stable routing and state authoring contracts, including typed
+  navigation, deep links, guards, scopes, and watch/select APIs.
+- **Servers:** generated function and controller routes with typed extraction,
+  validation, middleware, response dispatch, route metadata, and production
+  safety controls.
+- **SQLite:** migration-integrity checks plus opt-in background opening and SQL
+  execution through a persistent isolate.
+- **Developer experience:** inferred field types for `@Validate(...)`, clearer
+  diagnostics, deterministic generation, and release binaries that require no
+  Rust toolchain.
+
+Read the complete [v0.3.0 release notes](https://github.com/dustcodegen/dust/releases/tag/v0.3.0).
 
 ## Installation
 
@@ -53,9 +74,7 @@ Add that directory to `PATH`, then verify:
 dust --version
 ```
 
-The unchanged `v0.2.1` binary still has its historical `dust upgrade` destination.
-Current source uses `dustcodegen/dust`, but existing binaries are not replaced.
-Until a future binary release includes this fix, rerun the new installer to reinstall.
+`dust upgrade` and both installers resolve releases from `dustcodegen/dust`.
 
 Dust packages have their own pub versions. When changing the CLI or packages,
 check the [compatibility guide](docs/usage/compatibility.md).
@@ -89,11 +108,25 @@ class User with _$User {
 }
 ```
 
-Generate `user.g.dart`, then verify generated files are current:
+Generate `user.g.dart`:
 
 ```bash
 dust build
-dust check
+```
+
+Use the generated API immediately:
+
+```dart
+final user = User('Ada');
+final renamed = user.copyWith(name: 'Grace');
+
+print(renamed);
+```
+
+For continuous regeneration while editing:
+
+```bash
+dust watch
 ```
 
 Flutter apps can add `dust_flutter` too:
@@ -143,28 +176,14 @@ floors, local pre-commit gate, and release-only CI policy.
 | JSON serialization | Stable | [JSON guide](docs/usage/serde.md) |
 | Validation | Stable | [Validation guide](docs/usage/validation.md) |
 | HTTP clients | Stable | [HTTP guide](docs/usage/http.md) |
-| Primary constructors | Supported in source (Dart 3.13+) | [Usage and limits](docs/usage/primary-constructors.md) |
+| Primary constructors | Supported (Dart 3.13+) | [Usage and limits](docs/usage/primary-constructors.md) |
 | Routing | Stable | [Routing guide](docs/usage/routing.md) |
 | State management | Stable | [State guide](docs/usage/state.md) |
 | i18n | Beta | [i18n guide](docs/usage/i18n.md) |
 | Database | Beta | [Database guide](docs/usage/db.md) |
-| HTTP servers | Stable runtime; source codegen available | [Server guide](docs/dust_server/README.md) |
+| HTTP servers | Stable | [Server guide](docs/dust_server/README.md) |
 | Firebase | Planned | — |
 | Supabase | Planned | — |
-
-Stable features keep their documented authoring APIs compatible. Breaking
-changes require an explicit migration note. Features marked Beta may still
-receive API refinements.
-
-Primary-constructor support is scheduled for v0.3.0. Until that release is
-published, use the matching current-source CLI and packages together. Traditional
-constructors remain supported on the documented minimum Dart and Flutter SDKs.
-
-The v0.3.0 source generates `dust_server` controllers and top-level
-route modules with typed path, query, header, JSON, form, multipart, raw-body,
-state, peer, request, and custom extraction; validation; extractor wrappers;
-response dispatch; guarded failures; middleware; and route metadata. Until
-v0.3.0 is published, use the matching current-source CLI and packages together.
 
 ## Documentation
 
