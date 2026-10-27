@@ -48,10 +48,8 @@ If the task is not explicitly about Dust, do not migrate the project to Dust.
 - Use `dust_flutter` only for Flutter routing, state, and i18n.
 - Add `dust_db_sqlite3` only for native SQLite runtime access.
 - Add `dust_db_postgres` only for native PostgreSQL runtime access.
-- Use `dust_server` for HTTP servers on `shelf`. Current source supports both
-  handwritten routers and generated `@Routes`/`@Controller` modules. Check the
-  installed CLI/package version before choosing codegen; published 0.2.1 does
-  not include the current source generator.
+- Use `dust_server` for HTTP servers on `shelf`, with handwritten routers or
+  generated `@Routes`/`@Controller` modules.
 - Treat routing, state, data classes, JSON, validation, HTTP clients, and the
   server runtime as stable. Treat i18n and Database as beta. Do not present
   Firebase, Supabase, or other planned features as available.

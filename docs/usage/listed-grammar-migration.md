@@ -17,8 +17,7 @@ stage. Primary constructors now have separate positive Dart and Flutter
 [consumers and documented limits](primary-constructors.md) under #76. Updating
 a local checkout does not change already released binaries.
 
-Use traditional in-body constructors with Dart versions below 3.13 or the
-published Dust 0.2.1 release:
+Use traditional in-body constructors with Dart versions below 3.13:
 
 ```dart
 import 'package:dust_dart/derive.dart';
@@ -33,9 +32,8 @@ class User with _$User {
 }
 ```
 
-No existing handwritten app API or runtime constraint changes in the adoption
-stage. Current source builds gain primary-constructor support; no released binary
-gains that support until a coordinated later release.
+No existing handwritten app API or runtime constraint changed during adoption.
+Dust 0.3.0 includes primary-constructor support.
 
 ## Extraction and adoption checks
 

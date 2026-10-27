@@ -30,25 +30,24 @@ Supported handwritten syntax and generated Dart can work on a newer SDK even
 when new language syntax is not supported by Dust. A language-version gate
 records when Dart introduced a feature; it is not a parser-support guarantee.
 
-In this source checkout, version gates inspect syntax facts, not words in
-comments or string contents. For example, a regex containing `[.,]` is not a
+Version gates inspect syntax facts, not words in comments or string contents.
+For example, a regex containing `[.,]` is not a
 dot shorthand, and documentation or a supported `...?items` spread is not a
 Dart 3.8 null-aware element. Actual interpolation code is still checked:
-`'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic fix is
-scheduled for v0.3.0 and does not enable otherwise unsupported code generation.
+`'${[?value]}'` requires Dart 3.8 just like `[?value]`. This diagnostic does not
+enable otherwise unsupported code generation.
 
-The current source supports class-header primary constructors for Dart language
-version 3.13 and newer across the documented Dart and Flutter feature surface.
+Dust 0.3.0 supports class-header primary constructors for Dart language version
+3.13 and newer across the documented Dart and Flutter feature surface.
 Fresh Dart 3.13.6 and Flutter 3.47.7 consumers build, analyze and test alongside
 traditional Dart 3.6.0 and Flutter 3.29.0 consumers. See the
-[usage and limits](primary-constructors.md). This support is scheduled for
-v0.3.0; until it is published, primary-constructor projects must use the
-matching current-source CLI and packages. Constructor calls in application code
-do not need to change, and traditional declarations remain supported.
+[usage and limits](primary-constructors.md). Constructor calls in application
+code do not need to change, and traditional declarations remain supported.
 
-The [listed-upstream grammar migration](listed-grammar-migration.md) is staged.
-This source checkout uses the pinned listed upstream after extraction parity;
-released binaries are not changed by updating the source. Named concise
+The [listed-upstream grammar migration](listed-grammar-migration.md) documents
+the active parser and supported syntax boundary.
+Dust 0.3.0 uses the pinned listed upstream after extraction parity. Updating the
+grammar source alone does not change published binaries. Named concise
 constructors and dot shorthands still get explicit unsupported-generation errors,
 even though the new grammar parses them. Grammar acceptance is not codegen support.
 
@@ -63,15 +62,12 @@ normal build/check. Preserved output is stale, not evidence of successful
 generation: fix the input and rerun both commands. Explicit `--clean` removes
 generated files before building and does not promise to preserve them.
 
-## v0.3.0 Background Opening
+## Background Opening
 
-Generated SQLite `AppDatabase.openBackground` is scheduled for v0.3.0. Until
-that release is published, opting in requires the matching current-source CLI
-and `dust_db_sqlite3` runtime containing `Sqlite3WorkerDriver` and
-`Sqlite3WorkerUnsafeSql`. Numeric version checks cannot distinguish these source
-APIs require the matching v0.3.0 CLI and runtime. Do not combine opt-in
-generated code with the published 0.2.1 SQLite runtime. Ordinary
-synchronous-only database declarations keep their existing generated output.
+Generated SQLite `AppDatabase.openBackground` is available in 0.3.0. It requires
+a matching 0.3.x CLI and `dust_db_sqlite3` runtime containing
+`Sqlite3WorkerDriver` and `Sqlite3WorkerUnsafeSql`. Ordinary synchronous-only
+database declarations keep their existing generated output.
 
 ## Dust CLI 0.3.0
 

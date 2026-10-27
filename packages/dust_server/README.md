@@ -6,13 +6,9 @@
 
 Runtime support for Dust-generated Dart HTTP servers on `shelf`.
 
-> [!IMPORTANT]
-> **0.3.0 source release line.** It adds generated wiring for controllers and
-> top-level route modules: typed extraction, validation, response dispatch,
-> middleware, guarded failures, and `RouteMetadata` visible through
-> `Router.describe()`. Until v0.3.0 is published, pub.dev still serves 0.2.1;
-> use the matching current-source CLI and package together. OpenAPI generation
-> remains a separate package.
+Generated controllers and top-level route modules support typed extraction,
+validation, response dispatch, middleware, guarded failures, and route metadata
+through `Router.describe()`. OpenAPI generation remains a separate package.
 
 ## Documentation
 

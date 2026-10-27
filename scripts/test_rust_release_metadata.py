@@ -57,6 +57,28 @@ class RepositoryMetadataTests(unittest.TestCase):
             self.assertIn(f"img.shields.io/pub/v/{package}", readme)
         self.assertNotIn("sonarcloud.io/api/project_badges", readme)
 
+    def test_current_guides_do_not_describe_v030_as_unpublished(self):
+        documents = list((ROOT / "docs/dust_server").rglob("*.md"))
+        documents.extend((ROOT / "docs/usage").rglob("*.md"))
+        documents.extend((ROOT / "skills/use-dust").rglob("*.md"))
+        documents.extend((ROOT / "packages").glob("*/README.md"))
+        stale_phrases = (
+            "v0.3.0 is scheduled",
+            "scheduled for v0.3.0",
+            "until v0.3.0 is published",
+            "until that release is published",
+            "published 0.2.1",
+            "not published yet",
+            "matching current-source",
+            "source-built cli",
+            "unreleased",
+        )
+        for document in documents:
+            text = " ".join(document.read_text().lower().split())
+            for phrase in stale_phrases:
+                with self.subTest(document=str(document.relative_to(ROOT)), phrase=phrase):
+                    self.assertNotIn(phrase, text)
+
 
 if __name__ == "__main__":
     unittest.main()

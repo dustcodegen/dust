@@ -16,11 +16,7 @@ Each guide shows the handwritten API first and links to a working example.
 | Maintain ARB translations | [Internationalization](./i18n.md) | `dust_flutter` |
 | Validate SQLite queries | [Database](./db.md) | `dust_dart`, `dust_db_sqlite3` |
 | Run validated PostgreSQL queries | [PostgreSQL runtime](../../packages/dust_db_postgres/README.md) | `dust_dart`, `dust_db_postgres` |
-
-The guides above describe Dust-generated application features. Dust v0.3.0 is
-scheduled to add generated `dust_server` controllers and top-level route
-modules; its runtime and codegen guides live in
-[docs/dust_server](../dust_server/README.md).
+| Build Dart HTTP servers | [Server](../dust_server/README.md) | `dust_server` |
 
 Install the CLI from the [installation guide](../../README.md#installation).
 Each feature guide contains its exact package command and setup requirements.

@@ -163,11 +163,10 @@ await database.connection.close();
 
 ## Generated Background Opening
 
-This feature is scheduled for v0.3.0. Until that release is published, use the
-matching current-source CLI and SQLite runtime together; published 0.2.1
-artifacts do not include it. Existing synchronous-only declarations generate
+This feature is available in 0.3.0. Keep the CLI and SQLite runtime in the same
+supported compatibility row. Existing synchronous-only declarations generate
 the same output as before. See
-[compatibility](compatibility.md#v030-background-opening).
+[compatibility](compatibility.md#background-opening).
 
 Add a static forwarding method to your SQLite database declaration:
 

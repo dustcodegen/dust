@@ -37,9 +37,8 @@ parent connection or retain `tx` after its callback ends. Mappers and callbacks
 still run on the caller isolate; background SQL results are materialized and
 copied. Keep queries bounded.
 
-Generated background opening and the query-only discovery fix described here
-are scheduled for v0.3.0. Until it is published, use the matching current-source
-CLI/runtime rather than the published 0.2.1 artifacts.
+Generated background opening and the query-only discovery fix are available in
+0.3.0. Keep the CLI and runtime in the same supported compatibility row.
 
 ## Terminal behavior
 

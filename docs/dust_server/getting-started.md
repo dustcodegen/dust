@@ -6,8 +6,7 @@
 dart pub add dust_server
 ```
 
-This source tree targets 0.3.x. To state the minimum explicitly after v0.3.0 is
-published:
+Require Dust 0.3.0 or newer:
 
 ```yaml
 dependencies:
@@ -161,7 +160,7 @@ Every example runs the same way. The
 [index](../../packages/dust_server/example/README.md) lists all 51 by the
 question each one answers.
 
-## Generated SQLite Background Opening (Unreleased)
+## Generated SQLite Background Opening
 
 The native server fixture also opts its database declaration into
 `await AppDatabase.openBackground(path, options: appOptions)`. Opening,
@@ -183,4 +182,3 @@ This is not a live-service load test or device/crash evidence. Worker ownership
 still fails fast for unrelated work during a transaction; this feature adds no
 queue, retry policy or pool. See the
 [opt-in and compatibility guide](../usage/db.md#generated-background-opening).
-Until v0.3.0 is published, use matching current-source CLI/runtime packages.
