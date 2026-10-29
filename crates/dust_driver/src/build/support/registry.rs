@@ -7,7 +7,9 @@ use dust_plugin_api::{DustPlugin, MetadataOutput, PluginExecutionMode, PluginReg
 use dust_plugin_derive::register_plugin as register_derive_plugin;
 use dust_plugin_serde::register_plugin as register_serde_plugin;
 use dust_route_plugin::register_plugin as register_route_plugin;
-use dust_server_plugin::register_plugin as register_server_plugin;
+use dust_server_plugin::{
+    ServerClientDestination, register_plugin as register_server_plugin, register_plugin_with_client,
+};
 use dust_state_plugin::register_plugin as register_state_plugin;
 
 /// Selects which plugin registry should run for a command.
@@ -104,12 +106,27 @@ const BUILTIN_PLUGINS: &[PluginRegistration] = &[
 
 /// Builds the plugin registry requested by a command.
 pub(crate) fn registry_for_selection(selection: RegistrySelection) -> PluginRegistry {
+    registry_for_selection_with_server_client(selection, None)
+}
+
+/// Builds a registry with an optional backend-derived client destination.
+pub(crate) fn registry_for_selection_with_server_client(
+    selection: RegistrySelection,
+    destination: Option<ServerClientDestination>,
+) -> PluginRegistry {
     let mut registry = PluginRegistry::new();
     match selection {
         RegistrySelection::All => {
             for registration in BUILTIN_PLUGINS {
+                let plugin = (registration.default_factory)();
+                let plugin = if plugin.plugin_name() == "Server" {
+                    Box::new(register_plugin_with_client(destination.clone()))
+                        as Box<dyn DustPlugin>
+                } else {
+                    plugin
+                };
                 registry
-                    .register((registration.default_factory)())
+                    .register(plugin)
                     .expect("built-in plugin symbol ownership must be valid");
             }
         }

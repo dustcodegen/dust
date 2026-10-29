@@ -50,6 +50,8 @@ mod result;
 mod route_inspection;
 /// Route inspection command support.
 mod route_table;
+/// Generated-server client destination resolution.
+mod server_client;
 /// Filesystem identities for local Dart URI references.
 mod source_uri;
 /// Watch command orchestration and change snapshots.

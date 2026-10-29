@@ -11,4 +11,6 @@ mod plan;
 /// Server plugin implementation and registration surface.
 mod plugin;
 
-pub use plugin::{ServerPlugin, register_plugin};
+pub use plugin::{
+    ServerClientDestination, ServerPlugin, register_plugin, register_plugin_with_client,
+};

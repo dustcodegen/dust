@@ -3,6 +3,7 @@ use dust_ir::DartFileIr;
 use dust_plugin_api::{
     AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
 };
+use std::path::PathBuf;
 
 use crate::{analysis::collect_server_workspace_analysis_ir, emit::emit_server, plan::plan_server};
 
@@ -72,19 +73,41 @@ const METHODS_LIBRARY: &str = "package:dust_server/src/annotations/http_methods.
 const PARAMETERS_LIBRARY: &str = "package:dust_server/src/annotations/parameters.dart";
 
 /// Dust plugin for Dart HTTP servers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerClientDestination {
+    /// Name from the destination package's pubspec.
+    pub package_name: String,
+    /// Resolved local package root.
+    pub package_root: PathBuf,
+}
+
+/// Dust plugin for Dart HTTP servers.
 #[derive(Default)]
-pub struct ServerPlugin;
+pub struct ServerPlugin {
+    /// Optional local output package for backend-derived clients.
+    client: Option<ServerClientDestination>,
+}
 
 impl ServerPlugin {
     /// Creates a server plugin.
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// Returns the configured backend-derived client destination, when enabled.
+    pub fn client_destination(&self) -> Option<&ServerClientDestination> {
+        self.client.as_ref()
     }
 }
 
 /// Creates the server plugin.
 pub fn register_plugin() -> ServerPlugin {
     ServerPlugin::new()
+}
+
+/// Creates the server plugin with an optional generated-client destination.
+pub fn register_plugin_with_client(client: Option<ServerClientDestination>) -> ServerPlugin {
+    ServerPlugin { client }
 }
 
 impl DustPlugin for ServerPlugin {

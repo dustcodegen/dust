@@ -19,6 +19,15 @@ pub struct DustConfig {
     pub outputs: OutputConfig,
     /// Optional i18n generation settings.
     pub i18n: Option<I18nConfig>,
+    /// Optional generated-server settings.
+    pub server: Option<ServerConfig>,
+}
+
+/// Generated-server settings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerConfig {
+    /// Local Dart package that receives backend-derived clients.
+    pub client_package: String,
 }
 
 /// Generated output policy settings.
@@ -68,6 +77,15 @@ struct RawDustConfig {
     outputs: Option<RawOutputConfig>,
     /// Raw i18n section.
     i18n: Option<RawI18nConfig>,
+    /// Raw generated-server section.
+    server: Option<RawServerConfig>,
+}
+
+/// Deserialized `server` section from `dust.yaml`.
+#[derive(Debug, Default, Deserialize)]
+struct RawServerConfig {
+    /// Local package that receives generated clients.
+    client_package: Option<String>,
 }
 
 /// Deserialized `outputs` section from `dust.yaml`.
@@ -122,12 +140,41 @@ pub fn load_dust_config(package_root: &Path) -> Result<DustConfig, Diagnostic> {
         .unwrap_or_else(|| DEFAULT_PRIMARY_SUFFIX.to_owned());
     validate_primary_suffix(&primary_suffix, &path)?;
     let i18n = parse_i18n_config(raw.i18n, &path)?;
+    let server = parse_server_config(raw.server, &path)?;
 
     Ok(DustConfig {
         path: Some(path),
         outputs: OutputConfig { primary_suffix },
         i18n,
+        server,
     })
+}
+
+/// Parses the optional generated-server destination.
+fn parse_server_config(
+    raw: Option<RawServerConfig>,
+    path: &Path,
+) -> Result<Option<ServerConfig>, Diagnostic> {
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Some(client_package) = raw.client_package else {
+        return Err(invalid_config(path, "server.client_package is required"));
+    };
+    if !valid_package_name(&client_package) {
+        return Err(invalid_config(
+            path,
+            "server.client_package must be a valid Dart package name",
+        ));
+    }
+    Ok(Some(ServerConfig { client_package }))
+}
+
+/// Accepts Dart package names without treating a path as a package identity.
+fn valid_package_name(value: &str) -> bool {
+    let mut bytes = value.bytes();
+    bytes.next().is_some_and(|byte| byte.is_ascii_lowercase())
+        && bytes.all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
 }
 
 /// Parses and validates optional i18n config.
