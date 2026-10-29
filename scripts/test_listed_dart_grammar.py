@@ -22,7 +22,7 @@ class ListedGrammarTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"source\n")
         value = {
-            "repository": "https://github.com/UserNobody14/tree-sitter-dart",
+            "repository": "https://github.com/dustcodegen/tree-sitter-dart",
             "revision": "acfb453395e25cf6a1018e064df3c92e68e38782", "abi": 15,
             "files": {name: hashlib.sha256(b"source\n").hexdigest() for name in FILES},
         }
