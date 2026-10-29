@@ -110,17 +110,6 @@ fn validate_local_destination(
             "server.client_package must name a separate client package",
         ));
     }
-    if !package_root.join("lib").is_dir() {
-        return Err(Diagnostic::error(format!(
-            "server.client_package `{package_name}` has no `lib` directory"
-        )));
-    }
-    let declared = load_package_name(package_root)?;
-    if declared != package_name {
-        return Err(Diagnostic::error(format!(
-            "server.client_package `{package_name}` resolves to package `{declared}`"
-        )));
-    }
     let canonical_workspace = fs::canonicalize(workspace_root).map_err(|error| {
         Diagnostic::error(format!(
             "failed to resolve the active Dart workspace `{}`: {error}",
@@ -135,6 +124,17 @@ fn validate_local_destination(
     if !canonical_package.starts_with(canonical_workspace) {
         return Err(Diagnostic::error(format!(
             "server.client_package `{package_name}` resolves outside the active Dart workspace"
+        )));
+    }
+    if !canonical_package.join("lib").is_dir() {
+        return Err(Diagnostic::error(format!(
+            "server.client_package `{package_name}` has no `lib` directory"
+        )));
+    }
+    let declared = load_package_name(&canonical_package)?;
+    if declared != package_name {
+        return Err(Diagnostic::error(format!(
+            "server.client_package `{package_name}` resolves to package `{declared}`"
         )));
     }
     Ok(package_root.to_path_buf())

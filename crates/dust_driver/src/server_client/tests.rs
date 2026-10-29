@@ -6,7 +6,7 @@ use dust_workspace::{
 };
 use tempfile::TempDir;
 
-use super::resolve_destinations;
+use super::{resolve_destinations, validate_local_destination};
 
 fn write(path: &Path, source: &str) {
     if let Some(parent) = path.parent() {
@@ -213,4 +213,48 @@ fn rejects_malformed_package_entries() {
         let error = resolve_destinations(&plan).unwrap_err();
         assert!(error.message.contains(expected), "{}", error.message);
     }
+}
+
+#[test]
+fn reports_unreadable_and_invalid_package_configuration() {
+    let (temp, plan) = workspace(r#"{"configVersion":2,"packages":[]}"#);
+    fs::remove_file(&plan.package_config.path).unwrap();
+    assert!(
+        resolve_destinations(&plan)
+            .unwrap_err()
+            .message
+            .contains("failed to read package configuration")
+    );
+
+    write(&plan.package_config.path, "{");
+    assert!(
+        resolve_destinations(&plan)
+            .unwrap_err()
+            .message
+            .contains("failed to parse package configuration")
+    );
+    drop(temp);
+}
+
+#[test]
+fn reports_unresolvable_workspace_and_client_roots() {
+    let (temp, mut missing_workspace) = workspace(r#"{"configVersion":2,"packages":[]}"#);
+    missing_workspace.package_config.path =
+        temp.path().join("missing/.dart_tool/package_config.json");
+    let missing_client = temp.path().join("missing/client");
+    assert!(
+        validate_local_destination(&missing_workspace, &missing_client, "client")
+            .unwrap_err()
+            .message
+            .contains("failed to resolve the active Dart workspace")
+    );
+
+    let (_temp, plan) = workspace(r#"{"configVersion":2,"packages":[]}"#);
+    let missing_client = plan.package_root.parent().unwrap().join("missing_client");
+    assert!(
+        validate_local_destination(&plan, &missing_client, "client")
+            .unwrap_err()
+            .message
+            .contains("failed to resolve server client package")
+    );
 }

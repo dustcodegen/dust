@@ -9,6 +9,9 @@ use crate::{
     plan::{Callable, ExtractionWrapper, HandlerPlan, ParamPlan},
 };
 
+#[cfg(test)]
+mod tests;
+
 /// Builds one standalone HTTP endpoint from matching fact and typed-plan views.
 pub(super) fn build_endpoint(
     fact: &ServerRouteFact,

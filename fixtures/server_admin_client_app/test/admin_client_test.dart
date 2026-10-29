@@ -18,4 +18,19 @@ void main() {
 
     expect(await client.list(), 'admin');
   });
+
+  test('route tags expose admin and shared operations', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) async {
+      request.response.write(request.uri.pathSegments.last);
+      await request.response.close();
+    });
+    addTearDown(() => server.close(force: true));
+    final client = OperationsClient(
+      Dio(BaseOptions(baseUrl: 'http://${server.address.host}:${server.port}')),
+    );
+
+    expect(await client.adminOnly(), 'admin');
+    expect(await client.shared(), 'shared');
+  });
 }

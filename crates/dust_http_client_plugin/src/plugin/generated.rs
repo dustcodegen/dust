@@ -11,6 +11,9 @@ use super::{
 };
 use crate::plugin::{build::classify_return_type, emit::render_isolate_helpers};
 
+#[cfg(test)]
+mod tests;
+
 /// One complete standalone Dio client library derived from backend routes.
 pub struct GeneratedClient {
     /// Public Dart class name.

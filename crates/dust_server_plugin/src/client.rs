@@ -19,6 +19,9 @@ use crate::{
     plan::{HandlerPlan, ServerPlan},
 };
 
+#[cfg(test)]
+mod tests;
+
 /// Generates one standalone client library for one server route library.
 pub(crate) fn generate_server_client(
     file: &DartFileIr,

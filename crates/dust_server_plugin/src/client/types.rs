@@ -4,6 +4,9 @@ use dust_diagnostics::Diagnostic;
 use dust_http_client_plugin::GeneratedEndpoint;
 use dust_ir::{DartFileIr, ImportIr, TypeIr};
 
+#[cfg(test)]
+mod tests;
+
 /// Dart core types that require no generated import.
 const CORE_TYPES: &[&str] = &[
     "BigInt", "DateTime", "Duration", "Future", "Iterable", "List", "Map", "Never", "Object",
