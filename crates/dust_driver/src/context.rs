@@ -42,9 +42,9 @@ impl DriverContext {
             }
         };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
-        let destination = crate::server_client::resolve_destination(&workspace)?;
+        let destinations = crate::server_client::resolve_destinations(&workspace)?;
         let registry =
-            crate::build::registry_for_selection_with_server_client(selection, destination);
+            crate::build::registry_for_selection_with_server_clients(selection, destinations);
         let catalog = build_symbol_catalog(&registry)?;
 
         Ok(Self {

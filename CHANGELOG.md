@@ -8,10 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Server clients**: `server.client_package` can target a separate package in
-  the same Dart pub workspace. Dust derives separate standalone Dio clients for
-  each controller and top-level route group from `dust_server.routes.v1`, then
-  exports them through one generated library barrel without a second
+- **Server clients**: `server.client_package` can target one package, while
+  `server.client_packages` can split routes into separate packages using their
+  existing tags. Dust derives separate standalone Dio clients for each
+  controller and top-level route group from `dust_server.routes.v1`, then
+  exports them through a flat generated library barrel without a second
   handwritten contract.
 
 ## [v0.3.0] - 2026-10-26

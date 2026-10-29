@@ -1,4 +1,4 @@
-@Routes('/health')
+@Routes('/health', tags: ['public'])
 library;
 
 import 'package:dust_server/annotations.dart';

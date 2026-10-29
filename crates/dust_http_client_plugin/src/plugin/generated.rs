@@ -1,5 +1,6 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::{MethodIr, MethodParamIr};
+use dust_plugin_api::GENERATED_HEADER;
 
 use super::{
     emit::{render_shared_helpers, render_standalone_client_class},
@@ -135,7 +136,7 @@ pub fn generate_client_library(client: &GeneratedClient) -> Result<String, Diagn
         endpoints,
     };
     let mut blocks = vec![
-        "// GENERATED CODE - DO NOT MODIFY BY HAND.".to_owned(),
+        GENERATED_HEADER.to_owned(),
         "import 'package:dio/dio.dart';".to_owned(),
     ];
     blocks.extend(client.imports.iter().cloned());

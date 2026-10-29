@@ -22,6 +22,7 @@ Router healthRoutes() => Router.module(
           _$handleHealth,
           metadata: const RouteMetadata(
             operationId: 'health',
+            tags: ['public'],
           ),
         ),
       ],

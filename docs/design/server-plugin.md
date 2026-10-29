@@ -745,13 +745,15 @@ stores versioned JSON facts under `dust_server.routes.v1`, including structured
 parameter bindings and normalized parameter/return types, for a future
 documentation package's build-time schema pass.
 
-The same facts drive optional client generation. `server.client_package` must
-name one separate package in the active pub workspace. A route library produces
-one barrel; every controller gets its own client class, while top-level
-`@Routes` functions get a separate module client. Group/controller prefixes
-are joined into request paths. State, peer, request, raw-body/query and
-custom-extractor parameters stay server-only. Private, same-library or
-otherwise unreachable public types fail before any client output is replaced.
+The same facts drive optional client generation. `server.client_package` names
+one separate package in the active pub workspace. `server.client_packages`
+can instead map multiple destination packages to existing route tags. A route
+library produces one barrel per matching destination; every controller gets
+its own client class, while top-level `@Routes` functions get a separate module
+client. Group/controller prefixes are joined into request paths. State, peer,
+request, raw-body/query and custom-extractor parameters stay server-only.
+Private, same-library or otherwise unreachable public types fail before any
+client output is replaced.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 
@@ -1087,20 +1089,28 @@ Server handlers are the source of truth. Dust does not require an
 `@HttpContract` interface or a second copy of each method. The server plugin
 publishes `dust_server.routes.v1` facts after validating the real handler.
 
-Follow-up [#186](https://github.com/dustcodegen/dust/issues/186) will consume
-those facts after the server feature lands. Its only planned configuration is
-the local destination package:
+Dust consumes those facts to generate a separate local client package:
 
 ```yaml
 server:
   client_package: todo_client
 ```
 
-Each `@Routes` library produces its own client in that package. Server-only
-parameters—`@Extract`, `@RawBody`, `@RawQuery`, `@State`, `@Peer`, `Request`,
-and `RequestParts`—do not enter the wire signature. The future driver work must
-also reject types that the client package cannot import. None of that is part
-of the server plugin's completion gate.
+For separate public and administrative packages, use the existing inherited
+and route-local tags:
+
+```yaml
+server:
+  client_packages:
+    public_client: [public]
+    admin_client: [admin]
+```
+
+Each `@Routes` library produces its own client barrel in every matching
+package. Server-only parameters—`@Extract`, `@RawBody`, `@RawQuery`, `@State`,
+`@Peer`, `Request`, and `RequestParts`—do not enter the wire signature. The
+driver rejects types that the client package cannot import before replacing
+any output.
 
 ## Phases
 
@@ -1141,12 +1151,6 @@ Per the [Plugin Guide](../plugin-guide.md):
 Add the plugin's `src/` directory to `CODEGEN_FINGERPRINT_ROOTS` in
 `crates/dust_driver/build.rs`. Its modules and templates are then included
 recursively; a new plugin directory is not discovered automatically.
-
-## Deferred
-
-- **Backend-derived clients.** #186 consumes route facts only after this server
-  feature lands. It must not introduce an `@HttpContract` interface or place
-  `shelf` dependencies in the generated client package.
 
 ## Resolved
 

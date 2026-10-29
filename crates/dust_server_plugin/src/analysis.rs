@@ -35,7 +35,7 @@ pub(crate) struct ServerRouteFact {
     /// Optional long documentation description.
     description: Option<String>,
     /// Ordered controller and route tags.
-    tags: Vec<String>,
+    pub(crate) tags: Vec<String>,
     /// Whether consumers should mark the route deprecated.
     deprecated: bool,
     /// Whether documentation consumers should hide the route.

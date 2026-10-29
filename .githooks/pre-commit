@@ -14,9 +14,9 @@ run_without_git_env() {
 }
 
 ensure_generated_outputs_are_staged() {
-  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app fixtures/server_client_app fixtures/server_client_server; then
+  if ! git diff --quiet -- examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app fixtures/server_client_app fixtures/server_admin_client_app fixtures/server_client_server; then
     echo "error: Dust generated proof outputs changed during pre-commit." >&2
-    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app fixtures/server_client_app fixtures/server_client_server" >&2
+    echo "Run: git add examples/product_showcase examples/benchmark_project examples/shopping_app examples/server_codegen fixtures/server_codegen_app fixtures/server_client_app fixtures/server_admin_client_app fixtures/server_client_server" >&2
     echo "Then rerun your commit." >&2
     exit 1
   fi

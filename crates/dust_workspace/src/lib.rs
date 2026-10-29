@@ -18,7 +18,8 @@ mod root;
 mod workspace;
 
 pub use config::{
-    DustConfig, I18nConfig, I18nIosConfig, OutputConfig, ServerConfig, load_dust_config,
+    DustConfig, I18nConfig, I18nIosConfig, OutputConfig, ServerClientConfig, ServerConfig,
+    load_dust_config,
 };
 pub use discover::{
     LibraryDiscovery, SupportedAnnotations, discover_libraries, discover_libraries_with_usage,

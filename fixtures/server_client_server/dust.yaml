@@ -1,2 +1,4 @@
 server:
-  client_package: server_client_app
+  client_packages:
+    server_admin_client_app: [admin]
+    server_client_app: [public]

@@ -102,13 +102,45 @@ server:
   client_package: todo_client
 ```
 
+To split clients, map destination packages to existing route tags instead:
+
+```yaml
+server:
+  client_packages:
+    public_client: [public]
+    admin_client: [admin]
+```
+
+Tags declared by `@Routes` and `@Controller` are inherited; tags on `@GET`,
+`@POST`, and the other verb annotations apply to one route. A route is emitted
+to every destination matching one of its final tags. Untagged or unmatched
+routes remain server-only. The singular and plural settings are mutually
+exclusive.
+
 `dust build` writes a generated barrel per route library under the client
 package. For example, `server/lib/items.dart` generates
-`todo_client/lib/src/generated/server/items_client.g.dart`. Every controller
-gets a separate client class in its own generated file; top-level `@Routes`
+`todo_client/lib/src/generated/items_client.g.dart`. Every controller gets a
+separate client class in its own generated file; top-level `@Routes`
 functions get a separate module client. The barrel exports all of them.
 `@Routes` and `@Controller` prefixes are included in each request path. No
 `@HttpContract`, duplicate interface, or aggregate client class is required.
+
+Export the generated route barrels you want from the client package entrypoint:
+
+```dart
+// todo_client/lib/todo_client.dart
+export 'src/generated/items_client.g.dart';
+```
+
+Then construct the generated route or controller client with your configured
+`Dio` instance:
+
+```dart
+final items = ItemsRoutesClient(
+  Dio(BaseOptions(baseUrl: 'https://api.example.com')),
+);
+final item = await items.read(42, details: true);
+```
 
 Path, query, header, JSON body, form and multipart inputs become client method
 parameters. `@State`, `@Peer`, `Request`, `RequestParts`, raw request inputs and

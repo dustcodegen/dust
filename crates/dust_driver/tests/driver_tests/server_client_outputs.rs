@@ -1,6 +1,7 @@
 use std::fs;
 
 use dust_driver::{BuildRequest, CheckRequest, run_build, run_check};
+use dust_plugin_api::GENERATED_HEADER;
 
 use super::support::{make_pub_workspace_member, sdk_source_root, write_file};
 
@@ -82,13 +83,14 @@ class Todos with _$Todos {
     let built = run_build(request.clone());
 
     assert!(!built.has_errors(), "{:?}", built.diagnostics);
-    let barrel = client.join("lib/src/generated/product_showcase/todos_client.g.dart");
-    let output = client.join("lib/src/generated/product_showcase/todos_client.todos.g.dart");
+    let barrel = client.join("lib/src/generated/todos_client.g.dart");
+    let output = client.join("lib/src/generated/todos_client.todos.g.dart");
     assert_eq!(
         fs::read_to_string(&barrel).unwrap(),
-        "// GENERATED CODE - DO NOT MODIFY BY HAND.\n\nexport 'todos_client.todos.g.dart';\n"
+        format!("{GENERATED_HEADER}\nexport 'todos_client.todos.g.dart';\n")
     );
     let source = fs::read_to_string(&output).unwrap();
+    assert!(source.starts_with(GENERATED_HEADER));
     assert!(source.contains("final class TodosClient"));
     assert!(source.contains("Future<String> read("));
     assert!(source.contains("method: 'POST'"));
@@ -111,7 +113,7 @@ class Todos with _$Todos {
     let rebuilt = run_build(request.clone());
     assert!(!rebuilt.has_errors(), "{:?}", rebuilt.diagnostics);
     assert!(!output.exists());
-    let output = client.join("lib/src/generated/product_showcase/todos_client.tasks.g.dart");
+    let output = client.join("lib/src/generated/todos_client.tasks.g.dart");
     assert!(output.exists());
 
     write_file(&output, "stale\n");

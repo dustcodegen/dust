@@ -23,6 +23,7 @@ mixin _$Todos {
             _$handleRead,
             metadata: const RouteMetadata(
               operationId: 'read',
+              tags: ['public'],
             ),
           ),
           Route(
@@ -31,6 +32,7 @@ mixin _$Todos {
             _$handleCreate,
             metadata: const RouteMetadata(
               operationId: 'create',
+              tags: ['public'],
             ),
           ),
           Route(
@@ -39,6 +41,7 @@ mixin _$Todos {
             _$handleDelete,
             metadata: const RouteMetadata(
               operationId: 'delete',
+              tags: ['public'],
             ),
           ),
         ],
@@ -91,6 +94,32 @@ mixin _$Todos {
     return guard(
       () async => responseFrom(
         await (this as Todos).delete(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+}
+
+mixin _$AdminTodos {
+  Router routes() => Router.module(
+        prefix: '/admin/todos',
+        routes: [
+          Route(
+            'GET',
+            '/',
+            _$handleList,
+            metadata: const RouteMetadata(
+              operationId: 'list',
+              tags: ['admin'],
+            ),
+          ),
+        ],
+      );
+
+  Future<Response> _$handleList(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as AdminTodos).list(),
         status: 200,
       ),
     );

@@ -11,7 +11,7 @@ use std::{
 use dust_diagnostics::Diagnostic;
 use dust_http_client_plugin::{GeneratedClient, generate_client_library};
 use dust_ir::DartFileIr;
-use dust_plugin_api::WorkspaceAnalysis;
+use dust_plugin_api::{GENERATED_HEADER, WorkspaceAnalysis};
 
 use crate::{
     ServerClientDestination,
@@ -26,7 +26,14 @@ pub(crate) fn generate_server_client(
     destination: &ServerClientDestination,
     analysis: &WorkspaceAnalysis,
 ) -> Result<Vec<(PathBuf, String)>, Vec<Diagnostic>> {
-    let facts = route_facts(analysis, &file.source_path).map_err(|error| vec![error])?;
+    let facts = route_facts(analysis, &file.source_path)
+        .map_err(|error| vec![error])?
+        .into_iter()
+        .filter(|fact| {
+            destination.tags.is_empty()
+                || fact.tags.iter().any(|tag| destination.tags.contains(tag))
+        })
+        .collect::<Vec<_>>();
     if facts.is_empty() {
         return Ok(Vec::new());
     }
@@ -89,10 +96,7 @@ pub(crate) fn generate_server_client(
     exports.sort();
     outputs.push((
         main_output,
-        format!(
-            "// GENERATED CODE - DO NOT MODIFY BY HAND.\n\n{}\n",
-            exports.join("\n")
-        ),
+        format!("{GENERATED_HEADER}\n{}\n", exports.join("\n")),
     ));
     Ok(outputs)
 }
@@ -186,7 +190,6 @@ fn main_output_path(
     let mut output = destination
         .package_root
         .join("lib/src/generated")
-        .join(&file.package_name)
         .join(relative);
     output.set_file_name(format!("{stem}_client.g.dart"));
     Ok(output)

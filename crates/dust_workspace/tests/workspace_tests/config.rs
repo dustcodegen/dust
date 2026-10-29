@@ -1,6 +1,6 @@
 use dust_workspace::{
-    I18nConfig, I18nIosConfig, PackageConfigKind, ServerConfig, load_dust_config,
-    load_flutter_assets, load_is_flutter_package, load_package_config,
+    I18nConfig, I18nIosConfig, PackageConfigKind, load_dust_config, load_flutter_assets,
+    load_is_flutter_package, load_package_config,
 };
 use tempfile::tempdir;
 
@@ -22,51 +22,6 @@ fn load_package_config_requires_real_file() {
         root.path().join(".dart_tool/package_config.json")
     );
     assert_eq!(config.kind, PackageConfigKind::Direct);
-}
-
-#[test]
-fn load_dust_config_reads_server_client_package() {
-    let root = tempdir().unwrap();
-    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
-    write_file(
-        &root.path().join("dust.yaml"),
-        "server:\n  client_package: todo_client\n",
-    );
-
-    let config = load_dust_config(root.path()).unwrap();
-
-    assert_eq!(
-        config.server,
-        Some(ServerConfig {
-            client_package: "todo_client".to_owned(),
-        })
-    );
-}
-
-#[test]
-fn load_dust_config_rejects_invalid_server_client_package() {
-    let root = tempdir().unwrap();
-    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
-
-    for value in ["", "TodoClient", "../todo_client", "todo-client"] {
-        write_file(
-            &root.path().join("dust.yaml"),
-            &format!("server:\n  client_package: '{value}'\n"),
-        );
-        let error = load_dust_config(root.path()).unwrap_err();
-        assert!(error.message.contains("server.client_package"), "{value}");
-    }
-}
-
-#[test]
-fn load_dust_config_requires_server_client_package() {
-    let root = tempdir().unwrap();
-    write_file(&root.path().join("pubspec.yaml"), "name: dust_test\n");
-    write_file(&root.path().join("dust.yaml"), "server: {}\n");
-
-    let error = load_dust_config(root.path()).unwrap_err();
-
-    assert!(error.message.contains("server.client_package is required"));
 }
 
 #[test]

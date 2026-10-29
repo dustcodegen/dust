@@ -1,8 +1,12 @@
 use std::{path::PathBuf, sync::Arc};
 
 use dust_ir::{AnnotationValueIr, ParamKind, PartIr, TypeIr};
-use dust_plugin_api::{DustPlugin, PluginContext, SymbolPlan, WorkspaceAnalysisBuilder};
-use dust_server_plugin::{ServerClientDestination, register_plugin_with_client};
+use dust_plugin_api::{
+    DustPlugin, GENERATED_HEADER, PluginContext, SymbolPlan, WorkspaceAnalysisBuilder,
+};
+use dust_server_plugin::{ServerClientDestination, register_plugin_with_clients};
+
+mod split;
 
 use super::{class, config, empty_library, method, param};
 
@@ -112,10 +116,11 @@ fn generates_one_standalone_client_from_server_route_facts() {
     );
     admin.name = "AdminTodos".to_owned();
     library.classes = vec![todos, admin];
-    let plugin = register_plugin_with_client(Some(ServerClientDestination {
+    let plugin = register_plugin_with_clients(vec![ServerClientDestination {
         package_name: "client".to_owned(),
         package_root: PathBuf::from("/client"),
-    }));
+        tags: Vec::new(),
+    }]);
     let mut analysis = WorkspaceAnalysisBuilder::default();
     plugin.collect_workspace_analysis_ir(&library, &mut analysis);
     let mut plan = SymbolPlan::default();
@@ -132,7 +137,7 @@ fn generates_one_standalone_client_from_server_route_facts() {
         .unwrap();
     assert_eq!(
         client.output_path,
-        PathBuf::from("/client/lib/src/generated/dust_test/server_client.todos.g.dart")
+        PathBuf::from("/client/lib/src/generated/server_client.todos.g.dart")
     );
     assert!(client.source.contains("final class TodosClient"));
     assert!(
@@ -176,11 +181,13 @@ fn generates_one_standalone_client_from_server_route_facts() {
         .unwrap();
     assert_eq!(
         barrel.output_path,
-        PathBuf::from("/client/lib/src/generated/dust_test/server_client.g.dart")
+        PathBuf::from("/client/lib/src/generated/server_client.g.dart")
     );
     assert_eq!(
         barrel.source,
-        "// GENERATED CODE - DO NOT MODIFY BY HAND.\n\nexport 'server_client.admin_todos.g.dart';\nexport 'server_client.todos.g.dart';\n"
+        format!(
+            "{GENERATED_HEADER}\nexport 'server_client.admin_todos.g.dart';\nexport 'server_client.todos.g.dart';\n"
+        )
     );
 }
 
@@ -216,10 +223,11 @@ fn rejects_unreachable_server_model_before_client_output() {
         vec![read],
         span,
     )];
-    let plugin = register_plugin_with_client(Some(ServerClientDestination {
+    let plugin = register_plugin_with_clients(vec![ServerClientDestination {
         package_name: "client".to_owned(),
         package_root: PathBuf::from("/client"),
-    }));
+        tags: Vec::new(),
+    }]);
     let mut analysis = WorkspaceAnalysisBuilder::default();
     plugin.collect_workspace_analysis_ir(&library, &mut analysis);
     let mut plan = SymbolPlan::default();

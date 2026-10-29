@@ -14,5 +14,5 @@ mod plan;
 mod plugin;
 
 pub use plugin::{
-    ServerClientDestination, ServerPlugin, register_plugin, register_plugin_with_client,
+    ServerClientDestination, ServerPlugin, register_plugin, register_plugin_with_clients,
 };

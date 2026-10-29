@@ -83,13 +83,15 @@ pub struct ServerClientDestination {
     pub package_name: String,
     /// Resolved local package root.
     pub package_root: PathBuf,
+    /// Route tags accepted by this destination; empty accepts every route.
+    pub tags: Vec<String>,
 }
 
 /// Dust plugin for Dart HTTP servers.
 #[derive(Default)]
 pub struct ServerPlugin {
-    /// Optional local output package for backend-derived clients.
-    client: Option<ServerClientDestination>,
+    /// Local output packages for backend-derived clients.
+    clients: Vec<ServerClientDestination>,
 }
 
 impl ServerPlugin {
@@ -98,9 +100,9 @@ impl ServerPlugin {
         Self::default()
     }
 
-    /// Returns the configured backend-derived client destination, when enabled.
-    pub fn client_destination(&self) -> Option<&ServerClientDestination> {
-        self.client.as_ref()
+    /// Returns the configured backend-derived client destinations.
+    pub fn client_destinations(&self) -> &[ServerClientDestination] {
+        &self.clients
     }
 }
 
@@ -109,9 +111,9 @@ pub fn register_plugin() -> ServerPlugin {
     ServerPlugin::new()
 }
 
-/// Creates the server plugin with an optional generated-client destination.
-pub fn register_plugin_with_client(client: Option<ServerClientDestination>) -> ServerPlugin {
-    ServerPlugin { client }
+/// Creates the server plugin with generated-client destinations.
+pub fn register_plugin_with_clients(clients: Vec<ServerClientDestination>) -> ServerPlugin {
+    ServerPlugin { clients }
 }
 
 impl DustPlugin for ServerPlugin {
@@ -182,7 +184,7 @@ impl DustPlugin for ServerPlugin {
         match plan_server(file) {
             Ok(Some(plan)) => {
                 let mut contribution = emit_server(&plan);
-                if let Some(destination) = &self.client {
+                for destination in &self.clients {
                     match generate_server_client(
                         file,
                         &plan,
