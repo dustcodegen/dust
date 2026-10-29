@@ -12,6 +12,7 @@ pub(crate) fn emit_or_write_library(
     library: &SourceLibrary,
     lowered_library: &dust_ir::DartFileIr,
     previous_output_hash: Option<Option<u64>>,
+    previous_output_paths: &[std::path::PathBuf],
     processing: &ProcessingConfig<'_>,
     plan: dust_plugin_api::SymbolPlan,
 ) -> io::Result<WriteResult> {
@@ -25,6 +26,7 @@ pub(crate) fn emit_or_write_library(
                 library.output_path.clone(),
                 emitted.with_output_hash(&library.output_path),
                 previous_hash,
+                &[],
                 processing.write_output,
             );
         }
@@ -39,7 +41,9 @@ pub(crate) fn emit_or_write_library(
     );
 
     if processing.write_output {
-        persist_emit_result(library.output_path.clone(), emitted)
+        let result = persist_emit_result(library.output_path.clone(), emitted)?;
+        remove_obsolete_auxiliary(previous_output_paths, &result, true)?;
+        Ok(result)
     } else {
         let emitted = emitted.with_output_hash(&library.output_path);
         let output_hash = emitted
@@ -63,7 +67,12 @@ pub(crate) fn emit_or_write_library(
         } else {
             emitted.changed
         };
-        let changed = primary_changed || auxiliary_outputs.iter().any(|output| output.changed);
+        let obsolete_changed = obsolete_auxiliary(previous_output_paths, &auxiliary_outputs)
+            .iter()
+            .any(|path| path.is_file());
+        let changed = primary_changed
+            || auxiliary_outputs.iter().any(|output| output.changed)
+            || obsolete_changed;
 
         Ok(WriteResult {
             source: emitted.source,
@@ -84,6 +93,7 @@ fn persist_with_previous_hash(
     output_path: std::path::PathBuf,
     emitted: EmitResult,
     previous_hash: u64,
+    previous_output_paths: &[std::path::PathBuf],
     write_output: bool,
 ) -> io::Result<WriteResult> {
     let output_hash = emitted
@@ -118,7 +128,7 @@ fn persist_with_previous_hash(
         })
         .collect::<io::Result<Vec<_>>>()?;
 
-    Ok(WriteResult {
+    let result = WriteResult {
         source: emitted.source,
         output_hash,
         symbols: emitted.symbols,
@@ -128,7 +138,44 @@ fn persist_with_previous_hash(
         suppress_primary_output: emitted.suppress_primary_output,
         output_path,
         auxiliary_outputs,
-    })
+    };
+    remove_obsolete_auxiliary(previous_output_paths, &result, should_write)?;
+    Ok(result)
+}
+
+/// Removes auxiliary files that belonged to the prior successful output set.
+fn remove_obsolete_auxiliary(
+    previous: &[std::path::PathBuf],
+    current: &WriteResult,
+    remove: bool,
+) -> io::Result<()> {
+    if remove
+        && !current
+            .diagnostics
+            .iter()
+            .any(dust_diagnostics::Diagnostic::is_error)
+    {
+        for path in obsolete_auxiliary(previous, &current.auxiliary_outputs) {
+            remove_output_file(path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Returns old auxiliary paths absent from the newly emitted output set.
+fn obsolete_auxiliary<'a>(
+    previous: &'a [std::path::PathBuf],
+    current: &[AuxiliaryWriteResult],
+) -> Vec<&'a Path> {
+    if current.is_empty() {
+        return Vec::new();
+    }
+    previous
+        .iter()
+        .skip(1)
+        .filter(|path| !current.iter().any(|output| output.output_path == **path))
+        .map(std::path::PathBuf::as_path)
+        .collect()
 }
 
 /// Writes a generated file, creating its parent directory on demand.

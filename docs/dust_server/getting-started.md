@@ -91,6 +91,31 @@ Future<void> delete(@Path() int id) async {}
 dust build
 ```
 
+### Generate a client package from the routes
+
+Put the server and client in the same Dart pub workspace. The client package
+must declare `dio`, then select its exact `pubspec.yaml` name in the server's
+`dust.yaml`:
+
+```yaml
+server:
+  client_package: todo_client
+```
+
+`dust build` writes a generated barrel per route library under the client
+package. For example, `server/lib/items.dart` generates
+`todo_client/lib/src/generated/server/items_client.g.dart`. Every controller
+gets a separate client class in its own generated file; top-level `@Routes`
+functions get a separate module client. The barrel exports all of them.
+`@Routes` and `@Controller` prefixes are included in each request path. No
+`@HttpContract`, duplicate interface, or aggregate client class is required.
+
+Path, query, header, JSON body, form and multipart inputs become client method
+parameters. `@State`, `@Peer`, `Request`, `RequestParts`, raw request inputs and
+custom extractors remain server-only and are omitted. Dust rejects private or
+unreachable client types before replacing generated output. `dust check`
+reports a changed or missing client as stale.
+
 Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
 dependencies make a class clearer. Generated handlers also support typed
 `@Query()` models, compatibility `@Queries()` maps, `@Header(...)`,

@@ -4,7 +4,8 @@ Status: Phases 0 through 5 are integrated. Dust owns and discovers the server
 annotations, generates controller and top-level route wiring, and supports the
 typed extractor, validation, response, rejection, middleware, and runtime
 composition surface. Generated route metadata and versioned workspace facts are
-integrated. Client generation from those facts is separate follow-up work.
+integrated. An optional sibling package can consume those facts as standalone
+Dio clients without a handwritten client interface.
 
 `packages/dust_server` exists and has a local 100% line-coverage gate.
 That includes `test/generated/`, which hand-writes what the
@@ -49,8 +50,8 @@ For the runtime as it exists today, see [dust_server](../dust_server/README.md).
   through `@State()`.
 - Replacing `shelf`. Generated code targets the standard `Handler` contract and
   composes with existing `shelf` middleware.
-- Client generation. The server plugin publishes route facts; a separate
-  follow-up consumes them into a local client package without another contract.
+- API clients outside the active pub workspace. Generated clients are written
+  only to an explicitly configured local member package.
 
 ## Naming
 
@@ -743,6 +744,14 @@ Generated routes attach a `RouteMetadata` value containing `summary`,
 stores versioned JSON facts under `dust_server.routes.v1`, including structured
 parameter bindings and normalized parameter/return types, for a future
 documentation package's build-time schema pass.
+
+The same facts drive optional client generation. `server.client_package` must
+name one separate package in the active pub workspace. A route library produces
+one barrel; every controller gets its own client class, while top-level
+`@Routes` functions get a separate module client. Group/controller prefixes
+are joined into request paths. State, peer, request, raw-body/query and
+custom-extractor parameters stay server-only. Private, same-library or
+otherwise unreachable public types fail before any client output is replaced.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 

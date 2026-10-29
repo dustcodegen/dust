@@ -50,6 +50,9 @@ pub(crate) fn load_library_input(
         .as_ref()
         .filter(|entry| entry.tool_hash == tool_hash)
         .and(previous_output_hash);
+    let previous_output_paths = cache_fingerprint
+        .map(|entry| entry.output_paths)
+        .unwrap_or_default();
 
     Ok(LoadedLibraryInput {
         source_hash,
@@ -57,6 +60,7 @@ pub(crate) fn load_library_input(
         source,
         checked_output_hash,
         previous_output_hash,
+        previous_output_paths,
     })
 }
 

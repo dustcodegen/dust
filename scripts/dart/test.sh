@@ -27,7 +27,7 @@ for target in "${TARGETS[@]}"; do
 done
 
 if [[ "${1:-}" != "--examples" ]]; then
-  for target in fixtures/server_codegen_app examples/server_codegen; do
+  for target in fixtures/server_codegen_app fixtures/server_client_server examples/server_codegen; do
     echo "==> Dust build --clean: $target"
     cargo run --quiet -p dust_cli -- build --clean --root "$target"
     echo "==> Dust check: $target"

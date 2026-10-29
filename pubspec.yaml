@@ -12,6 +12,8 @@ workspace:
   - packages/dust_server
   - fixtures/server_app
   - fixtures/server_codegen_app
+  - fixtures/server_client_server
+  - fixtures/server_client_app
   - fixtures/postgres_app
   - examples/product_showcase
   - examples/benchmark_project

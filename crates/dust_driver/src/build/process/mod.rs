@@ -163,6 +163,8 @@ pub(crate) struct LoadedLibraryInput {
     pub(crate) checked_output_hash: Option<Option<u64>>,
     /// Previously generated output hash independent of current tool metadata.
     pub(crate) previous_output_hash: Option<Option<u64>>,
+    /// Previously generated primary and auxiliary paths from the cache entry.
+    pub(crate) previous_output_paths: Vec<std::path::PathBuf>,
 }
 
 /// Pending library that needs full processing rather than a cache hit.

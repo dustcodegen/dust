@@ -12,6 +12,8 @@ mod build;
 mod constants;
 /// Renders generated Dart HTTP client sources.
 mod emit;
+/// Shared standalone client generation for backend route plugins.
+mod generated;
 /// Internal HTTP client model used after validation.
 mod model;
 /// Extracts HTTP annotations from lowered Dart IR.
@@ -28,6 +30,11 @@ use self::emit::{
 };
 use self::parse::has_config_named;
 use self::validate::{JsonCapabilityContext, collect_workspace_analysis_ir, validate_client_class};
+
+pub use generated::{
+    GeneratedClient, GeneratedEndpoint, GeneratedHttpVerb, GeneratedParam, GeneratedRequestMode,
+    generate_client_library,
+};
 
 /// Dust plugin for generating Dio-backed HTTP clients.
 pub struct HttpClientPlugin;

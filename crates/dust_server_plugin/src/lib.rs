@@ -4,6 +4,8 @@
 
 /// Structured workspace facts for future documentation tooling.
 mod analysis;
+/// Backend-route to standalone-client normalization.
+mod client;
 /// Dart source emission for validated server plans.
 mod emit;
 /// Phase-one server normalization and validation.

@@ -1,11 +1,15 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
-    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+    AnnotationOrigin, AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution,
+    WorkspaceAnalysisBuilder,
 };
 use std::path::PathBuf;
 
-use crate::{analysis::collect_server_workspace_analysis_ir, emit::emit_server, plan::plan_server};
+use crate::{
+    analysis::collect_server_workspace_analysis_ir, client::generate_server_client,
+    emit::emit_server, plan::plan_server,
+};
 
 /// Server configuration symbols owned by this plugin.
 const CLAIMED_CONFIGS: &[&str] = &[
@@ -174,9 +178,32 @@ impl DustPlugin for ServerPlugin {
         plan_server(file).err().unwrap_or_default()
     }
 
-    fn generate(&self, file: &DartFileIr, _context: &PluginContext<'_>) -> Vec<PluginContribution> {
+    fn generate(&self, file: &DartFileIr, context: &PluginContext<'_>) -> Vec<PluginContribution> {
         match plan_server(file) {
-            Ok(Some(plan)) => vec![emit_server(&plan)],
+            Ok(Some(plan)) => {
+                let mut contribution = emit_server(&plan);
+                if let Some(destination) = &self.client {
+                    match generate_server_client(
+                        file,
+                        &plan,
+                        destination,
+                        context.symbol_plan.workspace_analysis(),
+                    ) {
+                        Ok(outputs) => {
+                            contribution
+                                .auxiliary_outputs
+                                .extend(outputs.into_iter().map(|(output_path, source)| {
+                                    AuxiliaryOutputContribution {
+                                        output_path,
+                                        source,
+                                    }
+                                }))
+                        }
+                        Err(diagnostics) => contribution.diagnostics.extend(diagnostics),
+                    }
+                }
+                vec![contribution]
+            }
             Ok(None) => vec![PluginContribution::default()],
             Err(diagnostics) => vec![PluginContribution {
                 diagnostics,
