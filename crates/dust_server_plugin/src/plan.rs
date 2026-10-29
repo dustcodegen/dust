@@ -36,6 +36,7 @@ use library::{
     validate_part, validate_unique_routes, verb_config,
 };
 use model::{Args, GroupPlan, VERBS};
+pub(crate) use types::query_model_plan_for_class;
 use values::{
     error, parse_middleware, parse_tags, required_string, string_value, validate_named,
     validate_route_path,

@@ -24,7 +24,8 @@ use crate::{
     build::{
         process::{
             IndexedBuildOutcome, LoweringConfig, PendingLibrary, ProcessingConfig,
-            collect_remaining_workspace_analysis, collect_workspace_analysis,
+            collect_dependency_workspace_analysis, collect_remaining_workspace_analysis,
+            collect_workspace_analysis,
         },
         support::CodegenToolHash,
         work::available_worker_count,
@@ -197,6 +198,11 @@ pub(crate) fn prepare_and_process_batch(
         config.namespaces,
     );
     workspace_analysis.merge(workspace_result.analysis);
+    workspace_analysis.merge(collect_dependency_workspace_analysis(
+        config.catalog,
+        config.registry,
+        config.namespaces,
+    ));
     for ((((pending, pre_parsed), pre_parse_diagnostics), pre_lowered), analysis_snapshot) in
         pending
             .iter_mut()

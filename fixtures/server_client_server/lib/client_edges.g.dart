@@ -18,6 +18,15 @@ mixin _$Transport {
         prefix: '/transport',
         routes: [
           Route(
+            'GET',
+            '/search',
+            _$handleSearch,
+            metadata: const RouteMetadata(
+              operationId: 'search',
+              tags: ['public'],
+            ),
+          ),
+          Route(
             'PUT',
             '/{id}',
             _$handleReplace,
@@ -64,6 +73,27 @@ mixin _$Transport {
           ),
         ],
       );
+
+  Future<Response> _$handleSearch(Request request) async {
+    final Result<contracts.TransportFilter, Rejection> _dustResult0 =
+        await QueryModelExtractable<contracts.TransportFilter>((query) {
+    final values = query.toObjectMap();
+    query.coerceOne<bool?>(values, 'done', aliases: const ['completed']);
+    query.coerceOne<int>(values, 'page');
+    query.copyAll(values, 'tags');
+    return const contracts.$TransportFilterDeserializer().deserialize(values);
+  }).extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 =
+        (_dustResult0 as Ok<contracts.TransportFilter, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as Transport).search(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
 
   Future<Response> _$handleReplace(Request request) async {
     final Result<String, Rejection> _dustResult0 =

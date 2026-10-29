@@ -36,4 +36,34 @@ impl NamespaceSources {
             .unwrap_or(PrimaryPart::Missing);
         BindingContext::new(catalog, self.scope(source)).with_primary_part(primary)
     }
+
+    /// Binds an imported analysis library by its canonical source identity.
+    pub(crate) fn dependency_bindings<'a>(
+        &'a self,
+        uri: &'a str,
+        output: &Path,
+        catalog: &'a SymbolCatalog,
+    ) -> BindingContext<'a> {
+        let primary = self
+            .units
+            .get(uri)
+            .and_then(|unit| unit.as_ref().ok())
+            .and_then(|unit| {
+                unit.parsed.directives.iter().find_map(|directive| {
+                    let ParsedDirective::Part {
+                        uri,
+                        uri_literal: Some(literal),
+                        span,
+                    } = directive
+                    else {
+                        return None;
+                    };
+                    let reference = literal.value()?;
+                    let target = unit.targets.get(&reference)?.as_ref().ok()?;
+                    (target.path == output).then_some(PrimaryPart::Resolved { uri, span: *span })
+                })
+            })
+            .unwrap_or(PrimaryPart::Missing);
+        BindingContext::new(catalog, Some(self.graph.scope(uri))).with_primary_part(primary)
+    }
 }

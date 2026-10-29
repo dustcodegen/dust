@@ -12,6 +12,8 @@ use dust_workspace::WorkspacePlan;
 
 use crate::{build::hash_text, result::DiagnosticFile};
 
+/// Imported annotated libraries available to structured plugin analysis.
+mod analysis;
 /// Root discovery and ownership preflight.
 mod discovery;
 /// Shared provisional/final graph construction.
@@ -48,6 +50,8 @@ pub(crate) struct NamespaceSources {
     metadata_hash: u64,
     /// Fatal ownership diagnostics to reject before any output mutation.
     binding_errors: BTreeMap<PathBuf, Vec<Diagnostic>>,
+    /// Generated primary suffix used for dependency-library identities.
+    primary_suffix: String,
 }
 
 impl NamespaceSources {
@@ -80,6 +84,29 @@ impl NamespaceSources {
                 return Err(Diagnostic::error(error));
             }
         }
+        let supported = registry
+            .all_supported_annotations()
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        let root_uris = roots
+            .iter()
+            .map(|root| root.uri.as_str())
+            .collect::<BTreeSet<_>>();
+        let annotated_dependencies = loader
+            .units
+            .iter()
+            .filter_map(|(uri, unit)| {
+                let unit = unit.as_ref().ok()?;
+                (!root_uris.contains(uri.as_str())
+                    && metadata::annotations(&unit.parsed)
+                        .iter()
+                        .any(|annotation| supported.contains(annotation.name.as_str())))
+                .then_some(uri.clone())
+            })
+            .collect();
+        loader
+            .require_lexical_imports(&annotated_dependencies)
+            .map_err(Diagnostic::error)?;
         let mut metadata = String::new();
         for (path, text) in &index.inputs {
             metadata.push_str(&path.to_string_lossy());
@@ -98,6 +125,7 @@ impl NamespaceSources {
                     .collect(),
                 metadata_hash: hash_text(&metadata),
                 binding_errors: BTreeMap::new(),
+                primary_suffix: primary_suffix.clone(),
             };
             discovery::select_libraries(&mut sources, workspace, catalog, include_unannotated);
             let required = sources.graph.required_lexical_imports();

@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server};
 
+/// Cross-library Serde query-model facts and plan hydration.
+mod query_models;
+pub(crate) use query_models::{collect_query_model_workspace_analysis_ir, hydrate_query_models};
+
 #[cfg(test)]
 mod tests;
 
@@ -66,6 +70,7 @@ pub(crate) fn collect_server_workspace_analysis_ir(
     file: &DartFileIr,
     analysis: &mut WorkspaceAnalysisBuilder,
 ) {
+    collect_query_model_workspace_analysis_ir(file, analysis);
     let Ok(Some(plan)) = plan_server(file) else {
         return;
     };

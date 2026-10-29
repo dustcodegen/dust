@@ -22,7 +22,10 @@ use crate::result::{BuildArtifact, DiagnosticFile};
 pub(crate) use self::{
     execute::process_pending_library,
     output::emit_or_write_library,
-    scan::{collect_remaining_workspace_analysis, collect_workspace_analysis},
+    scan::{
+        collect_dependency_workspace_analysis, collect_remaining_workspace_analysis,
+        collect_workspace_analysis,
+    },
 };
 
 /// Immutable processing inputs shared by per-library workers.

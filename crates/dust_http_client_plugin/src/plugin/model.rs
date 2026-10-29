@@ -122,6 +122,11 @@ pub(super) enum EndpointParam<'a> {
         /// Original method parameter.
         param: &'a MethodParamIr,
     },
+    /// Serde model merged into the query parameter map through `toJson()`.
+    QueryModel {
+        /// Original method parameter.
+        param: &'a MethodParamIr,
+    },
     /// Parameter rendered as a single request header.
     Header {
         /// Original method parameter.
@@ -227,6 +232,7 @@ impl<'a> EndpointParam<'a> {
             Self::Path { param, .. }
             | Self::Query { param, .. }
             | Self::Queries { param }
+            | Self::QueryModel { param }
             | Self::Header { param, .. }
             | Self::HeaderMap { param }
             | Self::Body { param }

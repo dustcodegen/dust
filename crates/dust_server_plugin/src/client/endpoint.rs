@@ -98,9 +98,10 @@ fn binding(
         "path" => Some(GeneratedParam::Path { index, key: key() }),
         "query" | "query-list" => Some(GeneratedParam::Query { index, key: key() }),
         "queries" if is_string_map(plan.value_type) => Some(GeneratedParam::Queries { index }),
-        "queries" | "query-model" => {
+        "query-model" => Some(GeneratedParam::QueryModel { index }),
+        "queries" => {
             return Err(Diagnostic::error(format!(
-                "generated client parameter `{}` uses a query model that cannot yet be encoded",
+                "generated client parameter `{}` uses an aggregate @Queries value that cannot be encoded; use Map<String, String> or @Query() with a shared Serde model",
                 fact.name
             )));
         }

@@ -156,6 +156,22 @@ pub(super) fn render_map_merge(target: &str, name: &str, nullable: bool) -> Stri
     }
 }
 
+/// Serializes a query model and omits optional fields instead of sending `null`.
+pub(super) fn render_query_model_merge(param: &dust_ir::MethodParamIr) -> String {
+    let map = format!(
+        "{}.toJson()..removeWhere((_, value) => value == null)",
+        param.name
+    );
+    if param.ty.is_nullable() {
+        format!(
+            "    if ({0} != null) _queryParameters.addAll({1});",
+            param.name, map
+        )
+    } else {
+        format!("    _queryParameters.addAll({map});")
+    }
+}
+
 /// Ensures a rendered chunk ends with a newline when non-empty.
 pub(super) fn chunk(mut value: String) -> String {
     if !value.is_empty() && !value.ends_with('\n') {

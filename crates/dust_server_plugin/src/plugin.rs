@@ -2,13 +2,18 @@ use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
     AnnotationOrigin, AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution,
-    WorkspaceAnalysisBuilder,
+    SymbolPlan, WorkspaceAnalysisBuilder,
 };
 use std::path::PathBuf;
 
 use crate::{
-    analysis::collect_server_workspace_analysis_ir, client::generate_server_client,
-    emit::emit_server, plan::plan_server,
+    analysis::{
+        collect_query_model_workspace_analysis_ir, collect_server_workspace_analysis_ir,
+        hydrate_query_models,
+    },
+    client::generate_server_client,
+    emit::emit_server,
+    plan::plan_server,
 };
 
 /// Server configuration symbols owned by this plugin.
@@ -176,13 +181,46 @@ impl DustPlugin for ServerPlugin {
         collect_server_workspace_analysis_ir(file, analysis);
     }
 
+    fn collect_dependency_analysis_ir(
+        &self,
+        file: &DartFileIr,
+        analysis: &mut WorkspaceAnalysisBuilder,
+    ) {
+        collect_query_model_workspace_analysis_ir(file, analysis);
+    }
+
     fn validate(&self, file: &DartFileIr) -> Vec<Diagnostic> {
         plan_server(file).err().unwrap_or_default()
     }
 
+    fn validate_with_plan(&self, file: &DartFileIr, symbols: &SymbolPlan) -> Vec<Diagnostic> {
+        match plan_server(file) {
+            Ok(Some(mut plan)) => hydrate_query_models(
+                file,
+                &mut plan,
+                symbols.workspace_analysis(),
+                !self.clients.is_empty(),
+            ),
+            Ok(None) => Vec::new(),
+            Err(diagnostics) => diagnostics,
+        }
+    }
+
     fn generate(&self, file: &DartFileIr, context: &PluginContext<'_>) -> Vec<PluginContribution> {
         match plan_server(file) {
-            Ok(Some(plan)) => {
+            Ok(Some(mut plan)) => {
+                let diagnostics = hydrate_query_models(
+                    file,
+                    &mut plan,
+                    context.symbol_plan.workspace_analysis(),
+                    !self.clients.is_empty(),
+                );
+                if !diagnostics.is_empty() {
+                    return vec![PluginContribution {
+                        diagnostics,
+                        ..PluginContribution::default()
+                    }];
+                }
                 let mut contribution = emit_server(&plan);
                 for destination in &self.clients {
                     match generate_server_client(

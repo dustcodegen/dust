@@ -13,6 +13,8 @@
 
 import 'package:dio/dio.dart';
 
+import 'package:server_client_app/query_contracts.dart' as contracts;
+
 /// Dio client generated from Dust server routes.
 final class TransportClient {
   /// Creates a client using [Dio] and an optional base URL override.
@@ -195,6 +197,42 @@ final class TransportClient {
             .compose(
               _dio.options,
               '/transport/' + Uri.encodeComponent(id.toString()),
+              queryParameters: _queryParameters,
+              data: _data,
+              cancelToken: null,
+              onSendProgress: null,
+              onReceiveProgress: null,
+            )
+            .copyWith(
+              baseUrl: _combineBaseUrls(
+                _dio.options.baseUrl,
+                _baseUrl,
+              ),
+            ),
+      ),
+    );
+    return _result.data as String;
+  }
+
+  /// Calls `GET /transport/search`.
+  Future<String> search(contracts.TransportFilter filter) async {
+    final _queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _extra = <String, dynamic>{};
+    _queryParameters.addAll(filter.toJson()..removeWhere((_, value) => value == null));
+    final Object? _data = null;
+    final _options = Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+      contentType: null,
+    );
+    final _result = await _dio.fetch<String>(
+      _setStreamType<String>(
+        _options
+            .compose(
+              _dio.options,
+              '/transport/search',
               queryParameters: _queryParameters,
               data: _data,
               cancelToken: null,

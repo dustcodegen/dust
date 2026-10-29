@@ -125,14 +125,16 @@ fn bindings_cover_every_wire_and_server_only_parameter() {
                 .is_none()
         );
     }
-    for kind in ["queries", "query-model"] {
-        assert!(
-            binding(&param_fact("value", kind), &string_plan, 0)
-                .unwrap_err()
-                .message
-                .contains("cannot yet be encoded")
-        );
-    }
+    assert!(matches!(
+        binding(&param_fact("value", "query-model"), &string_plan, 0).unwrap(),
+        Some(GeneratedParam::QueryModel { .. })
+    ));
+    assert!(
+        binding(&param_fact("value", "queries"), &string_plan, 0)
+            .unwrap_err()
+            .message
+            .contains("aggregate @Queries value")
+    );
     assert!(
         binding(&param_fact("value", "unknown"), &string_plan, 0)
             .unwrap_err()

@@ -8,6 +8,43 @@ use crate::build::work::{available_worker_count, round_robin_groups};
 
 use super::{LoweringConfig, PendingLibrary, execute::resolve_and_lower_library};
 
+/// Collects structured facts from imported annotated package libraries.
+pub(crate) fn collect_dependency_workspace_analysis(
+    catalog: &SymbolCatalog,
+    registry: &PluginRegistry,
+    namespaces: &crate::namespace_sources::NamespaceSources,
+) -> WorkspaceAnalysisBuilder {
+    let mut analysis = WorkspaceAnalysisBuilder::default();
+    for source in namespaces.dependency_analysis_sources(registry) {
+        if source.diagnostics.iter().any(Diagnostic::is_error) {
+            continue;
+        }
+        let library = dust_workspace::SourceLibrary {
+            source_path: source.source_path.to_path_buf(),
+            output_path: source.output_path.clone(),
+        };
+        let lowering = LoweringConfig {
+            package_root: &source.package_root,
+            package_name: source.package_name,
+            catalog,
+            registry,
+        };
+        let mut diagnostics = Vec::new();
+        if let Some(lowered) = resolve_and_lower_library(
+            source.file_id,
+            &library,
+            source.parsed,
+            &lowering,
+            namespaces.dependency_bindings(source.uri, &source.output_path, catalog),
+            &mut diagnostics,
+        ) && !diagnostics.iter().any(Diagnostic::is_error)
+        {
+            registry.collect_dependency_analysis_ir(&lowered, &mut analysis);
+        }
+    }
+    analysis
+}
+
 /// Workspace facts and preprocessed libraries collected during the scan phase.
 pub(crate) struct WorkspaceAnalysisResult {
     /// Plugin facts merged across all pending libraries.

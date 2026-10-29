@@ -6,6 +6,7 @@ use super::{model::RawBodyFormat, values::error};
 /// Typed query-model validation and conversion planning.
 mod query_model;
 pub(super) use query_model::query_model_plan;
+pub(crate) use query_model::query_model_plan_for_class;
 
 #[cfg(test)]
 /// Focused extractor and response type tests.
