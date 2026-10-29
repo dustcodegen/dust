@@ -98,6 +98,5 @@ power-loss tests. Physical-device/lifecycle checks remain separate in
 [#42](https://github.com/dustcodegen/dust/issues/42).
 
 Runtime probe SQL is unchecked. Application SQL still uses Dust's
-[Rust SQLx-backed query/DAO validation](db.md). These features are scheduled for
-v0.3.0. Full host lint/test scripts and the
+[Rust SQLx-backed query/DAO validation](db.md). Full host lint/test scripts and the
 final epic audit remain required in addition to this Linux gate.

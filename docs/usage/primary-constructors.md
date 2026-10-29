@@ -1,10 +1,8 @@
 # Primary constructors
 
-Dust v0.3.0 is scheduled to support class-header primary constructors under
-[#76](https://github.com/dustcodegen/dust/issues/76). Until it is published,
-build the CLI from this checkout and use the matching source packages together.
-Versions and runtime SDK floors remain unchanged, and traditional declarations
-remain fully supported.
+Dust 0.3.0 supports class-header primary constructors under
+[#76](https://github.com/dustcodegen/dust/issues/76). Runtime SDK floors remain
+unchanged, and traditional declarations remain fully supported.
 
 Dart primary constructors require language version 3.13 or newer. The class
 header declares the constructor; `final` or `var` parameters induce fields:
@@ -104,6 +102,4 @@ Separate unsupported forms and limits:
 
 Named concise `new` constructors and dot shorthands remain separate unsupported
 features and fail clearly. Named mixin applications remain unsupported generation
-targets. The published 0.2.1 release still requires traditional declarations;
-primary-constructor projects must use a source-built CLI and matching source
-packages until v0.3.0 is published.
+targets.

@@ -1,8 +1,7 @@
 # Dust Feature Map
 
-Use the project's installed package and CLI versions as the source of truth.
-The linked guides describe the current source authoring surface; a source-only
-feature may not exist in the latest published binaries or packages.
+Use the project's installed package and CLI versions as the source of truth and
+keep them in a supported compatibility row.
 
 | Feature | Packages | Focused import | Package guide |
 | :--- | :--- | :--- | :--- |
@@ -43,8 +42,8 @@ with the [compatibility guide](https://github.com/dustcodegen/dust/blob/main/doc
   `@Derive([FromRow()])`, `@SqlxDatabase`, `@SqlxDao`, raw static `@Query` SQL,
   and migrations. SQLite is native-only; it does not support web.
 - **HTTP servers:** use the handwritten `Router` API when codegen is not
-  wanted. With matching current source, annotate a library with `@Routes` or a
-  class with `@Controller`, add its `.g.dart` part, and run `dust build`.
+  wanted. Annotate a library with `@Routes` or a class with `@Controller`, add
+  its `.g.dart` part, and run `dust build`.
   Handler bodies and deployment policy stay handwritten. Native-only; no web
   support.
 
@@ -59,12 +58,11 @@ with the [compatibility guide](https://github.com/dustcodegen/dust/blob/main/doc
 | Offline Database validation | `dust db build --offline` | `dust check --db --offline` |
 | Translation inventory | — | `dust i18n scan` |
 | ARB/bootstrap reconciliation | `dust i18n build` | `dust i18n check` |
-| Generated server modules *(current source)* | `dust build` | `dust check` |
+| Generated server modules | `dust build` | `dust check` |
 
 An offline Database command requires compatible query metadata written by a
 successful online database build. Normal `dust build` does not generate
 `@SqlxDatabase`, `@SqlxDao`, or `@Query` output.
 
-Published 0.2.1 does not contain the current source server generator or other
-unreleased source features. Firebase, Supabase, and ORM/query-builder behavior
-are not current Dust features. Do not generate examples that imply otherwise.
+Firebase, Supabase, and ORM/query-builder behavior are not current Dust
+features. Do not generate examples that imply otherwise.

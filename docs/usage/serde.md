@@ -184,9 +184,8 @@ still apply. Bounds do not imply a JSON conversion. A parameter named `DateTime`
 another SDK type is still a parameter, not that SDK type; Dust reports the field
 instead of guessing its conversion. No generic decoder-callback API is added.
 
-This is scoped support scheduled for v0.3.0 under
-[#128](https://github.com/dustcodegen/dust/issues/128), not general generic-model
-readiness. Same-library applied inheritance under
+This is scoped support under [#128](https://github.com/dustcodegen/dust/issues/128),
+not general generic-model readiness. Same-library applied inheritance under
 [#133](https://github.com/dustcodegen/dust/issues/133) now retains actual inherited
 types: `Concrete extends ScalarBase<int>` generates integer JSON conversions and
 integer copy parameters, not the parent's `T`. Inherited field annotations remain
@@ -258,8 +257,8 @@ below. Generated constructors retain required positional arguments, optional
 key-presence validation: nullable wire values retain the existing decoding rules.
 Declared target constructors may have extra optional arguments not backed by
 fields; decoding omits them and retains their Dart defaults. Source spans and
-binders are unchanged. This is v0.3.0 scope, not all-constructor production
-certification. See the [generic-model design](../design/generic-models.md),
+binders are unchanged. This does not certify every constructor shape. See the
+[generic-model design](../design/generic-models.md),
 [sealed fixtures](../../fixtures/generic_sealed) and
 [ordinary generic JSON fixtures](../../fixtures/generic_serde).
 

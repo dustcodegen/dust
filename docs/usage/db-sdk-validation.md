@@ -104,8 +104,7 @@ These are host SDK/bundle results, not native mobile performance measurements.
 The fixture pins sqlite3 3.5.2 so native bytes remain comparable to the existing
 Flutter proof. It does not promise all allowed binding versions behave alike.
 Runtime SQL in the standalone probe is unchecked; application SQL validation
-uses [Dust and Rust SQLx](db.md), not runtime execution alone. These features
-are scheduled for v0.3.0 while numeric package versions remain unchanged.
+uses [Dust and Rust SQLx](db.md), not runtime execution alone.
 
 Full local `scripts/lint.sh`, `scripts/test.sh` and unfiltered **100% executable
 SQLite runtime library line coverage** remain required. The SDK matrix does

@@ -23,8 +23,6 @@ cooperative; it cannot forcibly stop an arbitrary Dart future.
 
 For generated modules, run `dust build` and `dust check`, then `dart analyze`
 and `dart test`. Handwritten-only server projects need no Dust generation.
-Check installed versions first: published 0.2.1 has the stable runtime but not
-the current source generator.
 
 Source documentation:
 

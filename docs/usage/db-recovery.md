@@ -5,8 +5,8 @@ temporary file. They cover synchronous and persistent-worker connections with
 both DELETE journals and WAL, using `synchronous = FULL`.
 
 This is OS-process-crash evidence, not power-loss or complete production
-certification. Database remains beta; the worker and generated background
-openers are scheduled for v0.3.0 and are not part of published 0.2.1 binaries.
+certification. Database remains beta; this evidence includes synchronous,
+worker, and generated background opening.
 
 Rust SQLx build-time validation checks SQL/schema shape, not crash durability.
 Keep using `dust db build` and `dust check --db --offline`; these runtime
@@ -125,7 +125,7 @@ data/history/timestamps, absence of partial schema and `integrity_check`.
 The migration fault occurs in a later pending file, after an earlier pending
 file's SQL and history insert have succeeded; both must roll back together.
 Restoring test capacity permits an explicit retry; repeated startup verifies
-migrations are applied only once. These fixes are scheduled for v0.3.0.
+migrations are applied only once.
 
 The tests use a small `PRAGMA max_page_count` on temporary, test-owned databases,
 then attempt one bounded 256 KiB BLOB. This generates a real SQLite error without

@@ -137,10 +137,10 @@ chained helper:
 final moved = profile.copyWith.address(city: 'London');
 ```
 
-### Generic Models (Unreleased Draft)
+### Generic Models
 
-The draft for [#93](https://github.com/dustcodegen/dust/issues/93) preserves the
-chosen type arguments through generated mixins and copy helpers:
+Dust preserves chosen type arguments through generated mixins and copy helpers,
+as specified in [#93](https://github.com/dustcodegen/dust/issues/93):
 
 ```dart
 @Derive([CopyWith(), ToString(), Eq()])
@@ -162,9 +162,8 @@ Copies stay shallow. Same-library nested helpers retain their type arguments;
 imported models support typed replacement, not private chained helpers.
 
 Traditional and primary-constructor consumers exercise these cases locally.
-This support is scheduled for v0.3.0 but is not published yet. Core-name/local
-collision cases have scoped tests, but names matching generated members such as
-`copyWith` still need
+Core-name/local collision cases have scoped tests, but names matching generated
+members such as `copyWith` still need
 [#103](https://github.com/dustcodegen/dust/issues/103). Generic validation helpers
 and other plugin capabilities remain under the [generic model design](../design/generic-models.md).
 
