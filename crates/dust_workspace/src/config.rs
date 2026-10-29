@@ -7,6 +7,12 @@ use std::{
 use dust_diagnostics::Diagnostic;
 use serde::Deserialize;
 
+/// Generated-server client destination configuration.
+mod server;
+
+use server::{RawServerConfig, parse_server_config};
+pub use server::{ServerClientConfig, ServerConfig};
+
 /// Default suffix for primary generated Dart libraries.
 const DEFAULT_PRIMARY_SUFFIX: &str = ".g.dart";
 
@@ -19,6 +25,8 @@ pub struct DustConfig {
     pub outputs: OutputConfig,
     /// Optional i18n generation settings.
     pub i18n: Option<I18nConfig>,
+    /// Optional generated-server settings.
+    pub server: Option<ServerConfig>,
 }
 
 /// Generated output policy settings.
@@ -68,6 +76,8 @@ struct RawDustConfig {
     outputs: Option<RawOutputConfig>,
     /// Raw i18n section.
     i18n: Option<RawI18nConfig>,
+    /// Raw generated-server section.
+    server: Option<RawServerConfig>,
 }
 
 /// Deserialized `outputs` section from `dust.yaml`.
@@ -122,11 +132,13 @@ pub fn load_dust_config(package_root: &Path) -> Result<DustConfig, Diagnostic> {
         .unwrap_or_else(|| DEFAULT_PRIMARY_SUFFIX.to_owned());
     validate_primary_suffix(&primary_suffix, &path)?;
     let i18n = parse_i18n_config(raw.i18n, &path)?;
+    let server = parse_server_config(raw.server, &path)?;
 
     Ok(DustConfig {
         path: Some(path),
         outputs: OutputConfig { primary_suffix },
         i18n,
+        server,
     })
 }
 

@@ -60,6 +60,9 @@ class FormatBootstrapTests(unittest.TestCase):
             "packages/runtime",
             CONSUMER,
             "fixtures/server_codegen_app",
+            "fixtures/server_client_server",
+            "fixtures/server_client_app",
+            "fixtures/server_admin_client_app",
             "examples/product_showcase",
         ):
             target = self.root / relative

@@ -12,6 +12,7 @@ description = "HTTP server generation plugin for Dust."
 [dependencies]
 dust_dart_emit = { path = "../dust_dart_emit", version = "0.3.0" }
 dust_diagnostics = { path = "../dust_diagnostics", version = "0.3.0" }
+dust_http_client_plugin = { path = "../dust_http_client_plugin", version = "0.3.0" }
 dust_ir = { path = "../dust_ir", version = "0.3.0" }
 dust_plugin_api = { path = "../dust_plugin_api", version = "0.3.0" }
 serde.workspace = true

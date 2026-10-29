@@ -1,7 +1,7 @@
 use dust_dart_emit::DYNAMIC_TYPES;
 use dust_ir::{DartFileIr, TypeIr};
-use dust_plugin_api::WorkspaceAnalysisBuilder;
-use serde::Serialize;
+use dust_plugin_api::{WorkspaceAnalysis, WorkspaceAnalysisBuilder};
+use serde::{Deserialize, Serialize};
 
 use crate::plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server};
 
@@ -11,54 +11,54 @@ mod tests;
 /// Versioned workspace-analysis bucket for generated server route facts.
 pub(crate) const SERVER_ROUTES_ANALYSIS_KEY: &str = "dust_server.routes.v1";
 
-#[derive(Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 /// Canonical, serializable facts for one generated server route.
-struct ServerRouteFact {
+pub(crate) struct ServerRouteFact {
     /// Source library that declares the handler.
-    source_path: String,
+    pub(crate) source_path: String,
     /// Controller name, or `None` for a top-level handler.
-    controller: Option<String>,
+    pub(crate) controller: Option<String>,
     /// Prefix inherited from the controller or module.
-    prefix: String,
+    pub(crate) prefix: String,
     /// Dart callable that implements the route.
-    callable: String,
+    pub(crate) callable: String,
     /// Normalized HTTP method.
-    method: String,
+    pub(crate) method: String,
     /// Route-local path.
-    path: String,
+    pub(crate) path: String,
     /// Declared success status.
     status: u16,
     /// Stable operation identifier.
-    operation_id: String,
+    pub(crate) operation_id: String,
     /// Optional short documentation summary.
     summary: Option<String>,
     /// Optional long documentation description.
     description: Option<String>,
     /// Ordered controller and route tags.
-    tags: Vec<String>,
+    pub(crate) tags: Vec<String>,
     /// Whether consumers should mark the route deprecated.
     deprecated: bool,
     /// Whether documentation consumers should hide the route.
     hidden: bool,
     /// Structured handler parameters in declaration order.
-    params: Vec<ServerParamFact>,
+    pub(crate) params: Vec<ServerParamFact>,
     /// Rendered Dart return type.
     return_type: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 /// Canonical, serializable facts for one handler parameter.
-struct ServerParamFact {
+pub(crate) struct ServerParamFact {
     /// Dart parameter name.
-    name: String,
+    pub(crate) name: String,
     /// Rendered Dart parameter type.
     type_source: String,
     /// Normalized extractor kind.
-    binding: &'static str,
+    pub(crate) binding: String,
     /// Optional path, query, header, field, part, or custom binding name.
-    binding_name: Option<String>,
+    pub(crate) binding_name: Option<String>,
     /// Required, optional, or fallible extraction wrapper.
-    wrapper: &'static str,
+    wrapper: String,
 }
 
 /// Collects valid generated route facts from canonical IR.
@@ -126,14 +126,39 @@ fn param_fact(param: &crate::plan::ParamPlan<'_>) -> ServerParamFact {
     ServerParamFact {
         name: param.param.name.clone(),
         type_source: render_type(&param.param.ty),
-        binding,
+        binding: binding.to_owned(),
         binding_name,
         wrapper: match param.wrapper {
             ExtractionWrapper::Required => "required",
             ExtractionWrapper::Optional => "optional",
             ExtractionWrapper::Fallible => "fallible",
-        },
+        }
+        .to_owned(),
     }
+}
+
+/// Reads this library's canonical route facts from the shared workspace analysis.
+pub(crate) fn route_facts(
+    analysis: &WorkspaceAnalysis,
+    source_path: &str,
+) -> Result<Vec<ServerRouteFact>, dust_diagnostics::Diagnostic> {
+    analysis
+        .string_set(SERVER_ROUTES_ANALYSIS_KEY)
+        .unwrap_or_default()
+        .iter()
+        .map(|value| {
+            serde_json::from_str::<ServerRouteFact>(value).map_err(|error| {
+                dust_diagnostics::Diagnostic::error(format!(
+                    "invalid {SERVER_ROUTES_ANALYSIS_KEY} route fact: {error}"
+                ))
+            })
+        })
+        .filter_map(|result| match result {
+            Ok(fact) if fact.source_path == source_path => Some(Ok(fact)),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .collect()
 }
 
 /// Returns the normalized extractor kind and optional source name.

@@ -30,9 +30,11 @@ pub(crate) struct DriverContext {
 impl DriverContext {
     /// Discovers the workspace and builds the selected registry and catalog.
     pub(crate) fn load(cwd: &Path, selection: RegistrySelection) -> Result<Self, Diagnostic> {
-        let registry = registry_for_selection(selection);
-        let supported_annotations: SupportedAnnotations =
-            registry.all_supported_annotations().into_iter().collect();
+        let discovery_registry = registry_for_selection(selection);
+        let supported_annotations: SupportedAnnotations = discovery_registry
+            .all_supported_annotations()
+            .into_iter()
+            .collect();
         let supported_annotations = match selection {
             RegistrySelection::All => supported_annotations,
             RegistrySelection::ValidatingPlugin { .. } => {
@@ -40,6 +42,9 @@ impl DriverContext {
             }
         };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
+        let destinations = crate::server_client::resolve_destinations(&workspace)?;
+        let registry =
+            crate::build::registry_for_selection_with_server_clients(selection, destinations);
         let catalog = build_symbol_catalog(&registry)?;
 
         Ok(Self {

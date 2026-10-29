@@ -1,0 +1,10 @@
+/// Dio client generated from Dust server routes.
+final class {{ class_name }} {
+  /// Creates a client using [Dio] and an optional base URL override.
+  {{ class_name }}(this._dio, {String? baseUrl}) : _baseUrl = baseUrl;
+
+  final Dio _dio;
+  final String? _baseUrl;
+
+{{ methods }}
+}

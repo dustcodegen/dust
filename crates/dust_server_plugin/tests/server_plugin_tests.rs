@@ -9,6 +9,8 @@ use dust_plugin_api::{DustPlugin, PluginContext, SymbolPlan};
 use dust_server_plugin::{ServerPlugin, register_plugin};
 use dust_text::{FileId, TextRange};
 
+#[path = "server_plugin_tests/client.rs"]
+mod client;
 #[path = "server_plugin_tests/metadata.rs"]
 mod metadata;
 #[path = "server_plugin_tests/middleware.rs"]

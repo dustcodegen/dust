@@ -1,0 +1,16 @@
+name: server_client_server
+description: Server-side source fixture for derived standalone clients.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+
+resolution: workspace
+
+dependencies:
+  dust_server:
+    path: ../../packages/dust_server
+
+dev_dependencies:
+  very_good_analysis: ^10.3.0

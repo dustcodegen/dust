@@ -37,6 +37,7 @@ pub(crate) fn process_pending_library(
         tool_hash,
         checked_output_hash: _,
         previous_output_hash,
+        previous_output_paths,
     } = input;
     let started = Instant::now();
     let mut outcome = process_library_from_source(
@@ -49,6 +50,7 @@ pub(crate) fn process_pending_library(
             lowered: pre_lowered,
         },
         previous_output_hash,
+        &previous_output_paths,
         processing,
     );
     let routed = crate::build::support::route_only_analysis(&analysis_snapshot);
@@ -85,6 +87,7 @@ pub(crate) fn process_library_from_source(
     source: Arc<str>,
     preprocessed: PreprocessedLibrary,
     previous_output_hash: Option<Option<u64>>,
+    previous_output_paths: &[std::path::PathBuf],
     processing: &ProcessingConfig<'_>,
 ) -> BuildOutcome {
     let mut diagnostics = Vec::new();
@@ -151,23 +154,28 @@ pub(crate) fn process_library_from_source(
         }
     };
 
-    let output =
-        match emit_library_output(library, &lowered_library, previous_output_hash, processing) {
-            Ok(output) => output,
-            Err(error) => {
-                diagnostics.push(Diagnostic::error(format!(
-                    "failed to write `{}`: {error}",
-                    library.output_path.display()
-                )));
-                let diagnostic_file = diagnostic_file_if_needed(
-                    file_id,
-                    library,
-                    Arc::clone(&source),
-                    diagnostics.iter().any(Diagnostic::has_labels),
-                );
-                return BuildOutcome::failed(library, diagnostics, diagnostic_file);
-            }
-        };
+    let output = match emit_library_output(
+        library,
+        &lowered_library,
+        previous_output_hash,
+        previous_output_paths,
+        processing,
+    ) {
+        Ok(output) => output,
+        Err(error) => {
+            diagnostics.push(Diagnostic::error(format!(
+                "failed to write `{}`: {error}",
+                library.output_path.display()
+            )));
+            let diagnostic_file = diagnostic_file_if_needed(
+                file_id,
+                library,
+                Arc::clone(&source),
+                diagnostics.iter().any(Diagnostic::has_labels),
+            );
+            return BuildOutcome::failed(library, diagnostics, diagnostic_file);
+        }
+    };
 
     let needs_diagnostic_file = diagnostics.iter().any(Diagnostic::has_labels)
         || output.diagnostics.iter().any(Diagnostic::has_labels);
@@ -228,6 +236,7 @@ fn emit_library_output(
     library: &SourceLibrary,
     lowered_library: &dust_ir::DartFileIr,
     previous_output_hash: Option<Option<u64>>,
+    previous_output_paths: &[std::path::PathBuf],
     processing: &ProcessingConfig<'_>,
 ) -> std::io::Result<WriteResult> {
     let mut plan = processing.registry.build_symbol_plan(lowered_library);
@@ -236,6 +245,7 @@ fn emit_library_output(
         library,
         lowered_library,
         previous_output_hash,
+        previous_output_paths,
         processing,
         plan,
     )

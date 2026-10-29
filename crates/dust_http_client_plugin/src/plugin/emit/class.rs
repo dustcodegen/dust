@@ -29,6 +29,10 @@ struct ClientClassContext<'a> {
 /// Template context for one generated endpoint method.
 #[derive(Serialize)]
 struct EndpointMethodContext<'a> {
+    /// Public method documentation for standalone generated clients.
+    doc_comment: String,
+    /// Override annotation for handwritten-interface implementations.
+    override_annotation: &'static str,
     /// Rendered Dart return type.
     return_type: String,
     /// Dart method name copied from source IR.
@@ -136,7 +140,27 @@ pub(crate) fn render_client_class(spec: &ClientSpec<'_>) -> String {
                 methods: spec
                     .endpoints
                     .iter()
-                    .map(|endpoint| render_endpoint_method(spec, endpoint))
+                    .map(|endpoint| render_endpoint_method(spec, endpoint, true))
+                    .collect::<Vec<_>>()
+                    .join("\n\n"),
+            },
+        )
+    )
+}
+
+/// Renders a standalone generated client with no handwritten interface.
+pub(crate) fn render_standalone_client_class(spec: &ClientSpec<'_>) -> String {
+    format!(
+        "{}\n",
+        render_template(
+            "standalone_client_class",
+            include_str!("templates/standalone_client_class.jinja"),
+            ClientClassContext {
+                class_name: spec.class_name,
+                methods: spec
+                    .endpoints
+                    .iter()
+                    .map(|endpoint| render_endpoint_method(spec, endpoint, false))
                     .collect::<Vec<_>>()
                     .join("\n\n"),
             },
@@ -145,7 +169,11 @@ pub(crate) fn render_client_class(spec: &ClientSpec<'_>) -> String {
 }
 
 /// Renders one generated Dart method for an endpoint.
-fn render_endpoint_method(spec: &ClientSpec<'_>, endpoint: &EndpointSpec<'_>) -> String {
+fn render_endpoint_method(
+    spec: &ClientSpec<'_>,
+    endpoint: &EndpointSpec<'_>,
+    implements_interface: bool,
+) -> String {
     let async_marker = if endpoint.return_spec.is_stream() {
         "async*"
     } else {
@@ -163,6 +191,20 @@ fn render_endpoint_method(spec: &ClientSpec<'_>, endpoint: &EndpointSpec<'_>) ->
         "endpoint_method",
         include_str!("templates/endpoint_method.jinja"),
         EndpointMethodContext {
+            doc_comment: if implements_interface {
+                String::new()
+            } else {
+                format!(
+                    "/// Calls `{} {}`.\n  ",
+                    endpoint.verb.as_str(),
+                    endpoint.path
+                )
+            },
+            override_annotation: if implements_interface {
+                "@override\n  "
+            } else {
+                ""
+            },
             return_type,
             method_name: &endpoint.method.name,
             params,

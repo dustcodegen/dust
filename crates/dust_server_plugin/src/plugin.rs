@@ -1,10 +1,15 @@
 use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
-    AnnotationOrigin, DustPlugin, PluginContext, PluginContribution, WorkspaceAnalysisBuilder,
+    AnnotationOrigin, AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution,
+    WorkspaceAnalysisBuilder,
 };
+use std::path::PathBuf;
 
-use crate::{analysis::collect_server_workspace_analysis_ir, emit::emit_server, plan::plan_server};
+use crate::{
+    analysis::collect_server_workspace_analysis_ir, client::generate_server_client,
+    emit::emit_server, plan::plan_server,
+};
 
 /// Server configuration symbols owned by this plugin.
 const CLAIMED_CONFIGS: &[&str] = &[
@@ -72,19 +77,43 @@ const METHODS_LIBRARY: &str = "package:dust_server/src/annotations/http_methods.
 const PARAMETERS_LIBRARY: &str = "package:dust_server/src/annotations/parameters.dart";
 
 /// Dust plugin for Dart HTTP servers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerClientDestination {
+    /// Name from the destination package's pubspec.
+    pub package_name: String,
+    /// Resolved local package root.
+    pub package_root: PathBuf,
+    /// Route tags accepted by this destination; empty accepts every route.
+    pub tags: Vec<String>,
+}
+
+/// Dust plugin for Dart HTTP servers.
 #[derive(Default)]
-pub struct ServerPlugin;
+pub struct ServerPlugin {
+    /// Local output packages for backend-derived clients.
+    clients: Vec<ServerClientDestination>,
+}
 
 impl ServerPlugin {
     /// Creates a server plugin.
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// Returns the configured backend-derived client destinations.
+    pub fn client_destinations(&self) -> &[ServerClientDestination] {
+        &self.clients
     }
 }
 
 /// Creates the server plugin.
 pub fn register_plugin() -> ServerPlugin {
     ServerPlugin::new()
+}
+
+/// Creates the server plugin with generated-client destinations.
+pub fn register_plugin_with_clients(clients: Vec<ServerClientDestination>) -> ServerPlugin {
+    ServerPlugin { clients }
 }
 
 impl DustPlugin for ServerPlugin {
@@ -151,9 +180,32 @@ impl DustPlugin for ServerPlugin {
         plan_server(file).err().unwrap_or_default()
     }
 
-    fn generate(&self, file: &DartFileIr, _context: &PluginContext<'_>) -> Vec<PluginContribution> {
+    fn generate(&self, file: &DartFileIr, context: &PluginContext<'_>) -> Vec<PluginContribution> {
         match plan_server(file) {
-            Ok(Some(plan)) => vec![emit_server(&plan)],
+            Ok(Some(plan)) => {
+                let mut contribution = emit_server(&plan);
+                for destination in &self.clients {
+                    match generate_server_client(
+                        file,
+                        &plan,
+                        destination,
+                        context.symbol_plan.workspace_analysis(),
+                    ) {
+                        Ok(outputs) => {
+                            contribution
+                                .auxiliary_outputs
+                                .extend(outputs.into_iter().map(|(output_path, source)| {
+                                    AuxiliaryOutputContribution {
+                                        output_path,
+                                        source,
+                                    }
+                                }))
+                        }
+                        Err(diagnostics) => contribution.diagnostics.extend(diagnostics),
+                    }
+                }
+                vec![contribution]
+            }
             Ok(None) => vec![PluginContribution::default()],
             Err(diagnostics) => vec![PluginContribution {
                 diagnostics,

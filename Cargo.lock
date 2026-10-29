@@ -531,6 +531,7 @@ version = "0.3.0"
 dependencies = [
  "dust_dart_emit",
  "dust_diagnostics",
+ "dust_http_client_plugin",
  "dust_ir",
  "dust_plugin_api",
  "dust_text",
