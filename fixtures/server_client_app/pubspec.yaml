@@ -10,6 +10,8 @@ resolution: workspace
 
 dependencies:
   dio: ^5.9.2
+  dust_dart:
+    path: ../../packages/dust_dart
 
 dev_dependencies:
   test: ^1.26.0

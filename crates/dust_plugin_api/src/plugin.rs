@@ -67,6 +67,18 @@ pub trait DustPlugin: Send + Sync {
     ) {
     }
 
+    /// Collects facts from an imported source library without generating it.
+    ///
+    /// Implement this only for facts that a generated root library may consume
+    /// across package boundaries. Dependency libraries never run validation or
+    /// generation in the importing package.
+    fn collect_dependency_analysis_ir(
+        &self,
+        _file: &DartFileIr,
+        _analysis: &mut WorkspaceAnalysisBuilder,
+    ) {
+    }
+
     /// Validates the Dart file from this plugin's point of view.
     fn validate(&self, file: &DartFileIr) -> Vec<Diagnostic>;
 

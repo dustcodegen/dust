@@ -51,7 +51,15 @@ fn endpoint(
 #[test]
 fn standalone_generation_covers_every_binding_verb_and_request_mode() {
     let wire_params = [
-        "path", "query", "queries", "header", "headers", "body", "field", "part",
+        "path",
+        "query",
+        "queries",
+        "queryModel",
+        "header",
+        "headers",
+        "body",
+        "field",
+        "part",
     ]
     .into_iter()
     .map(param)
@@ -66,18 +74,19 @@ fn standalone_generation_covers_every_binding_verb_and_request_mode() {
             key: "q".to_owned(),
         },
         GeneratedParam::Queries { index: 2 },
+        GeneratedParam::QueryModel { index: 3 },
         GeneratedParam::Header {
-            index: 3,
+            index: 4,
             key: "x-token".to_owned(),
         },
-        GeneratedParam::HeaderMap { index: 4 },
-        GeneratedParam::Body { index: 5 },
+        GeneratedParam::HeaderMap { index: 5 },
+        GeneratedParam::Body { index: 6 },
         GeneratedParam::Field {
-            index: 6,
+            index: 7,
             key: "title".to_owned(),
         },
         GeneratedParam::Part {
-            index: 7,
+            index: 8,
             key: "file".to_owned(),
         },
     ];

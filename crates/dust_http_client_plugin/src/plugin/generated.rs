@@ -91,6 +91,11 @@ pub enum GeneratedParam {
         /// Index in the generated method parameter list.
         index: usize,
     },
+    /// Serde model serialized into the complete query map.
+    QueryModel {
+        /// Index in the generated method parameter list.
+        index: usize,
+    },
     /// One request header.
     Header {
         /// Index in the generated method parameter list.
@@ -190,6 +195,7 @@ fn bind_param<'a>(
         GeneratedParam::Path { index, .. }
         | GeneratedParam::Query { index, .. }
         | GeneratedParam::Queries { index }
+        | GeneratedParam::QueryModel { index }
         | GeneratedParam::Header { index, .. }
         | GeneratedParam::HeaderMap { index }
         | GeneratedParam::Body { index }
@@ -211,6 +217,7 @@ fn bind_param<'a>(
             key: key.clone(),
         },
         GeneratedParam::Queries { .. } => EndpointParam::Queries { param },
+        GeneratedParam::QueryModel { .. } => EndpointParam::QueryModel { param },
         GeneratedParam::Header { key, .. } => EndpointParam::Header {
             param,
             key: key.clone(),

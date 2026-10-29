@@ -11,6 +11,9 @@ resolution: workspace
 dependencies:
   dust_server:
     path: ../../packages/dust_server
+  server_client_app:
+    path: ../server_client_app
 
 dev_dependencies:
+  test: ^1.26.0
   very_good_analysis: ^10.3.0

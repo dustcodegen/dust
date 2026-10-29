@@ -13,7 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   existing tags. Dust derives separate standalone Dio clients for each
   controller and top-level route group from `dust_server.routes.v1`, then
   exports them through a flat generated library barrel without a second
-  handwritten contract.
+  handwritten endpoint contract. Shared Serde query models deriving
+  `Serialize()` and `Deserialize()` now stay typed across generated server and
+  client code, including renamed keys, aliases, defaults, enums, repeated
+  values, and omitted nulls.
 
 ## [v0.3.0] - 2026-10-26
 

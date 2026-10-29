@@ -8,8 +8,6 @@ use crate::plan::{
     values::error,
 };
 
-use super::derives_deserialize;
-
 #[cfg(test)]
 mod tests;
 
@@ -23,15 +21,18 @@ pub(in crate::plan) fn query_model_plan(
 ) -> QueryModelPlan {
     let Some(name) = ty
         .name()
-        .filter(|name| !name.contains('.') && !ty.is_nullable() && ty.args().is_empty())
+        .filter(|_| !ty.is_nullable() && ty.args().is_empty())
     else {
         diagnostics.push(error(
             span,
-            "Query without a name requires a non-nullable same-library model",
-            "use @Query('name') for a scalar or @Query() on a local Deserialize model",
+            "Query without a name requires a non-nullable model",
+            "use @Query('name') for a scalar or @Query() on a Deserialize model",
         ));
         return empty_plan();
     };
+    if name.contains('.') {
+        return empty_plan();
+    }
     let Some(class) = classes.iter().find(|class| class.name == name) else {
         diagnostics.push(error(
             span,
@@ -40,6 +41,15 @@ pub(in crate::plan) fn query_model_plan(
         ));
         return empty_plan();
     };
+    query_model_plan_for_class(class, enums, diagnostics)
+}
+
+/// Validates one concrete class and plans its query conversions.
+pub(crate) fn query_model_plan_for_class(
+    class: &ClassIr,
+    enums: &[EnumIr],
+    diagnostics: &mut Vec<Diagnostic>,
+) -> QueryModelPlan {
     if !class.type_parameters.is_empty() {
         diagnostics.push(error(
             class.span,
@@ -47,7 +57,11 @@ pub(in crate::plan) fn query_model_plan(
             "use a concrete non-generic query model",
         ));
     }
-    if !derives_deserialize(ty, classes) {
+    if !class
+        .traits
+        .iter()
+        .any(|value| value.symbol.0 == "dust_dart::Deserialize")
+    {
         diagnostics.push(error(
             class.span,
             "Query model must derive Deserialize()",

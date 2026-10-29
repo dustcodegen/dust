@@ -1,10 +1,17 @@
-import 'package:dust_server/annotations.dart';
+import 'package:dust_server/server.dart';
+import 'package:server_client_app/query_contracts.dart' as contracts;
 
 part 'client_edges.g.dart';
 
 /// Exercises every wire binding and request mode exposed to generated clients.
 @Controller('/transport', tags: ['public'])
 class Transport with _$Transport {
+  /// Searches with one shared Serde query contract.
+  @GET('/search')
+  Future<String> search(@Query() contracts.TransportFilter filter) async =>
+      '${filter.owner}:${filter.completed}:${filter.page}:'
+      '${filter.tags.join(',')}:${filter.order.name}';
+
   /// Replaces a resource with aggregate query and header values.
   @PUT('/{id}')
   Future<String> replace(

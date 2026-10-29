@@ -207,6 +207,17 @@ impl PluginRegistry {
         }
     }
 
+    /// Collects cross-package facts from imported handwritten source libraries.
+    pub fn collect_dependency_analysis_ir(
+        &self,
+        file: &DartFileIr,
+        analysis: &mut WorkspaceAnalysisBuilder,
+    ) {
+        for plugin in self.plugins.iter().filter(|plugin| plugin.executes) {
+            plugin.plugin.collect_dependency_analysis_ir(file, analysis);
+        }
+    }
+
     /// Returns whether every registered plugin executes.
     ///
     /// A focused registry — `dust db build` selecting the Database plugin —

@@ -238,6 +238,11 @@ fn render_decoder(plan: &ParamPlan<'_>, ty: &str) -> String {
             .name()
             .expect("Serde-derived request models are named types");
         format!("_${name}Deserialize")
+    } else if matches!(plan.extraction, Extraction::QueryModel(_)) {
+        if let Some((prefix, name)) = plan.value_type.name().and_then(|name| name.split_once('.')) {
+            return format!("const {prefix}.${name}Deserializer().deserialize");
+        }
+        format!("{ty}.deserialize")
     } else {
         format!("{ty}.deserialize")
     }

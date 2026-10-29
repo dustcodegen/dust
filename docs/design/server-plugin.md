@@ -753,7 +753,10 @@ its own client class, while top-level `@Routes` functions get a separate module
 client. Group/controller prefixes are joined into request paths. State, peer,
 request, raw-body/query and custom-extractor parameters stay server-only.
 Private, same-library or otherwise unreachable public types fail before any
-client output is replaced.
+client output is replaced. A prefixed query model from a shared package is the
+structured exception: dependency analysis retains its SerDe field facts, the
+server decodes through its public generated deserializer, and the client
+encodes through `toJson()` while omitting null values.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 
@@ -1110,7 +1113,9 @@ Each `@Routes` library produces its own client barrel in every matching
 package. Server-only parameters—`@Extract`, `@RawBody`, `@RawQuery`, `@State`,
 `@Peer`, `Request`, and `RequestParts`—do not enter the wire signature. The
 driver rejects types that the client package cannot import before replacing
-any output.
+any output. Whole-query contracts live in a shared package, derive both
+`Serialize()` and `Deserialize()`, and use a prefixed package import so the
+generated server and client share one Dart type.
 
 ## Phases
 

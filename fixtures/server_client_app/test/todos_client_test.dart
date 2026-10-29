@@ -24,6 +24,14 @@ void main() {
             '${request.headers.value('x-token')}:'
             '${request.headers.value('x-trace')}',
           );
+        } else if (request.uri.path == '/transport/search') {
+          request.response.write(
+            '${request.uri.queryParameters['owner']}:'
+            '${request.uri.queryParameters['done']}:'
+            '${request.uri.queryParameters['page']}:'
+            '${request.uri.queryParametersAll['tags']!.join(',')}:'
+            '${request.uri.queryParameters['order']}',
+          );
         } else if (request.uri.path == '/transport/form') {
           request.response.write(await utf8.decoder.bind(request).join());
         } else if (request.uri.path == '/transport/multipart') {
@@ -81,6 +89,25 @@ void main() {
         {'x-trace': 'trace-1'},
       ),
       'a/b:open:one,two:secret:trace-1',
+    );
+  });
+
+  test('typed query models use canonical Serde values', () async {
+    final transport = TransportClient(
+      Dio(BaseOptions(baseUrl: 'http://${server.address.host}:${server.port}')),
+    );
+
+    expect(
+      await transport.search(
+        const TransportFilter(
+          owner: 'dust',
+          completed: true,
+          page: 2,
+          tags: ['rust', 'dart'],
+          order: TransportOrder.oldest,
+        ),
+      ),
+      'dust:true:2:rust,dart:oldest',
     );
   });
 

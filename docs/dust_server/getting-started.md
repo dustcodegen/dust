@@ -148,6 +148,36 @@ custom extractors remain server-only and are omitted. Dust rejects private or
 unreachable client types before replacing generated output. `dust check`
 reports a changed or missing client as stale.
 
+For a typed whole-query model, declare the model in a package both sides can
+import. The generated client package itself can own that contract. Derive both
+directions because the client serializes it and the server deserializes it:
+
+```dart
+@Derive([Serialize(), Deserialize()])
+final class TodoFilter with _$TodoFilter {
+  const TodoFilter({required this.owner, this.page = 1});
+
+  final String owner;
+
+  @SerDe(defaultValue: 1)
+  final int page;
+}
+```
+
+Import it with a prefix in the server route and use the normal `@Query()` API:
+
+```dart
+import 'package:todo_client/contracts.dart' as contracts;
+
+@GET('/search')
+Future<List<Todo>> search(@Query() contracts.TodoFilter filter) async =>
+    repository.search(filter);
+```
+
+The generated client accepts the same `TodoFilter`. SerDe rename rules define
+the encoded keys, aliases remain decode-only, nullable values are omitted, and
+list values remain repeated query parameters.
+
 Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
 dependencies make a class clearer. Generated handlers also support typed
 `@Query()` models, compatibility `@Queries()` maps, `@Header(...)`,
@@ -185,11 +215,11 @@ verb and at most one body mode. `@FormUrlEncoded()` and `@MultiPart()` stay
 separate from the verb because the encoding is independent of the HTTP method.
 
 `@Query(name)` reads and coerces one scalar or repeated list. An unnamed
-`@Query()` decodes the complete query string into a same-library model deriving
-`Deserialize()`, using its SerDe names, aliases, defaults, enums, and flat list
-fields. A model deriving `Validate()` is validated after decoding. Existing
-`@Queries()` map handlers remain compatible, but new typed handlers use
-`@Query()`.
+`@Query()` decodes the complete query string into a local or prefixed imported
+model deriving `Deserialize()`, using its SerDe names, aliases, defaults, enums,
+and flat list fields. A model deriving `Validate()` is validated after decoding.
+Generated clients additionally require `Serialize()`. Existing `@Queries()` map
+handlers remain compatible, but new typed handlers use `@Query()`.
 
 A same-library JSON `@Body()` model deriving `Deserialize()` uses its generated
 private decoder. Imported JSON and form models expose a compatible static
