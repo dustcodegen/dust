@@ -91,9 +91,9 @@ fn emits_metadata_and_collects_structured_route_facts() {
     plugin.collect_workspace_analysis_ir(&library, &mut analysis);
     let snapshot = analysis.snapshot();
     let facts = snapshot
-        .string_sets()
-        .values()
-        .flatten()
+        .string_set("dust_server.routes.v1")
+        .unwrap()
+        .iter()
         .map(|value| serde_json::from_str::<serde_json::Value>(value).unwrap())
         .collect::<Vec<_>>();
     assert_eq!(facts.len(), 2);

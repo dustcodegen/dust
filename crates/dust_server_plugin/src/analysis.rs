@@ -11,7 +11,8 @@ pub(crate) use query_models::{collect_query_model_workspace_analysis_ir, hydrate
 /// Cross-library request and response model capabilities.
 mod payload_models;
 pub(crate) use payload_models::{
-    collect_payload_model_workspace_analysis_ir, hydrate_payload_models, response_serde_types,
+    PayloadCapabilityIndex, collect_payload_model_workspace_analysis_ir, hydrate_payload_models,
+    response_serde_types,
 };
 
 #[cfg(test)]

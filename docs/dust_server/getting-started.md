@@ -210,11 +210,11 @@ Future<contracts.Todo> create(
 ```
 
 The server uses the generated public deserializer and applies `Validate()`.
-The generated client calls `toJson()` for the request and returns a typed
-`Todo`; `List<Todo>` and `Todo?` responses are decoded the same way. A known
-shared model missing a required derive fails during generation. Existing
-handwritten `toJson`, `fromJson`, and static `deserialize` contracts remain
-supported.
+The generated client calls the model's `Serializable.serialize()` contract and
+returns a typed `Todo`; `List<Todo>` and `Todo?` responses are decoded through
+generated `Deserializer` implementations. A shared model missing a required
+derive fails at its endpoint during generation. Handwritten methods with
+similar names do not replace these Dust contracts.
 
 Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
 dependencies make a class clearer. Generated handlers also support typed
@@ -257,8 +257,9 @@ handlers remain compatible, but new typed handlers use `@Query()`.
 A same-library JSON `@Body()` model deriving `Deserialize()` uses its generated
 private decoder. A prefixed imported JSON model deriving `Deserialize()` uses
 its public generated deserializer; deriving `Validate()` adds automatic
-post-decode validation. Compatibility models may expose static `deserialize`.
-Form values are strings rather than JSON values.
+post-decode validation. Generated clients require `Serialize()` on body models
+and both directions on response models. Form values are strings rather than
+JSON values.
 
 The existing handwritten examples remain the non-codegen track:
 

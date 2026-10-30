@@ -8,8 +8,9 @@ use std::path::PathBuf;
 
 use crate::{
     analysis::{
-        collect_payload_model_workspace_analysis_ir, collect_query_model_workspace_analysis_ir,
-        collect_server_workspace_analysis_ir, hydrate_payload_models, hydrate_query_models,
+        PayloadCapabilityIndex, collect_payload_model_workspace_analysis_ir,
+        collect_query_model_workspace_analysis_ir, collect_server_workspace_analysis_ir,
+        hydrate_payload_models, hydrate_query_models,
     },
     client::generate_server_client,
     emit::emit_server,
@@ -197,6 +198,11 @@ impl DustPlugin for ServerPlugin {
     fn validate_with_plan(&self, file: &DartFileIr, symbols: &SymbolPlan) -> Vec<Diagnostic> {
         match plan_server(file) {
             Ok(Some(mut plan)) => {
+                let models =
+                    match PayloadCapabilityIndex::from_analysis(symbols.workspace_analysis()) {
+                        Ok(models) => models,
+                        Err(error) => return vec![error],
+                    };
                 let mut diagnostics = hydrate_query_models(
                     file,
                     &mut plan,
@@ -206,7 +212,7 @@ impl DustPlugin for ServerPlugin {
                 diagnostics.extend(hydrate_payload_models(
                     file,
                     &mut plan,
-                    symbols.workspace_analysis(),
+                    &models,
                     !self.clients.is_empty(),
                 ));
                 diagnostics
@@ -219,6 +225,17 @@ impl DustPlugin for ServerPlugin {
     fn generate(&self, file: &DartFileIr, context: &PluginContext<'_>) -> Vec<PluginContribution> {
         match plan_server(file) {
             Ok(Some(mut plan)) => {
+                let models = match PayloadCapabilityIndex::from_analysis(
+                    context.symbol_plan.workspace_analysis(),
+                ) {
+                    Ok(models) => models,
+                    Err(error) => {
+                        return vec![PluginContribution {
+                            diagnostics: vec![error],
+                            ..PluginContribution::default()
+                        }];
+                    }
+                };
                 let mut diagnostics = hydrate_query_models(
                     file,
                     &mut plan,
@@ -228,7 +245,7 @@ impl DustPlugin for ServerPlugin {
                 diagnostics.extend(hydrate_payload_models(
                     file,
                     &mut plan,
-                    context.symbol_plan.workspace_analysis(),
+                    &models,
                     !self.clients.is_empty(),
                 ));
                 if !diagnostics.is_empty() {
@@ -244,6 +261,7 @@ impl DustPlugin for ServerPlugin {
                         &plan,
                         destination,
                         context.symbol_plan.workspace_analysis(),
+                        &models,
                     ) {
                         Ok(outputs) => {
                             contribution

@@ -2,7 +2,7 @@ use dust_dart_emit::render_template;
 use serde::Serialize;
 
 use crate::plugin::emit::path::{PathSegment, path_segments};
-use crate::plugin::emit::types::render_body_value;
+use crate::plugin::emit::types::{render_body_value, render_serde_body_value};
 use crate::plugin::model::{EndpointParam, EndpointSpec, RequestMode};
 use crate::plugin::util::escape_single_quoted;
 
@@ -42,10 +42,11 @@ pub(super) fn render_request_data(endpoint: &EndpointSpec<'_>) -> String {
             .params
             .iter()
             .find_map(|param| match param {
-                EndpointParam::Body { param } => Some(param),
+                EndpointParam::Body { param } => Some(render_body_value(param)),
+                EndpointParam::SerdeBody { param } => Some(render_serde_body_value(param)),
                 _ => None,
             })
-            .map(|param| render_standard_data(render_body_value(param)))
+            .map(render_standard_data)
             .unwrap_or_else(|| render_standard_data("null".to_owned())),
         RequestMode::FormUrlEncoded => render_keyed_body(endpoint, false),
         RequestMode::MultiPart => render_keyed_body(endpoint, true),

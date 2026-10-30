@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Server payload contracts**: generated server-client boundaries require
+  Dust `Serialize()` and `Deserialize()` derives instead of accepting
+  handwritten `toJson`, `fromJson`, or static `deserialize` look-alikes.
+  Migrate shared payloads by adding the required derives; add `Validate()` when
+  decoded request values should run generated validation.
+
 ### Added
 
 - **Server clients**: `server.client_package` can target one package, while

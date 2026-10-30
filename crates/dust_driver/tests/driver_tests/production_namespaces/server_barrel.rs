@@ -188,7 +188,8 @@ fn controller_handlers_generate_routes_and_extractors() {
     let root = workspace.path();
     write_file(
         &root.join("lib/model.dart"),
-        r#"import 'package:dust_server/server.dart';
+        r#"import 'package:dust_dart/serde.dart';
+import 'package:dust_server/server.dart';
 
 part 'model.g.dart';
 
@@ -201,9 +202,9 @@ class TodoController with _$TodoController {
   Future<void> create(@Body() CreateTodo input) async {}
 }
 
-class CreateTodo {
+@Derive([Deserialize()])
+class CreateTodo with _$CreateTodo {
   const CreateTodo();
-  static CreateTodo deserialize(Map<String, Object?> json) => const CreateTodo();
 }
 "#,
     );
@@ -220,7 +221,7 @@ class CreateTodo {
         "Route(\n            'POST',\n            '/',\n            _$handleCreate,\n            metadata: const RouteMetadata(\n              operationId: 'create',\n            ),\n          )"
     ));
     assert!(generated.contains(
-        "const JsonExtractable<CreateTodo>(\n      CreateTodo.deserialize,\n    ).extract(request)"
+        "const JsonExtractable<CreateTodo>(\n      _$CreateTodoDeserialize,\n    ).extract(request)"
     ));
     assert!(generated.contains("await (this as TodoController).create(_dustValue0);"));
     assert!(generated.contains("return Response(201);"));

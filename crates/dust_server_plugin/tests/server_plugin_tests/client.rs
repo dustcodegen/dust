@@ -223,6 +223,18 @@ fn rejects_unreachable_server_model_before_client_output() {
         vec![read],
         span,
     )];
+    let mut todo = library.classes[0].clone();
+    todo.name = "Todo".to_owned();
+    todo.configs.clear();
+    todo.methods.clear();
+    todo.traits = ["Serialize", "Deserialize"]
+        .into_iter()
+        .map(|name| dust_ir::TraitApplicationIr {
+            symbol: dust_ir::SymbolId::new(format!("dust_dart::{name}")),
+            span,
+        })
+        .collect();
+    library.classes.push(todo);
     let plugin = register_plugin_with_clients(vec![ServerClientDestination {
         package_name: "client".to_owned(),
         package_root: PathBuf::from("/client"),

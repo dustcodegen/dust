@@ -129,7 +129,11 @@ fn bindings_cover_every_wire_and_server_only_parameter() {
     }
     assert!(matches!(
         binding(&param_fact("value", "query-model"), &string_plan, 0).unwrap(),
-        Some(GeneratedParam::QueryModel { .. })
+        Some(GeneratedParam::SerdeQueryModel { .. })
+    ));
+    assert!(matches!(
+        binding(&param_fact("value", "body"), &string_plan, 0).unwrap(),
+        Some(GeneratedParam::SerdeBody { .. })
     ));
     assert!(
         binding(&param_fact("value", "queries"), &string_plan, 0)

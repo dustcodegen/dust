@@ -158,9 +158,19 @@ pub(super) fn render_map_merge(target: &str, name: &str, nullable: bool) -> Stri
 
 /// Serializes a query model and omits optional fields instead of sending `null`.
 pub(super) fn render_query_model_merge(param: &dust_ir::MethodParamIr) -> String {
+    render_model_merge(param, "toJson")
+}
+
+/// Serializes a Dust query model through its generated contract.
+pub(super) fn render_serde_query_model_merge(param: &dust_ir::MethodParamIr) -> String {
+    render_model_merge(param, "serialize")
+}
+
+/// Serializes one query model and removes omitted nullable fields.
+fn render_model_merge(param: &dust_ir::MethodParamIr, method: &str) -> String {
     let map = format!(
-        "{}.toJson()..removeWhere((_, value) => value == null)",
-        param.name
+        "{}.{method}()..removeWhere((_, value) => value == null)",
+        param.name,
     );
     if param.ty.is_nullable() {
         format!(

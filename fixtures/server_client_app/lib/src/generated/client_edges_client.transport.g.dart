@@ -28,7 +28,7 @@ final class TransportClient {
     final _queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _extra = <String, dynamic>{};
-    final Object? _data = input.toJson();
+    final Object? _data = input.serialize();
     final _options = Options(
       method: 'POST',
       headers: _headers,
@@ -328,7 +328,7 @@ final class TransportClient {
     final _queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _extra = <String, dynamic>{};
-    _queryParameters.addAll(filter.toJson()..removeWhere((_, value) => value == null));
+    _queryParameters.addAll(filter.serialize()..removeWhere((_, value) => value == null));
     final Object? _data = null;
     final _options = Options(
       method: 'GET',

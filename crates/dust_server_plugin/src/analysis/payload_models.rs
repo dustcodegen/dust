@@ -1,28 +1,32 @@
-use dust_diagnostics::Diagnostic;
-use dust_ir::{DartFileIr, TypeIr};
-use dust_plugin_api::WorkspaceAnalysis;
+use dust_diagnostics::{Diagnostic, SourceLabel};
+use dust_ir::{DartFileIr, SpanIr, TypeIr};
 
 use crate::plan::{BodyFormat, Extraction, ServerPlan};
 
 /// Structured model capability facts retained across package boundaries.
 mod facts;
 pub(crate) use facts::collect_payload_model_workspace_analysis_ir;
+#[cfg(test)]
 use facts::{PayloadModelFact, model_facts};
+/// One-pass lookup of local and imported payload contracts.
+mod index;
+#[cfg(test)]
+use dust_plugin_api::WorkspaceAnalysis;
+pub(crate) use index::PayloadCapabilityIndex;
+#[cfg(test)]
+use index::imported_fact;
+use index::payload_capabilities;
 
 #[cfg(test)]
 mod tests;
 
-/// Hydrates imported body behavior and validates generated client payloads.
+/// Hydrates body behavior and validates server and client payload contracts.
 pub(crate) fn hydrate_payload_models(
     file: &DartFileIr,
     plan: &mut ServerPlan<'_>,
-    analysis: &WorkspaceAnalysis,
+    models: &PayloadCapabilityIndex,
     require_client: bool,
 ) -> Vec<Diagnostic> {
-    let facts = match model_facts(analysis) {
-        Ok(value) => value,
-        Err(error) => return vec![error],
-    };
     let mut diagnostics = Vec::new();
     for handler in plan
         .controllers
@@ -34,33 +38,46 @@ pub(crate) fn hydrate_payload_models(
             if !matches!(param.extraction, Extraction::Body(BodyFormat::Json)) {
                 continue;
             }
-            let Some(name) = param.value_type.name().filter(|name| name.contains('.')) else {
+            let Some(name) = param.value_type.name() else {
                 continue;
             };
-            match imported_fact(file, &facts, name) {
-                Ok(Some(fact)) => {
-                    if fact.deserializable {
+            match payload_capabilities(file, models, name) {
+                Ok(Some(capabilities)) => {
+                    if capabilities.deserializable {
                         param.serde_deserialized = true;
-                    } else if !fact.deserialize_method {
-                        diagnostics.push(Diagnostic::error(format!(
-                            "imported body model `{name}` must derive Deserialize() or expose static deserialize"
-                        )));
+                    } else {
+                        diagnostics.push(payload_error(
+                            param.param.span,
+                            format!("body model `{name}` must derive Deserialize()"),
+                        ));
                     }
-                    param.validated = fact.validatable;
-                    if require_client && !(fact.serializable || fact.to_json) {
-                        diagnostics.push(Diagnostic::error(format!(
-                            "generated clients require body model `{name}` to derive Serialize() or expose toJson()"
-                        )));
+                    param.validated = capabilities.validatable;
+                    if require_client && !capabilities.serializable {
+                        diagnostics.push(payload_error(
+                            param.param.span,
+                            format!(
+                                "generated clients require body model `{name}` to derive Serialize()"
+                            ),
+                        ));
                     }
                 }
-                Ok(None) => {}
-                Err(error) => diagnostics.push(error),
+                Ok(None) if param.value_type.is_named("Map") => {}
+                Ok(None) => diagnostics.push(payload_error(
+                    param.param.span,
+                    format!(
+                        "body model `{name}` must be declared in this library or imported with a prefix and derive Deserialize()"
+                    ),
+                )),
+                Err(error) => diagnostics.push(label_payload_error(error, param.param.span)),
             }
         }
-        if require_client
-            && let Err(errors) =
-                response_serde_types_from_facts(file, handler.callable.return_type(), &facts)
-        {
+        if let Err(errors) = response_payload_types(
+            file,
+            handler.callable.return_type(),
+            handler.callable.span(),
+            models,
+            require_client,
+        ) {
             diagnostics.extend(errors);
         }
     }
@@ -71,21 +88,31 @@ pub(crate) fn hydrate_payload_models(
 pub(crate) fn response_serde_types(
     file: &DartFileIr,
     ty: &TypeIr,
-    analysis: &WorkspaceAnalysis,
+    span: SpanIr,
+    models: &PayloadCapabilityIndex,
 ) -> Result<Vec<String>, Vec<Diagnostic>> {
-    let facts = model_facts(analysis).map_err(|error| vec![error])?;
-    response_serde_types_from_facts(file, ty, &facts)
+    response_payload_types(file, ty, span, models, true)
 }
 
-/// Resolves one response shape against already decoded model facts.
-fn response_serde_types_from_facts(
+/// Validates response contracts and returns client deserializer model names.
+fn response_payload_types(
     file: &DartFileIr,
     ty: &TypeIr,
-    facts: &[PayloadModelFact],
+    span: SpanIr,
+    models: &PayloadCapabilityIndex,
+    require_deserialize: bool,
 ) -> Result<Vec<String>, Vec<Diagnostic>> {
     let mut serde_types = Vec::new();
     let mut diagnostics = Vec::new();
-    collect_response_types(file, ty, facts, &mut serde_types, &mut diagnostics);
+    collect_response_types(
+        file,
+        ty,
+        span,
+        models,
+        require_deserialize,
+        &mut serde_types,
+        &mut diagnostics,
+    );
     serde_types.sort();
     serde_types.dedup();
     if diagnostics.is_empty() {
@@ -99,7 +126,9 @@ fn response_serde_types_from_facts(
 fn collect_response_types(
     file: &DartFileIr,
     ty: &TypeIr,
-    facts: &[PayloadModelFact],
+    span: SpanIr,
+    models: &PayloadCapabilityIndex,
+    require_deserialize: bool,
     serde_types: &mut Vec<String>,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
@@ -108,75 +137,92 @@ fn collect_response_types(
     };
     let short = name.rsplit('.').next().unwrap_or(name);
     if matches!(short, "Future" | "Result" | "Option" | "List") && !ty.args().is_empty() {
-        collect_response_types(file, &ty.args()[0], facts, serde_types, diagnostics);
+        collect_response_types(
+            file,
+            &ty.args()[0],
+            span,
+            models,
+            require_deserialize,
+            serde_types,
+            diagnostics,
+        );
         return;
     }
-    if !name.contains('.') {
+    if is_native_response(name) {
         return;
     }
-    match imported_fact(file, facts, name) {
-        Ok(Some(fact)) => {
-            if !(fact.serializable || fact.to_json) {
-                diagnostics.push(Diagnostic::error(format!(
-                    "generated servers require response model `{name}` to derive Serialize() or expose toJson()"
-                )));
+    match payload_capabilities(file, models, name) {
+        Ok(Some(capabilities)) => {
+            if !capabilities.serializable {
+                diagnostics.push(payload_error(
+                    span,
+                    format!(
+                        "generated servers require response model `{name}` to derive Serialize()"
+                    ),
+                ));
             }
-            if fact.deserializable {
+            if capabilities.deserializable {
                 serde_types.push(name.to_owned());
-            } else if !fact.from_json {
-                diagnostics.push(Diagnostic::error(format!(
-                    "generated clients require response model `{name}` to derive Deserialize() or expose a fromJson factory"
-                )));
+            } else if require_deserialize {
+                diagnostics.push(payload_error(
+                    span,
+                    format!(
+                        "generated clients require response model `{name}` to derive Deserialize()"
+                    ),
+                ));
             }
         }
-        Ok(None) => {}
-        Err(error) => diagnostics.push(error),
+        Ok(None) => diagnostics.push(payload_error(
+            span,
+            format!(
+                "response model `{name}` must be declared in this library or imported with a prefix and derive Serialize()"
+            ),
+        )),
+        Err(error) => diagnostics.push(label_payload_error(error, span)),
     }
 }
 
-/// Finds the fact bound to one prefixed imported type.
-fn imported_fact<'a>(
-    file: &DartFileIr,
-    facts: &'a [PayloadModelFact],
-    qualified_name: &str,
-) -> Result<Option<&'a PayloadModelFact>, Diagnostic> {
-    let (prefix, name) = qualified_name.split_once('.').ok_or_else(|| {
-        Diagnostic::error(format!(
-            "payload model `{qualified_name}` requires a prefixed import"
-        ))
-    })?;
-    let import = file
-        .import_directives
-        .iter()
-        .find(|value| value.prefix.as_deref() == Some(prefix))
-        .ok_or_else(|| {
-            Diagnostic::error(format!("payload model prefix `{prefix}` is not imported"))
-        })?;
-    let Some(package) = import
-        .uri
-        .strip_prefix("package:")
-        .and_then(|value| value.split('/').next())
-    else {
-        return Err(Diagnostic::error(
-            "imported payload models require a prefixed package import",
-        ));
-    };
-    let exact = facts
-        .iter()
-        .filter(|fact| fact.library == import.uri && fact.name == name)
-        .collect::<Vec<_>>();
-    if let [fact] = exact.as_slice() {
-        return Ok(Some(fact));
-    }
-    let matches = facts
-        .iter()
-        .filter(|fact| fact.package == package && fact.name == name)
-        .collect::<Vec<_>>();
-    match matches.as_slice() {
-        [fact] => Ok(Some(fact)),
-        [] => Ok(None),
-        _ => Err(Diagnostic::error(format!(
-            "payload model `{qualified_name}` is ambiguous; import its declaring library directly"
-        ))),
-    }
+/// Returns whether a response type is encoded without a model contract.
+fn is_native_response(name: &str) -> bool {
+    matches!(
+        name,
+        "String"
+            | "int"
+            | "double"
+            | "num"
+            | "bool"
+            | "BigInt"
+            | "DateTime"
+            | "Uri"
+            | "Object"
+            | "Map"
+            | "Unit"
+            | "void"
+            | "Response"
+            | "ResponseBody"
+            | "Uint8List"
+            | "Future"
+            | "Result"
+            | "Option"
+            | "List"
+            | "Stream"
+    )
+}
+
+/// Creates a source-labelled payload diagnostic.
+fn payload_error(span: SpanIr, message: String) -> Diagnostic {
+    Diagnostic::error(message).with_label(SourceLabel::new(
+        span.file_id,
+        span.range,
+        "payload capability is required here",
+    ))
+}
+
+/// Attaches a source location to an import-resolution diagnostic.
+fn label_payload_error(error: Diagnostic, span: SpanIr) -> Diagnostic {
+    error.with_label(SourceLabel::new(
+        span.file_id,
+        span.range,
+        "payload type is used here",
+    ))
 }

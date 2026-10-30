@@ -226,7 +226,7 @@ class Todos with _$Todos {
     let client_source =
         fs::read_to_string(client.join("lib/src/generated/todos_client.todos.g.dart")).unwrap();
     assert!(client_source.contains("Future<String> search(contracts.TodoFilter filter)"));
-    assert!(client_source.contains("filter.toJson()..removeWhere"));
+    assert!(client_source.contains("filter.serialize()..removeWhere"));
 
     let deserialize_only = fs::read_to_string(&contracts)
         .unwrap()

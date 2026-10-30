@@ -114,7 +114,7 @@ class Todos with _$Todos {
 
     let output = client.join("lib/src/generated/todos_client.todos.g.dart");
     let source = fs::read_to_string(&output).unwrap();
-    assert!(source.contains("input.toJson()"));
+    assert!(source.contains("input.serialize()"));
     assert!(source.contains("const contracts.$TodoDeserializer().deserialize"));
     assert!(source.contains("Future<List<contracts.Todo>> list()"));
     assert!(source.contains("Future<contracts.Todo?> read(String id)"));
@@ -150,10 +150,22 @@ fn rejects_known_payload_models_without_required_capabilities() {
         r#"import 'package:dust_dart/serde.dart';
 part 'contracts.g.dart';
 
-@Derive([Validate()])
-final class Payload with _$Payload {
+@Derive([Serialize()])
+final class Sentinel with _$Sentinel {
+  const Sentinel();
+}
+
+final class Payload {
   const Payload(this.value);
+  factory Payload.fromJson(Map<String, Object?> json) =>
+      Payload(json['value']! as String);
+
+  static Payload deserialize(Map<String, Object?> json) =>
+      Payload.fromJson(json);
+
   final String value;
+
+  Map<String, Object?> toJson() => {'value': value};
 }
 "#,
     );
@@ -177,11 +189,12 @@ class Todos with _$Todos {
         .iter()
         .map(|value| value.message.as_str())
         .collect::<Vec<_>>();
+    assert!(built.diagnostics.iter().all(|value| value.has_labels()));
     for expected in [
-        "must derive Deserialize() or expose static deserialize",
-        "body model `contracts.Payload` to derive Serialize() or expose toJson()",
-        "response model `contracts.Payload` to derive Serialize() or expose toJson()",
-        "response model `contracts.Payload` to derive Deserialize() or expose a fromJson factory",
+        "body model `contracts.Payload` must derive Deserialize()",
+        "body model `contracts.Payload` to derive Serialize()",
+        "response model `contracts.Payload` to derive Serialize()",
+        "response model `contracts.Payload` to derive Deserialize()",
     ] {
         assert!(
             messages.iter().any(|value| value.contains(expected)),

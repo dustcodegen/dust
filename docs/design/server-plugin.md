@@ -757,9 +757,10 @@ client output is replaced. Prefixed query and JSON payload models from a shared
 package are the structured exception: dependency analysis retains their SerDe
 capabilities, the server decodes through public generated deserializers and
 applies imported `Validate()` derives, and the client encodes requests through
-`toJson()`. Object, list and nullable responses decode through the same public
-Serde contract. Known models missing a required direction fail generation;
-legacy static `deserialize`, `toJson`, and `fromJson` contracts remain valid.
+`Serializable.serialize()`. Object, list and nullable responses decode through
+generated `Deserializer` implementations. Known models missing a required
+direction fail generation at the endpoint; handwritten look-alike methods do
+not satisfy the server-client contract.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 

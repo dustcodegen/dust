@@ -55,6 +55,15 @@ pub(super) fn render_body_value(param: &MethodParamIr) -> String {
     }
 }
 
+/// Renders a body through Dust's generated `Serializable` contract.
+pub(super) fn render_serde_body_value(param: &MethodParamIr) -> String {
+    if param.ty.is_nullable() {
+        format!("{}?.serialize()", param.name)
+    } else {
+        format!("{}.serialize()", param.name)
+    }
+}
+
 /// Renders a response decode using selected Dust Serde model helpers.
 pub(super) fn render_decode_expr_with(
     data_expr: &str,
