@@ -6,6 +6,9 @@ use dust_ir::{BuiltinType, MethodParamIr, TypeIr};
 
 use crate::plugin::util::{is_response_body_type, type_name_is};
 
+#[cfg(test)]
+mod tests;
+
 /// Renders a Dart type using the HTTP plugin's dynamic-type policy.
 pub(super) fn render_type(ty: &TypeIr) -> String {
     DYNAMIC_TYPES.render(ty)
@@ -52,21 +55,29 @@ pub(super) fn render_body_value(param: &MethodParamIr) -> String {
     }
 }
 
-/// Renders a Dart decode expression that preserves nullable payloads.
-pub(super) fn render_decode_expr(data_expr: &str, ty: &TypeIr) -> String {
+/// Renders a response decode using selected Dust Serde model helpers.
+pub(super) fn render_decode_expr_with(
+    data_expr: &str,
+    ty: &TypeIr,
+    serde_types: &[String],
+) -> String {
     if ty.is_nullable() {
         format!(
             "{0} == null\n    ? null\n    : {1}",
             data_expr,
-            render_decode_expr_nonnull(data_expr, ty)
+            render_decode_expr_nonnull_with(data_expr, ty, serde_types)
         )
     } else {
-        render_decode_expr_nonnull(data_expr, ty)
+        render_decode_expr_nonnull_with(data_expr, ty, serde_types)
     }
 }
 
-/// Renders a Dart decode expression for a known non-null payload value.
-pub(super) fn render_decode_expr_nonnull(data_expr: &str, ty: &TypeIr) -> String {
+/// Renders a non-null response decode using selected Dust Serde helpers.
+pub(super) fn render_decode_expr_nonnull_with(
+    data_expr: &str,
+    ty: &TypeIr,
+    serde_types: &[String],
+) -> String {
     match ty {
         TypeIr::Dynamic | TypeIr::Unknown => data_expr.to_owned(),
         TypeIr::Builtin { kind, .. } => match kind {
@@ -83,11 +94,19 @@ pub(super) fn render_decode_expr_nonnull(data_expr: &str, ty: &TypeIr) -> String
             format!(
                 "({0} as {DART_LIST}<{DART_DYNAMIC}>)\n    .map((item) => {1})\n    .toList()",
                 data_expr,
-                render_decode_expr("item", &args[0])
+                render_decode_expr_with("item", &args[0], serde_types)
             )
         }
         TypeIr::Named { .. } if type_name_is(ty, DART_MAP) => {
             format!("{data_expr} as {}", render_non_nullable_type(ty))
+        }
+        TypeIr::Named { name, args, .. }
+            if serde_types.iter().any(|value| value == name.as_ref()) =>
+        {
+            let decoder = serde_deserializer(name, args);
+            format!(
+                "{decoder}.deserialize({data_expr} as {DART_MAP}<{DART_STRING}, {DART_OBJECT}?>)"
+            )
         }
         TypeIr::Named { .. } => format!(
             "{}.fromJson({} as {DART_MAP}<{DART_STRING}, {DART_DYNAMIC}>)",
@@ -96,6 +115,21 @@ pub(super) fn render_decode_expr_nonnull(data_expr: &str, ty: &TypeIr) -> String
         ),
         TypeIr::Function { .. } | TypeIr::Record { .. } => data_expr.to_owned(),
     }
+}
+
+/// Renders the public Dust deserializer instance for one response model.
+fn serde_deserializer(name: &str, args: &[TypeIr]) -> String {
+    let helper = match name.split_once('.') {
+        Some((prefix, name)) => format!("{prefix}.${name}Deserializer"),
+        None => format!("${name}Deserializer"),
+    };
+    let arguments = if args.is_empty() {
+        String::new()
+    } else {
+        let rendered = args.iter().map(render_type).collect::<Vec<_>>().join(", ");
+        format!("<{rendered}>")
+    };
+    format!("const {helper}{arguments}()")
 }
 
 /// Returns true when decoding should be moved to a generated isolate helper.

@@ -16,6 +16,7 @@ mod tests;
 pub(super) fn build_endpoint(
     fact: &ServerRouteFact,
     handler: &HandlerPlan<'_>,
+    serde_response_types: Vec<String>,
 ) -> Result<GeneratedEndpoint, Diagnostic> {
     let mut params = Vec::new();
     let mut bindings = Vec::new();
@@ -63,6 +64,7 @@ pub(super) fn build_endpoint(
         path: join_path(&fact.prefix, &fact.path),
         request_mode,
         params: bindings,
+        serde_response_types,
     })
 }
 

@@ -36,6 +36,8 @@ pub struct GeneratedEndpoint {
     pub request_mode: GeneratedRequestMode,
     /// Client-visible parameter bindings by method-parameter index.
     pub params: Vec<GeneratedParam>,
+    /// Named response models decoded through Dust's public Serde helper.
+    pub serde_response_types: Vec<String>,
 }
 
 /// HTTP methods accepted by standalone generation.
@@ -183,6 +185,7 @@ fn endpoint_spec(endpoint: &GeneratedEndpoint) -> Result<EndpointSpec<'_>, Diagn
         request_mode: endpoint.request_mode.into(),
         params,
         return_spec,
+        serde_response_types: endpoint.serde_response_types.clone(),
     })
 }
 

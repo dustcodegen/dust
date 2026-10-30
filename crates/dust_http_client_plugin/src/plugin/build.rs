@@ -154,6 +154,7 @@ pub(super) fn build_endpoint_spec<'a>(
         request_mode,
         params,
         return_spec,
+        serde_response_types: Vec::new(),
     })
 }
 

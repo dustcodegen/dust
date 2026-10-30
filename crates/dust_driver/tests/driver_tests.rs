@@ -13,6 +13,8 @@ mod build_outputs;
 mod http_client_outputs;
 #[path = "driver_tests/server_client_outputs.rs"]
 mod server_client_outputs;
+#[path = "driver_tests/server_client_payloads.rs"]
+mod server_client_payloads;
 
 #[path = "driver_tests/i18n_outputs.rs"]
 mod i18n_outputs;

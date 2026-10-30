@@ -45,6 +45,7 @@ fn endpoint(
         path: format!("/{name}"),
         request_mode,
         params: bindings,
+        serde_response_types: Vec::new(),
     }
 }
 

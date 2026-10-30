@@ -23,6 +23,41 @@ final class TransportClient {
   final Dio _dio;
   final String? _baseUrl;
 
+  /// Calls `POST /transport/typed`.
+  Future<contracts.TransportRecord> createTyped(contracts.CreateTransport input) async {
+    final _queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _extra = <String, dynamic>{};
+    final Object? _data = input.toJson();
+    final _options = Options(
+      method: 'POST',
+      headers: _headers,
+      extra: _extra,
+      contentType: null,
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(
+      _setStreamType<contracts.TransportRecord>(
+        _options
+            .compose(
+              _dio.options,
+              '/transport/typed',
+              queryParameters: _queryParameters,
+              data: _data,
+              cancelToken: null,
+              onSendProgress: null,
+              onReceiveProgress: null,
+            )
+            .copyWith(
+              baseUrl: _combineBaseUrls(
+                _dio.options.baseUrl,
+                _baseUrl,
+              ),
+            ),
+      ),
+    );
+    return const contracts.$TransportRecordDeserializer().deserialize(_result.data as Map<String, Object?>);
+  }
+
   /// Calls `PATCH /transport/form`.
   Future<String> form(String title, String priority) async {
     final _queryParameters = <String, dynamic>{};
@@ -96,6 +131,43 @@ final class TransportClient {
     return;
   }
 
+  /// Calls `GET /transport/typed`.
+  Future<List<contracts.TransportRecord>> listTyped() async {
+    final _queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _extra = <String, dynamic>{};
+    final Object? _data = null;
+    final _options = Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+      contentType: null,
+    );
+    final _result = await _dio.fetch<List<dynamic>>(
+      _setStreamType<List<contracts.TransportRecord>>(
+        _options
+            .compose(
+              _dio.options,
+              '/transport/typed',
+              queryParameters: _queryParameters,
+              data: _data,
+              cancelToken: null,
+              onSendProgress: null,
+              onReceiveProgress: null,
+            )
+            .copyWith(
+              baseUrl: _combineBaseUrls(
+                _dio.options.baseUrl,
+                _baseUrl,
+              ),
+            ),
+      ),
+    );
+    return (_result.data as List<dynamic>)
+    .map((item) => const contracts.$TransportRecordDeserializer().deserialize(item as Map<String, Object?>))
+    .toList();
+  }
+
   /// Calls `POST /transport/multipart`.
   Future<String> multipart(String title, String note) async {
     final _queryParameters = <String, dynamic>{};
@@ -167,6 +239,43 @@ final class TransportClient {
       ),
     );
     return;
+  }
+
+  /// Calls `GET /transport/typed/{id}`.
+  Future<contracts.TransportRecord?> readTyped(String id) async {
+    final _queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _extra = <String, dynamic>{};
+    final Object? _data = null;
+    final _options = Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+      contentType: null,
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(
+      _setStreamType<contracts.TransportRecord?>(
+        _options
+            .compose(
+              _dio.options,
+              '/transport/typed/' + Uri.encodeComponent(id.toString()),
+              queryParameters: _queryParameters,
+              data: _data,
+              cancelToken: null,
+              onSendProgress: null,
+              onReceiveProgress: null,
+            )
+            .copyWith(
+              baseUrl: _combineBaseUrls(
+                _dio.options.baseUrl,
+                _baseUrl,
+              ),
+            ),
+      ),
+    );
+    return _result.data == null
+    ? null
+    : const contracts.$TransportRecordDeserializer().deserialize(_result.data as Map<String, Object?>);
   }
 
   /// Calls `PUT /transport/{id}`.

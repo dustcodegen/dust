@@ -32,6 +32,44 @@ void main() {
             '${request.uri.queryParametersAll['tags']!.join(',')}:'
             '${request.uri.queryParameters['order']}',
           );
+        } else if (request.uri.path == '/transport/typed' &&
+            request.method == 'POST') {
+          final body = jsonDecode(await utf8.decoder.bind(request).join())
+              as Map<String, dynamic>;
+          request.response
+            ..statusCode = HttpStatus.created
+            ..headers.contentType = ContentType.json
+            ..write(
+              jsonEncode({
+                'id': 'created',
+                'display_name': body['display_name'],
+                'order': body['order'],
+                'metadata': body['metadata'],
+                'tags': body['tags'],
+              }),
+            );
+        } else if (request.uri.path == '/transport/typed') {
+          request.response
+            ..headers.contentType = ContentType.json
+            ..write(
+              jsonEncode([
+                {
+                  'id': 'one',
+                  'display_name': 'First',
+                  'order': 'oldest',
+                  'metadata': {'source': 'server'},
+                  'tags': <String>[],
+                },
+              ]),
+            );
+        } else if (request.uri.path == '/transport/typed/missing') {
+          request.response
+            ..headers.contentType = ContentType.json
+            ..write('null');
+        } else if (request.uri.path == '/transport/typed/malformed') {
+          request.response
+            ..headers.contentType = ContentType.json
+            ..write(jsonEncode({'id': 7}));
         } else if (request.uri.path == '/transport/form') {
           request.response.write(await utf8.decoder.bind(request).join());
         } else if (request.uri.path == '/transport/multipart') {
@@ -110,6 +148,56 @@ void main() {
       'dust:true:2:rust,dart:oldest',
     );
   });
+
+  test(
+    'typed payloads encode and decode through shared Serde models',
+    () async {
+      final transport = TransportClient(
+        Dio(
+          BaseOptions(
+            baseUrl: 'http://${server.address.host}:${server.port}',
+          ),
+        ),
+      );
+
+      final created = await transport.createTyped(
+        const CreateTransport(
+          title: 'Ship Dust',
+          order: TransportOrder.newest,
+          metadata: TransportMetadata(source: 'client'),
+          tags: ['dart', 'rust'],
+        ),
+      );
+      final listed = await transport.listTyped();
+
+      expect(created.id, 'created');
+      expect(created.title, 'Ship Dust');
+      expect(created.order, TransportOrder.newest);
+      expect(created.metadata.source, 'client');
+      expect(created.tags, ['dart', 'rust']);
+      expect(listed.single.title, 'First');
+      expect(listed.single.order, TransportOrder.oldest);
+    },
+  );
+
+  test(
+    'typed payload decoding preserves null and rejects malformed JSON',
+    () async {
+      final transport = TransportClient(
+        Dio(
+          BaseOptions(
+            baseUrl: 'http://${server.address.host}:${server.port}',
+          ),
+        ),
+      );
+
+      expect(await transport.readTyped('missing'), isNull);
+      await expectLater(
+        transport.readTyped('malformed'),
+        throwsA(isA<Object>()),
+      );
+    },
+  );
 
   test('PATCH encodes every declared form field', () async {
     final transport = TransportClient(

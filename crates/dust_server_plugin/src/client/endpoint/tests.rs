@@ -1,4 +1,4 @@
-use dust_ir::{FunctionIr, MethodIr, MethodParamIr, NameIr, ParamKind, SpanIr, TypeIr};
+use dust_ir::{MethodIr, MethodParamIr, ParamKind, SpanIr, TypeIr};
 use dust_text::{FileId, TextRange};
 use serde_json::json;
 
@@ -7,6 +7,8 @@ use crate::{
     analysis::{ServerParamFact, ServerRouteFact},
     plan::{BodyFormat, Extraction, RouteMetadataPlan},
 };
+
+mod modes;
 
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(1), TextRange::new(0_u32, 1_u32))
@@ -238,59 +240,14 @@ fn verbs_paths_and_endpoint_failures_cover_normalized_boundaries() {
         metadata: metadata(),
     };
     assert!(
-        build_endpoint(&route_fact(vec![param_fact("missing", "query")]), &handler)
-            .err()
-            .unwrap()
-            .message
-            .contains("no longer matches")
+        build_endpoint(
+            &route_fact(vec![param_fact("missing", "query")]),
+            &handler,
+            Vec::new(),
+        )
+        .err()
+        .unwrap()
+        .message
+        .contains("no longer matches")
     );
-}
-
-#[test]
-fn endpoint_request_modes_and_function_spans_are_derived_from_facts() {
-    for (binding, expected) in [
-        ("part", GeneratedRequestMode::MultiPart),
-        ("field", GeneratedRequestMode::FormUrlEncoded),
-    ] {
-        let function = FunctionIr {
-            name: NameIr {
-                source: "upload".to_owned(),
-                short: "upload".to_owned(),
-                prefix: None,
-                span: span(),
-            },
-            return_type: TypeIr::string(),
-            params: vec![param("wire", TypeIr::string())],
-            annotations: Vec::new(),
-            span: span(),
-        };
-        let extraction = if binding == "part" {
-            Extraction::Part {
-                name: "wire".to_owned(),
-                file: false,
-            }
-        } else {
-            Extraction::Field("wire".to_owned())
-        };
-        let handler = HandlerPlan {
-            callable: Callable::Function(&function),
-            method: "POST",
-            path: "/upload".to_owned(),
-            status: 200,
-            params: vec![ParamPlan {
-                param: &function.params[0],
-                value_type: &function.params[0].ty,
-                wrapper: ExtractionWrapper::Required,
-                extraction,
-                validated: false,
-                serde_deserialized: false,
-            }],
-            middleware: Vec::new(),
-            metadata: metadata(),
-        };
-        let endpoint =
-            build_endpoint(&route_fact(vec![param_fact("wire", binding)]), &handler).unwrap();
-        assert_eq!(endpoint.request_mode, expected);
-        assert_eq!(endpoint.method.span, function.span);
-    }
 }
