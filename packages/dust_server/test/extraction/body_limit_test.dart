@@ -118,5 +118,44 @@ void main() {
 
       expectStatus(await readBody(request, limit: 1024), 413);
     });
+
+    test('joins streamed chunks without changing their bytes', () async {
+      final request = Request(
+        'POST',
+        Uri.parse('http://localhost/upload'),
+        body: Stream<List<int>>.fromIterable([
+          [0, 1],
+          [2, 255],
+        ]),
+      );
+
+      expect(expectOk(await readBody(request)), [0, 1, 2, 255]);
+    });
+
+    test('accepts a streamed body exactly at the limit', () async {
+      final request = Request(
+        'POST',
+        Uri.parse('http://localhost/upload'),
+        body: Stream<List<int>>.fromIterable([
+          [1, 2],
+          [3, 4],
+        ]),
+      );
+
+      expect(expectOk(await readBody(request, limit: 4)), [1, 2, 3, 4]);
+    });
+
+    test('ignores a content-length outside the HTTP decimal grammar', () async {
+      for (final value in ['', '+1', '1.0', ' 1', '1 ']) {
+        final request = Request(
+          'POST',
+          Uri.parse('http://localhost/upload'),
+          headers: {'content-length': value},
+          body: const Stream<List<int>>.empty(),
+        );
+
+        expect(expectOk(await readBody(request)), isEmpty, reason: value);
+      }
+    });
   });
 }

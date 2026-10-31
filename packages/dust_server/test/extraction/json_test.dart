@@ -28,6 +28,19 @@ void main() {
       expect(expectOk(outcome).title, 'ok');
     });
 
+    test('accepts JSON media type parameters and casing', () async {
+      final outcome = await _extractor.extract(
+        request(
+          'POST',
+          '/todos',
+          headers: {'content-type': 'Application/JSON; Charset=UTF-8'},
+          body: '{"title":"ok"}',
+        ),
+      );
+
+      expect(expectOk(outcome).title, 'ok');
+    });
+
     test('rejects a missing content-type with 415', () async {
       final outcome = await _extractor
           .extract(request('POST', '/todos', body: '{"title":"x"}'));

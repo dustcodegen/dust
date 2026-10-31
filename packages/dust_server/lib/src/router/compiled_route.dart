@@ -55,7 +55,7 @@ final class CompiledRoute {
   ///
   /// Both checks are exact rather than heuristic: a route that passes still
   /// runs the pattern, and one that fails could not have matched.
-  bool couldMatch(String path, int segmentCount) {
+  bool couldMatch(String path, int? segmentCount) {
     if (_staticPath case final staticPath?) return staticPath == path;
     if (_segmentCount case final count?) return count == segmentCount;
     return true;

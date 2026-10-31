@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:dust_dart/fp.dart';
 import 'package:shelf/shelf.dart';
 
-import '../request/request_parts.dart';
 import '../response/rejection.dart';
 
 /// The default maximum body size, in bytes.
@@ -32,15 +31,33 @@ Future<Result<Uint8List, Rejection>> readBody(
   Rejection tooLarge() =>
       Rejection.payloadTooLarge('body exceeds $effective bytes');
 
-  final declared = RequestParts.of(request).contentLength;
+  final declared = _contentLength(request.headers['content-length']);
   if (declared != null && declared > effective) return Err(tooLarge());
 
-  final builder = BytesBuilder(copy: false);
+  Uint8List? firstChunk;
+  BytesBuilder? builder;
   await for (final chunk in request.read()) {
+    final length = (builder?.length ?? firstChunk?.length ?? 0) + chunk.length;
+    if (length > effective) return Err(tooLarge());
+
+    if (firstChunk == null && builder == null) {
+      firstChunk = chunk is Uint8List ? chunk : Uint8List.fromList(chunk);
+      continue;
+    }
+
+    builder ??= BytesBuilder(copy: false)..add(firstChunk!);
     builder.add(chunk);
-    if (builder.length > effective) return Err(tooLarge());
   }
-  return Ok(builder.takeBytes());
+  return Ok(builder?.takeBytes() ?? firstChunk ?? Uint8List(0));
+}
+
+int? _contentLength(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  for (var index = 0; index < raw.length; index++) {
+    final codeUnit = raw.codeUnitAt(index);
+    if (codeUnit < 0x30 || codeUnit > 0x39) return null;
+  }
+  return int.tryParse(raw, radix: 10);
 }
 
 /// The smaller of [limit] and whatever the router configured.

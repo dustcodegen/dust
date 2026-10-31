@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Server performance**: precompile route-prefix candidates, defer dynamic
+  segment counting, avoid request metadata parsing for common JSON bodies, and
+  retain single-chunk request bodies without an unnecessary builder.
+
 - **Server payload contracts**: generated server-client boundaries require
   Dust `Serialize()` and `Deserialize()` derives instead of accepting
   handwritten `toJson`, `fromJson`, or static `deserialize` look-alikes.

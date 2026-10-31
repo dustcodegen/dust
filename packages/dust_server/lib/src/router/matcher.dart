@@ -57,9 +57,9 @@ final class NoMatch extends RouteMatch {
 
 /// Matches requests against a flattened route table.
 ///
-/// A linear scan of compiled patterns, which is small enough to own. The
-/// alternative meant depending on `shelf_router` and reading its private
-/// context key to get path parameters back out.
+/// Literal prefixes are compiled into a trie once. Each node retains the
+/// declaration-ordered routes that can match below that prefix, avoiding a
+/// full route-table scan without depending on `shelf_router` internals.
 @internal
 final class RouteMatcher {
   /// Compiles [routes] into matchable patterns.
@@ -69,38 +69,27 @@ final class RouteMatcher {
             CompiledRoute(routes[index], index),
         ] {
     for (final route in _routes) {
-      _byPrefix.putIfAbsent(route.literalPrefix, () => []).add(route);
+      _prefixes.add(route);
     }
+    _prefixes.compile(const []);
   }
 
   final List<CompiledRoute> _routes;
-
-  /// Routes grouped by their leading literal segments.
-  final _byPrefix = <String, List<CompiledRoute>>{};
+  final _prefixes = _PrefixNode();
 
   /// The routes that could serve [path], in declaration order.
   ///
-  /// A route can only match if the request walked its whole literal prefix, so
-  /// the candidates are the buckets for each prefix of the request path, and
-  /// nothing else. Every bucket is already in declaration order; sorting the
-  /// union by declaration index keeps the one rule that decides ties.
+  /// A route can only match if the request walked its whole literal prefix.
+  /// Each trie node stores that cumulative candidate set in declaration order.
   List<CompiledRoute> _candidates(String path) {
-    final buckets = <List<CompiledRoute>>[];
-    if (_byPrefix[''] case final opening?) buckets.add(opening);
-
-    var prefix = '';
+    var node = _prefixes;
     for (final segment in path.split('/')) {
       if (segment.isEmpty) continue;
-      prefix = prefix.isEmpty ? segment : '$prefix/$segment';
-      if (_byPrefix[prefix] case final bucket?) buckets.add(bucket);
+      final child = node.children[segment];
+      if (child == null) break;
+      node = child;
     }
-
-    if (buckets.isEmpty) return const [];
-    if (buckets.length == 1) return buckets.single;
-
-    return [
-      for (final bucket in buckets) ...bucket,
-    ]..sort((a, b) => a.index.compareTo(b.index));
+    return node.candidates;
   }
 
   /// Finds the handler for [method] and [path].
@@ -115,10 +104,12 @@ final class RouteMatcher {
     CompiledRoute? getRoute;
     RegExpMatch? getCaptured;
 
-    final segmentCount = countSegments(path);
+    int? segmentCount;
 
     for (final route in _candidates(path)) {
-      if (!route.couldMatch(path, segmentCount)) continue;
+      final candidateSegmentCount =
+          route.isStatic ? null : segmentCount ??= countSegments(path);
+      if (!route.couldMatch(path, candidateSegmentCount)) continue;
 
       final captured = route.isStatic ? null : route.capture(path);
       if (!route.isStatic && captured == null) continue;
@@ -145,4 +136,48 @@ final class RouteMatcher {
     }.toList()
       ..sort());
   }
+}
+
+final class _PrefixNode {
+  final children = <String, _PrefixNode>{};
+  final _local = <CompiledRoute>[];
+  List<CompiledRoute> candidates = const [];
+
+  void add(CompiledRoute route) {
+    var node = this;
+    for (final segment in route.literalPrefix.split('/')) {
+      if (segment.isEmpty) continue;
+      node = node.children.putIfAbsent(segment, _PrefixNode.new);
+    }
+    node._local.add(route);
+  }
+
+  void compile(List<CompiledRoute> inherited) {
+    candidates = _mergeByDeclaration(inherited, _local);
+    for (final child in children.values) {
+      child.compile(candidates);
+    }
+  }
+}
+
+List<CompiledRoute> _mergeByDeclaration(
+  List<CompiledRoute> inherited,
+  List<CompiledRoute> local,
+) {
+  if (inherited.isEmpty) return List.unmodifiable(local);
+  if (local.isEmpty) return inherited;
+
+  final merged = <CompiledRoute>[];
+  var inheritedIndex = 0;
+  var localIndex = 0;
+  while (inheritedIndex < inherited.length && localIndex < local.length) {
+    if (inherited[inheritedIndex].index < local[localIndex].index) {
+      merged.add(inherited[inheritedIndex++]);
+    } else {
+      merged.add(local[localIndex++]);
+    }
+  }
+  merged.addAll(inherited.skip(inheritedIndex));
+  merged.addAll(local.skip(localIndex));
+  return List.unmodifiable(merged);
 }
