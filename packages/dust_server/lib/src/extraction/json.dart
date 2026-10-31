@@ -98,7 +98,7 @@ Future<Result<Object?, Rejection>> _decodeJsonBody(
   Request request,
   int limit,
 ) async {
-  if (!isJsonMediaType(RequestParts.of(request).mediaType)) {
+  if (!_hasJsonMediaType(request)) {
     return const Err(
       Rejection.unsupportedMediaType('expected application/json'),
     );
@@ -121,4 +121,10 @@ Future<Result<Object?, Rejection>> _decodeJsonBody(
   } on FormatException catch (error) {
     return Err(Rejection.badRequest('malformed JSON: ${error.message}'));
   }
+}
+
+bool _hasJsonMediaType(Request request) {
+  final raw = request.headers['content-type'];
+  if (raw == 'application/json') return true;
+  return isJsonMediaType(RequestParts.of(request).mediaType);
 }

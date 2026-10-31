@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Route matching now compiles literal-prefix candidates once, and the common
+  JSON request path avoids redundant metadata and body-buffer allocations.
+
 ## [0.3.0] - 2026-10-26
 
 ### Fixed
