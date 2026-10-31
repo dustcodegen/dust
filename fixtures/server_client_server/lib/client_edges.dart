@@ -12,6 +12,42 @@ class Transport with _$Transport {
       '${filter.owner}:${filter.completed}:${filter.page}:'
       '${filter.tags.join(',')}:${filter.order.name}';
 
+  /// Creates one typed record from a validated imported body.
+  @POST('/typed', status: 201)
+  Future<contracts.TransportRecord> createTyped(
+    @Body() contracts.CreateTransport input,
+  ) async =>
+      contracts.TransportRecord(
+        id: 'created',
+        title: input.title,
+        order: input.order,
+        metadata: input.metadata,
+        tags: input.tags,
+      );
+
+  /// Returns typed records for generated list decoding.
+  @GET('/typed')
+  Future<List<contracts.TransportRecord>> listTyped() async => const [
+        contracts.TransportRecord(
+          id: 'one',
+          title: 'First',
+          order: contracts.TransportOrder.oldest,
+          metadata: contracts.TransportMetadata(source: 'server'),
+        ),
+      ];
+
+  /// Returns a nullable typed response.
+  @GET('/typed/{id}')
+  Future<contracts.TransportRecord?> readTyped(@Path() String id) async =>
+      id == 'missing'
+          ? null
+          : contracts.TransportRecord(
+              id: id,
+              title: 'Found',
+              order: contracts.TransportOrder.newest,
+              metadata: const contracts.TransportMetadata(source: 'server'),
+            );
+
   /// Replaces a resource with aggregate query and header values.
   @PUT('/{id}')
   Future<String> replace(

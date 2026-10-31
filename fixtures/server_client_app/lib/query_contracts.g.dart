@@ -20,6 +20,64 @@ mixin _$TransportFilter implements Serializable {
   Map<String, Object?> toJson() => serialize();
 }
 
+mixin _$TransportMetadata implements Serializable {
+  Map<String, Object?> serialize() =>
+      _$TransportMetadataSerialize(this as TransportMetadata);
+
+  Map<String, Object?> toJson() => serialize();
+}
+
+mixin _$CreateTransport implements Validatable, Serializable {
+  /// Validates this `CreateTransport`.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final result = value.validate();
+  /// if (result case Invalid(:final errors)) {
+  ///   print(errors.first.message);
+  /// }
+  /// ```
+  ValidationResult validate() {
+    final self = this as CreateTransport;
+    final errors = <ValidationError>[];
+    _CreateTransportValidation._validateTitle(self.title, errors);
+    return errors.isEmpty ? const Valid() : Invalid(errors);
+  }
+
+  /// Throws [ValidationException] when this `CreateTransport` is invalid.
+  ///
+  /// Usage:
+  /// ```dart
+  /// value.validateOrThrow();
+  /// ```
+  void validateOrThrow() {
+    final result = validate();
+    if (result case Invalid(errors: final errors)) {
+      throw ValidationException(errors);
+    }
+  }
+
+  Map<String, Object?> serialize() =>
+      _$CreateTransportSerialize(this as CreateTransport);
+
+  Map<String, Object?> toJson() => serialize();
+}
+
+mixin _$TransportRecord implements Serializable {
+  Map<String, Object?> serialize() =>
+      _$TransportRecordSerialize(this as TransportRecord);
+
+  Map<String, Object?> toJson() => serialize();
+}
+
+extension _CreateTransportValidation on CreateTransport {
+  static void _validateTitle(String title, List<ValidationError> errors) {
+    if (title.length < 1) {
+      errors.add(ValidationError(field: 'title', message: 'must not be empty'));
+    }
+  }
+
+}
 final class $TransportFilterSerializer implements Serializer<TransportFilter, Map<String, Object?>> {
   const $TransportFilterSerializer();
 
@@ -31,6 +89,42 @@ final class $TransportFilterDeserializer implements Deserializer<TransportFilter
 
   @override
   TransportFilter deserialize(Map<String, Object?> json) => _$TransportFilterDeserialize(json);
+}
+final class $TransportMetadataSerializer implements Serializer<TransportMetadata, Map<String, Object?>> {
+  const $TransportMetadataSerializer();
+
+  @override
+  Map<String, Object?> serialize(TransportMetadata value) => _$TransportMetadataSerialize(value);
+}
+final class $TransportMetadataDeserializer implements Deserializer<TransportMetadata, Map<String, Object?>> {
+  const $TransportMetadataDeserializer();
+
+  @override
+  TransportMetadata deserialize(Map<String, Object?> json) => _$TransportMetadataDeserialize(json);
+}
+final class $CreateTransportSerializer implements Serializer<CreateTransport, Map<String, Object?>> {
+  const $CreateTransportSerializer();
+
+  @override
+  Map<String, Object?> serialize(CreateTransport value) => _$CreateTransportSerialize(value);
+}
+final class $CreateTransportDeserializer implements Deserializer<CreateTransport, Map<String, Object?>> {
+  const $CreateTransportDeserializer();
+
+  @override
+  CreateTransport deserialize(Map<String, Object?> json) => _$CreateTransportDeserialize(json);
+}
+final class $TransportRecordSerializer implements Serializer<TransportRecord, Map<String, Object?>> {
+  const $TransportRecordSerializer();
+
+  @override
+  Map<String, Object?> serialize(TransportRecord value) => _$TransportRecordSerialize(value);
+}
+final class $TransportRecordDeserializer implements Deserializer<TransportRecord, Map<String, Object?>> {
+  const $TransportRecordDeserializer();
+
+  @override
+  TransportRecord deserialize(Map<String, Object?> json) => _$TransportRecordDeserialize(json);
 }
 final class $TransportOrderSerializer implements Serializer<TransportOrder, Object?> {
   const $TransportOrderSerializer();
@@ -108,6 +202,131 @@ TransportFilter _$TransportFilterDeserialize(Map<String, Object?> json) {
 
 TransportFilter _$TransportFilterFromJson(Map<String, Object?> json) =>
     _$TransportFilterDeserialize(json);
+
+Map<String, Object?> _$TransportMetadataSerialize(TransportMetadata instance) {
+  return <String, Object?>{
+    'source': instance.source,
+  };
+}
+
+Map<String, Object?> _$TransportMetadataToJson(TransportMetadata instance) =>
+    _$TransportMetadataSerialize(instance);
+
+// factory TransportMetadata.fromJson(Map<String, Object?> json) => _$TransportMetadataFromJson(json);
+TransportMetadata _$TransportMetadataDeserialize(Map<String, Object?> json) {
+  final sourceValue = JsonHelper.as<String>(json['source'], 'source', 'String');
+
+  return TransportMetadata(source: sourceValue);
+}
+
+TransportMetadata _$TransportMetadataFromJson(Map<String, Object?> json) =>
+    _$TransportMetadataDeserialize(json);
+
+Map<String, Object?> _$CreateTransportSerialize(CreateTransport instance) {
+  return <String, Object?>{
+    'display_name': instance.title,
+    'order': _$TransportOrderSerialize(instance.order),
+    'metadata': _$TransportMetadataSerialize(instance.metadata),
+    'tags': instance.tags
+        .map((item) => item)
+        .toList(),
+  };
+}
+
+Map<String, Object?> _$CreateTransportToJson(CreateTransport instance) =>
+    _$CreateTransportSerialize(instance);
+
+// factory CreateTransport.fromJson(Map<String, Object?> json) => _$CreateTransportFromJson(json);
+CreateTransport _$CreateTransportDeserialize(Map<String, Object?> json) {
+  const allowedKeys = <String>{
+    'display_name',
+    'title',
+    'order',
+    'metadata',
+    'tags',
+  };
+  for (final key in json.keys) {
+    if (!allowedKeys.contains(key)) {
+      throw ArgumentError.value(key, 'json', 'unknown key for CreateTransport');
+    }
+  }
+
+  var rawTitleKey = 'display_name';
+  Object? rawTitle;
+  if (json.containsKey('display_name')) {
+    rawTitle = json['display_name'];
+  } else if (json.containsKey('title')) {
+    rawTitleKey = 'title';
+    rawTitle = json['title'];
+  }
+  final titleValue = JsonHelper.as<String>(rawTitle, rawTitleKey, 'String');
+  final orderValue = _$TransportOrderDeserialize(json['order'], 'order');
+  final metadataValue = _$TransportMetadataDeserialize(
+    JsonHelper.asMap(json['metadata'], 'metadata'),
+  );
+  final tagsValue = json.containsKey('tags')
+      ? JsonHelper.decodeList(json['tags'], 'tags',
+      (item, itemKey) => JsonHelper.as<String>(item, itemKey, 'String'))
+      : <String>[];
+
+  return CreateTransport(
+    title: titleValue,
+    order: orderValue,
+    metadata: metadataValue,
+    tags: tagsValue,
+  );
+}
+
+CreateTransport _$CreateTransportFromJson(Map<String, Object?> json) =>
+    _$CreateTransportDeserialize(json);
+
+Map<String, Object?> _$TransportRecordSerialize(TransportRecord instance) {
+  return <String, Object?>{
+    'id': instance.id,
+    'display_name': instance.title,
+    'order': _$TransportOrderSerialize(instance.order),
+    'metadata': _$TransportMetadataSerialize(instance.metadata),
+    'tags': instance.tags
+        .map((item) => item)
+        .toList(),
+  };
+}
+
+Map<String, Object?> _$TransportRecordToJson(TransportRecord instance) =>
+    _$TransportRecordSerialize(instance);
+
+// factory TransportRecord.fromJson(Map<String, Object?> json) => _$TransportRecordFromJson(json);
+TransportRecord _$TransportRecordDeserialize(Map<String, Object?> json) {
+  final idValue = JsonHelper.as<String>(json['id'], 'id', 'String');
+  var rawTitleKey = 'display_name';
+  Object? rawTitle;
+  if (json.containsKey('display_name')) {
+    rawTitle = json['display_name'];
+  } else if (json.containsKey('title')) {
+    rawTitleKey = 'title';
+    rawTitle = json['title'];
+  }
+  final titleValue = JsonHelper.as<String>(rawTitle, rawTitleKey, 'String');
+  final orderValue = _$TransportOrderDeserialize(json['order'], 'order');
+  final metadataValue = _$TransportMetadataDeserialize(
+    JsonHelper.asMap(json['metadata'], 'metadata'),
+  );
+  final tagsValue = json.containsKey('tags')
+      ? JsonHelper.decodeList(json['tags'], 'tags',
+      (item, itemKey) => JsonHelper.as<String>(item, itemKey, 'String'))
+      : <String>[];
+
+  return TransportRecord(
+    id: idValue,
+    title: titleValue,
+    order: orderValue,
+    metadata: metadataValue,
+    tags: tagsValue,
+  );
+}
+
+TransportRecord _$TransportRecordFromJson(Map<String, Object?> json) =>
+    _$TransportRecordDeserialize(json);
 
 Object? _$TransportOrderSerialize(TransportOrder instance) {
   return switch (instance) {

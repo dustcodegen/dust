@@ -753,10 +753,14 @@ its own client class, while top-level `@Routes` functions get a separate module
 client. Group/controller prefixes are joined into request paths. State, peer,
 request, raw-body/query and custom-extractor parameters stay server-only.
 Private, same-library or otherwise unreachable public types fail before any
-client output is replaced. A prefixed query model from a shared package is the
-structured exception: dependency analysis retains its SerDe field facts, the
-server decodes through its public generated deserializer, and the client
-encodes through `toJson()` while omitting null values.
+client output is replaced. Prefixed query and JSON payload models from a shared
+package are the structured exception: dependency analysis retains their SerDe
+capabilities, the server decodes through public generated deserializers and
+applies imported `Validate()` derives, and the client encodes requests through
+`Serializable.serialize()`. Object, list and nullable responses decode through
+generated `Deserializer` implementations. Known models missing a required
+direction fail generation at the endpoint; handwritten look-alike methods do
+not satisfy the server-client contract.
 
 That is enough to rebuild everything the deleted emitter did, from outside:
 
@@ -842,8 +846,6 @@ part 'todo.g.dart';
 class Todo with _$Todo {
   const Todo({required this.id, required this.title, required this.done});
 
-  static Todo deserialize(Map<String, Object?> json) => _$TodoDeserialize(json);
-
   final String id;
   final String title;
   final bool done;
@@ -857,13 +859,9 @@ import 'package:dust_dart/serde.dart';
 
 part 'create_todo.g.dart';
 
-@Derive([Deserialize(), Validate()])
+@Derive([Serialize(), Deserialize(), Validate()])
 class CreateTodo with _$CreateTodo {
   const CreateTodo({required this.title});
-
-  // Required because this model is imported by the handler library.
-  static CreateTodo deserialize(Map<String, Object?> json) =>
-      _$CreateTodoDeserialize(json);
 
   @Validate(length: Length(min: 1, max: 200))
   final String title;
@@ -1195,12 +1193,12 @@ recursively; a new plugin directory is not discovered automatically.
 
 - **Validation uses the built-in `Validate()` derive.** The generator does not
   define a validation mechanism of its own. It recognizes
-  `@Derive([Validate()])` on a same-library body model and emits a
-  `ValidatedExtractable`, which runs the generated `validate()` and answers
-  **422** with per-field errors. Imported body models still decode, but their
-  validation must be called explicitly until cross-library derive facts are
-  available. The executable consumer fixture proves rule and shape failures use
-  the same status and body shape, so a client writes one error renderer.
+  `@Derive([Validate()])` on local and prefixed imported JSON body models and
+  emits a `ValidatedExtractable`, which runs the generated `validate()` and
+  answers **422** with per-field errors. Dependency analysis binds imported
+  derives to their declaring package and never infers them from a type name.
+  The executable consumer fixture proves rule and shape failures use the same
+  status and body shape, so a client writes one error renderer.
 
   Whether those constraints are *also* published as a workspace fact for the
   documentation package is a separate question about the doc package, not about

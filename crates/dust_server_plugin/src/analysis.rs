@@ -8,6 +8,12 @@ use crate::plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_s
 /// Cross-library Serde query-model facts and plan hydration.
 mod query_models;
 pub(crate) use query_models::{collect_query_model_workspace_analysis_ir, hydrate_query_models};
+/// Cross-library request and response model capabilities.
+mod payload_models;
+pub(crate) use payload_models::{
+    PayloadCapabilityIndex, collect_payload_model_workspace_analysis_ir, hydrate_payload_models,
+    response_serde_types,
+};
 
 #[cfg(test)]
 mod tests;
@@ -71,6 +77,7 @@ pub(crate) fn collect_server_workspace_analysis_ir(
     analysis: &mut WorkspaceAnalysisBuilder,
 ) {
     collect_query_model_workspace_analysis_ir(file, analysis);
+    collect_payload_model_workspace_analysis_ir(file, analysis);
     let Ok(Some(plan)) = plan_server(file) else {
         return;
     };

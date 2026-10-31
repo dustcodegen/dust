@@ -15,7 +15,7 @@ use dust_plugin_api::{GENERATED_HEADER, WorkspaceAnalysis};
 
 use crate::{
     ServerClientDestination,
-    analysis::route_facts,
+    analysis::{PayloadCapabilityIndex, response_serde_types, route_facts},
     plan::{HandlerPlan, ServerPlan},
 };
 
@@ -28,6 +28,7 @@ pub(crate) fn generate_server_client(
     plan: &ServerPlan<'_>,
     destination: &ServerClientDestination,
     analysis: &WorkspaceAnalysis,
+    payload_models: &PayloadCapabilityIndex,
 ) -> Result<Vec<(PathBuf, String)>, Vec<Diagnostic>> {
     let facts = route_facts(analysis, &file.source_path)
         .map_err(|error| vec![error])?
@@ -76,7 +77,19 @@ pub(crate) fn generate_server_client(
                 )));
                 continue;
             };
-            match endpoint::build_endpoint(fact, handler) {
+            let serde_response_types = match response_serde_types(
+                file,
+                handler.callable.return_type(),
+                handler.callable.span(),
+                payload_models,
+            ) {
+                Ok(value) => value,
+                Err(errors) => {
+                    diagnostics.extend(errors);
+                    continue;
+                }
+            };
+            match endpoint::build_endpoint(fact, handler, serde_response_types) {
                 Ok(endpoint) => endpoints.push(endpoint),
                 Err(error) => diagnostics.push(error),
             }

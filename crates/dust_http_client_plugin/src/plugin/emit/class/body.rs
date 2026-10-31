@@ -126,6 +126,9 @@ pub(super) fn render_endpoint_setup(endpoint: &EndpointSpec<'_>) -> String {
             EndpointParam::QueryModel { param } => {
                 setup.push(render_query_model_merge(param));
             }
+            EndpointParam::SerdeQueryModel { param } => {
+                setup.push(render_serde_query_model_merge(param));
+            }
             EndpointParam::Header { param, key } => setup.push(render_map_entry_with_guard(
                 "_headers",
                 &format!("{}.toString()", param.name),

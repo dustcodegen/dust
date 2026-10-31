@@ -59,6 +59,14 @@ pub(super) fn build_invocation(
                         sample_body_assertion(&param.ty, &sample)
                     );
                 }
+                EndpointParam::SerdeBody { .. }
+                    if endpoint.request_mode == RequestMode::Standard =>
+                {
+                    data_assertion = format!(
+                        "expect(request.data, equals({}.serialize()));",
+                        sample.expression
+                    );
+                }
                 EndpointParam::Field { key, .. }
                     if endpoint.request_mode == RequestMode::FormUrlEncoded
                         && !sample_is_null(&sample) =>

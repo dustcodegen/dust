@@ -113,8 +113,6 @@ part 'todo.dart.g.dart';
 final class Todo with _$Todo {
   const Todo({required this.id, required this.title, required this.done});
 
-  static Todo deserialize(Map<String, Object?> json) => _$TodoDeserialize(json);
-
   final String id;
   final String title;
   final bool done;
@@ -139,7 +137,9 @@ decodes and then runs the generated `validate`:
 
 Future<Todo> createTodo(Request request) async {
   final repository = await request.state<TodoRepository>();
-  final input = await request.validBody(CreateTodo.deserialize);
+  final input = await request.validBody(
+    const $CreateTodoDeserializer().deserialize,
+  );
 
   return repository.add(input);
 }
@@ -157,9 +157,6 @@ Add constraints to the model and wrap the extractor in `valid`:
 final class CreateTodo with _$CreateTodo {
   const CreateTodo({required this.title, required this.owner});
 
-  static CreateTodo deserialize(Map<String, Object?> json) =>
-      _$CreateTodoDeserialize(json);
-
   @Validate(length: Length(min: 1, max: 200), message: 'must be 1 to 200 characters')
   final String title;
 
@@ -169,7 +166,9 @@ final class CreateTodo with _$CreateTodo {
 ```
 
 ```dart
-final input = await request.validBody(CreateTodo.deserialize);
+final input = await request.validBody(
+  const $CreateTodoDeserializer().deserialize,
+);
 ```
 
 A body that breaks a constraint answers 422 with the field and the message

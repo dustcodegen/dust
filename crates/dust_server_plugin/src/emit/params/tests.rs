@@ -125,6 +125,20 @@ fn renders_validated_json_and_form_bodies_exactly() {
         "const ValidatedExtractable<CreateTodo>(\n    JsonExtractable<CreateTodo>(_$CreateTodoDeserialize),\n  )"
     );
 
+    let imported = param("input", TypeIr::named("contracts.CreateTodo"));
+    let mut imported_json = plan(
+        &imported,
+        &imported.ty,
+        ExtractionWrapper::Required,
+        Extraction::Body(BodyFormat::Json),
+    );
+    imported_json.validated = true;
+    imported_json.serde_deserialized = true;
+    assert_eq!(
+        render_extractor(&imported_json),
+        "ValidatedExtractable<contracts.CreateTodo>(\n    JsonExtractable<contracts.CreateTodo>(const contracts.$CreateTodoDeserializer().deserialize),\n  )"
+    );
+
     let mut form = plan(
         &input,
         &input.ty,

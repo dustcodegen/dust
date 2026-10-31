@@ -2,7 +2,7 @@
 
 use dust_ir::{
     AnnotationValueIr, ClassIr, ClassKindIr, ConfigApplicationIr, DartFileIr, MethodIr,
-    MethodParamIr, NameIr, ParamKind, PartIr, SpanIr, SymbolId, TypeIr,
+    MethodParamIr, NameIr, ParamKind, PartIr, SpanIr, SymbolId, TraitApplicationIr, TypeIr,
 };
 use dust_plugin_api::{DustPlugin, PluginContext, SymbolPlan};
 use dust_server_plugin::register_plugin;
@@ -94,6 +94,26 @@ fn library(method: MethodIr) -> DartFileIr {
             "dust_server::Controller",
             vec![AnnotationValueIr::String("/todos".to_owned())],
         )],
+        serde: None,
+    });
+    library.classes.push(ClassIr {
+        kind: ClassKindIr::Class,
+        name: "Todo".to_owned(),
+        type_parameters: Vec::new(),
+        mixins: Vec::new(),
+        is_abstract: false,
+        is_interface: false,
+        superclass_name: None,
+        superclass: None,
+        span: span(),
+        fields: Vec::new(),
+        constructors: Vec::new(),
+        methods: Vec::new(),
+        traits: vec![TraitApplicationIr {
+            symbol: SymbolId::new("dust_dart::Serialize"),
+            span: span(),
+        }],
+        configs: Vec::new(),
         serde: None,
     });
     library

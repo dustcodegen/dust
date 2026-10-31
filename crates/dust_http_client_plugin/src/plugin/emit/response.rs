@@ -1,5 +1,5 @@
 use crate::plugin::emit::types::{
-    is_void_type, needs_isolate_helper, render_decode_expr, render_decode_expr_nonnull,
+    is_void_type, needs_isolate_helper, render_decode_expr_nonnull_with, render_decode_expr_with,
     render_non_nullable_type, render_type,
 };
 use crate::plugin::model::{ClientSpec, EndpointSpec, HttpTargetMode, ParseThreadMode};
@@ -36,7 +36,7 @@ pub(super) fn render_response_return(spec: &ClientSpec<'_>, endpoint: &EndpointS
                 render_background_decode(spec.target, &helper_name, "_result.data!")
             }
         } else {
-            render_decode_expr("_result.data", ty)
+            render_decode_expr_with("_result.data", ty, &endpoint.serde_response_types)
         };
 
     if endpoint.return_spec.raw_response {
@@ -80,7 +80,11 @@ fn render_isolate_helper(class_name: &str, endpoint: &EndpointSpec<'_>) -> Strin
         "{} {}(dynamic json) {{\n  return {};\n}}\n",
         render_non_nullable_type(&endpoint.return_spec.ty),
         isolate_helper_name(class_name, &endpoint.method.name),
-        render_decode_expr_nonnull("json", &endpoint.return_spec.ty)
+        render_decode_expr_nonnull_with(
+            "json",
+            &endpoint.return_spec.ty,
+            &endpoint.serde_response_types,
+        )
     )
 }
 

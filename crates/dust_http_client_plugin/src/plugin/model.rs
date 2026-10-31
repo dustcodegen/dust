@@ -98,6 +98,8 @@ pub(super) struct EndpointSpec<'a> {
     pub(super) params: Vec<EndpointParam<'a>>,
     /// Return-shape metadata used for fetch and decode rendering.
     pub(super) return_spec: ReturnSpec,
+    /// Named response models decoded through Dust's public Serde helper.
+    pub(super) serde_response_types: Vec<String>,
 }
 
 /// Binding between a method parameter and its HTTP request role.
@@ -127,6 +129,11 @@ pub(super) enum EndpointParam<'a> {
         /// Original method parameter.
         param: &'a MethodParamIr,
     },
+    /// Dust Serde model merged into the query map through `serialize()`.
+    SerdeQueryModel {
+        /// Original method parameter.
+        param: &'a MethodParamIr,
+    },
     /// Parameter rendered as a single request header.
     Header {
         /// Original method parameter.
@@ -141,6 +148,11 @@ pub(super) enum EndpointParam<'a> {
     },
     /// Parameter rendered as the raw request body.
     Body {
+        /// Original method parameter.
+        param: &'a MethodParamIr,
+    },
+    /// Parameter serialized through Dust's `Serializable` contract.
+    SerdeBody {
         /// Original method parameter.
         param: &'a MethodParamIr,
     },
@@ -233,9 +245,11 @@ impl<'a> EndpointParam<'a> {
             | Self::Query { param, .. }
             | Self::Queries { param }
             | Self::QueryModel { param }
+            | Self::SerdeQueryModel { param }
             | Self::Header { param, .. }
             | Self::HeaderMap { param }
             | Self::Body { param }
+            | Self::SerdeBody { param }
             | Self::Field { param, .. }
             | Self::Part { param, .. }
             | Self::Extra { param, .. }

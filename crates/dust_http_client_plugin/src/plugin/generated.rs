@@ -36,6 +36,8 @@ pub struct GeneratedEndpoint {
     pub request_mode: GeneratedRequestMode,
     /// Client-visible parameter bindings by method-parameter index.
     pub params: Vec<GeneratedParam>,
+    /// Named response models decoded through Dust's public Serde helper.
+    pub serde_response_types: Vec<String>,
 }
 
 /// HTTP methods accepted by standalone generation.
@@ -96,6 +98,11 @@ pub enum GeneratedParam {
         /// Index in the generated method parameter list.
         index: usize,
     },
+    /// Dust Serde model serialized into the complete query map.
+    SerdeQueryModel {
+        /// Index in the generated method parameter list.
+        index: usize,
+    },
     /// One request header.
     Header {
         /// Index in the generated method parameter list.
@@ -110,6 +117,11 @@ pub enum GeneratedParam {
     },
     /// Raw request body.
     Body {
+        /// Index in the generated method parameter list.
+        index: usize,
+    },
+    /// Request body serialized through Dust's `Serializable` contract.
+    SerdeBody {
         /// Index in the generated method parameter list.
         index: usize,
     },
@@ -183,6 +195,7 @@ fn endpoint_spec(endpoint: &GeneratedEndpoint) -> Result<EndpointSpec<'_>, Diagn
         request_mode: endpoint.request_mode.into(),
         params,
         return_spec,
+        serde_response_types: endpoint.serde_response_types.clone(),
     })
 }
 
@@ -196,9 +209,11 @@ fn bind_param<'a>(
         | GeneratedParam::Query { index, .. }
         | GeneratedParam::Queries { index }
         | GeneratedParam::QueryModel { index }
+        | GeneratedParam::SerdeQueryModel { index }
         | GeneratedParam::Header { index, .. }
         | GeneratedParam::HeaderMap { index }
         | GeneratedParam::Body { index }
+        | GeneratedParam::SerdeBody { index }
         | GeneratedParam::Field { index, .. }
         | GeneratedParam::Part { index, .. } => *index,
     };
@@ -218,12 +233,14 @@ fn bind_param<'a>(
         },
         GeneratedParam::Queries { .. } => EndpointParam::Queries { param },
         GeneratedParam::QueryModel { .. } => EndpointParam::QueryModel { param },
+        GeneratedParam::SerdeQueryModel { .. } => EndpointParam::SerdeQueryModel { param },
         GeneratedParam::Header { key, .. } => EndpointParam::Header {
             param,
             key: key.clone(),
         },
         GeneratedParam::HeaderMap { .. } => EndpointParam::HeaderMap { param },
         GeneratedParam::Body { .. } => EndpointParam::Body { param },
+        GeneratedParam::SerdeBody { .. } => EndpointParam::SerdeBody { param },
         GeneratedParam::Field { key, .. } => EndpointParam::Field {
             param,
             key: key.clone(),

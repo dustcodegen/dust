@@ -195,7 +195,7 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         ),
         Extraction::Queries => (
             format!("QueriesExtractable<{ty}>(\n    {decoder},\n  )"),
-            true,
+            decoder_is_const(plan),
         ),
         Extraction::Header(name) => (
             format!("HeaderExtractable<{ty}>({})", dart_string_literal(name)),
@@ -205,16 +205,17 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         Extraction::Body(BodyFormat::Json) if is_json_map(plan.value_type) => {
             (format!("JsonExtractable<{ty}>((json) => json)"), false)
         }
-        Extraction::Body(BodyFormat::Json) => {
-            (format!("JsonExtractable<{ty}>(\n    {decoder},\n  )"), true)
-        }
+        Extraction::Body(BodyFormat::Json) => (
+            format!("JsonExtractable<{ty}>(\n    {decoder},\n  )"),
+            decoder_is_const(plan),
+        ),
         Extraction::Body(BodyFormat::Form) if is_json_map(plan.value_type) => (
             format!("FormModelExtractable<{ty}>((fields) => fields)"),
             false,
         ),
         Extraction::Body(BodyFormat::Form) => (
             format!("FormModelExtractable<{ty}>(\n    {decoder},\n  )"),
-            true,
+            decoder_is_const(plan),
         ),
         Extraction::Custom(name) => (format!("{name}()"), true),
         Extraction::RawQuery => ("RawQueryExtractable()".to_owned(), true),
@@ -237,6 +238,9 @@ fn render_decoder(plan: &ParamPlan<'_>, ty: &str) -> String {
             .value_type
             .name()
             .expect("Serde-derived request models are named types");
+        if let Some((prefix, name)) = name.split_once('.') {
+            return format!("const {prefix}.${name}Deserializer().deserialize");
+        }
         format!("_${name}Deserialize")
     } else if matches!(plan.extraction, Extraction::QueryModel(_)) {
         if let Some((prefix, name)) = plan.value_type.name().and_then(|name| name.split_once('.')) {
@@ -246,6 +250,13 @@ fn render_decoder(plan: &ParamPlan<'_>, ty: &str) -> String {
     } else {
         format!("{ty}.deserialize")
     }
+}
+
+/// Returns whether Dart permits the decoder tear-off in a const expression.
+fn decoder_is_const(plan: &ParamPlan<'_>) -> bool {
+    plan.value_type
+        .name()
+        .is_some_and(|name| !name.contains('.'))
 }
 
 /// Returns whether a type is a string-to-string map.

@@ -44,3 +44,71 @@ final class TransportFilter with _$TransportFilter {
   @SerDe(defaultValue: TransportOrder.newest)
   final TransportOrder order;
 }
+
+/// Nested payload data shared by typed requests and responses.
+@Derive([Serialize(), Deserialize()])
+final class TransportMetadata with _$TransportMetadata {
+  /// Creates nested transport metadata.
+  const TransportMetadata({required this.source});
+
+  /// Origin of the transport payload.
+  final String source;
+}
+
+/// Validated request body shared by the server and generated client.
+@Derive([Serialize(), Deserialize(), Validate()])
+@SerDe(disallowUnrecognizedKeys: true)
+final class CreateTransport with _$CreateTransport {
+  /// Creates a transport request.
+  const CreateTransport({
+    required this.title,
+    required this.order,
+    required this.metadata,
+    this.tags = const [],
+  });
+
+  /// User-visible title with a decode-only legacy alias.
+  @SerDe(rename: 'display_name', aliases: ['title'])
+  @Validate(length: Length(min: 1), message: 'must not be empty')
+  final String title;
+
+  /// Selected ordering mode.
+  final TransportOrder order;
+
+  /// Nested payload value.
+  final TransportMetadata metadata;
+
+  /// Repeated payload labels.
+  @SerDe(defaultValue: <String>[])
+  final List<String> tags;
+}
+
+/// Typed response body shared by the server and generated client.
+@Derive([Serialize(), Deserialize()])
+final class TransportRecord with _$TransportRecord {
+  /// Creates a transport response.
+  const TransportRecord({
+    required this.id,
+    required this.title,
+    required this.order,
+    required this.metadata,
+    this.tags = const [],
+  });
+
+  /// Stable record identifier.
+  final String id;
+
+  /// User-visible title.
+  @SerDe(rename: 'display_name', aliases: ['title'])
+  final String title;
+
+  /// Selected ordering mode.
+  final TransportOrder order;
+
+  /// Nested payload value.
+  final TransportMetadata metadata;
+
+  /// Repeated payload labels.
+  @SerDe(defaultValue: <String>[])
+  final List<String> tags;
+}

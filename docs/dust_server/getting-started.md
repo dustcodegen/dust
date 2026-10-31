@@ -178,6 +178,44 @@ The generated client accepts the same `TodoFilter`. SerDe rename rules define
 the encoded keys, aliases remain decode-only, nullable values are omitted, and
 list values remain repeated query parameters.
 
+JSON bodies and responses use the same shared-model rule. Put the contracts in
+a package imported by both sides, derive both directions, and use the types
+directly in the server route:
+
+```dart
+@Derive([Serialize(), Deserialize(), Validate()])
+final class CreateTodo with _$CreateTodo {
+  const CreateTodo({required this.title});
+
+  @Validate(length: Length(min: 1))
+  final String title;
+}
+
+@Derive([Serialize(), Deserialize()])
+final class Todo with _$Todo {
+  const Todo({required this.id, required this.title});
+
+  final String id;
+  final String title;
+}
+```
+
+```dart
+import 'package:todo_client/contracts.dart' as contracts;
+
+@POST('/', status: 201)
+Future<contracts.Todo> create(
+  @Body() contracts.CreateTodo input,
+) async => repository.create(input);
+```
+
+The server uses the generated public deserializer and applies `Validate()`.
+The generated client calls the model's `Serializable.serialize()` contract and
+returns a typed `Todo`; `List<Todo>` and `Todo?` responses are decoded through
+generated `Deserializer` implementations. A shared model missing a required
+derive fails at its endpoint during generation. Handwritten methods with
+similar names do not replace these Dust contracts.
+
 Mount `itemRoutes()` with `Router.merge`. Use `@Controller(...)` when class-owned
 dependencies make a class clearer. Generated handlers also support typed
 `@Query()` models, compatibility `@Queries()` maps, `@Header(...)`,
@@ -190,11 +228,6 @@ work with built-in extractors. Runnable focused examples and request tests live
 in [`examples/server_codegen`](../../examples/server_codegen/README.md). The
 exhaustive internal regression fixture remains in
 [`fixtures/server_codegen_app`](../../fixtures/server_codegen_app).
-
-Automatic `Validate()` wrapping currently requires the body model and handler
-to be declared in the same Dart library. An imported body model still decodes,
-but validate it explicitly in the handler until cross-library derive facts are
-available.
 
 ## Generated annotation reference
 
@@ -222,8 +255,11 @@ Generated clients additionally require `Serialize()`. Existing `@Queries()` map
 handlers remain compatible, but new typed handlers use `@Query()`.
 
 A same-library JSON `@Body()` model deriving `Deserialize()` uses its generated
-private decoder. Imported JSON and form models expose a compatible static
-`deserialize` function; form values are strings rather than JSON values.
+private decoder. A prefixed imported JSON model deriving `Deserialize()` uses
+its public generated deserializer; deriving `Validate()` adds automatic
+post-decode validation. Generated clients require `Serialize()` on body models
+and both directions on response models. Form values are strings rather than
+JSON values.
 
 The existing handwritten examples remain the non-codegen track:
 

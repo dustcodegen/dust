@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Server payload contracts**: generated server-client boundaries require
+  Dust `Serialize()` and `Deserialize()` derives instead of accepting
+  handwritten `toJson`, `fromJson`, or static `deserialize` look-alikes.
+  Migrate shared payloads by adding the required derives; add `Validate()` when
+  decoded request values should run generated validation.
+
 ### Added
 
 - **Server clients**: `server.client_package` can target one package, while
@@ -13,10 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   existing tags. Dust derives separate standalone Dio clients for each
   controller and top-level route group from `dust_server.routes.v1`, then
   exports them through a flat generated library barrel without a second
-  handwritten endpoint contract. Shared Serde query models deriving
-  `Serialize()` and `Deserialize()` now stay typed across generated server and
-  client code, including renamed keys, aliases, defaults, enums, repeated
-  values, and omitted nulls.
+  handwritten endpoint contract. Shared Serde query and JSON payload models
+  deriving `Serialize()` and `Deserialize()` stay typed across generated
+  server and client code, including object, list and nullable responses.
+  Renamed keys, aliases, defaults, enums, nested values and validation retain
+  their declared behavior without handwritten `toJson` or `fromJson` adapters.
 
 ## [v0.3.0] - 2026-10-26
 

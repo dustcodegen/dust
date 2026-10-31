@@ -55,7 +55,7 @@ pub(super) fn sample_response_data(return_spec: &ReturnSpec) -> &'static str {
 /// Returns fallback samples for HTTP bindings that are not ordinary model values.
 pub(super) fn fallback_sample(binding: &EndpointParam<'_>) -> Option<SampleValue> {
     Some(match binding {
-        EndpointParam::Body { .. } => return None,
+        EndpointParam::Body { .. } | EndpointParam::SerdeBody { .. } => return None,
         EndpointParam::Queries { .. } | EndpointParam::HeaderMap { .. } => {
             SampleValue::new("const <String, dynamic>{'value': 'dust'} as dynamic", None)
         }

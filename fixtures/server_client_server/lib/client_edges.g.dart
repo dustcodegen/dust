@@ -27,6 +27,33 @@ mixin _$Transport {
             ),
           ),
           Route(
+            'POST',
+            '/typed',
+            _$handleCreateTyped,
+            metadata: const RouteMetadata(
+              operationId: 'createTyped',
+              tags: ['public'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/typed',
+            _$handleListTyped,
+            metadata: const RouteMetadata(
+              operationId: 'listTyped',
+              tags: ['public'],
+            ),
+          ),
+          Route(
+            'GET',
+            '/typed/{id}',
+            _$handleReadTyped,
+            metadata: const RouteMetadata(
+              operationId: 'readTyped',
+              tags: ['public'],
+            ),
+          ),
+          Route(
             'PUT',
             '/{id}',
             _$handleReplace,
@@ -90,6 +117,46 @@ mixin _$Transport {
     return guard(
       () async => responseFrom(
         await (this as Transport).search(_dustValue0),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleCreateTyped(Request request) async {
+    final Result<contracts.CreateTransport, Rejection> _dustResult0 =
+        await ValidatedExtractable<contracts.CreateTransport>(
+      JsonExtractable<contracts.CreateTransport>(const contracts.$CreateTransportDeserializer().deserialize),
+    ).extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 =
+        (_dustResult0 as Ok<contracts.CreateTransport, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as Transport).createTyped(_dustValue0),
+        status: 201,
+      ),
+    );
+  }
+
+  Future<Response> _$handleListTyped(Request request) async {
+    return guard(
+      () async => responseFrom(
+        await (this as Transport).listTyped(),
+        status: 200,
+      ),
+    );
+  }
+
+  Future<Response> _$handleReadTyped(Request request) async {
+    final Result<String, Rejection> _dustResult0 =
+        await const PathExtractable<String>('id').extract(request);
+    if (_dustResult0 case Err(:final error)) return error.intoResponse();
+    final _dustValue0 = (_dustResult0 as Ok<String, Rejection>).value;
+
+    return guard(
+      () async => responseFrom(
+        await (this as Transport).readTyped(_dustValue0),
         status: 200,
       ),
     );

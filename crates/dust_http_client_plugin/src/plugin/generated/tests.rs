@@ -45,6 +45,7 @@ fn endpoint(
         path: format!("/{name}"),
         request_mode,
         params: bindings,
+        serde_response_types: Vec::new(),
     }
 }
 
@@ -146,6 +147,20 @@ fn standalone_generation_covers_every_binding_verb_and_request_mode() {
             Vec::new(),
             Vec::new(),
         ),
+        endpoint(
+            "serdeBody",
+            GeneratedHttpVerb::Post,
+            Default::default(),
+            vec![param("input")],
+            vec![GeneratedParam::SerdeBody { index: 0 }],
+        ),
+        endpoint(
+            "serdeQuery",
+            GeneratedHttpVerb::Get,
+            Default::default(),
+            vec![param("filter")],
+            vec![GeneratedParam::SerdeQueryModel { index: 0 }],
+        ),
     ];
 
     let source = generate_client_library(&GeneratedClient {
@@ -161,6 +176,8 @@ fn standalone_generation_covers_every_binding_verb_and_request_mode() {
     }
     assert!(source.contains("FormData.fromMap"));
     assert!(source.contains("application/x-www-form-urlencoded"));
+    assert!(source.contains("input.serialize()"));
+    assert!(source.contains("filter.serialize()"));
 }
 
 #[test]

@@ -38,6 +38,10 @@ fn empty_plan<'a>() -> ServerPlan<'a> {
     }
 }
 
+fn empty_payload_models() -> PayloadCapabilityIndex {
+    PayloadCapabilityIndex::from_analysis(&WorkspaceAnalysisBuilder::default().build()).unwrap()
+}
+
 fn function(name: &str) -> FunctionIr {
     let span = SpanIr::new(FileId::new(1), TextRange::new(0_u32, 1_u32));
     FunctionIr {
@@ -131,6 +135,7 @@ fn client_generation_handles_empty_and_malformed_workspace_facts() {
             &empty_plan(),
             &destination(),
             &empty,
+            &empty_payload_models(),
         )
         .unwrap(),
         Vec::new()
@@ -143,6 +148,7 @@ fn client_generation_handles_empty_and_malformed_workspace_facts() {
         &empty_plan(),
         &destination(),
         &malformed.build(),
+        &empty_payload_models(),
     )
     .unwrap_err();
     assert!(error[0].message.contains("invalid dust_server.routes.v1"));
@@ -177,6 +183,7 @@ fn client_generation_reports_duplicate_missing_and_invalid_top_level_facts() {
         &plan,
         &destination(),
         &analysis.build(),
+        &empty_payload_models(),
     )
     .unwrap_err();
     let messages = diagnostics

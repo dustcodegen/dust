@@ -16,6 +16,7 @@ mod tests;
 pub(super) fn build_endpoint(
     fact: &ServerRouteFact,
     handler: &HandlerPlan<'_>,
+    serde_response_types: Vec<String>,
 ) -> Result<GeneratedEndpoint, Diagnostic> {
     let mut params = Vec::new();
     let mut bindings = Vec::new();
@@ -63,6 +64,7 @@ pub(super) fn build_endpoint(
         path: join_path(&fact.prefix, &fact.path),
         request_mode,
         params: bindings,
+        serde_response_types,
     })
 }
 
@@ -98,7 +100,7 @@ fn binding(
         "path" => Some(GeneratedParam::Path { index, key: key() }),
         "query" | "query-list" => Some(GeneratedParam::Query { index, key: key() }),
         "queries" if is_string_map(plan.value_type) => Some(GeneratedParam::Queries { index }),
-        "query-model" => Some(GeneratedParam::QueryModel { index }),
+        "query-model" => Some(GeneratedParam::SerdeQueryModel { index }),
         "queries" => {
             return Err(Diagnostic::error(format!(
                 "generated client parameter `{}` uses an aggregate @Queries value that cannot be encoded; use Map<String, String> or @Query() with a shared Serde model",
@@ -107,7 +109,8 @@ fn binding(
         }
         "header" => Some(GeneratedParam::Header { index, key: key() }),
         "header-map" => Some(GeneratedParam::HeaderMap { index }),
-        "body" => Some(GeneratedParam::Body { index }),
+        "body" if plan.value_type.is_named("Map") => Some(GeneratedParam::Body { index }),
+        "body" => Some(GeneratedParam::SerdeBody { index }),
         "field" => Some(GeneratedParam::Field { index, key: key() }),
         "part" => Some(GeneratedParam::Part { index, key: key() }),
         "custom" | "raw-query" | "raw-body" | "state" | "peer" | "request" | "request-parts" => {

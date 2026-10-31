@@ -274,7 +274,7 @@ impl<'a> Callable<'a> {
     }
 
     /// Returns the callable source span.
-    pub(super) fn span(self) -> SpanIr {
+    pub(crate) fn span(self) -> SpanIr {
         match self {
             Self::Method(value) => value.span,
             Self::Function(value) => value.span,
