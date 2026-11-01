@@ -1,9 +1,9 @@
 # Examples
 
-One question per file. Each is under 90 lines, creates the tables it needs and
-drops them afterwards, and prints what it just demonstrated, so the answer is
-not buried in an application. Named after the question you would type into a
-search box — `nullable_columns`, not `advanced_reading`.
+One question per file. Each creates the tables it needs, drops them afterwards,
+and prints what it just demonstrated, so the answer is not buried in an
+application. Files are named after the question you would type into a search
+box — `nullable_columns`, not `advanced_reading`.
 
 ```shell
 DUST_DATABASE_URL='postgres://user:pw@localhost:5432/app?sslmode=disable' \
