@@ -12,7 +12,7 @@ still needs a focused review, tests, and the complete local gate.
 | `dust_flutter` | audited below |
 | `dust_db_sqlite3` | audited below |
 | `dust_db_postgres` | audited below |
-| `dust_server` | pending |
+| `dust_server` | audited below |
 
 ## Direction for new code
 
@@ -228,3 +228,51 @@ failure.
 5. Compose cache disposal and pool close without weakening stale-plan recovery.
 6. Review throwing and nullable adapters only during an explicitly approved
    major-release change.
+
+## `dust_server`
+
+Extraction, route matching, and response dispatch already use `Result`,
+`Option`, sealed states, and exhaustive patterns. The remaining exception and
+nullable paths sit mostly at Shelf, stream, isolate, filesystem, serialization,
+and user-callback boundaries. Dust-owned code still uses a few nullable or
+boolean sentinels that hide why an operation failed.
+
+### Planned migrations
+
+| Priority | Area | Plan | Compatibility proof |
+| :--- | :--- | :--- | :--- |
+| 1 | Request decoding | Give coercion and generated query-model conversion typed errors instead of throwing from `coerceOne`, `coerceAll`, and `copyAll`. Add `Option` paths for optional query, header, cookie, raw-query, and parsed-content-type values; keep current nullable and throwing extractors as adapters. | Extractor tests, malformed and unsupported types, repeated query keys, exact server snapshots, and analyzer-clean fixtures. |
+| 1 | Response encoding | Add a result-returning JSON and response-encoding core, then make generated handler dispatch consume it. Keep `jsonResponse`, `responseFrom`, and `guard` as compatibility and framework-boundary adapters. | Every response-dispatch variant, failed custom serialization, invalid headers, generated handler snapshots, WebSocket upgrades, and streaming responses. |
+| 1 | Server lifecycle | Add result-returning startup APIs and typed shutdown outcomes that preserve request, task, layer, and isolate failure details. Decode isolate commands with patterns, settle each request once, and keep `serve`, `serveIsolates`, and boolean close methods as adapters. | Bind/spawn/startup failures, partial clusters, drain deadlines, background tasks, disposal failures, dead workers, and repeated close tests. |
+| 2 | Layer state | Replace the concurrency gate's `Future<bool>?` with a sealed admission outcome. Add `Option` helpers for CORS, cancellation, request IDs, and trace context, and report predicate or callback failures at one middleware boundary. | Queue full/cancelled/admitted cases, streamed-body release, CORS preflight/cache headers, timeout and access-log callbacks, tracing, and rate limiting. |
+| 2 | Templates | Add typed template load and render results for missing directories, parse failures, unknown names, and render failures. Preserve `TemplateEngine.render` and `MustacheTemplates.fromDirectory` as throwing adapters until a separately reviewed API migration. | Directory traversal and extension cases, partials, malformed templates, missing values, escaping, alternate engines, and handler rendering. |
+| 2 | Multipart streams | Add result-returning collect, text, and file-write helpers without buffering ordinary stream extraction. Keep throwing stream adapters where Shelf can only report an error after response headers have started. | Size limits, malformed boundaries, invalid text, disk failures, cancellation, early close, backpressure, and single-listen request bodies. |
+
+### Deliberate boundaries
+
+- Shelf handler, WebSocket hijack, stream, socket, filesystem, isolate, and JSON
+  APIs can throw. Their focused catches remain and translate or report the
+  failure once; stream errors after headers start cannot become an HTTP result.
+- User handlers, predicates, serializers, template engines, reporters, and
+  lifecycle callbacks remain exception boundaries. Dust must prevent an
+  observer failure from hiding the primary request or shutdown outcome.
+- Router composition errors remain throwing programmer errors. Route matching
+  already uses a sealed `RouteMatch`; hot-path map misses and plain cardinality
+  guards do not need mechanical `Option` or combinator rewrites.
+- Nullable Shelf headers, request context, WebSocket metadata, and SDK values
+  stay nullable at their public boundary. Dust-owned control flow converts them
+  once when absence affects a decision.
+- `try`/`finally` remains for concurrency permits, request accounting, stream
+  cleanup, and shutdown. Replacing it would weaken cleanup guarantees.
+
+### Implementation order
+
+1. Add typed request coercion and query conversion, then update the emitter,
+   snapshots, fixtures, and nullable compatibility adapters together.
+2. Add result-returning response encoding and migrate generated dispatch.
+3. Introduce typed lifecycle outcomes and isolate protocol decoding without
+   changing the current `serve` and close entry points.
+4. Replace layer sentinels and centralize callback failure reporting.
+5. Add typed template loading/rendering and multipart helper paths.
+6. Review old nullable, boolean, and throwing adapters only during an
+   explicitly approved major-release change.
