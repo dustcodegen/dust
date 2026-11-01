@@ -364,7 +364,7 @@ data.
 
 ## Examples
 
-- [Flutter package example](../../packages/dust_flutter/example/dust_flutter_example.dart)
+- [State annotation source sample](../../packages/dust_flutter/example/dust_flutter_example.dart)
 - [Shopping app ViewModels](../../examples/shopping_app/lib/core/view_models/app_view_model.dart)
 - [Shopping app scope composition](../../examples/shopping_app/lib/main.dart)
 - [Safe async action helper](../../examples/shopping_app/lib/features/products/view_models/products_view_model.dart)

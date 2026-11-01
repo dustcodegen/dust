@@ -39,7 +39,7 @@ Feature generation lives in:
 | Package | Responsibility |
 | :--- | :--- |
 | `dust_dart` | Dart-only annotations and runtime APIs for derives, JSON, validation, HTTP, and Database. |
-| `dust_flutter` | Flutter-only state, routing, form validation, and i18n APIs. |
+| `dust_flutter` | Flutter-only state, routing, and i18n APIs. |
 | `dust_db_sqlite3` | Native SQLite `Executor` implementation for generated Database code. |
 | `dust_db_postgres` | PostgreSQL `Executor` and pool implementation for generated Database code. |
 | `dust_server` | Dart HTTP server runtime consumed by generated server wiring. |
