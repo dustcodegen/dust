@@ -1,29 +1,16 @@
-# Usage Guides
+# Using Dust
 
-Use these guides after completing the [root Quick Start](../../README.md#quick-start).
-Each guide shows the handwritten API first and links to a working example.
+These guides are for application developers. Complete the
+[root quick start](../../README.md#quick-start), then follow the package section
+for the feature you need.
 
-## Feature Guides
+Repository architecture, contributor validation, design notes, and release
+evidence are grouped separately in [Developing Dust](../development/README.md).
 
-| Task | Guide | Package |
-| :--- | :--- | :--- |
-| Generate data-class helpers | [Derive](./derive.md) | `dust_dart` |
-| Encode and decode JSON | [Serde](./serde.md) | `dust_dart` |
-| Validate models and Flutter forms | [Validation](./validation.md) | `dust_dart` |
-| Generate Dio clients | [HTTP](./http.md) | `dust_dart` |
-| Build typed ViewModels | [State](./state.md) | `dust_flutter` |
-| Configure Navigator 2.0 routing | [Routing](./routing.md), [deep links](./routing-deep-links.md), [shells](./routing-shells.md), [guards](./routing-guards.md) | `dust_flutter` |
-| Maintain ARB translations | [Internationalization](./i18n.md) | `dust_flutter` |
-| Validate SQLite queries | [Database](./db.md) | `dust_dart`, `dust_db_sqlite3` |
-| Run validated PostgreSQL queries | [PostgreSQL runtime](../../packages/dust_db_postgres/README.md) | `dust_dart`, `dust_db_postgres` |
-| Build Dart HTTP servers | [Server](../dust_server/README.md) | `dust_server` |
+## Dust CLI
 
-Install the CLI from the [installation guide](../../README.md#installation).
-Each feature guide contains its exact package command and setup requirements.
-When changing Dust versions, check the
-[CLI and package compatibility guide](./compatibility.md).
-
-## CLI Overview
+- [Installation](../../README.md#installation)
+- [CLI and package compatibility](./compatibility.md)
 
 | Command | Behavior |
 | :--- | :--- |
@@ -40,25 +27,65 @@ When changing Dust versions, check the
 | `dust i18n build` | Reconciles ARB files and refreshes the Flutter bootstrap. |
 | `dust i18n check` | Validates ARB files and localization setup without writing. |
 
-Run `dust --help` or `dust <command> --help` for the current options.
-`--root` accepts equivalent relative or absolute package paths, including pub
-workspace members.
+Run `dust --help` or `dust <command> --help` for current options. `--root`
+accepts equivalent relative or absolute package paths, including pub workspace
+members.
 
-In a pub workspace, run `dust build` and `dust check` from a member package (or
-pass `--root <member>`). Running either command at a root that declares
+In a pub workspace, run `dust build` and `dust check` from a member package, or
+pass `--root <member>`. Running either command at a root that declares
 `workspace:` fails instead of succeeding without checking any libraries.
 
 `dust upgrade --check` reads release metadata only. `dust upgrade --dry-run`
 downloads and verifies the selected release without replacing the installed
-binary. Package compatibility is tracked separately in the
-[compatibility contract](./compatibility.md).
+binary. Package compatibility is tracked in the
+[compatibility guide](./compatibility.md).
 
-> [!NOTE]
-> Normal `dust build` does not generate `@SqlxDatabase` or `@SqlxDao` output.
-> Database projects run `dust build` for row derives and `dust db build` for
-> database and DAO generation.
+## `dust_dart`
 
-## Typical Workflow
+| Task | Guide |
+| :--- | :--- |
+| Generate data-class helpers | [Derive](./derive.md) |
+| Encode and decode JSON | [JSON serialization](./serde.md) |
+| Validate models and Flutter forms | [Validation](./validation.md) |
+| Generate Dio clients | [HTTP clients](./http.md) |
+| Use Dart 3.13 primary constructors | [Primary constructors](./primary-constructors.md) |
+| Validate SQL and generate DAOs | [Database](./db.md) |
+
+See the [`dust_dart` package reference](../../packages/dust_dart/README.md) for
+annotations and runtime APIs.
+
+## `dust_flutter`
+
+| Task | Guide |
+| :--- | :--- |
+| Build typed ViewModels | [State](./state.md) |
+| Configure Navigator 2.0 routing | [Routing](./routing.md) |
+| Add guarded routes | [Route guards](./routing-guards.md) |
+| Handle incoming links | [Deep links](./routing-deep-links.md) |
+| Keep independent branch stacks | [Shell routes](./routing-shells.md) |
+| Maintain ARB translations | [Internationalization](./i18n.md) |
+
+See the [`dust_flutter` package reference](../../packages/dust_flutter/README.md)
+for runtime APIs.
+
+## Database runtimes
+
+- [`dust_db_sqlite3`](../../packages/dust_db_sqlite3/README.md): native SQLite
+  runtime, opening modes, transactions, migrations, and WAL operation.
+- [`dust_db_postgres`](../../packages/dust_db_postgres/README.md): PostgreSQL
+  pool and executor runtime.
+- [SQLite WAL guide](./db-wal.md): application configuration and operational
+  boundaries.
+- [SQLite query parity](./db-query-parity.md): generated DAO and inline query
+  behavior.
+
+## `dust_server`
+
+The [server guide](../dust_server/README.md) covers routing, extraction,
+responses, dependencies, middleware, authentication, WebSockets, rendering,
+serving, tracing, security, and testing.
+
+## Common workflows
 
 For normal Dart and Flutter generation:
 
@@ -84,14 +111,14 @@ dust i18n build
 dust i18n check
 ```
 
-## Runnable Examples
+> [!NOTE]
+> Normal `dust build` does not generate `@SqlxDatabase` or `@SqlxDao` output.
+> Database projects run `dust build` for row derives and `dust db build` for
+> database and DAO generation.
+
+## Runnable application examples
 
 - [Product showcase](../../examples/product_showcase): Dart derives, JSON,
   validation, and HTTP generation.
 - [Shopping app](../../examples/shopping_app): Flutter state, routing, i18n,
   HTTP, and Database integration.
-- [Benchmark project](../../examples/benchmark_project): large generated input
-  used for build and cache measurements.
-
-Contributor checkout and Rust development commands live in
-[CONTRIBUTING.md](../../CONTRIBUTING.md).

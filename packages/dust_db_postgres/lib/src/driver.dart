@@ -12,7 +12,9 @@ final class PostgresDriver extends _PostgresSession implements Pool {
   final pg.Pool<Object?> _pool;
   final Map<String, String> _migrations;
 
-  /// Opens a pool from a connection URL and applies unapplied migrations.
+  /// Opens a pool from a connection URL.
+  ///
+  /// Call [migrate] after opening to apply unapplied migrations.
   ///
   /// The URL is `postgres://user:password@host:port/database`.
   static PostgresDriver connect(

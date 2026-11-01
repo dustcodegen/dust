@@ -7,7 +7,7 @@ enum Driver {
   /// SQLite through `package:sqlite3`.
   sqlite3,
 
-  /// Reserved for the future Postgres runtime.
+  /// PostgreSQL through `package:dust_db_postgres`.
   postgres,
 }
 

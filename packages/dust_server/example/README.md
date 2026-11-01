@@ -1,19 +1,13 @@
 # Examples
 
-Two sizes, and the small one is the point.
-
 These are the handwritten, non-codegen examples. For the equivalent annotated
 handlers and generated routing, see
 [`examples/server_codegen`](../../../examples/server_codegen/README.md).
 
-**One-question examples** are single files under 60 lines. Each answers exactly
-one question and nothing else, so the answer is not buried in an application.
-Named after the question you would type into a search box — `handle_head_request`,
-not `advanced_routing`.
-
-**Complete applications** come later, and there will be few of them. They show
-the pieces working together, which no single-concept file can — and that is the
-only job they have.
+Each file focuses on one question, so the answer is not buried in an
+application. Files are named after the question you would type into a search
+box — `handle_head_request`, not `advanced_routing`. Operational examples are
+longer where lifecycle or security behavior needs to be shown end to end.
 
 ## The contract
 
@@ -23,14 +17,14 @@ Every example in this directory:
    `dart run example/cors.dart`
 2. Carries a `curl` block for the endpoints it serves, so the example can be
    checked from a terminal rather than only by reading it.
-3. Splits `Router buildApp()` out of `main`, so the shared suite in
+3. Splits `buildApp` out of `main`, so the shared suite in
    [`../test/example/`](../test/example) can serve it on a loopback port
-   without a process.
+   without a process and substitute dependencies where needed.
 4. Answers one question. A second concept in the file belongs in a second file.
 
-`buildApp()` takes no arguments — anything the example needs, it constructs. A
-complete application takes its dependencies instead, so a test can substitute a
-repository.
+Small examples construct their own values. Examples that own a database,
+filesystem path, secret, exporter, or callback accept that dependency in
+`buildApp`, so tests can substitute it without changing the route behavior.
 
 ## Routing and requests
 

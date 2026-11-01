@@ -1,9 +1,7 @@
 /// Renders a named template against a set of values.
 ///
-/// `dust_server` does not implement templating. It ships an adapter over
-/// `mustache_template`, which is the most used template package on pub, and
-/// this interface so anything else, `jinja` and `liquify` included, can be
-/// dropped in without changing a handler.
+/// `dust_server` delegates templating to `mustache_template` and ships this
+/// interface so another engine can be used without changing a handler.
 ///
 /// ```dart
 /// final class JinjaTemplates implements TemplateEngine {

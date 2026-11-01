@@ -25,7 +25,7 @@ localization, SQL, and Dart servers—without `build_runner`.
 
 <p align="center">
   <a href="https://dustcodegen.github.io/">Website</a> ·
-  <a href="docs/usage/README.md">Documentation</a> ·
+  <a href="docs/README.md">Documentation</a> ·
   <a href="https://github.com/dustcodegen/dust/releases/tag/v0.3.0">v0.3.0 release</a> ·
   <a href="examples/">Examples</a>
 </p>
@@ -187,14 +187,14 @@ floors, local pre-commit gate, and release-only CI policy.
 
 ## Documentation
 
-- [Usage guides](docs/usage/README.md)
+- [Documentation map](docs/README.md)
+- [Using Dust](docs/usage/README.md)
 - [CLI and package compatibility](docs/usage/compatibility.md)
 - [Dart package](packages/dust_dart/README.md)
 - [Flutter package](packages/dust_flutter/README.md)
 - [Database runtime](packages/dust_db_sqlite3/README.md)
 - [Server runtime](packages/dust_server/README.md)
-- [Contributor guide](CONTRIBUTING.md)
-- [Architecture and internals](docs/developer.md)
+- [Developing Dust](docs/development/README.md)
 
 ## Examples
 

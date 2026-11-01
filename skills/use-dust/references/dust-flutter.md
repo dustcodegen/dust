@@ -32,4 +32,3 @@ Source documentation:
 - [Routing](https://github.com/dustcodegen/dust/blob/main/docs/usage/routing.md)
 - [State](https://github.com/dustcodegen/dust/blob/main/docs/usage/state.md)
 - [i18n](https://github.com/dustcodegen/dust/blob/main/docs/usage/i18n.md)
-- [Readiness contract](https://github.com/dustcodegen/dust/blob/main/docs/design/flutter-routing-state.md)

@@ -139,8 +139,7 @@ final moved = profile.copyWith.address(city: 'London');
 
 ### Generic Models
 
-Dust preserves chosen type arguments through generated mixins and copy helpers,
-as specified in [#93](https://github.com/dustcodegen/dust/issues/93):
+Dust preserves chosen type arguments through generated mixins and copy helpers:
 
 ```dart
 @Derive([CopyWith(), ToString(), Eq()])
@@ -161,11 +160,9 @@ field type accepts null. For non-nullable fields, null keeps the existing value.
 Copies stay shallow. Same-library nested helpers retain their type arguments;
 imported models support typed replacement, not private chained helpers.
 
-Traditional and primary-constructor consumers exercise these cases locally.
-Core-name/local collision cases have scoped tests, but names matching generated
-members such as `copyWith` still need
-[#103](https://github.com/dustcodegen/dust/issues/103). Generic validation helpers
-and other plugin capabilities remain under the [generic model design](../design/generic-models.md).
+Traditional and primary-constructor forms support the same generic copy
+contract. Source members cannot reuse generated member names such as
+`copyWith`.
 
 ### Explicit Generic Callbacks
 
@@ -195,8 +192,8 @@ final cleared = model.copyWith(optionalTransform: null);
 
 Omission retains the callback. Passing `null` clears a nullable callback, while
 the required callback keeps the existing non-nullable null-as-omission behavior.
-This example does not establish generic class generation (#93) or shorthand
-primary callback-formal support (#92).
+This is an explicit callback field type; shorthand primary-constructor callback
+formals are not supported.
 
 ## Examples
 
@@ -205,5 +202,5 @@ primary callback-formal support (#92).
 - [Generated copyWith tests](../../examples/product_showcase/test/generated_copywith_test.dart)
 - [Explicit callback model](../../examples/product_showcase/lib/models/callback_model.dart)
 - [Callback copy tests](../../examples/product_showcase/test/models/callback_model_test.dart)
-- [Draft generic models](../../examples/product_showcase/lib/models/generic_models.dart)
+- [Generic models](../../examples/product_showcase/lib/models/generic_models.dart)
 - [Generic copy tests](../../examples/product_showcase/test/models/generic_models_test.dart)

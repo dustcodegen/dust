@@ -61,7 +61,7 @@ the Top 10 is a risk index, not a complete test plan.
 ## Memory and dependency safety
 
 The Rust workspace forbids `unsafe` in first-party crates. Dart code is
-memory-managed. The local pre-commit hook and release-only CI run
+memory-managed. The local pre-commit hook and release workflows run
 `scripts/security/audit.sh`, which rejects Rust vulnerabilities, unsoundness,
 unmaintained crates, unexpected yanks, and affected/retracted/discontinued Dart
 packages.

@@ -87,23 +87,25 @@ CounterViewModelScope(
 | i18n | Beta | ARB loading, locale fallback, generated app setup, and translated widgets. |
 
 Stable APIs keep their documented authoring contracts compatible. Beta APIs may
-still receive refinements while they are hardened. See the
-[routing and state readiness contract](https://github.com/dustcodegen/dust/blob/main/docs/design/flutter-routing-state.md)
-for tested boundaries and application-owned responsibilities.
+still receive refinements while they are hardened.
 
 ## Examples
 
-Each runs with `flutter run example/<file>`, without `dust build`, by extending
-the runtime base a generated ViewModel extends:
+These runtime demos run without generation:
 
 - [`async_view_model.dart`](example/async_view_model.dart): loading from a
   `Result`, keeping the error's type in `AsyncFailure`, refresh that keeps data
-  on screen, and retry.
+  on screen, and retry. Run it with
+  `flutter run example/async_view_model.dart`.
 - [`stale_actions.dart`](example/stale_actions.dart): search-as-you-type where
   a slow answer never overwrites a newer one, and a one-off effect for an empty
-  result.
-- [`dust_flutter_example.dart`](example/dust_flutter_example.dart): the route,
-  ViewModel, and i18n annotations `dust build` reads.
+  result. Run it with `flutter run example/stale_actions.dart`.
+
+[`dust_flutter_example.dart`](example/dust_flutter_example.dart) is an API
+source sample for route and ViewModel annotations plus i18n runtime setup. It
+does not contain a standalone `main()` entrypoint. Use the
+[shopping app](../../examples/shopping_app) for a generated, runnable
+application.
 
 ## Libraries
 
@@ -120,7 +122,7 @@ the runtime base a generated ViewModel extends:
 - [State management](https://github.com/dustcodegen/dust/blob/main/docs/usage/state.md)
 - [Localization](https://github.com/dustcodegen/dust/blob/main/docs/usage/i18n.md)
 - [Shopping app](https://github.com/dustcodegen/dust/tree/main/examples/shopping_app)
-- [Package example](https://github.com/dustcodegen/dust/blob/main/packages/dust_flutter/example/dust_flutter_example.dart)
+- [Package API source sample](https://github.com/dustcodegen/dust/blob/main/packages/dust_flutter/example/dust_flutter_example.dart)
 
 Report problems through the
 [Dust issue tracker](https://github.com/dustcodegen/dust/issues). Contributions

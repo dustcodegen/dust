@@ -1,5 +1,5 @@
 name: server_app
-description: Fixture for the Dust server plugin, hand-emitted until it exists.
+description: Dust server fixture with authentication and database integration.
 publish_to: none
 version: 0.1.0
 

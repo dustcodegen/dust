@@ -1,7 +1,7 @@
 import 'package:dust_server/server.dart';
 
 // The hand-written half of the worked example in
-// docs/design/server-plugin.md: the types an application author writes.
+// docs/dust_server/extraction.md: the types an application author writes.
 
 /// The value a custom extractor produces, with no framework coupling.
 final class AuthUser {

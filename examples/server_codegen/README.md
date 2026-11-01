@@ -37,8 +37,8 @@ Use the [handwritten runtime examples](../../packages/dust_server/example/README
 when you do not want code generation. Both styles use the same `Router`,
 extractors, responses, and serving runtime.
 
-Codegen now has runnable coverage for route modules, controllers, all seven
-supported HTTP verbs, route metadata and middleware, built-in parameter/body
+Runnable coverage includes route modules, controllers, all seven supported
+HTTP verbs, route metadata and middleware, built-in parameter/body
 extraction, required/optional/fallible extraction, validation, and standard
 response dispatch. The production composition example proves generated routes
 keep the runtime's body, concurrency and queue limits, request ids, access logs,

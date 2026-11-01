@@ -1,73 +1,40 @@
 # Documentation
 
-The root [README](../README.md) explains what Dust does and provides the first
-runnable example. Use this directory for feature setup, API details, examples,
-and contributor documentation.
+Choose the path that matches what you are doing. Application setup and APIs
+live under **Using Dust**. Repository architecture, validation, design work,
+and release evidence live under **Developing Dust**.
 
-## Start Here
+## Using Dust
 
-| Goal | Documentation |
+Start with the [root quick start](../README.md#quick-start), then use the guide
+for the package you are adding to your application.
+
+| Package | User documentation |
 | :--- | :--- |
-| Install Dust and generate the first model | [README Quick Start](../README.md#quick-start) |
-| Check CLI and package versions | [Compatibility guide](./usage/compatibility.md) |
-| Choose and configure a feature | [Usage guides](./usage/README.md) |
-| Explore a Dart example | [Product showcase](../examples/product_showcase/README.md) |
-| Explore a Flutter application | [Shopping app](../examples/shopping_app/README.md) |
-| Contribute to Dust | [Contributing guide](../CONTRIBUTING.md) |
+| Dust CLI | [Commands, workflows, and compatibility](./usage/README.md) |
+| `dust_dart` | [Derive](./usage/derive.md), [JSON](./usage/serde.md), [validation](./usage/validation.md), [HTTP](./usage/http.md), and [Database](./usage/db.md) |
+| `dust_flutter` | [State](./usage/state.md), [routing](./usage/routing.md), and [internationalization](./usage/i18n.md) |
+| `dust_db_sqlite3` | [SQLite runtime](../packages/dust_db_sqlite3/README.md) |
+| `dust_db_postgres` | [PostgreSQL runtime](../packages/dust_db_postgres/README.md) |
+| `dust_server` | [Server guide](./dust_server/README.md) |
 
-## Feature Guides
+The [usage index](./usage/README.md) includes setup order, common CLI
+workflows, package references, and runnable application examples.
 
-### Dart
+## Developing Dust
 
-- [Data-class derives](./usage/derive.md)
-- [JSON serialization](./usage/serde.md)
-- [Model and form validation](./usage/validation.md)
-- [Dio HTTP clients](./usage/http.md)
+Use the [developer documentation](./development/README.md) for:
 
-### Flutter
-
-- [State management](./usage/state.md)
-- [Typed routing](./usage/routing.md)
-- [Routing and state architecture](./design/flutter-routing-state.md)
-- [Internationalization](./usage/i18n.md)
-
-### Database
-
-- [SQL validation and generated DAOs](./usage/db.md)
-- [SQLite runtime](../packages/dust_db_sqlite3/README.md)
-- [PostgreSQL runtime](../packages/dust_db_postgres/README.md)
-
-### Server
-
-- [dust_server guides](./dust_server/README.md): runtime and generated routing,
-  extraction, responses, middleware, serving, WebSockets, and testing
-
-## Package References
-
-- [`dust_dart`](../packages/dust_dart/README.md): Dart annotations and runtime
-  APIs.
-- [`dust_flutter`](../packages/dust_flutter/README.md): Flutter state, routing,
-  validation, and i18n APIs.
-- [`dust_db_sqlite3`](../packages/dust_db_sqlite3/README.md): native SQLite
-  runtime for generated Database code.
-- [`dust_db_postgres`](../packages/dust_db_postgres/README.md): PostgreSQL pool
-  and executor runtime for generated Database code.
-- [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
-  generated route modules on `shelf`, shaped after axum.
+- contributor setup and the local quality gate;
+- engine architecture and plugin boundaries;
+- package-by-package validation;
+- active design work and retained decisions; and
+- release and production-readiness evidence.
 
 ## Examples
 
-| Example | Covers |
-| :--- | :--- |
-| [Product showcase](../examples/product_showcase/README.md) | Derives, JSON, validation, and HTTP generation. |
-| [Shopping app](../examples/shopping_app/README.md) | Flutter state, routing, i18n, HTTP, and Database integration. |
-| [Benchmark project](../examples/benchmark_project/README.md) | Large generated input for build and cache measurements. |
-
-## Contributor Documentation
-
-- [Contributing](../CONTRIBUTING.md)
-- [Developer guide](./developer.md)
-- [Plugin guide](./plugin-guide.md)
-- [Code of Conduct](../CODE_OF_CONDUCT.md)
-- [Security policy](../SECURITY.md)
-- [Roadmap and milestones](https://github.com/dustcodegen/dust/milestones)
+| Example | Audience | Covers |
+| :--- | :--- | :--- |
+| [Product showcase](../examples/product_showcase/README.md) | Dart users | Derives, JSON, validation, and HTTP generation. |
+| [Shopping app](../examples/shopping_app/README.md) | Flutter users | State, routing, i18n, HTTP, and Database integration. |
+| [Benchmark project](../examples/benchmark_project/README.md) | Dust contributors | Build and cache performance measurements. |

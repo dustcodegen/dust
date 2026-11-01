@@ -8,8 +8,7 @@
 /// graph of every project that runs `dust build`. Owning three small types
 /// costs less than that.
 ///
-/// The contract is stable within a major version, and `Option` is still
-/// growing: see the tracking issue for the methods it does not have yet.
+/// The contract is stable within a major version.
 ///
 /// ```dart
 /// import 'package:dust_dart/fp.dart';

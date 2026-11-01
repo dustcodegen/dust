@@ -59,8 +59,8 @@ change is intended by adding these facts.
 
 ## Remaining work
 
-- Use the [verified shared static literal contract](static-dart-literals.md)
-  when reading graph inputs ([#107](https://github.com/dustcodegen/dust/issues/107));
+- Use the verified shared static literal decoder when reading graph inputs
+  ([#107](https://github.com/dustcodegen/dust/issues/107));
   never use the shallow delimiter-stripper for semantic URI identity.
 - Associate canonical symbols with actual declaration origins, construct the
   import/export/part graph, and use one binding policy at every annotation site.

@@ -15,10 +15,9 @@ or query builder.
 
 ## Installation
 
-This package requires stable Dart 3.10 or newer. Flutter 3.38.1 provides that
-stable SDK; Flutter 3.38.0 bundles an older Dart prerelease rejected by Pub.
-See the [SDK consumer validation guide](../../docs/usage/db-sdk-validation.md).
-Other Dust runtime packages keep their existing Dart 3.6 floor.
+This package requires stable Dart 3.10 or newer. Flutter users need 3.38.1 or
+newer. See the [compatibility guide](../../docs/usage/compatibility.md) for SDK
+and Dust package version requirements.
 
 Add the Database annotations and SQLite runtime:
 
@@ -61,7 +60,7 @@ CREATE TABLE users (
 
   try {
     await queryExecute(
-      'INSERT INTO users (name) VALUES (?)',
+      r'INSERT INTO users (name) VALUES ($1)',
       ['Ada'],
     ).execute(db);
 
@@ -377,12 +376,13 @@ Generated DAOs pass `TypeFromRow.fromRow` mappers directly.
 
 ## Raw SQLite Access
 
-Use `raw` only for dynamic SQL that cannot be checked during generation:
+Use `unsafe` only for dynamic SQL that cannot be checked during generation:
 
 ```dart
-final rows = await database.pool.raw.fetch(
-  'SELECT * FROM users WHERE id = ?',
+final rows = await database.unsafe.fetchAs(
+  r'SELECT id, name FROM users WHERE id = $1',
   [id],
+  (row) => (row.read<int>('id'), row.read<String>('name')),
 );
 ```
 
@@ -390,7 +390,7 @@ Access the underlying `package:sqlite3` database only for driver-specific
 operations:
 
 ```dart
-final sqlite = (database.pool as Sqlite3Executor).database;
+final sqlite = (database.connection as Sqlite3Executor).database;
 ```
 
 Prefer `database.connection` plus generated DAOs for product queries because

@@ -77,21 +77,28 @@ abstract final class OrdersRepo {
 Generate and validate:
 
 ```bash
+dust build
 DUST_DATABASE_URL='postgres://user:pw@localhost:5432/app?sslmode=disable' dust db build
+dust check
+dust check --db --offline
 ```
 
 Then use it:
 
 ```dart
 final database = AppDatabase.connect(url);
-await database.migrate();
+try {
+  (await database.migrate()).unwrap();
 
-final orders = await OrdersRepo(database.connection).byIds(<int>[1, 2]);
-switch (orders) {
-  case Ok(:final value):
-    print(value.map((order) => order.item));
-  case Err(:final error):
-    print('lookup failed: $error');
+  final orders = await OrdersRepo(database.connection).byIds(<int>[1, 2]);
+  switch (orders) {
+    case Ok(:final value):
+      print(value.map((order) => order.item));
+    case Err(:final error):
+      print('lookup failed: $error');
+  }
+} finally {
+  (await database.close()).unwrap();
 }
 ```
 
@@ -117,7 +124,9 @@ AppDatabase.connect(
   options: const PgConnectOptions(
     sslMode: PgSslMode.verifyFull,
     connectTimeout: Duration(seconds: 5),
+    queryTimeout: Duration(seconds: 30),
     applicationName: 'orders-api',
+    maxConnectionAge: Duration(minutes: 30),
     maxConnections: 20,
   ),
 );
@@ -134,8 +143,10 @@ inside one transaction and under a PostgreSQL advisory lock — several servers
 can start against one database at once, and the lock is what stops them racing
 to apply the same migration.
 
-Applied migrations are recorded in `__dust_schema_migrations`, the same table
-the SQLite runtime uses.
+Applied migration names and timestamps are recorded in
+`__dust_schema_migrations`. PostgreSQL migration history does not store SQL
+checksums, so never edit or rename an applied migration; add a new migration
+for every schema change.
 
 ## What differs from SQLite
 
@@ -182,13 +193,12 @@ DUST_DATABASE_URL='postgres://user:pw@localhost:5432/dust_test?sslmode=disable' 
 ```
 
 There is no in-memory PostgreSQL, which is also why `dust db build` needs a
-server and CI validates from the committed query cache instead.
+server and server-independent checks use the committed query cache instead.
 
 ## Documentation
 
 - [Examples](https://github.com/dustcodegen/dust/tree/main/packages/dust_db_postgres/example) — one file per question, from opening a pool to `jsonb` and `timestamptz`
 - [Database usage guide](https://github.com/dustcodegen/dust/blob/main/docs/usage/db.md)
-- [Design notes](https://github.com/dustcodegen/dust/blob/main/docs/design/db-queries.md)
 
 ## License
 

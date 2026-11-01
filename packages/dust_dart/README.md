@@ -74,12 +74,17 @@ Prefer focused imports when a file uses one feature area:
 
 | Import | Provides |
 | :--- | :--- |
+| `package:dust_dart/core.dart` | Compatibility export for the functional primitives in `fp.dart`. |
 | `package:dust_dart/derive.dart` | Data-class and validation annotations. |
 | `package:dust_dart/serde.dart` | JSON annotations, codecs, and derive exports. |
 | `package:dust_dart/http.dart` | Typed HTTP client annotations and runtime types. |
 | `package:dust_dart/fp.dart` | `Option`, `Result`, `Unit`, and their variants. |
 | `package:dust_dart/db.dart` | Beta Database annotations and runtime contracts. |
-| `package:dust_dart/dust_dart.dart` | Convenience export for every Dart-only API. |
+| `package:dust_dart/dust_dart.dart` | Convenience export whose `Query` name is the Database annotation. |
+
+Database and HTTP both define a `Query` annotation. The unified barrel exposes
+the Database annotation; import `package:dust_dart/http.dart` in files that use
+HTTP `@Query` parameters.
 
 ## Functional Types
 
