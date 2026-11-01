@@ -9,7 +9,7 @@ still needs a focused review, tests, and the complete local gate.
 | Package | Status |
 | :--- | :--- |
 | `dust_dart` | audited below |
-| `dust_flutter` | pending |
+| `dust_flutter` | audited below |
 | `dust_db_sqlite3` | pending |
 | `dust_db_postgres` | pending |
 | `dust_server` | pending |
@@ -74,3 +74,58 @@ and optional error metadata.
    typed readers.
 5. Add the result-returning custom codec path, then migrate generated decoding.
 6. Review old adapters only during an explicitly approved major-release change.
+
+## `dust_flutter`
+
+The runtime already models async UI state with sealed classes and uses pattern
+matching in generated-facing code. The main nullable sentinels are in routing:
+route parsers use `null` for both absence and invalid input, while guards use
+`null` to mean "allow." The async ViewModel example also turns `Err` into a
+thrown object so the base class can catch it again.
+
+Using `Result` or `Option` in this package's public API requires moving
+`dust_dart` from a development dependency to a runtime dependency. That change
+must land with a standalone Flutter consumer check; generated code must not
+rely on an undeclared transitive dependency.
+
+### Planned migrations
+
+| Priority | Area | Plan | Compatibility proof |
+| :--- | :--- | :--- | :--- |
+| 1 | Route parameters | Add typed parsers that return `Result<Option<T>, RouteParameterError>` so a missing optional value and malformed input are distinct. Move generated path and query decoding to the typed helpers; keep the nullable `generatedRouteParse*` functions as adapters. | Helper unit tests, route parser edge cases, exact route snapshots, deep-link restoration, and analyzer-clean generated fixtures. |
+| 1 | Guards and redirects | Add `Option<T>`-returning guard and redirect contracts, then adapt the existing `T?` contracts at one boundary. Make the internal guard chain always return `Future<Option<T>>` instead of using both a nullable future and a nullable result. | Guard order, sync and async redirects, auth-protected routes, redirect cycles, stale navigation, and browser restoration tests. |
+| 1 | Async actions and loading | Add a result-native path that accepts `Result<T, E>`, preserves action-token stale-result suppression, and maps `Ok`/`Err` directly to callbacks or `AsyncState`. Keep throwing `runAction` and `loadData` entry points as compatibility adapters. | Action-token tests, nullable data, refresh with previous data, typed errors, retries, disposal, and the async ViewModel example. |
+| 2 | Navigation completion | Return `Option<_RouteEntry<T>>` from the private navigation pipeline for disposed or superseded work. Keep Flutter's public `Future<R?>` push result because `null` is a valid Navigator pop result. | Push/pop result, concurrent navigation, disposal, refresh, replace, and branch-stack tests. |
+| 2 | i18n parsing | Add a typed ARB parse result and keep `I18nArbParser.parse` as the throwing compatibility adapter. Catch `jsonDecode` failures only at this boundary and preserve asset-loading failures from Flutter. | Malformed JSON, non-object JSON, metadata filtering, locale fallback, overrides, and asset discovery tests. |
+| 2 | Routing invariants | Remove avoidable null assertions when composing URI fragments, restoring stacks, and resolving `RouterScope`; use patterns or explicit Flutter errors while preserving the same successful behavior. | URI round trips, restore mode, missing-scope diagnostics, and release-mode widget tests. |
+
+### Deliberate boundaries
+
+- Flutter `Page` fields, `BuildContext.maybeOf`, route branch metadata, and
+  Navigator pop results stay nullable because Flutter defines those contracts.
+- `AsyncState<T>` remains the authoritative sealed lifecycle. Its nullable
+  convenience getters stay for widget ergonomics and to preserve the existing
+  distinction between no data and present nullable data.
+- Initialization keeps `try`/`finally` so `_initFuture` is cleared after both
+  success and failure. Diagnostic route formatting keeps its fallback catch so
+  logging cannot break navigation.
+- Asset bundle I/O, user callbacks, and legacy throwing overrides remain
+  exception boundaries. New Dust-owned flow converts expected failures once
+  and pattern-matches them afterward.
+- Plain lifecycle guards, equality checks, and collection loops keep their
+  direct `if` statements; replacing them with combinators would be less clear.
+
+### Implementation order
+
+1. Promote `dust_dart` to a declared runtime dependency and add a standalone
+   consumer fixture before exposing its functional types.
+2. Add typed route parameter helpers and migrate the route emitter, snapshots,
+   runtime tests, and generated examples.
+3. Add typed guard and redirect contracts, bridge legacy contracts once, then
+   migrate generated routers and the routing guides.
+4. Add result-native action and async loading paths, then migrate the example
+   without throwing `Err` values.
+5. Convert the private navigation result and remove the related null assertions.
+6. Add typed ARB parsing while retaining the existing throwing entry point.
+7. Review nullable and throwing adapters only during an explicitly approved
+   major-release change.
