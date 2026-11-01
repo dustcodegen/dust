@@ -23,13 +23,12 @@ dependencies:
 
 ## Entry points
 
-Import everything, or only the part a file needs. Every symbol is reachable
-from `server.dart`; the narrower libraries exist so a composition file does not
-pull in annotations, and a handler file does not pull in the server.
+Import the application runtime from `server.dart`, or only the part a file
+needs. Test utilities stay separate so production code does not import them.
 
 | Library | Contents |
 | :--- | :--- |
-| `package:dust_server/server.dart` | everything below |
+| `package:dust_server/server.dart` | every application runtime library below except `testing.dart` |
 | `package:dust_server/annotations.dart` | `@Controller(...)`, the verbs, parameter annotations, `@Routes(...)` |
 | `package:dust_server/extraction.dart` | `FromRequestParts`, `FromRequest`, the built-in extractors, coercion |
 | `package:dust_server/response.dart` | `Rejection`, `IntoResponse`, encoders, `guard`, `ServerErrors` |
@@ -38,13 +37,15 @@ pull in annotations, and a handler file does not pull in the server.
 | `package:dust_server/serving.dart` | `serve`, `serveIsolates`, static files |
 | `package:dust_server/ws.dart` | WebSocket routes and sessions |
 | `package:dust_server/templating.dart` | template engines and HTML responses |
+| `package:dust_server/tracing.dart` | spans, W3C trace context, exporters |
+| `package:dust_server/testing.dart` | in-process and real-socket test clients and assertions |
 
 `test/libraries_test.dart` holds each one to that contract: a file importing
 only `router.dart` has to compile without `server.dart`.
 
 ## Layout
 
-`lib/src` is split by feature, and no file passes 180 lines. `test` mirrors it.
+`lib/src` is split by feature, and `test` mirrors it.
 
 | Folder | Contents |
 | :--- | :--- |
@@ -56,6 +57,8 @@ only `router.dart` has to compile without `server.dart`.
 | `layers/` | the middleware that ships |
 | `serving/` | running, draining, clustering, static files |
 | `template/` | the template seam and its adapter |
+| `testing/` | in-process and real-socket test clients and assertions |
+| `tracing/` | spans, trace context, and the tracing layer |
 | `ws/` | WebSocket routes and sessions |
 
 Each folder carries a barrel, so a public entry point is one export line and the
@@ -231,8 +234,8 @@ exhaustive internal regression fixture remains in
 
 ## Generated annotation reference
 
-These are the 24 annotations currently consumed by server codegen. The forms
-below match their Dart declarations exactly.
+These are the annotations consumed by server codegen. The forms below match
+their Dart declarations exactly.
 
 | Target | Supported annotations |
 | :--- | :--- |
@@ -280,8 +283,8 @@ rule. To send a JSON string specifically, wrap it — `['Hello']` or
 `{'greeting': 'Hello'}` — or call `jsonResponse`.
 
 Every example runs the same way. The
-[index](../../packages/dust_server/example/README.md) lists all 51 by the
-question each one answers.
+[index](../../packages/dust_server/example/README.md) lists them by the question
+each one answers.
 
 ## Generated SQLite Background Opening
 

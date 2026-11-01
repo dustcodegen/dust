@@ -6,9 +6,8 @@ fallback.
 
 ## Templates
 
-Templating is not implemented here. `mustache_template` is the most used
-template package on pub, so this package adapts it and defines a seam so
-anything else can replace it.
+Templating is delegated to `mustache_template`. This package adapts it and
+defines a seam so another engine can replace it.
 
 ```dart
 final templates = MustacheTemplates.fromDirectory('web/templates');

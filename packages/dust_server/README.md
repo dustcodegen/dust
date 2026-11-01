@@ -4,11 +4,12 @@
 [![pub points](https://img.shields.io/pub/points/dust_server)](https://pub.dev/packages/dust_server/score)
 [![downloads](https://img.shields.io/pub/dm/dust_server)](https://pub.dev/packages/dust_server)
 
-Runtime support for Dust-generated Dart HTTP servers on `shelf`.
+Dart HTTP server runtime on `shelf`, with annotations for Dust-generated
+routing.
 
 Generated controllers and top-level route modules support typed extraction,
 validation, response dispatch, middleware, guarded failures, and route metadata
-through `Router.describe()`. OpenAPI generation remains a separate package.
+through `Router.describe()`. OpenAPI generation is not part of this package.
 
 ## Documentation
 
@@ -16,17 +17,22 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 
 | Section | Covers |
 | :--- | :--- |
+| [Tutorial](../../docs/dust_server/tutorial.md) | a handwritten to-do API built one boundary at a time |
 | [Getting started](../../docs/dust_server/getting-started.md) | the smallest server, entry points, layout |
 | [Routing](../../docs/dust_server/routing.md) | paths, methods, nesting, mounting, and matching cost |
 | [Extraction](../../docs/dust_server/extraction.md) | the built-in extractors, coercion, writing one |
+| [Authentication](../../docs/dust_server/authentication.md) | credentials, schemes, challenges, authorization |
 | [Responses](../../docs/dust_server/responses.md) | encoders, rejections, `guard`, error reporting |
 | [WebSockets](../../docs/dust_server/websockets.md) | upgrades, sessions, close codes |
 | [Rendering](../../docs/dust_server/rendering.md) | templates, static files, single-page apps |
+| [Web applications](../../docs/dust_server/web-apps.md) | client-side routes, cache policy, cross-origin isolation |
 | [Serving](../../docs/dust_server/serving.md) | draining, TLS, isolate clustering |
 | [Middleware](../../docs/dust_server/middleware.md) | layers, ordering, what ships |
+| [Tracing](../../docs/dust_server/tracing.md) | spans, W3C trace context, exporters |
 | [Testing](../../docs/dust_server/testing.md) | running the suite, testing an application |
 | [Security](../../docs/dust_server/security.md) | production baseline, OWASP ownership, dependency audits |
 | [Dependencies](../../docs/dust_server/dependencies.md) | what is reused, and what is not |
+| [Production readiness](../../docs/dust_server/production-readiness.md) | repository evidence and deployment boundaries |
 
 ## At a glance
 

@@ -9,10 +9,10 @@ version, and the exceptions are recorded rather than assumed.
 | Package | Purpose | Why it, specifically |
 | :--- | :--- | :--- |
 | `shelf` | `Handler`, `Request`, `Response`, `Middleware` | the interoperability contract the Dart server ecosystem speaks |
-| `shelf_static` | static files, single-page fallback | content types, ranges, conditional requests, and directory escape already handled; 8.4M downloads a month |
+| `shelf_static` | static files, single-page fallback | content types, ranges, conditional requests, and directory escape are already handled |
 | `shelf_web_socket` | the WebSocket handshake | the standard upgrade for `shelf` |
 | `web_socket_channel` | the socket itself | what `shelf_web_socket` yields, and what clients use |
-| `mustache_template` | templating | the most used template package on pub, 7.9M downloads a month |
+| `mustache_template` | templating | escaping-by-default templates behind the package's `TemplateEngine` seam |
 | `http_parser` | `content-type` and media type parsing | the same parser the rest of the Dart HTTP stack uses; parameters, casing, and quoting are not worth re-deriving |
 | `mime` | multipart decoding | the Dart team's implementation of a format with real edge cases |
 | `uuid` | request ids | ids unique across processes and machines, not just within one isolate |
@@ -46,10 +46,9 @@ this router against it on 24 hand-picked and 1000 generated paths, and
 the package it replaces as the oracle is the cheapest evidence available that
 the replacement is correct.
 
-**An OpenAPI package.** `open_api` is abandoned (2018, Dart 2). `openapi_spec`
-is pre-1.0 with near-zero adoption. The rest generate clients from a spec, the
-opposite direction. Documentation is deferred to a separate package instead, and
-`Router.describe()` plus an opaque `metadata` slot is the seam it will build on.
+**An OpenAPI package.** `dust_server` does not generate an OpenAPI document.
+`Router.describe()` plus an opaque `metadata` slot lets independent tooling
+inspect routes without coupling the runtime to one schema format.
 
 **A hand-rolled template engine, HTML escaper, media-type parser, and id
 generator.** All four existed here briefly and all four were deleted in favour of

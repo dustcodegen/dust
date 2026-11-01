@@ -115,6 +115,6 @@ Before deploying an application:
 4. configure process supervision for isolate or process failure;
 5. configure durable logs, metrics, traces, alerts, backups, and restore tests.
 
-The accurate claim is: Dust provides stable server APIs, production-oriented
+The accurate claim is: Dust provides stable server APIs, explicit operational
 controls, and reproducible local evidence. It does not certify an arbitrary
 application or deployment as production-ready.

@@ -60,8 +60,8 @@ app.describe().first.metadataOf<Audit>();    // null — someone else's type
 ```
 
 Naming one of those types in `dust_server` would make the runtime depend on a
-format it has no business knowing, so nothing is named. The slot stays open for
-OpenAPI support to land later without a breaking change.
+format it has no business knowing, so nothing is named. Independent tooling can
+attach OpenAPI, audit, or other metadata without changing the runtime.
 
 What `describe()` is not is a schema source. Parameter types and request or
 response bodies come from the build-time IR, not from the route table.

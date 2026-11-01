@@ -49,7 +49,7 @@ a long file.
 | `test/extraction/`, `test/request/`, `test/response/` | one file per extractor and encoder |
 | `test/layers/`, `test/serving/`, `test/ws/`, `test/templating/` | the rest of the surface |
 | `test/generated/` | runtime contracts for generated handler shapes |
-| `test/example/` | the example application, over a socket |
+| `test/example/` | the handwritten examples, over a socket |
 
 `fixtures/server_codegen_app` is the generator proof: local checks run
 `dust build --clean`, `dust check`, `dart analyze --fatal-infos`, and request

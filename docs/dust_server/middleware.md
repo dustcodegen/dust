@@ -53,8 +53,8 @@ capacity limit.
 
 ## Trying it
 
-One example per layer, each under 60 lines. The two worth running first are the
-ones where placement changes the answer.
+Each layer has a focused example. The two worth running first are the ones where
+placement changes the answer.
 
 **`routeLayer` versus `layer`** — `dart run example/route_layer.dart`:
 
