@@ -4,7 +4,7 @@ import 'package:dust_server/server.dart';
 import 'package:server_codegen_app/src/basic_routes.dart';
 import 'package:server_codegen_app/src/todo_controller.dart';
 
-/// Builds the production-shaped fixture around generated route groups.
+/// Builds the fixture router around generated route groups.
 Router buildApp({
   int bodyLimit = 64,
   void Function(Object error, StackTrace stack)? onError,

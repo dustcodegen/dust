@@ -1,6 +1,8 @@
 # Server Runtime: axum Parity
 
-Status: settled, with the naming changes shipped before the stable 0.2.x line.
+Status: historical decision record. The naming decisions shipped before the
+stable 0.2.x line; current usage belongs in the
+[server guides](../dust_server/README.md).
 
 `dust_server` is a Dart HTTP runtime on `shelf` whose API is modelled on Rust's
 axum. It is **not** built on axum — no Rust is involved — and the distinction
@@ -209,8 +211,7 @@ the moment `isolates > 1`.
 Folding it into `serve(factory, ..., isolates: N)` was considered. It would
 remove the footgun of forgetting it — one core of four, with nothing in the logs
 to say so — but it forces every caller to pass a top-level factory even for the
-single-isolate case, and 58 of the 100 existing call sites build their router
-inline in a way a sendable factory cannot express.
+single-isolate case, including callers that naturally build their router inline.
 
 ## What cannot port
 
@@ -225,11 +226,11 @@ pub trait Service<Request> {
 cannot get one: a Dart handler is a function, and a function cannot decline
 before it is called.
 
-Everything tower builds on that second method — `limit`, `load_shed`, `balance`
-— is therefore unavailable. Shedding load in Dust means answering 503 from
-inside the handler, after the work of accepting and parsing is already done.
-`RequestTimeout` is the nearest thing and is not the same thing: a timeout
-reacts after the fact where backpressure refuses in advance.
+Everything tower builds on that second method — pre-call readiness, load
+shedding, and balancing — is therefore unavailable at the service boundary.
+`ConcurrencyLimit`, `RateLimit`, and `RequestTimeout` act inside the handler,
+after the work of accepting and parsing is already done. Connection-level
+limits and balancing belong at the trusted reverse proxy.
 
 Anyone arriving from tower will look for the second and find only the first.
 
@@ -264,15 +265,12 @@ One caveat found while testing it: `very_good_analysis` enables
 compiles. Under that lint you write `app.call` where a `Handler` is wanted,
 which is still better than a named conversion getter but is not free.
 
-## Open
+## Operational limits
 
-- **A dead isolate is silent.** `Isolate.spawn` is called with no `onExit` and
-  no `onError`, so a worker that dies is simply gone: the port stays bound by
-  the survivors, traffic keeps flowing at reduced capacity, and
-  `ServerIsolates.size` still reports the original count. Restarting it is not
-  possible — see [Rejected](#rejected) — but reporting it is, and an operator
-  who cannot tell a four-isolate server from a one-isolate one has no way to
-  find the lost throughput.
+- **A dead isolate is reported, not restarted.** `ServerIsolates.alive` and
+  `onIsolateError` expose lost capacity. The port can remain bound after a
+  synchronously wedged isolate is killed, so replacement remains a process
+  supervisor's job.
 
 - **`serveIsolates` has no default.** `isolates:` is required: two was neither
   "one, explicitly" nor "use the machine". Defaulting to the core count is
@@ -294,7 +292,7 @@ which is still better than a named conversion getter but is not free.
   worker takes its socket with it when it dies. Replacing the process is the
   only recovery, which is what a supervisor outside it already does.
 
-  Detection is a different question from restart, and is still worth having —
-  see [Open](#open).
+  Detection ships through `ServerIsolates.alive` and `onIsolateError`; only
+  in-process restart is rejected.
 - **`serveWorkers`.** Familiar from gunicorn and uvicorn, but "worker" implies
   a process, and hiding the isolate boundary hides the constraint that matters.

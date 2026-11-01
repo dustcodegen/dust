@@ -189,6 +189,7 @@ floors, local pre-commit gate, and release-only CI policy.
 
 - [Usage guides](docs/usage/README.md)
 - [CLI and package compatibility](docs/usage/compatibility.md)
+- [Package production readiness](docs/production-readiness.md)
 - [Dart package](packages/dust_dart/README.md)
 - [Flutter package](packages/dust_flutter/README.md)
 - [Database runtime](packages/dust_db_sqlite3/README.md)

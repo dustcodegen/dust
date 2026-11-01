@@ -5,8 +5,8 @@ parsed surface and IR, and replacing the structural interface detection that
 several plugins do today.
 
 For the build pipeline and crate map, see the [Developer Guide](../developer.md).
-The feature that first needed this is described in the
-[Server Plugin Design](server-plugin.md), which was reworked to *not* need it.
+The server plugin originally motivated this proposal, then avoided the
+dependency by requiring `@Extract(Type)` to name the extractor explicitly.
 
 ## Problem
 
@@ -110,10 +110,8 @@ Adding the clause does not mean structural detection goes away. The rule:
 | server `Extractable` | irrelevant, the extractor type is named at the call site | bare-type extractor parameters become possible |
 | generated mixins | unverifiable | Dust can check `with _$Foo` was applied and diagnose when it was not |
 
-The server plugin's bare-type extractor form is the largest of these and is
-described under
-[Rejected: bare-type binding](server-plugin.md#rejected-bare-type-binding). It
-needs one more thing beyond this change: a `dust_server.extractables.v1`
+The server plugin's possible bare-type extractor form is the largest of these.
+It needs one more thing beyond this change: a `dust_server.extractables.v1`
 workspace fact mapping value type to extractor type, following the JSON-in-facts
 convention the route plugin already uses
 (`crates/dust_route_plugin/src/plugin/analysis.rs`), plus an ambiguity

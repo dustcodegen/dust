@@ -106,21 +106,19 @@ A `HEAD` with no handler falls back to the `GET` route. A known path reached
 with an unhandled method answers 405 with `Allow`, where `shelf_router` answers
 404.
 
-## Speed
+## Matcher cost
 
 Routes bucket by their whole literal prefix, static paths match by string
 compare rather than pattern, and a request whose segment count cannot fit is
 rejected before any pattern runs.
 
-| Table | Per match |
-| :--- | :--- |
-| 100 dynamic routes | 29us |
-| 1000 dynamic routes | 13us |
-| 500 under one prefix | 11us |
-| 500 static routes | 6us |
+`test/router/integration/load_test.dart` prints local timing diagnostics for
+dynamic, shared-prefix, and static tables. Those values are machine evidence,
+not a portable performance promise, so they are not copied into this guide.
 
 What still scans linearly is one bucket: routes identical up to their first
-parameter compete. A trie would fix that; the numbers do not yet justify it.
+parameter compete. A trie would fix that; measure the application's route table
+before paying that complexity.
 
 ## Sealing
 

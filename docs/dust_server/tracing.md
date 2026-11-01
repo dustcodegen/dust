@@ -141,27 +141,3 @@ Counting rather than tracing is `dart run example/metrics.dart`, and the same
 cardinality rule decides whether it works — see
 [`example/metrics.dart`](../../packages/dust_server/example/metrics.dart), which
 labels by `record.matchedRoute` and collapses every unmatched path to one series.
-
-
-The second prints a `traceparent` carrying `4bf92f…4736` with a **different**
-span id — same trace, new span:
-
-```text
-traceparent: 00-7424cdc3b56f26ce133cb44db1c0d272-0d90e1659f296f09-01
-traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-7e115a2e956f7b23-01
-traceparent: 00-4ae1f0e56ed5209d05cd4b5d3d85271c-4aa3e513ac1f82ed-01
-```
-
-The third started a fresh trace and still answered `200`.
-
-The server prints the span as it finishes:
-
-```text
-GET /api/v1/todos 3ms ok trace=7424cdc3b56f26ce133cb44db1c0d272
-```
-
-## What is still missing
-
-Metrics. There are no counters and no histograms, so "how many" and "how slow"
-can only be answered by reading every span. See
-[Production readiness](../design/server-production-readiness.md).

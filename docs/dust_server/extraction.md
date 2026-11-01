@@ -157,6 +157,10 @@ Future<void> read(
 checks extractors declared in the same library before writing output; imported
 extractors remain checked by `dart analyze` at the generated call site.
 
+The value type cannot select the extractor: `BearerAuth` and `TodosWrite` can
+both produce `AuthUser` while enforcing different policy. Name the extraction
+strategy explicitly; `@Extract() AuthUser user` is therefore not supported.
+
 `readsRequestBody` looks through all of these, so a composition check sees the
 body extractor underneath a wrapper.
 

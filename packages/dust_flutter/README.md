@@ -87,9 +87,7 @@ CounterViewModelScope(
 | i18n | Beta | ARB loading, locale fallback, generated app setup, and translated widgets. |
 
 Stable APIs keep their documented authoring contracts compatible. Beta APIs may
-still receive refinements while they are hardened. See the
-[routing and state readiness contract](https://github.com/dustcodegen/dust/blob/main/docs/design/flutter-routing-state.md)
-for tested boundaries and application-owned responsibilities.
+still receive refinements while they are hardened.
 
 ## Examples
 

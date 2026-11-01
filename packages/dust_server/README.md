@@ -17,7 +17,7 @@ Full documentation lives in [docs/dust_server](../../docs/dust_server/README.md)
 | Section | Covers |
 | :--- | :--- |
 | [Getting started](../../docs/dust_server/getting-started.md) | the smallest server, entry points, layout |
-| [Routing](../../docs/dust_server/routing.md) | paths, methods, nesting, mounting, matching rules, speed |
+| [Routing](../../docs/dust_server/routing.md) | paths, methods, nesting, mounting, and matching cost |
 | [Extraction](../../docs/dust_server/extraction.md) | the built-in extractors, coercion, writing one |
 | [Responses](../../docs/dust_server/responses.md) | encoders, rejections, `guard`, error reporting |
 | [WebSockets](../../docs/dust_server/websockets.md) | upgrades, sessions, close codes |
@@ -136,7 +136,7 @@ which keeps the examples from rotting.
 ## Tests
 
 The local pre-commit gate requires 100% line coverage. GitHub Actions are
-reserved for Rust releases.
+reserved for release workflows.
 
 ```bash
 dart test

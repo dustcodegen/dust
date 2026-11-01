@@ -16,8 +16,9 @@ Coverage:
 bash scripts/dart/coverage.sh packages/dust_server 100
 ```
 
-Currently **100%** of lines, 1204 of 1204, and the same script runs in CI, so a
-change that drops coverage fails the build and names the uncovered lines.
+The local pre-commit gate requires **100%** line coverage and names uncovered
+lines. GitHub Actions are reserved for release workflows, so ordinary pull
+requests do not prove that this local command ran.
 
 The raw commands, if you want the lcov report itself:
 
@@ -47,7 +48,7 @@ a long file.
 | `test/router/hardening/` | pathological input, untrusted request fields |
 | `test/extraction/`, `test/request/`, `test/response/` | one file per extractor and encoder |
 | `test/layers/`, `test/serving/`, `test/ws/`, `test/templating/` | the rest of the surface |
-| `test/generated/` | runtime contracts for generated handler shapes, including later phases |
+| `test/generated/` | runtime contracts for generated handler shapes |
 | `test/example/` | the example application, over a socket |
 
 `fixtures/server_codegen_app` is the generator proof: local checks run
@@ -56,8 +57,8 @@ tests for generated GET, POST, extraction, status, and rejection behavior.
 
 Three habits are worth copying:
 
-- **Differential testing.** The router is checked against `shelf_router` on 24
-  hand-picked paths and 1000 generated ones. Every intentional difference is
+- **Differential testing.** The router is checked against `shelf_router` on
+  hand-picked and randomized paths. Every intentional difference is
   asserted rather than left to be noticed later.
 - **Real sockets.** Anything about HTTP is tested through a real client on a
   real port. In-memory `Request` objects hide encoding bugs.

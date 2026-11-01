@@ -120,7 +120,7 @@ below and report ambiguity; that integration is not implemented by #104.
 
 [#110](https://github.com/dustcodegen/dust/issues/110) combines the catalog,
 [directive facts](directive-namespace-facts.md),
-[literal decoder](static-dart-literals.md) and reviewed server runtime contract
+the static literal decoder from #107 and the reviewed server runtime contract
 on one implementation stack. No GitHub PR has been merged by that integration.
 
 `AnnotationOrigin` explicitly records a canonical symbol, actual package-library

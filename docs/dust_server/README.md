@@ -22,7 +22,7 @@ server-rendered HTML, static files, and serving across isolates.
 | [Security](security.md) | production baseline, OWASP ownership, dependency audits |
 | [Testing](testing.md) | how the package is tested, and how to test an application built on it |
 | [Dependencies](dependencies.md) | what is reused, and why each was chosen over writing it |
-| [Production readiness](../design/server-production-readiness.md) | what is proven, what is missing |
+| [Production readiness](production-readiness.md) | repository evidence, release gates, and deployment limits |
 
 ## The shortest version
 

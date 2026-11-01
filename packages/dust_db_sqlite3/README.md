@@ -377,12 +377,13 @@ Generated DAOs pass `TypeFromRow.fromRow` mappers directly.
 
 ## Raw SQLite Access
 
-Use `raw` only for dynamic SQL that cannot be checked during generation:
+Use `unsafe` only for dynamic SQL that cannot be checked during generation:
 
 ```dart
-final rows = await database.pool.raw.fetch(
-  'SELECT * FROM users WHERE id = ?',
+final rows = await database.unsafe.fetchAs(
+  'SELECT id, name FROM users WHERE id = ?',
   [id],
+  (row) => (row.read<int>('id'), row.read<String>('name')),
 );
 ```
 
@@ -390,7 +391,7 @@ Access the underlying `package:sqlite3` database only for driver-specific
 operations:
 
 ```dart
-final sqlite = (database.pool as Sqlite3Executor).database;
+final sqlite = (database.connection as Sqlite3Executor).database;
 ```
 
 Prefer `database.connection` plus generated DAOs for product queries because

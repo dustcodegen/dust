@@ -10,6 +10,7 @@ and contributor documentation.
 | :--- | :--- |
 | Install Dust and generate the first model | [README Quick Start](../README.md#quick-start) |
 | Check CLI and package versions | [Compatibility guide](./usage/compatibility.md) |
+| Review package release and deployment evidence | [Production readiness](./production-readiness.md) |
 | Choose and configure a feature | [Usage guides](./usage/README.md) |
 | Explore a Dart example | [Product showcase](../examples/product_showcase/README.md) |
 | Explore a Flutter application | [Shopping app](../examples/shopping_app/README.md) |
@@ -28,7 +29,6 @@ and contributor documentation.
 
 - [State management](./usage/state.md)
 - [Typed routing](./usage/routing.md)
-- [Routing and state architecture](./design/flutter-routing-state.md)
 - [Internationalization](./usage/i18n.md)
 
 ### Database
@@ -53,7 +53,7 @@ and contributor documentation.
 - [`dust_db_postgres`](../packages/dust_db_postgres/README.md): PostgreSQL pool
   and executor runtime for generated Database code.
 - [`dust_server`](../packages/dust_server/README.md): HTTP server runtime and
-  generated route modules on `shelf`, shaped after axum.
+  generated route modules on `shelf`, modelled after axum.
 
 ## Examples
 
