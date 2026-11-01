@@ -21,8 +21,7 @@ final class _$OrdersRepo implements OrdersRepo {
   @override
   Future<Result<List<Order>, SqlxError>> forAccount(int accountId) {
     return _db.fetchAll<Order>(
-      r'''
-SELECT id, account_id, item, quantity, express, placed_at FROM orders
+      r'''SELECT id, account_id, item, quantity, express, placed_at FROM orders
 WHERE account_id = $1
 ORDER BY id
 ''',
@@ -34,8 +33,7 @@ ORDER BY id
   @override
   Future<Result<List<Order>, SqlxError>> byIds(List<int> ids) {
     return _db.fetchAll<Order>(
-      r'''
-SELECT id, account_id, item, quantity, express, placed_at FROM orders
+      r'''SELECT id, account_id, item, quantity, express, placed_at FROM orders
 WHERE id = ANY($1)
 ORDER BY id
 ''',
@@ -47,8 +45,7 @@ ORDER BY id
   @override
   Future<Result<List<Order>, SqlxError>> atLeast(int accountId, int quantity) {
     return _db.fetchAll<Order>(
-      r'''
-SELECT id, account_id, item, quantity, express, placed_at FROM orders
+      r'''SELECT id, account_id, item, quantity, express, placed_at FROM orders
 WHERE account_id = $1 AND (quantity >= $2 OR $2 = 0)
 ORDER BY id
 ''',
@@ -60,8 +57,7 @@ ORDER BY id
   @override
   Future<Result<Order, SqlxError>> place(int accountId, String item, int quantity, bool express) {
     return _db.fetchOne<Order>(
-      r'''
-INSERT INTO orders (account_id, item, quantity, express)
+      r'''INSERT INTO orders (account_id, item, quantity, express)
 VALUES ($1, $2, $3, $4)
 RETURNING id, account_id, item, quantity, express, placed_at
 ''',
