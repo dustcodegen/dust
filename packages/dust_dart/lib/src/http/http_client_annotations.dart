@@ -165,7 +165,7 @@ class Body {
 }
 
 /// Adds a field to `application/x-www-form-urlencoded`.
-/// Requires [@FormUrlEncoded] on the method.
+/// Requires [FormUrlEncoded] on the method.
 @immutable
 class Field {
   /// Form field name.
@@ -176,7 +176,7 @@ class Field {
 }
 
 /// Adds a part to `multipart/form-data`.
-/// Requires [@MultiPart] on the method.
+/// Requires [MultiPart] on the method.
 @immutable
 class Part {
   /// Multipart field name.

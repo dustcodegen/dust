@@ -155,7 +155,7 @@ a custom codec. Dust validates JSON capability for types declared in the
 current workspace; external package types are checked later by the Dart
 analyzer.
 
-## Generic Models (Development Branch)
+## Generic Models
 
 Ordinary generic models retain their chosen arguments and bounds in generated
 helpers, mixins and directional codec classes. Keep the mixin applied to the
@@ -177,20 +177,17 @@ const deserializer = $LabelDeserializer<int>();
 final Label<int> decoded = deserializer.deserialize(serializer.serialize(label));
 ```
 
-The concrete `String` field needs no conversion for `T`. A field using its class parameter
-(for example `T` or `List<T?>`) requires explicit `@SerDe(using: ...)` mapping.
-Skipped directions do not need parameter conversion; deserialization defaults
-still apply. Bounds do not imply a JSON conversion. A parameter named `DateTime`, `List` or
-another SDK type is still a parameter, not that SDK type; Dust reports the field
-instead of guessing its conversion. No generic decoder-callback API is added.
+The concrete `String` field needs no conversion for `T`. A field using its class
+parameter, such as `T` or `List<T?>`, requires an explicit
+`@SerDe(using: ...)` codec. Skipped directions do not need parameter conversion,
+and deserialization defaults still apply. A bound is a Dart type constraint, not
+a JSON conversion.
 
-This is scoped support under [#128](https://github.com/dustcodegen/dust/issues/128),
-not general generic-model readiness. Same-library applied inheritance under
-[#133](https://github.com/dustcodegen/dust/issues/133) now retains actual inherited
-types: `Concrete extends ScalarBase<int>` generates integer JSON conversions and
-integer copy parameters, not the parent's `T`. Inherited field annotations remain
-effective. The [complete concrete example](../../fixtures/generic_inheritance/concrete_traditional.dart.snapshot)
-supports normal usage:
+### Applied Inheritance
+
+Same-library applied inheritance retains actual inherited types. For example,
+`Concrete extends ScalarBase<int>` generates integer JSON conversion and copy
+parameters rather than treating the inherited field as an unresolved `T`:
 
 ```dart
 final count = Concrete.fromJson({'amount': 3});
@@ -199,22 +196,15 @@ assert(updated.toJson()['amount'] == 7);
 assert(updated.validate().isValid);
 ```
 
-The [inheritance fixtures](../../fixtures/generic_inheritance) also exercise named
-super-parameters, nested nullable collections, dependent/reordered bounds,
-callback overrides and primary constructors. Only proven local class parents
-are substituted; imported parents and alias expansion are not inferred. Raw or
-wrong-arity applications and substitutions inside opaque function/record types
-fail clearly. An explicit effective child field can override an opaque parent
-field without rewriting it. A child field that still uses its own parameter
-continues to require explicit JSON mapping; bounds are not decoder functions.
+Inherited field annotations remain effective. Imported parents and alias
+expansion are not inferred. Raw or wrong-arity applications, and substitutions
+inside function or record types, are rejected instead of erasing types.
 
-Generic sealed redirects are implemented on the development branch under
-[#134](https://github.com/dustcodegen/dust/issues/134), with acceptance still in
-progress. Their declared or omitted targets retain applied arguments, bounds,
-named constructors and `.new`; identifiers never contain `<T>`.
-For example, the [complete declared family](../../fixtures/generic_sealed/declared_traditional.dart.snapshot)
-uses `Event<A, B extends List<A>>` and redirects `Event.done` to
-`Done<B, A>.create`:
+### Generic Sealed Classes
+
+Generic sealed redirects retain applied arguments, bounds, named constructors,
+and `.new` targets. For example, `Event<A, B extends List<A>>` can redirect
+`Event.done` to `Done<B, A>.create`:
 
 ```dart
 const event = Event<int, List<int>>.done('ready');
@@ -223,25 +213,13 @@ final Event<int, List<int>> restored = Event<int, List<int>>.fromJson(json);
 final codecResult = const $EventDeserializer<int, List<int>>().deserialize(json);
 ```
 
-Sealed decoding honors the redirect's constructor even when the ordinary leaf
-codec selects a different first constructible constructor. Tagged, adjacent and
-untagged representations retain their owning types. Unknown generic subtypes
-outside the factory protocol throw `ArgumentError`; Dart cannot prove every
-dependent generic subtype pattern exhaustive. Manual JSON methods remain the
-manual variant's responsibility.
+Sealed decoding uses the constructor named by the redirect. Tagged, adjacent,
+and untagged representations retain the sealed type arguments. Unknown subtypes
+outside the factory protocol throw `ArgumentError`; manual variants remain
+responsible for their own JSON methods.
 
-Omitted generic targets must carry a complete permutation of the owner's bare
-parameters. Dust copies those source binders and bounds, rather than inventing
-names for concrete/nested applications. Unproven imported ownership, invalid
-arity and opaque substitutions fail before replacing generated output/cache.
-Factory-parameter `@SerDe` metadata supplies generated field codecs, aliases and
-wire defaults. Redirecting factories cannot declare explicit Dart defaults;
-nullable optional parameters still default to `null`. When source binders capture
-runtime JSON names, a generated public factory uses an allocated public payload
-typedef such as `$CaptureDoneJson`, not private aliases in its public signature.
-
-The development fix under [#138](https://github.com/dustcodegen/dust/issues/138)
-preserves argument presence independently of nullability. For example:
+Required and optional arguments keep their Dart meaning independently of
+nullability:
 
 ```dart
 const factory Event.named({required int? value, int? note}) = NamedEvent;
@@ -251,16 +229,19 @@ const named = NamedEvent(value: null); // `value` must be supplied, even if null
 const optional = OptionalEvent(); // Both positional values may be omitted.
 ```
 
-These factories belong inside an annotated sealed base such as the example
-below. Generated constructors retain required positional arguments, optional
-`[...]` groups and explicit named `required` modifiers. This does not add JSON
-key-presence validation: nullable wire values retain the existing decoding rules.
-Declared target constructors may have extra optional arguments not backed by
-fields; decoding omits them and retains their Dart defaults. Source spans and
-binders are unchanged. This does not certify every constructor shape. See the
-[generic-model design](../design/generic-models.md),
-[sealed fixtures](../../fixtures/generic_sealed) and
-[ordinary generic JSON fixtures](../../fixtures/generic_serde).
+Generated constructors retain required positional arguments, optional `[...]`
+groups, and explicit named `required` modifiers. Nullable wire values keep the
+normal decoding rules; nullability alone does not make a required argument
+optional. Declared target constructors may have additional optional arguments
+that are not serialized; decoding omits them and keeps their Dart defaults.
+
+An omitted generated target must use a complete permutation of the sealed
+base's bare type parameters. Dust rejects imported ownership it cannot prove,
+invalid arity, and opaque substitutions before replacing generated output.
+
+Complete examples cover [ordinary generic JSON](../../fixtures/generic_serde),
+[applied inheritance](../../fixtures/generic_inheritance), and
+[generic sealed classes](../../fixtures/generic_sealed).
 
 ## Enums
 
