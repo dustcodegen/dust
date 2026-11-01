@@ -1,9 +1,9 @@
 # Examples
 
-One question per file. Each is under 80 lines, opens its own database, and
-prints what it just demonstrated, so the answer is not buried in an application.
-Named after the question you would type into a search box — `nullable_columns`,
-not `advanced_reading`.
+One question per file. Each opens its own database and prints what it just
+demonstrated, so the answer is not buried in an application. Files are named
+after the question you would type into a search box — `nullable_columns`, not
+`advanced_reading`.
 
 ```shell
 dart run example/fetch_optional.dart

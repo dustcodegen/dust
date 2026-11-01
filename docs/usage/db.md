@@ -445,7 +445,7 @@ Nothing is passed:
 
 ```dart
 final user = await queryAs<UserRow>(
-  'SELECT id, email, name FROM users WHERE id = ?',
+  r'SELECT id, email, name FROM users WHERE id = $1',
   [id],
 ).fetchOne(database.connection);
 
@@ -476,7 +476,7 @@ For a row type Dust does not generate, the `With` terminals take the mapping:
 
 ```dart
 final row = await queryAs<Legacy>(
-  'SELECT id FROM legacy WHERE id = ?',
+  r'SELECT id FROM legacy WHERE id = $1',
   [id],
 ).fetchOneWith(database.connection, Legacy.fromRow);
 ```
@@ -688,7 +688,7 @@ with `json_each`:
 
 ```dart
 final orders = await queryAs<Order>(
-  'SELECT id, item FROM orders WHERE id IN (SELECT value FROM json_each(?))',
+  r'SELECT id, item FROM orders WHERE id IN (SELECT value FROM json_each($1))',
   [ids],
 ).fetchAll(database.connection);
 ```
@@ -743,7 +743,7 @@ Most reasons to reach for it have a checked answer:
 
 | Instead of building SQL | Write |
 | :--- | :--- |
-| `IN (?, ?, ?)` | one bound list over `json_each` — see [Set Membership](#set-membership) |
+| `IN ($1, $2, $3)` | one bound list over `json_each` — see [Set Membership](#set-membership) |
 | optional filters | a `switch` over the supplied combination, each branch a constant query |
 | a dynamic `ORDER BY` | a `switch` over an enum |
 
