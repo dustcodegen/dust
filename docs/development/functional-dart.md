@@ -10,7 +10,7 @@ still needs a focused review, tests, and the complete local gate.
 | :--- | :--- |
 | `dust_dart` | audited below |
 | `dust_flutter` | audited below |
-| `dust_db_sqlite3` | pending |
+| `dust_db_sqlite3` | audited below |
 | `dust_db_postgres` | pending |
 | `dust_server` | pending |
 
@@ -128,4 +128,55 @@ rely on an undeclared transitive dependency.
 5. Convert the private navigation result and remove the related null assertions.
 6. Add typed ARB parsing while retaining the existing throwing entry point.
 7. Review nullable and throwing adapters only during an explicitly approved
+   major-release change.
+
+## `dust_db_sqlite3`
+
+Queries, statements, transactions, and close operations already return
+`Result`, and the driver translates native SQLite failures at focused
+boundaries. The remaining exception-first flow is mainly connection startup
+and migrations. Internal transaction control also returns nullable errors, and
+the isolate protocol relies on casts and null assertions before a catch-all
+turns malformed messages into a connection error.
+
+### Planned migrations
+
+| Priority | Area | Plan | Compatibility proof |
+| :--- | :--- | :--- | :--- |
+| 1 | Connection startup | Add result-returning foreground and worker `open`/`connect` paths, including generated database facade entry points. Move option validation, native open, pragmas, and migration setup onto that core; keep the current throwing factories and generated methods as adapters. | Connection-option validation, read-only and memory modes, native open failures, worker startup/exit tests, exact database snapshots, and SDK-consumer fixtures. |
+| 1 | Optional queries | After the shared `dust_dart` `Executor` contract adds an `Option` path, implement `Result<Option<T>, SqlxError>` for optional rows and scalars. Preserve `Some<T?>(null)` for a present SQL `NULL`; keep existing `Result<T?, SqlxError>` terminals as adapters. | Zero-row, present-null, wrong-type, too-many-row, foreground/worker parity, generated DAO snapshots, and both database drivers. |
+| 1 | Migration execution | Make migration steps return `Result<Unit, SqlxError>` and compose them instead of throwing between Dust-owned helpers. Catch only calls into `package:sqlite3`, and preserve rollback-error precedence, the commit filter, checksum provenance, locking, and disk-full behavior. | Migration integrity, legacy baseline, locking, transaction-boundary, commit/rollback failure, disk-full, and worker migration tests. |
+| 2 | Transaction control | Replace nullable-error helpers such as connection access, `BEGIN`/`COMMIT`/`ROLLBACK`, and savepoint cleanup with `Result<Unit, SqlxError>`. Represent stored recovery or aborted-transaction failures with `Option`, then use exhaustive patterns while retaining callback cleanup in `finally`. | Root/nested transaction, ownership, unawaited child, aborted transaction, failed cleanup, commit recovery, and worker parity tests. |
+| 2 | Worker protocol | Decode startup arguments, commands, replies, and error payloads with typed `Result` helpers and list/map patterns. Remove protocol null assertions; convert one decode failure into the existing terminal connection error and complete every pending request once. | Invalid reply, early exit, send failure, startup failure, callback failure, close, and pending-request completion tests. |
+| 2 | Row decoding | Implement the shared `Option` row readers and replace exception-driven `DateTime.parse` handling with `DateTime.tryParse` plus a typed decode error. Keep mapper exception translation at the driver boundary. | Nullable and missing columns, present-null values, bool/date coercion, mapper failures, scalar reads, and generated row mapping tests. |
+
+### Deliberate boundaries
+
+- `package:sqlite3`, isolate spawn/send, and user row mappers or transaction
+  callbacks can throw. Their focused catches remain and immediately translate
+  into `SqlxError`; transaction and statement cleanup keeps `finally`.
+- Nullable connection options mean "not configured." A nullable migration
+  bundle also distinguishes unmanaged startup from a managed empty bundle.
+  Those stable Dart entry points remain nullable and convert once internally.
+- SQL `NULL` stays nullable at the native row boundary. Typed optional-query
+  paths must preserve the difference between no row and a row containing null.
+- Map and statement-cache misses stay nullable at the Dart collection boundary.
+  The placeholder scanner's nullable match helpers stay on its per-character
+  hot path unless a benchmark proves an `Option` rewrite has no regression.
+- `_workerDiagnostic` keeps its defensive catch because even an error object's
+  `toString` may throw, and diagnostics must not terminate the worker.
+- Cardinality checks, lifecycle guards, bounded loops, and SQL text scanning
+  keep direct `if` statements where they express the condition most clearly.
+
+### Implementation order
+
+1. Add shared `Option` row and optional-query contracts in `dust_dart`, with
+   compatibility adapters and exact generator snapshots.
+2. Add result-returning direct and worker startup APIs without changing current
+   callers, then expose matching generated database facade methods.
+3. Move migration setup and execution onto the result-returning startup core.
+4. Convert connection and transaction-control sentinels to `Result`/`Option`.
+5. Add typed worker protocol decoders and remove protocol null assertions.
+6. Migrate row decoding and Dust-owned examples to the typed paths.
+7. Review throwing and nullable adapters only during an explicitly approved
    major-release change.
