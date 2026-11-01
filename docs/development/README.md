@@ -19,6 +19,8 @@ APIs are documented separately in [Using Dust](../usage/README.md).
   boundaries, and validation commands.
 - [Plugin guide](../plugin-guide.md): plugin registration, IR input, workspace
   analysis, emission, diagnostics, and tests.
+- [Functional Dart migration](functional-dart.md): package-by-package audit and
+  staged use of `Result`, `Option`, patterns, and combinators.
 - [Crate map](../../crates/README.md): responsibility of each Rust crate.
 - [Design notes](../design/README.md): active implementation designs and
   retained architectural decisions.
