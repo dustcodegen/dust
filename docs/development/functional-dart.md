@@ -11,7 +11,7 @@ still needs a focused review, tests, and the complete local gate.
 | `dust_dart` | audited below |
 | `dust_flutter` | audited below |
 | `dust_db_sqlite3` | audited below |
-| `dust_db_postgres` | pending |
+| `dust_db_postgres` | audited below |
 | `dust_server` | pending |
 
 ## Direction for new code
@@ -179,4 +179,52 @@ turns malformed messages into a connection error.
 5. Add typed worker protocol decoders and remove protocol null assertions.
 6. Migrate row decoding and Dust-owned examples to the typed paths.
 7. Review throwing and nullable adapters only during an explicitly approved
+   major-release change.
+
+## `dust_db_postgres`
+
+Queries, migrations, transactions, and close operations already report
+`Result`, and failures from `package:postgres` are translated at the driver
+boundary. The remaining exception-first setup is connection URL and pool-option
+validation. Optional queries still use nullable sentinels, indexed scalar casts
+can escape as `TypeError`, and savepoint cleanup currently discards its own
+failure.
+
+### Planned migrations
+
+| Priority | Area | Plan | Compatibility proof |
+| :--- | :--- | :--- | :--- |
+| 1 | Connection setup | Add a result-returning connection path that validates the URL, `sslmode`, and pool size before constructing the pool. Expose a matching generated database facade entry point; keep `PostgresDriver.connect`, `PgPool`, and generated throwing factories as adapters. | Supported and rejected TLS modes, malformed URLs, option precedence, pool-size validation, exact database snapshots, and the PostgreSQL consumer fixture. |
+| 1 | Scalar and row decoding | Replace unchecked indexed casts with type patterns that return `SqlxError.decode`, including nullable scalars. Keep user mapper catches at the query boundary so no expected decode failure escapes a `Result`. | Wrong-type and null scalars, missing indexes, named/indexed parity, user mapper throws, and unchecked SQL mapping tests. |
+| 1 | Optional queries | Implement the shared `Result<Option<T>, SqlxError>` row and scalar terminals after the `dust_dart` contract lands. Preserve `Some<T?>(null)` for a present SQL `NULL`; keep current nullable terminals and generated methods as adapters. | Zero-row, present-null, wrong-type, too-many-row, generated DAO snapshots, query-parity fixtures, and SQLite/PostgreSQL parity tests. |
+| 2 | Savepoint control | Make savepoint creation and completion return typed results, then combine callback and cleanup outcomes with explicit error precedence. Keep the private rollback signal only where `package:postgres` requires a throw to make `runTx` roll back an `Err`. | Root and nested `Ok`, `Err`, and thrown callbacks; aborted transactions; savepoint create/release/rollback failures; and multi-level nesting. |
+| 2 | Connection and cache cleanup | Compose statement-cache disposal with pool close through a typed result while preserving the rule that an already-closed connection must not hide the primary close outcome. Keep stale-plan retry limited to PostgreSQL's specific server error. | Closed connections, statement eviction, retired connections, stale-plan recovery, concurrent queries, and repeated close tests. |
+
+### Deliberate boundaries
+
+- `package:postgres` query, transaction, TLS, and connection calls can throw.
+  Their focused catches remain and translate failures into `SqlxError` once.
+- `_RollbackSignal` remains a private adapter because the driver commits a
+  callback that returns normally; Dust must throw an `Err` through that API to
+  request rollback.
+- Nullable connection options mean "use the URL or driver default." SQL `NULL`
+  and nullable error metadata also stay nullable at their external boundary and
+  convert once inside Dust-owned flow.
+- Statement-cache and column-index map misses stay nullable collection lookups.
+  Cache capacity checks, cardinality guards, and migration loops keep direct
+  `if` statements because they express plain conditions more clearly.
+- Migration execution is already result-native. Its driver catch and early
+  `Err` patterns remain; replacing them with a longer async combinator chain
+  would obscure transaction order and rollback behavior.
+
+### Implementation order
+
+1. Fix indexed scalar decoding so every wrong type is a typed decode failure.
+2. Add the result-returning connection core and generated facade entry point,
+   then migrate Dust-owned examples and fixtures.
+3. Land the shared `Option` query contract and update both database drivers,
+   generated terminals, snapshots, and examples together.
+4. Return typed savepoint outcomes and prove cleanup-error precedence.
+5. Compose cache disposal and pool close without weakening stale-plan recovery.
+6. Review throwing and nullable adapters only during an explicitly approved
    major-release change.
