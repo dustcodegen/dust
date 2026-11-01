@@ -49,7 +49,9 @@ To contribute to Dust, you'll need both the Rust and Dart toolchains installed o
 | `crates/` | Rust crates for parsing, IR, plugins, emitter, and the CLI. |
 | `packages/` | Publishable Dart annotation and runtime packages. |
 | `examples/` | Real-world example projects and scale/perf fixtures. |
-| `docs/` | Comprehensive usage guides and internal architecture docs. |
+| `docs/usage/` | Application setup and feature guides, grouped by package. |
+| `docs/development/` | Contributor architecture, validation, design, and release index. |
+| `docs/design/` | Active implementation designs and retained decisions. |
 
 ---
 
