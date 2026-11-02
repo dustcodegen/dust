@@ -5,6 +5,7 @@ import 'package:shelf/shelf.dart';
 
 import '../response/rejection.dart';
 import '../router/middleware.dart';
+import '../stream_lifecycle.dart';
 import 'timeout.dart';
 
 /// Bounds work executing inside the application and sheds excess load.
@@ -71,24 +72,13 @@ final class ConcurrencyLimit implements Layer {
 
           release = false;
           return response.change(
-            body: _releaseWhenDone(response.read(), gate.leave),
+            body: finishWithStream(response.read(), gate.leave),
           );
         } finally {
           if (release) gate.leave();
         }
       };
     };
-  }
-}
-
-Stream<List<int>> _releaseWhenDone(
-  Stream<List<int>> body,
-  void Function() release,
-) async* {
-  try {
-    yield* body;
-  } finally {
-    release();
   }
 }
 

@@ -130,6 +130,22 @@ void main() {
       client.close(force: true);
     });
 
+    test('streams the unread request body back over the socket', () async {
+      final app = Router()
+        ..route(
+          '/echo',
+          post((request) async => Response.ok(request.read())),
+        );
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+      final response = await http.post(
+        Uri.parse('http://${server.address.host}:${server.port}/echo'),
+        body: 'streamed',
+      );
+
+      expect(response.body, 'streamed');
+      expect(await server.close(), isTrue);
+    });
+
     test('returns immediately when nothing is in flight', () async {
       final app = Router()..route('/a', get((request) async => noContent()));
       final server = await serve(app, InternetAddress.loopbackIPv4, 0);
