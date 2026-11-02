@@ -63,5 +63,6 @@ void main() {
   test('DB JSON helper decodes objects and rejects non-objects', () {
     expect(decodeJsonObject('{"id":1}'), <String, Object?>{'id': 1});
     expect(() => decodeJsonObject('[1]'), throwsA(isA<FormatException>()));
+    expect(() => decodeJsonObject('{'), throwsA(isA<FormatException>()));
   });
 }

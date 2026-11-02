@@ -10,6 +10,10 @@ void main() {
   final label = parseCount(
     '42',
   ).match(ok: (value) => 'count=$value', err: (error) => error);
+  final jsonLabel = switch (decodeJsonObjectResult('{"count":42}')) {
+    Ok(:final value) => 'json=${value['count']}',
+    Err(:final error) => error.message,
+  };
 
-  print('${derive.traits.length} $label');
+  print('${derive.traits.length} $label $jsonLabel');
 }
