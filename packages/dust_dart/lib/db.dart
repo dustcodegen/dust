@@ -11,3 +11,4 @@ export 'src/db/query.dart';
 export 'src/db/row_mapper.dart';
 export 'src/db/sqlx_error.dart';
 export 'src/db/unsafe_sql.dart';
+export 'src/serde/json_result.dart';

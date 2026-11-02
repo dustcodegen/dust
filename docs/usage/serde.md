@@ -73,6 +73,26 @@ the Dart ecosystem mirror. `Deserialize()` generates the private
 a class must expose a forwarding `fromJson` factory as shown above. The two
 traits can be used independently.
 
+### Decode JSON Text as a Result
+
+Use `decodeJsonResult` or `decodeJsonObjectResult` when JSON text is an expected
+input failure rather than an exception:
+
+```dart
+switch (decodeJsonObjectResult(source)) {
+  case Ok(:final value):
+    print(value);
+  case Err(:final error):
+    print(error.message);
+}
+```
+
+Malformed text returns `JsonDecodeSyntaxError`; a valid non-object root returns
+`JsonDecodeTypeError`. Both implement `JsonDecodeError`, so the switch remains
+exhaustive. Generated `fromJson` methods keep their existing throwing contract.
+The Database `decodeJsonObject` helper also remains a throwing compatibility
+adapter for existing callers.
+
 Dust also generates reusable directional objects:
 
 ```dart

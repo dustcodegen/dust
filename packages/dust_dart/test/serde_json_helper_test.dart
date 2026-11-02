@@ -45,6 +45,10 @@ void main() {
         JsonHelper.asMap(<String, Object?>{'id': 1}, 'payload'),
         <String, Object?>{'id': 1},
       );
+      expect(
+        JsonHelper.asMap(<Object?, Object?>{'id': 1}, 'payload'),
+        <String, Object?>{'id': 1},
+      );
     });
 
     test('decodes list set and map values with nested keys', () {
@@ -75,9 +79,18 @@ void main() {
     });
 
     test('rejects maps with non-string keys', () {
+      final invalid = <Object?, Object?>{1: 'bad'};
       expect(
-        () => JsonHelper.asMap(<Object?, Object?>{1: 'bad'}, 'payload'),
-        throwsA(isA<ArgumentError>()),
+        () => JsonHelper.asMap(invalid, 'payload'),
+        throwsA(
+          isA<ArgumentError>()
+              .having((error) => error.name, 'name', 'payload')
+              .having(
+                (error) => error.invalidValue,
+                'invalidValue',
+                same(invalid),
+              ),
+        ),
       );
     });
 

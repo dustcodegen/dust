@@ -60,11 +60,14 @@ abstract final class JsonHelper {
   /// Reads [value] as a `Map<String, Object?>`.
   static Map<String, Object?> asMap(Object? value, String key) {
     final map = as<Map>(value, key, 'Map<String, Object?>');
-    try {
-      return Map<String, Object?>.from(map);
-    } on TypeError {
-      return typeError(value, key, 'Map<String, Object?>');
-    }
+    return Map.fromEntries(
+      map.entries.map(
+        (entry) => switch (entry.key) {
+          final String mapKey => MapEntry(mapKey, entry.value),
+          _ => typeError(value, key, 'Map<String, Object?>'),
+        },
+      ),
+    );
   }
 
   /// Decodes a JSON map while extending [key] with each map key.
