@@ -138,10 +138,12 @@ change is proposed.
 
 The request structs, CLI callers and production cached contexts now consume that
 optional path; no invalid-input fallback selects a different SDK.
-Its discovery follows the first executable `dart` on `PATH`, resolving symlinks
-and standalone/Flutter source layouts. Relative `PATH` entries are based on the
-process directory, not the requested package root; an opaque proxy requires an installed SDK
-bin directory on `PATH` or an explicit Rust request root. Source-map includes and
+For a Flutter workspace, discovery uses the bundled Dart SDK beside the resolved
+`flutter` package from `package_config.json`. Dart-only discovery follows the
+first executable `dart` on `PATH`, resolving symlinks and standalone/Flutter
+source layouts. Relative `PATH` entries are based on the process directory, not
+the requested package root; an opaque proxy requires an installed SDK bin
+directory on `PATH` or an explicit Rust request root. Source-map includes and
 override order follow the
 [SDK specification](https://github.com/dart-lang/sdk/blob/main/pkg/_fe_analyzer_shared/lib/src/util/libraries_specification.dart).
 SDK source alternatives remain target-independent: a relevant divergent source

@@ -22,14 +22,22 @@ pub(super) struct SdkSources {
 }
 
 impl SdkSources {
-    /// Explicit roots never fall back; discovery follows the first active Dart.
-    pub(super) fn load(cwd: &Path, explicit: Option<&Path>) -> Result<Self, String> {
+    /// Explicit roots never fall back; Flutter workspaces use their resolved SDK.
+    pub(super) fn load(
+        cwd: &Path,
+        explicit: Option<&Path>,
+        flutter_package: Option<&Path>,
+    ) -> Result<Self, String> {
         let root = match explicit {
             Some(root) => normalize_path(&cwd.join(root)),
             None => {
                 let process_cwd = std::env::current_dir()
                     .map_err(|error| format!("cannot discover Dart SDK sources: {error}"))?;
-                discover(&process_cwd, std::env::var_os("PATH").as_deref())?
+                discover(
+                    &process_cwd,
+                    std::env::var_os("PATH").as_deref(),
+                    flutter_package,
+                )?
             }
         };
         Self::read(&root).map_err(|error| {
@@ -97,8 +105,15 @@ fn sdk_language_version(version: &str) -> Option<DartLanguageVersion> {
     ))
 }
 
-/// Finds installed sources beside a standalone binary or Flutter's Dart wrapper.
-fn discover(cwd: &Path, path: Option<&OsStr>) -> Result<PathBuf, String> {
+/// Finds the workspace Flutter SDK or sources beside the first active Dart.
+fn discover(
+    cwd: &Path,
+    path: Option<&OsStr>,
+    flutter_package: Option<&Path>,
+) -> Result<PathBuf, String> {
+    if let Some(package) = flutter_package {
+        return flutter_sdk_root(package);
+    }
     for directory in path.into_iter().flat_map(std::env::split_paths) {
         let directory = cwd.join(directory);
         let names: &[&str] = if cfg!(windows) {
@@ -134,6 +149,25 @@ fn discover(cwd: &Path, path: Option<&OsStr>) -> Result<PathBuf, String> {
         }
     }
     Err("cannot discover Dart SDK sources: no active Dart on PATH; supply sdk_source_root".into())
+}
+
+/// Derives the bundled Dart SDK from Flutter's resolved SDK package root.
+fn flutter_sdk_root(package: &Path) -> Result<PathBuf, String> {
+    let root = package.parent().and_then(Path::parent).ok_or_else(|| {
+        format!(
+            "resolved Flutter package `{}` has no SDK root",
+            package.display()
+        )
+    })?;
+    let sdk = root.join("bin/cache/dart-sdk");
+    if sdk.join("lib/libraries.json").is_file() {
+        return Ok(sdk);
+    }
+    Err(format!(
+        "resolved Flutter package `{}` has no bundled Dart SDK at `{}`",
+        package.display(),
+        sdk.display()
+    ))
 }
 
 /// Non-executable files must not shadow the command selected by the shell.

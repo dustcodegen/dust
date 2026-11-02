@@ -64,8 +64,13 @@ impl NamespaceSources {
         registry: &dust_plugin_api::PluginRegistry,
         include_unannotated: bool,
     ) -> Result<Self, Diagnostic> {
-        let index = index::SourceIndex::load(cwd, &workspace.package_config.path, sdk_root)
-            .map_err(Diagnostic::error)?;
+        let index = index::SourceIndex::load(
+            cwd,
+            &workspace.package_config.path,
+            sdk_root,
+            workspace.is_flutter_package,
+        )
+        .map_err(Diagnostic::error)?;
         let mut files = Vec::new();
         discovery::collect_sources(&workspace.package_root.join("lib"), &mut files)?;
         files.sort();

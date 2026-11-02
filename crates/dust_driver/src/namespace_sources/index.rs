@@ -36,7 +36,12 @@ pub(super) struct SourceIndex {
 
 impl SourceIndex {
     /// Reads package configuration and the selected SDK without resolving by guesses.
-    pub(super) fn load(cwd: &Path, config: &Path, sdk_root: Option<&Path>) -> Result<Self, String> {
+    pub(super) fn load(
+        cwd: &Path,
+        config: &Path,
+        sdk_root: Option<&Path>,
+        is_flutter_workspace: bool,
+    ) -> Result<Self, String> {
         let contents = fs::read_to_string(config).map_err(|error| {
             format!(
                 "cannot read package configuration `{}`: {error}",
@@ -44,7 +49,17 @@ impl SourceIndex {
             )
         })?;
         let packages = packages::load(config, &contents)?;
-        let sdk = SdkSources::load(cwd, sdk_root)?;
+        let flutter_package = if sdk_root.is_none() && is_flutter_workspace {
+            Some(
+                &packages
+                    .get("flutter")
+                    .ok_or("Flutter workspace package configuration does not resolve `flutter`")?
+                    .root,
+            )
+        } else {
+            None
+        };
+        let sdk = SdkSources::load(cwd, sdk_root, flutter_package.map(PathBuf::as_path))?;
         let mut inputs = sdk.inputs.clone();
         inputs.insert(config.to_path_buf(), contents);
         Ok(Self {
