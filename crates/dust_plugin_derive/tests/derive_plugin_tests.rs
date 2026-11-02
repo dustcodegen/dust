@@ -18,6 +18,9 @@ mod copywith;
 #[path = "derive_plugin_tests/generic_names.rs"]
 mod generic_names;
 
+#[path = "derive_plugin_tests/member_binders.rs"]
+mod member_binders;
+
 #[path = "derive_plugin_tests/validate_support.rs"]
 mod validate_support;
 

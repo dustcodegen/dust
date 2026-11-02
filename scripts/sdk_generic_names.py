@@ -38,6 +38,55 @@ def require_only_name_infos(message: str) -> list[str]:
     return infos
 
 
+def check_member_binder_rejection(run, dust: Path, dart: Path, app: Path,
+                                  env: dict[str, str], *, primary: bool) -> list[str]:
+    """Prove Dart accepts the binders before Dust rejects conflicting generation."""
+    source = app / "lib/member_binders.dart"
+    generated = app / "lib/member_binders.g.dart"
+    if source.exists() or generated.exists():
+        raise ValueError("Member-binder probe requires fresh owned staging filenames")
+    parameters = "copyWith, toString, hashCode"
+    plain = f"""/// Legal Dart member-named binder probe.
+class Probe<{parameters}> {{
+  /// Creates a probe.
+  const Probe(this.value);
+  /// Chosen value.
+  final copyWith value;
+}}
+"""
+    if primary:
+        declaration = (
+            f"class const Probe<{parameters}>(final copyWith value) "
+            f"with _$Probe<{parameters}> {{ this; }}")
+    else:
+        declaration = (
+            f"class Probe<{parameters}> with _$Probe<{parameters}> {{\n"
+            "  const Probe(this.value);\n  final copyWith value;\n}")
+    annotated = (
+        "import 'package:dust_dart/derive.dart' as d;\n"
+        "part 'member_binders.g.dart';\n"
+        "@d.Derive([d.CopyWith(), d.ToString(), d.Eq()])\n"
+        f"{declaration}\n")
+    try:
+        source.write_text(plain, encoding="utf-8")
+        accepted = run([str(dart), "analyze", "--format=machine", "lib/member_binders.dart"],
+                       app, env=env)
+        require_only_name_infos(accepted.stdout + accepted.stderr)
+        source.write_text(annotated, encoding="utf-8")
+        for command in ("build", "check"):
+            result = run([str(dust), command, "--root", str(app)], app, expected=1, env=env)
+            output = result.stdout + result.stderr
+            for member in ("copyWith", "toString", "hashCode"):
+                if f"generic parameter `{member}`" not in output:
+                    raise ValueError(f"Missing member-binder diagnostic for {member}")
+            if generated.exists():
+                raise ValueError("Rejected member binders wrote generated output")
+        return ["copyWith", "toString", "hashCode"]
+    finally:
+        source.unlink(missing_ok=True)
+        generated.unlink(missing_ok=True)
+
+
 def check_generic_names(run, dust: Path, dart: Path, app: Path, output: Path,
                         options: Path, package: str, env: dict[str, str], *,
                         primary: bool = False) -> dict[str, object]:
@@ -46,7 +95,9 @@ def check_generic_names(run, dust: Path, dart: Path, app: Path, output: Path,
     source = app / "lib/generic_names.dart"
     generated = app / "lib/generic_names.g.dart"
     test = app / "test/generic_names_test.dart"
-    if any(path.exists() for path in (source, generated, test)):
+    member_source = app / "lib/member_binders.dart"
+    member_generated = app / "lib/member_binders.g.dart"
+    if any(path.exists() for path in (source, generated, test, member_source, member_generated)):
         raise ValueError("Collision probe requires fresh owned staging filenames")
     fixtures = ROOT / "fixtures/generic_names"
     infos = []
@@ -72,10 +123,13 @@ def check_generic_names(run, dust: Path, dart: Path, app: Path, output: Path,
         snapshot = generated.read_bytes()
         if snapshot != (fixtures / "generated.dart.snapshot").read_bytes():
             raise ValueError("Generated collision output differs from the complete contract")
+        rejected = check_member_binder_rejection(
+            run, dust, dart, app, env, primary=primary)
         (output / "generic_names.dart").write_bytes(source.read_bytes())
         (output / "generic_names.g.dart").write_bytes(snapshot)
         (output / "generic_names_test.dart").write_bytes(test.read_bytes())
         result = {"generated": hashlib.sha256(snapshot).hexdigest(), "nameStyleInfos": infos,
+                  "rejectedMemberBinders": rejected,
                   "generatedLineCoverage": coverage}
         (output / "results.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         return result
