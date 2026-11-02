@@ -192,8 +192,9 @@ final cleared = model.copyWith(optionalTransform: null);
 
 Omission retains the callback. Passing `null` clears a nullable callback, while
 the required callback keeps the existing non-nullable null-as-omission behavior.
-This is an explicit callback field type; shorthand primary-constructor callback
-formals are not supported.
+This is the preferred explicit callback field syntax. Shorthand callback
+parameters in primary constructors are also supported, but Dart's style lint
+still recommends the explicit `Function(...)` form.
 
 ## Examples
 

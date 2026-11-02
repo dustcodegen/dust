@@ -26,7 +26,7 @@ localization, SQL, and Dart servers—without `build_runner`.
 <p align="center">
   <a href="https://dustcodegen.github.io/">Website</a> ·
   <a href="docs/README.md">Documentation</a> ·
-  <a href="https://github.com/dustcodegen/dust/releases/tag/v0.3.0">v0.3.0 release</a> ·
+  <a href="https://github.com/dustcodegen/dust/releases/tag/v0.3.1">v0.3.1 release</a> ·
   <a href="examples/">Examples</a>
 </p>
 
@@ -36,25 +36,17 @@ localization, SQL, and Dart servers—without `build_runner`.
 2. Run `dust build` to generate the typed implementation.
 3. Use the generated API from your application code.
 
-## v0.3.0 Highlights
+## v0.3.1 Highlights
 
-- **Latest Dart syntax:** generate from class-header primary constructors on
-  Dart 3.13+ while keeping traditional constructors supported.
-- **Flutter:** stable routing and state authoring contracts, including typed
-  navigation, deep links, guards, scopes, and watch/select APIs.
-- **Servers:** generated function and controller routes with typed extraction,
-  validation, middleware, response dispatch, route metadata, and production
-  safety controls.
-- **SQLite:** migration-integrity checks plus opt-in background opening and SQL
-  execution through a persistent isolate.
-- **Developer experience:** inferred field types for `@Validate(...)`, clearer
-  diagnostics, deterministic generation, and release binaries that require no
-  Rust toolchain.
+- **Generated server clients:** target one package or split route groups into
+  tagged packages, with separate typed Dio clients and a flat generated barrel.
+- **Typed payload contracts:** shared request and response models use Dust
+  `Serialize()` and `Deserialize()` derives, retaining Serde names, aliases,
+  defaults, nested values, enums, and validation.
+- **Server performance:** precompiled route-prefix candidates and leaner request
+  body handling reduce work on common routing and JSON paths.
 
-Read the complete [v0.3.0 release notes](https://github.com/dustcodegen/dust/releases/tag/v0.3.0).
-
-Current source prepares CLI and package version 0.3.1. No tag or publication is
-implied by the source version.
+Read the complete [v0.3.1 release notes](https://github.com/dustcodegen/dust/releases/tag/v0.3.1).
 
 ## Installation
 

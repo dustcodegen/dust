@@ -1,8 +1,7 @@
 # Shorthand callback compiler probes
 
-Evidence for [#92](https://github.com/dustcodegen/dust/issues/92) and the approved
-[source-fact design](../../docs/design/function-formal-types.md), not proof that
-Dust currently generates these forms correctly.
+Compiler and generated-consumer evidence for the completed
+[#92](https://github.com/dustcodegen/dust/issues/92) callback support.
 
 Copy each `.dart.snapshot` into a separate owned temporary `.dart` file. Run an
 explicit SDK with `--enable-asserts`. No generated parts or placeholder mixins
@@ -24,8 +23,8 @@ fatal-info success. The preferred probe must pass fatal-info analysis separately
 
 The pinned native grammar accepts the inspected primary, nullable-function,
 generic and nested signatures. Native AST inspection uses the actual vendored
-binding, not a globally selected CLI grammar. Complete Dust semantic/generation
-regressions and full acceptance are tracked in PR #157.
+binding, not a globally selected CLI grammar. Permanent parser, resolver,
+driver, generation, and SDK regressions cover the implemented contract.
 
 The `generated_primary` and `generated_traditional` snapshots are separate
 Dust consumers. `scripts/sdk_callback_formals.py` stages them as a real
