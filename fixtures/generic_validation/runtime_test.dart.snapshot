@@ -7,6 +7,15 @@ import 'package:validation_probe/validation_scope.dart';
 typedef _Scoped = Scoped<int, int, int, int, int, int, int, int, int>;
 
 // Inherited exception helpers must dispatch to an overridden validator too.
+class _InvalidPlain extends Plain {
+  const _InvalidPlain() : super(0);
+
+  @override
+  ValidationResult validate() => const Invalid([
+        ValidationError(field: 'subclass', message: 'invalid'),
+      ]);
+}
+
 class _InvalidEmpty extends Empty<int> {
   const _InvalidEmpty();
 
@@ -66,6 +75,8 @@ void main() {
     });
 
     test('container rules and empty phantom models remain valid', () {
+      expect(const Plain(1).validate(), const Valid());
+      expect(const Plain(1).validateOrThrow, returnsNormally);
       expect(const Items<int>([1, 2]).validate(), const Valid());
       expect(
           const Items<int>([]).validate().errors.single.message, 'Too short');
@@ -166,6 +177,7 @@ void main() {
         const _Scoped(),
         const LocalNames<int, int, int, int>(null),
         const Spelled<int, String>(null, null),
+        const _InvalidPlain(),
         const _InvalidEmpty(),
       ];
       for (final value in invalid) {

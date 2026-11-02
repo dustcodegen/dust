@@ -8,7 +8,7 @@
 /// }
 /// ```
 {{ runtime.ValidationResult }} validate() {
-{%- if not generic or fields %}
+{%- if fields %}
   final {{ self_name }} = this as {{ class_type }};
 {%- endif %}
   final {{ errors_name }} = <{{ runtime.ValidationError }}>[];
@@ -26,7 +26,7 @@
 /// ```
 void validateOrThrow() {
   final {{ result_name }} = validate();
-  if ({{ result_name }} case {{ runtime.Invalid }}({% if not generic or invalid_errors_name != "errors" %}errors: {% else %}:{% endif %}final {{ invalid_errors_name }})) {
+  if ({{ result_name }} case {{ runtime.Invalid }}({% if fields and (not generic or invalid_errors_name != "errors") %}errors: {% else %}:{% endif %}final {{ invalid_errors_name }})) {
     throw {{ runtime.ValidationException }}({{ invalid_errors_name }});
   }
 }

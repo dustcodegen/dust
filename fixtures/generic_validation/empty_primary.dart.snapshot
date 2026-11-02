@@ -1,0 +1,8 @@
+import 'package:dust_dart/derive.dart';
+
+part 'empty.g.dart';
+
+@Derive([Validate()])
+class const Plain(final int value) with _$Plain {
+  this;
+}

@@ -8,6 +8,16 @@ part 'validation_shapes.g.dart';
 /// An alias may already be nullable without a written field question mark.
 typedef OptionalValue<T> = T?;
 
+/// A non-generic model with no rules remains a valid no-op validator.
+@Derive([d.Validate<Object?>()])
+class Plain with _$Plain {
+  /// Creates a plain value.
+  const Plain(this.value);
+
+  /// Unvalidated data must not force a generated receiver local.
+  final int value;
+}
+
 /// The chosen argument determines whether an unbounded value can be null.
 @Derive([d /* prefix . ( */ .Validate<List<Map<String, int?>>>()])
 class ValueBox<T> with _$ValueBox<T> {

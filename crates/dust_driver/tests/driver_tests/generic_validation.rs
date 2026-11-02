@@ -5,6 +5,52 @@ use dust_driver::{BuildRequest, CheckRequest, run_build, run_check};
 use super::support::{make_workspace, write_file};
 
 #[test]
+fn empty_validation_has_exact_output_for_both_headers() {
+    let expected =
+        include_str!("../../../../fixtures/generic_validation/empty_generated.dart.snapshot");
+    for (version, source) in [
+        (
+            "3.6.0",
+            include_str!("../../../../fixtures/generic_validation/empty_traditional.dart.snapshot"),
+        ),
+        (
+            "3.13.0",
+            include_str!("../../../../fixtures/generic_validation/empty_primary.dart.snapshot"),
+        ),
+    ] {
+        let workspace = make_workspace();
+        let root = workspace.path();
+        write_file(
+            &root.join("pubspec.yaml"),
+            &format!("name: dust_test\nenvironment:\n  sdk: '>={version} <4.0.0'\n"),
+        );
+        write_file(&root.join("lib/empty.dart"), source);
+        let request = BuildRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
+            cwd: root.to_path_buf(),
+            fail_fast: false,
+            jobs: None,
+            db: Default::default(),
+        };
+        let built = run_build(request.clone());
+        assert_eq!(built.diagnostics, []);
+        assert_eq!(
+            fs::read_to_string(root.join("lib/empty.g.dart")).unwrap(),
+            expected
+        );
+        let checked = run_check(CheckRequest {
+            sdk_source_root: Some(crate::support::sdk_source_root(root)),
+            cwd: root.to_path_buf(),
+            fail_fast: false,
+            jobs: None,
+            db: Default::default(),
+        });
+        assert_eq!(checked.diagnostics, []);
+        assert!(!checked.checked_libraries[0].stale);
+    }
+}
+
+#[test]
 fn generic_validation_has_the_same_typed_contract_for_both_headers() {
     let expected = include_str!("../../../../fixtures/generic_validation/generated.dart.snapshot");
     for (version, source) in [
