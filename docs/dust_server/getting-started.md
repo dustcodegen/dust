@@ -6,11 +6,11 @@
 dart pub add dust_server
 ```
 
-Require Dust 0.3.0 or newer:
+Require Dust 0.3.1 or newer:
 
 ```yaml
 dependencies:
-  dust_server: ^0.3.0
+  dust_server: ^0.3.1
 ```
 
 Inside this workspace, depend on it by path instead:

@@ -69,6 +69,16 @@ a matching 0.3.x CLI and `dust_db_sqlite3` runtime containing
 `Sqlite3WorkerDriver` and `Sqlite3WorkerUnsafeSql`. Ordinary synchronous-only
 database declarations keep their existing generated output.
 
+## Dust CLI 0.3.1
+
+| Dust CLI | `dust_dart` | `dust_flutter` | `dust_db_sqlite3` | `dust_db_postgres` | `dust_server` |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `0.3.1` | `>=0.3.1 <0.4.0` | `>=0.3.1 <0.4.0` | `>=0.3.1 <0.4.0` | `>=0.3.1 <0.4.0` | `>=0.3.1 <0.4.0` |
+
+0.3.1 is a lockstep patch release. It improves generated server-client
+contracts and server request performance, fixes SQLite statement reuse, and
+selects Flutter's bundled Dart SDK when generating Flutter workspaces.
+
 ## Dust CLI 0.3.0
 
 | Dust CLI | `dust_dart` | `dust_flutter` | `dust_db_sqlite3` | `dust_db_postgres` | `dust_server` |
