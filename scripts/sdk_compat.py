@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -29,6 +28,7 @@ from sdk_lexical_scopes import check_lexical_scopes
 from sdk_callback_formals import check_callback_formals
 from sdk_server_codegen import check_server_codegen, require_server_determinism
 from sdk_process import run_command
+from sdk_source_identity import FrozenSourceIdentity, invalidate_proof, verify_frozen
 
 
 def stable_dart_version(output: str) -> str:
@@ -79,14 +79,19 @@ def core_lints(version: str) -> str:
 
 def run_matrix(args: argparse.Namespace, output: Path) -> None:
     """Execute independent consumers without changing selected SDKs or production locks."""
+    invalidate_proof(output / "proof.json")
     log_number = 0
+    frozen = None
 
     def run(command: list[str], cwd: Path = ROOT, expected: int = 0,
             env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         nonlocal log_number
+        verify_frozen(frozen)
         log_number += 1
         print(f"==> {' '.join(command)} ({cwd})", flush=True)
-        return run_command(command, cwd, output / f"{log_number:02d}.log", expected, env)
+        result = run_command(command, cwd, output / f"{log_number:02d}.log", expected, env)
+        verify_frozen(frozen)
+        return result
 
     with urllib.request.urlopen(
         "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/VERSION",
@@ -101,6 +106,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
     run(["cargo", "build", "--quiet", "-p", "dust_cli"])
     cargo = json.loads(run(["cargo", "metadata", "--no-deps", "--format-version=1"]).stdout)
     dust = Path(cargo["target_directory"]) / "debug" / ("dust.exe" if os.name == "nt" else "dust")
+    frozen = FrozenSourceIdentity(ROOT, dust)
     rows = []
     for role in ("minimum", "latest"):
         dart = getattr(args, f"{role}_dart").resolve(strict=True)
@@ -195,10 +201,9 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
     require_inheritance_parity(rows, inheritance)
     sealed = {target: json.loads((output / f"primary-{target}-sealed/results.json").read_text()) for target in ("dart", "flutter")}
     require_sealed_parity(rows, sealed)
+    frozen.verify()
     proof = {
-        "sourceCommit": run(["git", "rev-parse", "HEAD"]).stdout.strip(),
-        "sourceDirty": bool(run(["git", "status", "--porcelain=v1"]).stdout),
-        "dustSha256": hashlib.sha256(dust.read_bytes()).hexdigest(),
+        **frozen.identity.evidence(),
         "rows": rows, "primary": primary, "unsupported": negatives,
         "primaryGenericNames": json.loads((output / "primary-generic-names/results.json").read_text()),
         "primaryGenericValidation": validation,
