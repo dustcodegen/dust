@@ -34,7 +34,7 @@ class GenericNameTests(unittest.TestCase):
                     baseline = config.read_bytes()
                     calls = []
 
-                    def run(command, cwd, env=None):
+                    def run(command, cwd, expected=0, env=None):
                         calls.append(command)
                         self.assertEqual(cwd, app)
                         self.assertEqual(env, {"SDK": "selected"})
@@ -43,17 +43,27 @@ class GenericNameTests(unittest.TestCase):
                         self.assertIn("package:selected/generic_names.dart", (app / "test/generic_names_test.dart").read_text())
                         if command[1] == fail:
                             raise RuntimeError("controlled failure")
-                        if command[1] == "build":
+                        binder_probe = (app / "lib/member_binders.dart").exists()
+                        if command[1] == "build" and not binder_probe:
                             content = (ROOT / "fixtures/generic_names/generated.dart.snapshot").read_bytes()
                             (app / "lib/generic_names.g.dart").write_bytes(b"// wrong contract\n" if fail == "snapshot" else content)
                         if command[1] == "analyze":
                             self.assertEqual(command[:3], ["dart", "analyze", "--format=machine"])
+                            if binder_probe:
+                                return subprocess.CompletedProcess(command, 0, "", "")
                             self.assertIn("strict-casts: true", config.read_text())
                             self.assertNotIn("type=lint", (app / "lib/generic_names.g.dart").read_text())
                         if command[1] == "run":
                             self.assertNotIn("--check-ignore", command)
                             Path(command[command.index("-o") + 1]).write_text(
                                 f"SF:{app}/lib/generic_names.g.dart\nDA:1,1\nend_of_record\n")
+                        if binder_probe and command[1] in {"build", "check"}:
+                            self.assertEqual(expected, 1)
+                            errors = "\n".join(
+                                f"generic parameter `{member}` conflicts with generated member"
+                                for member in ("copyWith", "toString", "hashCode"))
+                            return subprocess.CompletedProcess(command, 1, "", errors)
+                        self.assertEqual(expected, 0)
                         return subprocess.CompletedProcess(command, 0, "", "")
 
                     def probe():
@@ -67,8 +77,15 @@ class GenericNameTests(unittest.TestCase):
                     else:
                         result = probe()
                         self.assertEqual(result["nameStyleInfos"], [])
+                        self.assertEqual(
+                            result["rejectedMemberBinders"],
+                            ["copyWith", "toString", "hashCode"],
+                        )
                         self.assertEqual(len(result["generated"]), 64)
-                        self.assertEqual([call[1] for call in calls], ["build", "check", "analyze", "test", "run"])
+                        self.assertEqual(
+                            [call[1] for call in calls],
+                            ["build", "check", "analyze", "test", "run", "analyze", "build", "check"],
+                        )
                         self.assertEqual(result["generatedLineCoverage"], {"hit": 1, "found": 1})
                         self.assertTrue((root / "evidence/results.json").is_file())
                     self.assertEqual(config.read_bytes(), baseline)
