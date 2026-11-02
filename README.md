@@ -53,6 +53,9 @@ localization, SQL, and Dart servers—without `build_runner`.
 
 Read the complete [v0.3.0 release notes](https://github.com/dustcodegen/dust/releases/tag/v0.3.0).
 
+Current source prepares CLI and package version 0.3.1. No tag or publication is
+implied by the source version.
+
 ## Installation
 
 macOS and Linux (no Rust toolchain required):

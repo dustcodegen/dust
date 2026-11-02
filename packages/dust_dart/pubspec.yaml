@@ -1,6 +1,6 @@
 name: dust_dart
 description: Annotations and runtime support for generating Dart code with dust.
-version: 0.3.0
+version: 0.3.1
 repository: https://github.com/dustcodegen/dust
 issue_tracker: https://github.com/dustcodegen/dust/issues
 topics:
