@@ -167,5 +167,16 @@ void main() {
       expect(after.statusCode, 200);
       await after.read().drain<void>();
     });
+
+    test('passes through an unread request body stream', () async {
+      final app = Router()
+        ..layer(const ConcurrencyLimit(maxConcurrentRequests: 1))
+        ..route('/echo', post((request) async => Response.ok(request.read())));
+      final response = await app.handler(
+        request('POST', '/echo', body: 'streamed'),
+      );
+
+      expect(await response.readAsString(), 'streamed');
+    });
   });
 }

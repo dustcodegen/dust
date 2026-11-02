@@ -6,6 +6,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import '../router/middleware.dart';
 import '../router/router_base.dart';
+import '../stream_lifecycle.dart';
 import 'background.dart';
 
 /// A running server that can be stopped without dropping work.
@@ -129,7 +130,9 @@ Future<ServerHandle> serve(
       try {
         final response = await handler(request);
         return _flushIfStreamed(
-          response.change(body: _track(response.read(), inFlight.leave)),
+          response.change(
+            body: finishWithStream(response.read(), inFlight.leave),
+          ),
         );
       } on Object {
         inFlight.leave();
@@ -143,17 +146,6 @@ Future<ServerHandle> serve(
   );
 
   return ServerHandle._(server, inFlight, tasks, disposableLayersIn(router));
-}
-
-Stream<List<int>> _track(
-  Stream<List<int>> body,
-  void Function() finished,
-) async* {
-  try {
-    yield* body;
-  } finally {
-    finished();
-  }
 }
 
 /// Turns off output buffering for a response whose length is not known.

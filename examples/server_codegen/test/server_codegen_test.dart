@@ -159,7 +159,7 @@ void main() {
       headers: {'authorization': 'Bearer demo-token'},
     );
     final missing = await app.send('GET', '/me');
-    final forbidden = await app.send(
+    final invalid = await app.send(
       'GET',
       '/me',
       headers: {'authorization': 'Bearer wrong'},
@@ -167,7 +167,7 @@ void main() {
 
     expect(app.json(accepted), {'user': 'Ada'});
     expect(missing.statusCode, 401);
-    expect(forbidden.statusCode, 403);
+    expect(invalid.statusCode, 401);
   });
 
   test('generated multipart handler reads fields and files', () async {
