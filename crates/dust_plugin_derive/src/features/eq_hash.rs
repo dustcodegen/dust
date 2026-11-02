@@ -1,12 +1,13 @@
 use std::{collections::HashMap, fmt::Write};
 
 use dust_dart_emit::{DART_ITERABLE, DART_LIST, DART_MAP, DART_SET, render_class_type};
-use dust_diagnostics::Diagnostic;
+use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::{ClassIr, DartFileIr, TypeIr};
 
 use crate::features::{
     EQ_SYMBOL,
     core_names::{CoreNames, runtime_type},
+    eq_reference::equality_reference,
     names::{NameAllocator, class_helper_stem, library_reference_names, upper_first},
 };
 
@@ -42,15 +43,33 @@ pub(crate) fn has_trait(class: &ClassIr, symbol: &str) -> bool {
 }
 
 /// Validates equality generation requirements for a class.
-pub(crate) fn validate_eq_hash(class: &ClassIr) -> Vec<Diagnostic> {
-    let _ = class;
-    Vec::new()
+pub(crate) fn validate_eq_hash(library: &DartFileIr, class: &ClassIr) -> Vec<Diagnostic> {
+    let Some(field) = class.fields.iter().find(|field| {
+        has_trait(class, EQ_SYMBOL) && deep_equality_constructor(&field.ty).is_some()
+    }) else {
+        return Vec::new();
+    };
+    if equality_reference(library).is_some() {
+        return Vec::new();
+    }
+    vec![
+        Diagnostic::error(format!(
+            "collection equality for `{}` requires a visible `DeepCollectionEquality` import",
+            class.name
+        ))
+        .with_label(SourceLabel::new(
+            field.span.file_id,
+            field.span.range,
+            "import a Dust derive barrel that exposes the helper",
+        )),
+    ]
 }
 
 /// Plans collection equality helper declarations for a library.
 pub(crate) fn plan_equality(library: &DartFileIr) -> EqualityPlan {
     let mut allocator = NameAllocator::new(library_reference_names(library));
     let mut plan = EqualityPlan::default();
+    let equality = equality_reference(library).unwrap_or_else(|| "DeepCollectionEquality".into());
 
     for class in library
         .classes
@@ -72,7 +91,7 @@ pub(crate) fn plan_equality(library: &DartFileIr) -> EqualityPlan {
                 helper_name.clone(),
             );
             plan.declarations.push(format!(
-                "const DeepCollectionEquality {helper_name} = {constructor};"
+                "const {equality} {helper_name} = {equality}{constructor};"
             ));
         }
     }
@@ -204,9 +223,9 @@ fn render_hash_value(
 /// Returns the DeepCollectionEquality constructor needed by a type.
 fn deep_equality_constructor(ty: &TypeIr) -> Option<&'static str> {
     if needs_unordered_deep_helper(ty) {
-        Some("DeepCollectionEquality.unordered()")
+        Some(".unordered()")
     } else if needs_ordered_deep_helper(ty) {
-        Some("DeepCollectionEquality()")
+        Some("()")
     } else {
         None
     }
