@@ -6,6 +6,8 @@ pub(crate) mod core_names;
 pub(crate) mod debug;
 /// Generates equality and hashCode support.
 pub(crate) mod eq_hash;
+/// Resolves the visible collection-equality runtime reference.
+pub(crate) mod eq_reference;
 /// Allocates collision-safe generated names.
 pub(crate) mod names;
 /// Generates validation helpers.

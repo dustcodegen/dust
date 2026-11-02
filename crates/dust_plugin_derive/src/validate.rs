@@ -42,7 +42,7 @@ fn validate_library_inner(library: &DartFileIr, emit_form_helpers: bool) -> Vec<
             )));
             continue;
         }
-        diagnostics.extend(validate_eq_hash(class));
+        diagnostics.extend(validate_eq_hash(library, class));
         diagnostics.extend(validate_copy_with(class));
         diagnostics.extend(validate_validate(library, class, emit_form_helpers));
     }

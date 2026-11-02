@@ -19,7 +19,7 @@ typedef _DustCoreBool = bool;
 typedef _DustCoreInt = int;
 const bool Function(Object?, Object?) _dustCoreIdentical = identical;
 typedef _DustCorePragma = pragma;
-const DeepCollectionEquality _collectionNamesValuesEquality2 = DeepCollectionEquality();
+const d.DeepCollectionEquality _collectionNamesValuesEquality2 = d.DeepCollectionEquality();
 bool _copyWithAcceptsNull<T>() => null is T;
 final class _CoreNamesCopyWithUnset {
   const _CoreNamesCopyWithUnset();

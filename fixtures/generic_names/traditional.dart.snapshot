@@ -1,4 +1,3 @@
-import 'package:dust_dart/derive.dart';
 import 'package:dust_dart/derive.dart' as d;
 
 part 'generic_names.g.dart';

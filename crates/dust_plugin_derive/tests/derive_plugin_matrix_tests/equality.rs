@@ -1,4 +1,4 @@
-use dust_ir::{NameIr, ParamKind, TopLevelVariableIr, TypeIr};
+use dust_ir::{ImportIr, NameIr, ParamKind, TopLevelVariableIr, TypeIr};
 use dust_plugin_api::{DustPlugin, SymbolPlan};
 use dust_plugin_derive::register_plugin;
 
@@ -163,6 +163,33 @@ int get hashCode {
             .to_owned(),
         ]
         .as_slice()
+    );
+}
+
+#[test]
+fn rejects_collection_equality_without_a_proven_helper_export() {
+    let plugin = register_plugin();
+    let mut library = library(vec![class(
+        "Catalog",
+        vec![field("products", TypeIr::list_of(TypeIr::named("Product")))],
+        vec![],
+        &["dust_dart::Eq"],
+    )]);
+    library.import_directives.push(ImportIr {
+        namespace: None,
+        uri: "package:app/annotations.dart".to_owned(),
+        prefix: Some("d".to_owned()),
+        show: Vec::new(),
+        hide: Vec::new(),
+        is_deferred: false,
+        span: span(0, 10),
+    });
+
+    let diagnostics = plugin.validate(&library);
+    assert_eq!(diagnostics.len(), 1);
+    assert_eq!(
+        diagnostics[0].message,
+        "collection equality for `Catalog` requires a visible `DeepCollectionEquality` import"
     );
 }
 
