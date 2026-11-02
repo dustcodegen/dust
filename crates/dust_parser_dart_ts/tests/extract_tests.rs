@@ -45,6 +45,8 @@ mod typed_annotation_values;
 
 #[path = "extract_tests/primary_shapes.rs"]
 mod primary_shapes;
+#[path = "extract_tests/query_calls.rs"]
+mod query_calls;
 #[path = "extract_tests/redirect_targets.rs"]
 mod redirect_targets;
 #[path = "extract_tests/static_strings.rs"]
