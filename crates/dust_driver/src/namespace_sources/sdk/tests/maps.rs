@@ -24,7 +24,7 @@ fn transitive_external_includes_apply_ordered_overrides_and_keep_read_sets() {
       "second":{"include":[{"target":"base"}],"libraries":{}},
       "base":{"libraries":{"async":{"uri":"../async/async.dart"}}}}"#,
     );
-    let sources = SdkSources::load(root.path(), Some(root.path())).unwrap();
+    let sources = SdkSources::load(root.path(), Some(root.path()), None).unwrap();
     assert_eq!(sources.inputs.len(), 4);
     assert_eq!(
         sources.resolve("core").unwrap(),
@@ -51,7 +51,7 @@ fn source_uris_follow_the_sdk_map_location_including_local_external_sources() {
       "core":{"uri":"../sources/core.dart"},
       "async":{"uri":"async/a%20space.dart"}}}}"#,
     );
-    let sources = SdkSources::load(root.path(), Some(root.path())).unwrap();
+    let sources = SdkSources::load(root.path(), Some(root.path()), None).unwrap();
     assert_eq!(
         sources.resolve("core").unwrap(),
         root.path().join("sources/core.dart")
@@ -94,7 +94,7 @@ fn malformed_and_cyclic_includes_fail_instead_of_becoming_empty_namespaces() {
                 r#"{{"vm":{{"include":{include},"libraries":{{"core":{{"uri":"core/core.dart"}}}}}}}}"#
             ),
         );
-        let error = SdkSources::load(root.path(), Some(root.path()))
+        let error = SdkSources::load(root.path(), Some(root.path()), None)
             .err()
             .unwrap();
         assert!(error.contains(expected), "{error}");
@@ -114,7 +114,7 @@ fn external_map_include_cycles_keep_the_failing_input_path() {
         r#"{"base":{
       "include":[{"target":"vm","path":"libraries.json"}],"libraries":{}}}"#,
     );
-    let error = SdkSources::load(root.path(), Some(root.path()))
+    let error = SdkSources::load(root.path(), Some(root.path()), None)
         .err()
         .unwrap();
     assert!(error.contains("cyclic SDK source-map include"));
@@ -129,7 +129,7 @@ fn null_include_is_an_omitted_include() {
         r#"{"vm":{"include":null,
       "libraries":{"core":{"uri":"core/core.dart"}}}}"#,
     );
-    let sources = SdkSources::load(root.path(), Some(root.path())).unwrap();
+    let sources = SdkSources::load(root.path(), Some(root.path()), None).unwrap();
     assert_eq!(
         sources.resolve("core").unwrap(),
         root.path().join("lib/core/core.dart")
@@ -147,7 +147,7 @@ fn symlink_aliases_cannot_hide_a_source_map_include_cycle() {
       "libraries":{"core":{"uri":"core/core.dart"}}}}"#,
     );
     std::os::unix::fs::symlink(&map, root.path().join("lib/alias.json")).unwrap();
-    let error = SdkSources::load(root.path(), Some(root.path()))
+    let error = SdkSources::load(root.path(), Some(root.path()), None)
         .err()
         .unwrap();
     assert!(error.contains("cyclic SDK source-map include"));

@@ -31,6 +31,53 @@ fn relative_sdk_path_uses_process_directory_not_root_option() {
 }
 
 #[test]
+fn flutter_workspace_uses_its_sdk_when_standalone_dart_is_first() {
+    let workspace = make_workspace();
+    let root = workspace.path();
+    write_file(
+        &root.join("pubspec.yaml"),
+        "name: dust_test\ndependencies:\n  flutter:\n    sdk: flutter\n",
+    );
+    let config_path = root.join(".dart_tool/package_config.json");
+    let mut config: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
+    let flutter = config["packages"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|package| package["name"] == "flutter")
+        .unwrap();
+    flutter["rootUri"] = "../flutter-sdk/packages/flutter".into();
+    write_file(&config_path, &config.to_string());
+    let sdk = root.join("flutter-sdk/bin/cache/dart-sdk");
+    write_file(&sdk.join("version"), "3.13.5\n");
+    write_file(
+        &sdk.join("lib/libraries.json"),
+        r#"{"vm":{"libraries":{"core":{"uri":"core/core.dart"},"ui":{"uri":"ui/ui.dart"}}}}"#,
+    );
+    write_file(&sdk.join("lib/core/core.dart"), "library dart.core;");
+    write_file(&sdk.join("lib/ui/ui.dart"), "library dart.ui;");
+    write_dust_file(
+        &root.join("lib/user.dart"),
+        &[DustImport::Derive],
+        &format!("import 'dart:ui';\n{USER}"),
+    );
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_dust"))
+        .current_dir(root)
+        .env("PATH", root.join(".dust-test-sdk/bin"))
+        .arg("build")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(root.join("lib/user.g.dart").is_file());
+}
+
+#[test]
 fn language_gates_ignore_documentation_and_regex_strings_in_build_and_check() {
     let workspace = make_workspace();
     super::helpers::set_language_version(workspace.path(), "dust_test", "3.6");

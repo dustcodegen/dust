@@ -34,6 +34,7 @@ fn load(root: &Path) -> SourceIndex {
         root,
         &root.join(".dart_tool/package_config.json"),
         Some(Path::new("sdk")),
+        false,
     )
     .unwrap()
 }
@@ -197,7 +198,7 @@ fn invalid_package_metadata_is_not_legacy_annotation_provenance() {
         let path = root.path().join(".dart_tool/package_config.json");
         write(&path, config);
         assert!(
-            SourceIndex::load(root.path(), &path, Some(Path::new("sdk"))).is_err(),
+            SourceIndex::load(root.path(), &path, Some(Path::new("sdk")), false).is_err(),
             "{config}"
         );
     }
@@ -218,7 +219,7 @@ fn empty_package_uri_uses_the_declared_root_and_missing_config_is_not_ignored() 
     assert_eq!(target.uri, "package:p/source.dart");
     assert_eq!(target.language_version.to_string(), "3.13");
     fs::remove_file(&path).unwrap();
-    let error = SourceIndex::load(root.path(), &path, Some(Path::new("sdk")))
+    let error = SourceIndex::load(root.path(), &path, Some(Path::new("sdk")), false)
         .err()
         .unwrap();
     assert!(

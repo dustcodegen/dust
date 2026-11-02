@@ -53,7 +53,7 @@ fn sdk() -> TempDir {
 #[test]
 fn explicit_sdk_loads_sources_metadata_and_version_without_executing_dart() {
     let root = sdk();
-    let sources = SdkSources::load(root.path(), Some(Path::new("."))).unwrap();
+    let sources = SdkSources::load(root.path(), Some(Path::new(".")), None).unwrap();
     assert_eq!(sources.language_version.to_string(), "3.13");
     assert_eq!(sources.inputs.len(), 2);
     assert_eq!(sources.inputs[&root.path().join("version")], "3.13.5\n");
@@ -74,11 +74,21 @@ fn explicit_sdk_loads_sources_metadata_and_version_without_executing_dart() {
 #[test]
 fn explicit_invalid_sdk_does_not_fall_back_to_path() {
     let root = tempdir().unwrap();
-    let error = SdkSources::load(root.path(), Some(Path::new("absent")))
+    let error = SdkSources::load(root.path(), Some(Path::new("absent")), None)
         .err()
         .unwrap();
     assert!(error.starts_with("cannot load Dart SDK sources at `"));
     assert!(error.contains("absent/version"));
+}
+
+#[test]
+fn explicit_sdk_still_wins_over_a_resolved_flutter_package() {
+    let root = sdk();
+    let flutter = tempdir().unwrap();
+    let package = flutter.path().join("packages/flutter");
+
+    let sources = SdkSources::load(root.path(), Some(root.path()), Some(&package)).unwrap();
+    assert_eq!(sources.language_version.to_string(), "3.13");
 }
 
 #[test]
@@ -107,14 +117,14 @@ fn sdk_metadata_failures_are_retained() {
         let root = tempdir().unwrap();
         write(&root.path().join("version"), version);
         write(&root.path().join("lib/libraries.json"), map);
-        let error = SdkSources::load(root.path(), Some(root.path()))
+        let error = SdkSources::load(root.path(), Some(root.path()), None)
             .err()
             .unwrap();
         assert!(error.contains(expected), "{error}");
     }
     let root = sdk();
     fs::remove_file(root.path().join("lib/libraries.json")).unwrap();
-    let error = SdkSources::load(root.path(), Some(root.path()))
+    let error = SdkSources::load(root.path(), Some(root.path()), None)
         .err()
         .unwrap();
     assert!(error.contains("lib/libraries.json"));
@@ -148,16 +158,59 @@ fn discovers_standalone_and_flutter_sources_from_active_path() {
             root.path().to_path_buf()
         };
         write(&expected.join("lib/libraries.json"), "{}");
-        let selected = discover(root.path(), Some(bin.as_os_str())).unwrap();
+        let selected = discover(root.path(), Some(bin.as_os_str()), None).unwrap();
         assert_eq!(selected, fs::canonicalize(expected).unwrap());
     }
+}
+
+#[test]
+fn resolved_flutter_package_wins_over_standalone_dart_on_path() {
+    let standalone = sdk();
+    let standalone_bin = standalone.path().join("bin");
+    executable(&standalone_bin.join(command_name()));
+    let flutter = tempdir().unwrap();
+    let package = flutter.path().join("packages/flutter");
+    let bundled = flutter.path().join("bin/cache/dart-sdk");
+    write(&bundled.join("version"), "3.13.5\n");
+    write(
+        &bundled.join("lib/libraries.json"),
+        r#"{"vm":{"libraries":{"core":{"uri":"core/core.dart"},"ui":{"uri":"ui/ui.dart"}}}}"#,
+    );
+
+    assert_eq!(
+        discover(
+            flutter.path(),
+            Some(standalone_bin.as_os_str()),
+            Some(&package),
+        )
+        .unwrap(),
+        bundled
+    );
+}
+
+#[test]
+fn invalid_resolved_flutter_sdk_never_falls_back_to_standalone_dart() {
+    let standalone = sdk();
+    let standalone_bin = standalone.path().join("bin");
+    executable(&standalone_bin.join(command_name()));
+    let flutter = tempdir().unwrap();
+    let package = flutter.path().join("packages/flutter");
+
+    let error = discover(
+        flutter.path(),
+        Some(standalone_bin.as_os_str()),
+        Some(&package),
+    )
+    .unwrap_err();
+    assert!(error.contains("has no bundled Dart SDK"), "{error}");
+    assert!(error.contains("bin/cache/dart-sdk"), "{error}");
 }
 
 #[test]
 fn missing_or_opaque_active_dart_is_diagnostic_not_a_different_sdk() {
     let root = tempdir().unwrap();
     assert_eq!(
-        discover(root.path(), None).unwrap_err(),
+        discover(root.path(), None, None).unwrap_err(),
         "cannot discover Dart SDK sources: no active Dart on PATH; supply sdk_source_root"
     );
     let first = root.path().join("first");
@@ -165,7 +218,7 @@ fn missing_or_opaque_active_dart_is_diagnostic_not_a_different_sdk() {
     let second = sdk();
     executable(&second.path().join("bin").join(command_name()));
     let path = std::env::join_paths([first, second.path().join("bin")]).unwrap();
-    let error = discover(root.path(), Some(&path)).unwrap_err();
+    let error = discover(root.path(), Some(&path), None).unwrap_err();
     assert!(error.contains("cannot discover SDK sources beside active Dart"));
     assert!(error.contains("first"));
 }
@@ -188,7 +241,7 @@ fn path_search_skips_missing_entries_directories_and_non_executable_files() {
     paths.push(bin);
     let path = std::env::join_paths(paths).unwrap();
     assert_eq!(
-        discover(root.path(), Some(&path)).unwrap(),
+        discover(root.path(), Some(&path), None).unwrap(),
         fs::canonicalize(root.path()).unwrap()
     );
 }
@@ -203,7 +256,7 @@ fn resolves_active_dart_symlink_before_finding_source_root() {
     fs::create_dir_all(&link_dir).unwrap();
     std::os::unix::fs::symlink(&dart, link_dir.join("dart")).unwrap();
     assert_eq!(
-        discover(root.path(), Some(link_dir.as_os_str())).unwrap(),
+        discover(root.path(), Some(link_dir.as_os_str()), None).unwrap(),
         fs::canonicalize(root.path()).unwrap()
     );
 }

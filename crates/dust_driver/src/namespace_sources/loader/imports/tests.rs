@@ -36,6 +36,7 @@ fn lexical_part_requests_promote_owner_imports_and_are_idempotent() {
         root.path(),
         &root.path().join("package_config.json"),
         Some(std::path::Path::new("sdk")),
+        false,
     )
     .unwrap();
     let source = index.file(&root.path().join("lib/root.dart")).unwrap();
