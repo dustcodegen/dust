@@ -25,8 +25,8 @@ Run with an explicitly selected SDK executable:
 ```
 
 Verified locally on Dart 3.6.0 and 3.13.5; the primary probe requires Dart 3.13.
-The two associated Rust regressions now pass with the approved
-[structured use-site scopes](../../docs/design/annotation-lexical-scopes.md):
+The two associated Rust regressions exercise the production structured
+use-site scopes:
 
 ```sh
 cargo test -p dust_resolver --test namespace_graph class_constant_metadata_cannot_become_an_imported_client_verb

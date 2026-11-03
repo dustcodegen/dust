@@ -89,16 +89,15 @@ Separate unsupported forms and limits:
   still recommended by Dart's style lint. Scoped minimum/latest executable
   probes cover nullable returns/functions, generic/nested/named invocation and
   callback retain/replace/null-clear; inference and defaults inside signatures
-  fail clearly. See the [approved contract](../design/function-formal-types.md)
-  and [executable fixtures](../../fixtures/primary_callback_formals/README.md).
+  fail clearly. See the
+  [executable fixtures](../../fixtures/primary_callback_formals/README.md).
 - [Generic class generation (#93)](https://github.com/dustcodegen/dust/issues/93)
   is supported for the capabilities exercised by the traditional and primary
   consumers using `with _$Box<T>`. These cover bounds, nullable arguments,
   nested helpers, equality/debug output, validation, SerDe, inheritance, sealed
-  models and typed imported replacements. Names that collide with generated
-  members such as `copyWith` remain tracked separately in
-  [#103](https://github.com/dustcodegen/dust/issues/103); this is not a claim
-  that every generic derive combination is supported.
+  models and typed imported replacements. Dust rejects names that collide with
+  generated members such as `copyWith`; this is not a claim that every generic
+  derive combination is supported.
 
 Named concise `new` constructors and dot shorthands remain separate unsupported
 features and fail clearly. Named mixin applications remain unsupported generation
