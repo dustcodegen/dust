@@ -126,6 +126,60 @@ void main() {
 
       expect(JsonHelper.encodeWithCodec<int, Object?>(codec, 42), '42');
       expect(JsonHelper.decodeWithCodec<int, Object?>(codec, '42', 'id'), 42);
+
+      expect(
+        JsonHelper.decodeWithCodecResult<int, String>(codec, '42', 'id'),
+        const Ok<int, JsonCodecDecodeError>(42),
+      );
+    });
+
+    test('returns typed codec input failures', () {
+      final nullResult = JsonHelper.decodeWithCodecResult<int, String>(
+        const _IntCodec(),
+        null,
+        'id',
+      );
+      final typeResult = JsonHelper.decodeWithCodecResult<int, String>(
+        const _IntCodec(),
+        42,
+        'id',
+      );
+
+      switch (nullResult) {
+        case Err(:final JsonDecodeTypeError error):
+          expect(error.value, isNull);
+          expect(error.path, 'id');
+          expect(error.expected, 'non-null value');
+        case _:
+          fail('expected a typed null failure');
+      }
+      switch (typeResult) {
+        case Err(:final JsonDecodeTypeError error):
+          expect(error.value, 42);
+          expect(error.path, 'id');
+          expect(error.expected, 'String');
+        case _:
+          fail('expected a typed input failure');
+      }
+    });
+
+    test('returns codec failures with their path and cause', () {
+      final result = JsonHelper.decodeWithCodecResult<int, String>(
+        const _IntCodec(),
+        'nan',
+        'profile.id',
+      );
+
+      switch (result) {
+        case Err(:final JsonCodecDecodeFailure error):
+          expect(error.value, 'nan');
+          expect(error.path, 'profile.id');
+          expect(error.cause, isA<FormatException>());
+          expect(error.message, contains('Custom codec failed at profile.id'));
+          expect(error.toString(), error.message);
+        case _:
+          fail('expected a codec failure');
+      }
     });
 
     test('rejects null codec values', () {
@@ -144,6 +198,14 @@ void main() {
         () => JsonHelper.decodeWithCodec<int, Object?>(
           const _IntCodec(),
           'nan',
+          'id',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => JsonHelper.decodeWithCodec<int, String>(
+          const _IntCodec(),
+          42,
           'id',
         ),
         throwsA(isA<ArgumentError>()),

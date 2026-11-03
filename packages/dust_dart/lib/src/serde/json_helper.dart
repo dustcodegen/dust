@@ -5,6 +5,8 @@
 /// emitting duplicate private helpers into every generated file.
 library;
 
+import '../fp/result.dart';
+import 'json_result.dart';
 import 'serde.dart';
 
 /// Shared runtime helpers used by Dust-generated serde code.
@@ -121,20 +123,47 @@ abstract final class JsonHelper {
     Object? value,
     String key,
   ) {
-    if (value == null) {
-      throw ArgumentError.value(
-        value,
-        key,
-        'expected value for SerDeCodec at $key',
+    return switch (decodeWithCodecResult(codec, value, key)) {
+      Ok(:final value) => value,
+      Err(:final error) => throw ArgumentError.value(
+          value,
+          key,
+          switch (error) {
+            JsonDecodeTypeError(value: null) =>
+              'expected value for SerDeCodec at $key',
+            JsonCodecDecodeFailure(:final cause) =>
+              'failed SerDeCodec decode at $key: $cause',
+            JsonDecodeTypeError() =>
+              'failed SerDeCodec decode at $key: ${error.message}',
+          },
+        ),
+    };
+  }
+
+  /// Decodes [value] through a user-provided codec without throwing for
+  /// expected type or codec failures.
+  static Result<DartT, JsonCodecDecodeError>
+      decodeWithCodecResult<DartT, JsonT>(
+    Deserializer<DartT, JsonT> codec,
+    Object? value,
+    String key,
+  ) {
+    if (value == null || value is! JsonT) {
+      return Err<DartT, JsonCodecDecodeError>(
+        JsonDecodeTypeError(
+          value: value,
+          path: key,
+          expected: value == null ? 'non-null value' : '$JsonT',
+        ),
       );
     }
+    // The guard establishes this; Dart does not promote to a type variable.
+    final typedValue = value as JsonT;
     try {
-      return codec.deserialize(value as JsonT);
+      return Ok<DartT, JsonCodecDecodeError>(codec.deserialize(typedValue));
     } catch (error) {
-      throw ArgumentError.value(
-        value,
-        key,
-        'failed SerDeCodec decode at $key: $error',
+      return Err<DartT, JsonCodecDecodeError>(
+        JsonCodecDecodeFailure(value: value, path: key, cause: error),
       );
     }
   }

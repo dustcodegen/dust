@@ -14,13 +14,22 @@ sealed class JsonDecodeError {
   String toString() => message;
 }
 
+/// Failure returned while decoding JSON through a custom codec.
+sealed class JsonCodecDecodeError {
+  /// Creates a custom codec decode error.
+  const JsonCodecDecodeError();
+
+  /// Human-readable failure description.
+  String get message;
+
+  @override
+  String toString() => message;
+}
+
 /// Invalid JSON syntax reported by `dart:convert`.
 final class JsonDecodeSyntaxError extends JsonDecodeError {
   /// Creates a JSON syntax error.
-  const JsonDecodeSyntaxError({
-    required this.source,
-    required this.cause,
-  });
+  const JsonDecodeSyntaxError({required this.source, required this.cause});
 
   /// Source text that failed to decode.
   final String source;
@@ -33,7 +42,8 @@ final class JsonDecodeSyntaxError extends JsonDecodeError {
 }
 
 /// A decoded JSON value that does not have the expected shape.
-final class JsonDecodeTypeError extends JsonDecodeError {
+final class JsonDecodeTypeError extends JsonDecodeError
+    implements JsonCodecDecodeError {
   /// Creates a JSON shape error.
   const JsonDecodeTypeError({
     required this.value,
@@ -52,6 +62,28 @@ final class JsonDecodeTypeError extends JsonDecodeError {
 
   @override
   String get message => 'Expected $expected at $path.';
+}
+
+/// A custom codec that threw while decoding one JSON value.
+final class JsonCodecDecodeFailure extends JsonCodecDecodeError {
+  /// Creates a custom codec failure.
+  const JsonCodecDecodeFailure({
+    required this.value,
+    required this.path,
+    required this.cause,
+  });
+
+  /// JSON value passed to the codec.
+  final Object? value;
+
+  /// JSON path where the codec failed.
+  final String path;
+
+  /// Original codec failure.
+  final Object cause;
+
+  @override
+  String get message => 'Custom codec failed at $path: $cause';
 }
 
 /// Decodes [source] without throwing for invalid JSON syntax.
