@@ -31,8 +31,8 @@ abstract interface class Layer {
 /// axum needs no equivalent — Rust drops a layer when its router goes — so this
 /// is Dart's problem rather than a borrowed shape.
 ///
-/// `close(drain:)` disposes every one it finds on the router, inside the same
-/// budget it gives requests and background work.
+/// `close(drain:)` starts disposal when accepted work finishes or the deadline
+/// passes. Shutdown waits for disposal only within the drain budget.
 ///
 /// It is a separate interface because Dart's `implements` requires every member
 /// to be re-declared, so adding a method to [Layer] — even one with a body —
@@ -54,8 +54,8 @@ abstract interface class Layer {
 abstract interface class DisposableLayer implements Layer {
   /// Releases whatever this layer acquired.
   ///
-  /// Called once, during shutdown. It should not throw; one that does is
-  /// reported through the router's `onError` and does not stop the others.
+  /// Called once during shutdown. If it throws, the remaining layers are
+  /// still disposed.
   Future<void> dispose();
 }
 

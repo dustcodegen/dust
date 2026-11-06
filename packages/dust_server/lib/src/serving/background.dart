@@ -99,23 +99,26 @@ final class BackgroundTasks {
   /// Returns `true` when everything finished, and `false` when the budget passed
   /// with work still going — the same contract as `ServerHandle.close`, and the
   /// only signal that something was abandoned.
-  Future<bool> close({Duration within = const Duration(seconds: 15)}) async {
-    _closed = true;
-    return settled(within);
-  }
+  Future<bool> close({Duration within = const Duration(seconds: 15)}) =>
+      _settledWithin(drainBackgroundTasks(this), within);
 
   /// Waits [within] for the running tasks without closing the registry.
-  Future<bool> settled(Duration within) async {
-    if (_running.isEmpty) return true;
+  Future<bool> settled(Duration within) => _settledWithin(_whenIdle, within);
 
-    final idle = _idle ??= Completer<void>();
-    try {
-      await idle.future.timeout(within);
-      return true;
-    } on TimeoutException {
-      return false;
-    }
-  }
+  Future<void> get _whenIdle => _running.isEmpty
+      ? Future<void>.value()
+      : (_idle ??= Completer<void>()).future;
+
+  Future<bool> _settledWithin(Future<void> idle, Duration within) =>
+      idle.then((_) => true).timeout(within, onTimeout: () => false);
+}
+
+/// Stops accepting tasks and returns a future for all accepted work to finish.
+@internal
+Future<void> drainBackgroundTasks(BackgroundTasks? tasks) {
+  if (tasks == null) return Future<void>.value();
+  tasks._closed = true;
+  return tasks._whenIdle;
 }
 
 /// Names the task that failed, so the report says which one.

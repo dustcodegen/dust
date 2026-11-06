@@ -11,9 +11,8 @@ import 'background.dart';
 
 /// A running server that can be stopped without dropping work.
 ///
-/// `HttpServer.close` stops accepting and, unforced, waits for open
-/// connections. What it does not do is tell you how many requests are still in
-/// flight, which is what a deployment needs before it takes the process away.
+/// `HttpServer.close` stops accepting and leaves active connections open
+/// during unforced shutdown. The handle tracks requests still in flight.
 final class ServerHandle {
   ServerHandle._(this._server, this._inFlight, this._background, this._layers)
       : address = _server.address,
@@ -23,6 +22,7 @@ final class ServerHandle {
   final _InFlight _inFlight;
   final BackgroundTasks? _background;
   final List<DisposableLayer> _layers;
+  Future<bool>? _closing;
 
   /// The address the server bound to.
   ///
@@ -39,41 +39,38 @@ final class ServerHandle {
   /// How many background tasks are still running, when a registry was passed.
   int get pendingTasks => _background?.pending ?? 0;
 
-  /// Stops accepting, then waits for the requests already accepted.
+  /// Stops accepting, then drains requests, tasks, and layer disposal.
   ///
-  /// When a [BackgroundTasks] was passed to [serve], its work is drained
-  /// too, and within the same [drain] budget rather than a second one — the
-  /// platform kills the process on its own schedule, and two budgets in series
-  /// exceed it.
-  ///
-  /// Returns `true` when everything finished within [drain], and `false` when
-  /// the deadline passed with work still running, at which point the caller
-  /// decides whether to wait longer or exit anyway.
-  Future<bool> close({Duration drain = const Duration(seconds: 30)}) async {
+  /// The first call sets the [drain] budget after the listener stops.
+  /// Later calls share its result.
+  /// Returns `true` when cleanup completes within that budget, or `false`
+  /// while cleanup continues. Layer disposal starts when requests and
+  /// background tasks finish or the deadline passes, whichever comes first.
+  Future<bool> close({Duration drain = const Duration(seconds: 30)}) =>
+      _closing ??= _close(drain);
+
+  Future<bool> _close(Duration drain) async {
+    // Return only after the OS has released the listening socket.
     await _server.close();
 
-    final deadline = Stopwatch()..start();
-    final requestsSettled = await _inFlight.settled(drain);
+    Future<void>? disposal;
+    Future<void> disposeOnce() => disposal ??= _disposeLayers();
 
-    final background = _background;
-    var tasksSettled = true;
-
-    if (background != null) {
-      // Whatever is left of the budget. A request that used all of it leaves
-      // nothing, and `close` reports the failure rather than waiting twice as
-      // long as it was told to.
-      final remaining = drain - deadline.elapsed;
-      tasksSettled = await background.close(
-        within: remaining.isNegative ? Duration.zero : remaining,
-      );
+    Future<void> drainAndDispose() async {
+      await _inFlight.idle;
+      await drainBackgroundTasks(_background);
+      await disposeOnce();
     }
 
-    // After the tasks, because a background task may still be using whatever a
-    // layer owns. Always, because a server with no background work still has
-    // layers to release — an early return here left them open.
-    await _disposeLayers();
-
-    return requestsSettled && tasksSettled;
+    return drainAndDispose().then((_) => true).timeout(
+      drain,
+      onTimeout: () {
+        unawaited(drainBackgroundTasks(_background));
+        // A pending request can depend on a layer closing its resource.
+        unawaited(disposeOnce());
+        return false;
+      },
+    );
   }
 
   /// Releases every [DisposableLayer] on the router, once.
@@ -186,15 +183,6 @@ final class _InFlight {
     }
   }
 
-  Future<bool> settled(Duration within) async {
-    if (count == 0) return true;
-
-    final idle = _idle ??= Completer<void>();
-    try {
-      await idle.future.timeout(within);
-      return true;
-    } on TimeoutException {
-      return false;
-    }
-  }
+  Future<void> get idle =>
+      count == 0 ? Future<void>.value() : (_idle ??= Completer<void>()).future;
 }

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Share one graceful shutdown across concurrent calls and include disposal in
+  its drain budget. Layer disposal starts by the deadline even if requests or
+  background tasks are still running.
+
 ## [0.3.1] - 2026-11-02
 
 ### Changed
