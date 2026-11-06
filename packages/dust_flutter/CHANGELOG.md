@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Reuse the previous page when a router refresh redirects to its location.
 - Wait for route guards before showing protected initial and newly exposed
   pages.
 - Recheck access before showing a cached navigation branch.

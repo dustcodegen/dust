@@ -8,6 +8,7 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
     int guardRedirects = 0,
     List<String>? guardRedirectChain,
     bool reuseCachedBranch = true,
+    bool refreshing = false,
   }) async {
     if (_disposed) return null;
     final epoch = ++_navigationEpoch;
@@ -70,6 +71,7 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
             guardRedirects: guardRedirects,
             guardRedirectChain: guardChain,
             reuseCachedBranch: false,
+            refreshing: refreshing,
           );
         }
       }
@@ -89,6 +91,7 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
           guardRedirectChain: [...guardChain, _debugRoute(redirected)],
           // Follow a cached route's redirect without reopening cached pages.
           reuseCachedBranch: reuseCachedBranch && !isCached,
+          refreshing: refreshing,
         );
       }
     }
@@ -99,6 +102,7 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
       checkedRoutes: checkedRoutes,
       resumesBranch: retained != null,
       reuseCachedBranch: reuseCachedBranch,
+      refreshing: refreshing,
     );
   }
 

@@ -9,6 +9,7 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
     required RouteStack<T> checkedRoutes,
     required bool resumesBranch,
     required bool reuseCachedBranch,
+    required bool refreshing,
   }) {
     final previous = _history.routes();
     final previousBranch = _history.activeBranch;
@@ -34,7 +35,11 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
         committed = _RouteEntry(route, tracksPop: true);
         _history.push(committed);
       case NavigationMode.replace:
-        final replacement = _history.replaceTop(route, config.routeLocation);
+        final replacement = _history.replaceTop(
+          route,
+          config.routeLocation,
+          reusePrevious: refreshing && !switchedBranch,
+        );
         committed = replacement.committed;
         replacement.replaced?.complete(null);
       case NavigationMode.restore:

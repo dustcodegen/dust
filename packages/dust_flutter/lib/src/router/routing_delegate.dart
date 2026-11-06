@@ -159,7 +159,11 @@ final class GeneratedRouterDelegate<T extends Object> extends RouterDelegate<T>
     final refresh = Future<void>.microtask(() async {
       _refreshScheduled = false;
       if (_disposed) return;
-      await _applyRoute(currentRoute, NavigationMode.replace);
+      await _applyRoute(
+        currentRoute,
+        NavigationMode.replace,
+        refreshing: true,
+      );
     });
     _scheduledRefresh = refresh;
     _unawaitedNavigation(refresh);

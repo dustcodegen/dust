@@ -81,8 +81,9 @@ final class _RouteStackStore<T extends Object> {
 
   ({_RouteEntry<T> committed, _RouteEntry<T>? replaced}) replaceTop(
     T route,
-    RouteLocation<T> routeLocation,
-  ) {
+    RouteLocation<T> routeLocation, {
+    required bool reusePrevious,
+  }) {
     if (_activeEntries.isEmpty) {
       final committed = _RouteEntry(route);
       _activeEntries.add(committed);
@@ -90,7 +91,22 @@ final class _RouteStackStore<T extends Object> {
     }
 
     final previous = _activeEntries.last;
-    final sameLocation = routeLocation(previous.route) == routeLocation(route);
+    final previousLocation = routeLocation(previous.route);
+    final location = routeLocation(route);
+    final sameLocation = previousLocation == location;
+    final predecessorIndex = _activeEntries.length - 2;
+    if (reusePrevious &&
+        !sameLocation &&
+        predecessorIndex >= 0 &&
+        routeLocation(_activeEntries[predecessorIndex].route) == location) {
+      // Keep the existing page key and its pending result when a refresh
+      // redirects to the page directly underneath the current one.
+      final committed = _activeEntries[predecessorIndex].withRoute(route);
+      _activeEntries
+        ..removeLast()
+        ..[predecessorIndex] = committed;
+      return (committed: committed, replaced: previous);
+    }
     final committed =
         sameLocation ? previous.withRoute(route) : _RouteEntry(route);
     _activeEntries[_activeEntries.length - 1] = committed;
