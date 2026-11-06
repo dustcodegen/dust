@@ -1,6 +1,6 @@
 use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_text::SourceText;
-use tree_sitter::{Node, Tree};
+use tree_sitter::{Node, Tree, TreeCursor};
 
 use crate::language_gates::{FeatureOccurrence, record_syntax_occurrence};
 use crate::syntax::{direct_named_child, node_text, text_range};
@@ -35,19 +35,30 @@ pub(crate) fn extract_diagnostics(
     occurrences: &mut Vec<FeatureOccurrence>,
 ) -> DiagnosticViews {
     let mut views = DiagnosticViews::default();
-    collect_error_diagnostics(tree.root_node(), source, &mut views, occurrences);
+    collect_error_diagnostics(
+        &mut tree.walk(),
+        None,
+        source,
+        &mut views,
+        occurrences,
+        tree.root_node().has_error(),
+    );
     views
 }
 
 /// Records parse errors and grammar forms whose generation is still unsupported.
 fn collect_error_diagnostics(
-    node: Node<'_>,
+    cursor: &mut TreeCursor<'_>,
+    parent_kind: Option<&str>,
     source: &SourceText,
     views: &mut DiagnosticViews,
     occurrences: &mut Vec<FeatureOccurrence>,
+    has_syntax_errors: bool,
 ) {
-    record_syntax_occurrence(node, source, occurrences);
-    if let Some(feature) = unsupported_feature(node, source) {
+    let node = cursor.node();
+    let kind = node.kind();
+    record_syntax_occurrence(node, kind, parent_kind, source, occurrences);
+    if let Some(feature) = unsupported_feature(node, kind, source) {
         let (name, guidance) = match feature {
             UnsupportedFeature::DotShorthands => (
                 "dot shorthands",
@@ -71,7 +82,7 @@ fn collect_error_diagnostics(
         }
         views.diagnostics.push(diagnostic);
     }
-    if node.is_error() || node.is_missing() {
+    if has_syntax_errors && (node.is_error() || node.is_missing()) {
         let mut diagnostic =
             Diagnostic::error("tree-sitter reported a Dart syntax error").with_label(
                 SourceLabel::new(source.file_id(), text_range(node), "invalid syntax"),
@@ -85,15 +96,31 @@ fn collect_error_diagnostics(
         views.diagnostics.push(diagnostic);
     }
 
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        collect_error_diagnostics(child, source, views, occurrences);
+    if cursor.goto_first_child() {
+        loop {
+            collect_error_diagnostics(
+                cursor,
+                Some(kind),
+                source,
+                views,
+                occurrences,
+                has_syntax_errors,
+            );
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+        cursor.goto_parent();
     }
 }
 
 /// Keeps newly parseable syntax gated until its generated consumers are verified.
-fn unsupported_feature(node: Node<'_>, source: &SourceText) -> Option<UnsupportedFeature> {
-    match node.kind() {
+fn unsupported_feature(
+    node: Node<'_>,
+    kind: &str,
+    source: &SourceText,
+) -> Option<UnsupportedFeature> {
+    match kind {
         "dot_shorthand" if !is_generic_receiver_member(node, source) => {
             Some(UnsupportedFeature::DotShorthands)
         }

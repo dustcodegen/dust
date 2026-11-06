@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   for the same source and producer, discard rejected placeholders in one scan,
   share annotation discovery across workspace roots, and build diagnostic line
   indexes only for referenced dependencies.
+- **Dart parsing**: reuse one tree cursor for syntax diagnostics and
+  language-feature detection.
 - **Build fingerprints**: reuse the hash state for identical SDK dependency
   prefixes within a source snapshot while preserving the existing fingerprints.
 
