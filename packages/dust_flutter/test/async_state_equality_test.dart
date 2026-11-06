@@ -87,8 +87,23 @@ void main() {
       );
     });
 
-    test('a state that differs only in its type argument is not equal', () {
-      expect(const AsyncData<Object>(1), isNot(const AsyncData<int>(1)));
+    test('covariant states with different type arguments are unequal', () {
+      final error = StateError('offline');
+      final stackTrace = StackTrace.current;
+      final states = <(AsyncState<Object>, AsyncState<int>)>[
+        (const AsyncInitial<Object>(), const AsyncInitial<int>()),
+        (const AsyncLoading<Object>(), const AsyncLoading<int>()),
+        (const AsyncData<Object>(1), const AsyncData<int>(1)),
+        (
+          AsyncFailure<Object>(error, stackTrace),
+          AsyncFailure<int>(error, stackTrace),
+        ),
+      ];
+
+      for (final (wider, narrower) in states) {
+        expect(wider == narrower, isFalse, reason: '$wider == $narrower');
+        expect(narrower == wider, isFalse, reason: '$narrower == $wider');
+      }
     });
   });
 

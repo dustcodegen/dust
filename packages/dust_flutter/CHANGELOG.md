@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Recheck access before showing a cached navigation branch.
+- Update the visible page after a same-location replacement with a custom
+  transition while preserving the route key and pending pop result.
+- Share the pending ViewModel initialization attempt with reentrant callers
+  and allow explicit retries after synchronous failures.
+- Make async state equality symmetric for different generic types.
+
 ## [0.3.1] - 2026-11-02
 
 ## [0.3.0] - 2026-10-26

@@ -4,22 +4,27 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
     on GeneratedRouterDelegate<T> {
   _RouteEntry<T> _commitRoute(
     T route,
-    NavigationMode mode, [
-    RouteStack<T>? restored,
-  ]) {
+    NavigationMode mode, {
+    required String? targetBranch,
+    required RouteStack<T> checkedRoutes,
+    required bool resumesBranch,
+    required bool reuseCachedBranch,
+  }) {
     final previous = _history.routes();
-    final targetBranch = config.routeBranch(route);
     final previousBranch = _history.activeBranch;
     final switchedBranch = _history.activateBranch(targetBranch);
     if (switchedBranch) {
       _log('branch ${previousBranch ?? '-'} => ${targetBranch ?? '-'}');
+      if (!reuseCachedBranch) {
+        _completeEntries(_history.entries);
+        _history.entries.clear();
+      }
     }
     late final _RouteEntry<T> committed;
     switch (mode) {
       case NavigationMode.go:
-        if (switchedBranch &&
-            targetBranch != null &&
-            _history.activeRootMatches(route, config.routeLocation)) {
+        if (resumesBranch) {
+          _history.entries[0] = _history.entries.first.withRoute(route);
           committed = _history.entries.last;
           break;
         }
@@ -33,8 +38,7 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
         committed = replacement.committed;
         replacement.replaced?.complete(null);
       case NavigationMode.restore:
-        final routes = restored!;
-        _completeEntries(_history.replaceWithRoutes(routes));
+        _completeEntries(_history.replaceWithRoutes(checkedRoutes));
         committed = _history.entries.last;
     }
     _finishStackCommit(previous);

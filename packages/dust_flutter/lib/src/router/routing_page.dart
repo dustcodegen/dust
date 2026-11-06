@@ -58,13 +58,13 @@ final class _GeneratedTransitionPage<R> extends Page<R> {
 final class _GeneratedTransitionRoute<R> extends PageRoute<R> {
   _GeneratedTransitionRoute({
     required _GeneratedTransitionPage<R> page,
-  })  : _page = page,
-        super(
-          settings: page,
-          fullscreenDialog: page.fullscreenDialog,
-        );
+  }) : super(settings: page);
 
-  final _GeneratedTransitionPage<R> _page;
+  _GeneratedTransitionPage<R> get _page =>
+      settings as _GeneratedTransitionPage<R>;
+
+  @override
+  bool get fullscreenDialog => _page.fullscreenDialog;
 
   @override
   bool get maintainState => _page.maintainState;

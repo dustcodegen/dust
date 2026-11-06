@@ -163,7 +163,7 @@ fn render_generated_group(
         include_str!("templates/generated_group.jinja"),
         GeneratedGroupContext {
             indent: indent_str(indent),
-            path: path.to_owned(),
+            path_literal: dart_string_literal(path),
             children: render_generated_children_with_prefix(children, spec, indent, true),
         },
     )
@@ -179,7 +179,7 @@ fn render_generated_route(
 ) -> String {
     let routes = &spec.routes;
     let mut fields = vec![
-        format!("{}  '{path}',\n", indent_str(indent)),
+        format!("{}  {},\n", indent_str(indent), dart_string_literal(path)),
         format!("{}  page: {},\n", indent_str(indent), route.page_class),
         format!("{}  name: '{}',\n", indent_str(indent), route.name),
         format!(

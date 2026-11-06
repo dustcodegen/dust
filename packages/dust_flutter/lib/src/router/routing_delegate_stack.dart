@@ -45,9 +45,26 @@ final class _RouteStackStore<T extends Object> {
     return true;
   }
 
-  bool activeRootMatches(T route, RouteLocation<T> routeLocation) {
-    return _activeEntries.isNotEmpty &&
-        routeLocation(_activeEntries.first.route) == routeLocation(route);
+  RouteStack<T>? cachedRoutesToKeep(
+    T route,
+    String? branch,
+    NavigationMode mode,
+    RouteLocation<T> routeLocation,
+  ) {
+    if (branch == _activeBranch) return null;
+    final entries = branch == null ? _rootEntries : _branchEntries[branch];
+    if (entries == null || entries.isEmpty) return null;
+
+    final retained = switch (mode) {
+      NavigationMode.go
+          when branch != null &&
+              routeLocation(entries.first.route) == routeLocation(route) =>
+        entries.skip(1),
+      NavigationMode.push => entries,
+      NavigationMode.replace => entries.take(entries.length - 1),
+      _ => null,
+    };
+    return retained?.map((entry) => entry.route).toList(growable: false);
   }
 
   Iterable<_RouteEntry<T>> replaceWithOne(_RouteEntry<T> entry) {

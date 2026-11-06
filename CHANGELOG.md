@@ -11,6 +11,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Functional Dart**: add typed custom-codec decoding results while preserving
   the existing throwing JSON helper as a compatibility adapter.
 
+### Fixed
+
+- **Flutter routing**: recheck access when restoring a cached branch, show
+  updated content after a same-location replacement with a custom transition,
+  and escape literal route paths in generated Dart.
+- **Flutter state**: let ViewModels retry after a synchronous initialization
+  failure and compare async states symmetrically across generic types.
+
 ## [v0.3.1] - 2026-11-02
 
 ### Changed

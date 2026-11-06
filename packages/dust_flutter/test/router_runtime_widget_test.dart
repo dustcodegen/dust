@@ -113,6 +113,35 @@ void main() {
     await expectLater(result, completion(isNull));
   });
 
+  testWidgets('same-location replace updates a custom-transition page', (
+    tester,
+  ) async {
+    const original = TestRoute('/detail');
+    final delegate = GeneratedRouterDelegate<TestRoute>(
+      runtimeConfig(
+        transitionForRoute: (_) => const GeneratedNoTransitionBuilder(),
+        buildChild: (context, route) => Text(
+          identical(route, original) ? 'original' : 'updated',
+        ),
+      ),
+    );
+    await pumpRuntimeRouter(tester, delegate);
+
+    final result = delegate.push<String>(original);
+    await tester.pumpAndSettle();
+    expect(find.text('original'), findsOneWidget);
+    final key = delegate.debugPageKeys.last;
+
+    delegate.replace(TestRoute(delegate.currentRoute.location));
+    await tester.pumpAndSettle();
+
+    expect(delegate.debugPageKeys.last, same(key));
+    expect(find.text('original'), findsNothing);
+    expect(find.text('updated'), findsOneWidget);
+    expect(delegate.pop('saved'), isTrue);
+    await expectLater(result, completion('saved'));
+  });
+
   testWidgets('system back dismisses a dialog before popping the route', (
     tester,
   ) async {
