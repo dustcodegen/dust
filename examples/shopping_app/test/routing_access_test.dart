@@ -121,8 +121,11 @@ void main() {
     );
     expect(routes.stack, [isA<ProductsRoute>(), isA<LoginRoute>()]);
 
-    authenticate(router, 'dust');
+    await router.auth.login('dust', 'password');
     await routes.waitForRefresh();
+    expect(router.auth.state.isAuthenticated, isTrue);
+    expect(routes.stack, [isA<ProductsRoute>()]);
+
     await routes.open('/admin');
     expect(routes.stack, [isA<ProductsRoute>()]);
 
