@@ -29,3 +29,6 @@ mod primary_constructors;
 
 #[path = "cli_tests/route.rs"]
 mod route;
+
+#[path = "cli_tests/watch_live.rs"]
+mod watch_live;

@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Build cache**: replace cache files atomically and recover from malformed
+  cache contents with a warning.
+- **Watch mode**: report diagnostics as each rebuild completes, preserve each
+  diagnostic’s source text, and save completed cache batches before polling.
 - **Server client generation**: diagnose colliding output paths before writing
   clients, and preserve paths handed off to another current source.
 - **SQL validation**: use an isolated SQLite database for online checks and

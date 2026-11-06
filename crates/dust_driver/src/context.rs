@@ -73,6 +73,8 @@ pub(crate) struct CachedDriverContext {
     pub(crate) cache: WorkspaceCache,
     /// Cache report initialized with the cache storage path.
     pub(crate) cache_report: CacheReport,
+    /// A recoverable error from loading disposable cache contents.
+    pub(crate) cache_warning: Option<Diagnostic>,
 }
 
 impl CachedDriverContext {
@@ -109,7 +111,7 @@ impl CachedDriverContext {
             workspace.dust_config.path.as_deref(),
             &workspace.package_root.join("pubspec.yaml"),
         )?;
-        let cache = load_workspace_cache(&workspace)?;
+        let (cache, cache_warning) = load_workspace_cache(&workspace)?;
         let cache_report = CacheReport {
             path: cache.path().to_path_buf(),
             ..CacheReport::default()
@@ -124,6 +126,7 @@ impl CachedDriverContext {
             package_config_hash,
             cache,
             cache_report,
+            cache_warning,
         })
     }
 }
@@ -140,14 +143,24 @@ fn validate_workspace_libraries(workspace: &WorkspacePlan) -> Result<(), Diagnos
 }
 
 /// Loads the workspace cache and converts IO failures into diagnostics.
-fn load_workspace_cache(workspace: &WorkspacePlan) -> Result<WorkspaceCache, Diagnostic> {
-    WorkspaceCache::load(&workspace.cache_root).map_err(|error| {
-        Diagnostic::error(format!(
-            "failed to load Dust cache `{}`: {error}",
-            workspace
-                .cache_root
-                .join(".dart_tool/dust/build_cache_v1.json")
-                .display()
+fn load_workspace_cache(
+    workspace: &WorkspacePlan,
+) -> Result<(WorkspaceCache, Option<Diagnostic>), Diagnostic> {
+    let (cache, ignored) =
+        WorkspaceCache::load_with_recovery(&workspace.cache_root).map_err(|error| {
+            Diagnostic::error(format!(
+                "failed to load Dust cache `{}`: {error}",
+                workspace
+                    .cache_root
+                    .join(".dart_tool/dust/build_cache_v1.json")
+                    .display()
+            ))
+        })?;
+    let warning = ignored.map(|error| {
+        Diagnostic::warning(format!(
+            "ignoring invalid Dust cache `{}`: {error}",
+            cache.path().display()
         ))
-    })
+    });
+    Ok((cache, warning))
 }

@@ -71,6 +71,7 @@ fn run_build_inner(
         package_config_hash,
         mut cache,
         mut cache_report,
+        cache_warning,
     } = match CachedDriverContext::load(
         &request.cwd,
         RegistrySelection::for_build(request.db),
@@ -84,6 +85,7 @@ fn run_build_inner(
             return result;
         }
     };
+    result.diagnostics.extend(cache_warning);
     let batch = prepare_and_process_batch(
         BatchConfig {
             analysis_libraries: &workspace.libraries,

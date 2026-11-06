@@ -3,7 +3,7 @@
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    let run = dust_cli::run_from_env();
+    let run = dust_cli::run_from_env_with_live_watch();
 
     if !run.stdout.is_empty() {
         print!("{}", run.stdout);

@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, process::Command};
 
 use tempfile::tempdir;
 
@@ -8,13 +8,23 @@ pub(crate) use namespace_fixture::{prepare, set_language_version};
 
 /// Exercise real CLI dispatch with an SDK fixture scoped to this child process.
 pub(crate) fn run_cli(args: impl IntoIterator<Item = impl Into<String>>) -> dust_cli::CliRun {
+    let output = cli_command(args).output().unwrap();
+    dust_cli::CliRun {
+        exit_code: output.status.code().expect("CLI exited normally"),
+        stdout: String::from_utf8(output.stdout).unwrap(),
+        stderr: String::from_utf8(output.stderr).unwrap(),
+    }
+}
+
+/// Prepares the Dust child with the SDK fixture for the requested root.
+pub(crate) fn cli_command(args: impl IntoIterator<Item = impl Into<String>>) -> Command {
     let args = args.into_iter().map(Into::into).collect::<Vec<_>>();
     let root = args
         .windows(2)
         .find(|pair| pair[0] == "--root")
         .map(|pair| pair[1].as_str())
         .or_else(|| args.iter().find_map(|arg| arg.strip_prefix("--root=")));
-    let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_dust"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_dust"));
     command.args(&args);
     if let Some(root) = root {
         let sdk = namespace_fixture::sdk_source_root(std::path::Path::new(root));
@@ -29,12 +39,7 @@ pub(crate) fn run_cli(args: impl IntoIterator<Item = impl Into<String>>) -> dust
             command.env("PATH", std::env::join_paths(paths).unwrap());
         }
     }
-    let output = command.output().unwrap();
-    dust_cli::CliRun {
-        exit_code: output.status.code().expect("CLI exited normally"),
-        stdout: String::from_utf8(output.stdout).unwrap(),
-        stderr: String::from_utf8(output.stderr).unwrap(),
-    }
+    command
 }
 
 pub(crate) enum DustImport {

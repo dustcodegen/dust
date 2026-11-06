@@ -50,6 +50,7 @@ fn render_clean_and_doctor_summaries() {
             ..CommandResult::default()
         },
         false,
+        0,
     );
     let doctor = render_result(
         &CliCommand::Doctor,
@@ -74,6 +75,7 @@ fn render_clean_and_doctor_summaries() {
             ..CommandResult::default()
         },
         false,
+        0,
     );
 
     assert!(clean.contains("clean  scanned: 4  removed: 3  cache: cleared  time: 18ms"));
@@ -111,8 +113,8 @@ fn render_watch_and_diagnostics() {
         ],
         ..CommandResult::default()
     };
-    let rendered = render_result(&CliCommand::Watch, &result, false);
-    let compact = render_result(&CliCommand::Watch, &result, true);
+    let rendered = render_result(&CliCommand::Watch, &result, false, 0);
+    let compact = render_result(&CliCommand::Watch, &result, true, 0);
 
     assert!(
         rendered.contains("watch  scanned: 0  generated: 0  cached: 0  skipped: 0  time: 22ms")
@@ -162,6 +164,7 @@ fn render_route_table_summary_and_routes() {
             ..CommandResult::default()
         },
         true,
+        0,
     );
 
     assert_eq!(
@@ -183,6 +186,7 @@ fn ai_mode_omits_banner_but_keeps_summary() {
             ..CommandResult::default()
         },
         false,
+        0,
     );
     let compact = render_result(
         &CliCommand::Build,
@@ -191,6 +195,7 @@ fn ai_mode_omits_banner_but_keeps_summary() {
             ..CommandResult::default()
         },
         true,
+        0,
     );
 
     assert!(normal.starts_with(render_banner()));

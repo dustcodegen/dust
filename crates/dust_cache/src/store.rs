@@ -1,8 +1,12 @@
 use std::{
     collections::BTreeMap,
     fs, io,
+    io::Write,
     path::{Path, PathBuf},
 };
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 use dust_plugin_api::LibraryAnalysisSnapshot;
 use serde::{Deserialize, Serialize};
@@ -74,11 +78,7 @@ impl WorkspaceCache {
         let contents = match fs::read_to_string(&path) {
             Ok(contents) => contents,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(Self {
-                    path,
-                    entries: BTreeMap::new(),
-                    dirty: false,
-                });
+                return Ok(Self::empty(path));
             }
             Err(error) => return Err(error),
         };
@@ -86,11 +86,7 @@ impl WorkspaceCache {
         let parsed = serde_json::from_str::<CacheFile>(&contents)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
         if parsed.schema_version != CACHE_SCHEMA_VERSION {
-            return Ok(Self {
-                path,
-                entries: BTreeMap::new(),
-                dirty: false,
-            });
+            return Ok(Self::empty(path));
         }
 
         Ok(Self {
@@ -98,6 +94,29 @@ impl WorkspaceCache {
             entries: parsed.entries,
             dirty: false,
         })
+    }
+
+    /// Opens the cache, treating malformed build metadata as a miss.
+    ///
+    /// The returned error describes any malformed contents that were ignored.
+    /// Other read errors are returned normally.
+    pub fn load_with_recovery(root: &Path) -> io::Result<(Self, Option<io::Error>)> {
+        match Self::load(root) {
+            Ok(cache) => Ok((cache, None)),
+            Err(error) if error.kind() == io::ErrorKind::InvalidData => {
+                Ok((Self::empty(cache_file_path(root)), Some(error)))
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Constructs a cache with no saved entries.
+    fn empty(path: PathBuf) -> Self {
+        Self {
+            path,
+            entries: BTreeMap::new(),
+            dirty: false,
+        }
     }
 
     /// Returns the on-disk cache file path.
@@ -132,9 +151,8 @@ impl WorkspaceCache {
             return Ok(());
         }
 
-        if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent)?;
-        }
+        let parent = self.path.parent().unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(parent)?;
 
         let file = CacheFileRef {
             schema_version: CACHE_SCHEMA_VERSION,
@@ -142,7 +160,29 @@ impl WorkspaceCache {
         };
         let json = serde_json::to_vec(&file)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        fs::write(&self.path, json)?;
+        #[cfg(unix)]
+        let existing_permissions = match fs::metadata(&self.path) {
+            Ok(metadata) => Some(metadata.permissions()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error),
+        };
+        #[cfg(unix)]
+        let mut temporary = tempfile::Builder::new()
+            .permissions(
+                existing_permissions
+                    .clone()
+                    .unwrap_or_else(|| fs::Permissions::from_mode(0o666)),
+            )
+            .tempfile_in(parent)?;
+        #[cfg(not(unix))]
+        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+        temporary.write_all(&json)?;
+        // The umask only applies to creating a new cache. Keep an existing cache's mode.
+        #[cfg(unix)]
+        if let Some(permissions) = existing_permissions {
+            temporary.as_file().set_permissions(permissions)?;
+        }
+        temporary.persist(&self.path).map_err(|error| error.error)?;
         self.dirty = false;
         Ok(())
     }
