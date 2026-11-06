@@ -38,6 +38,8 @@ struct PreparedParse {
 pub(super) struct ParseAhead<'a> {
     /// Sends new requests to the scoped pool.
     sender: mpsc::Sender<ParseJob>,
+    /// Coalesced worker completions that let the coordinator refill during a wait.
+    completed: mpsc::Receiver<()>,
     /// In-flight requests and completed results awaiting their queue turn.
     pending: BTreeMap<String, mpsc::Receiver<Option<PreparedParse>>>,
     /// Counts requests still queued or being parsed.
@@ -59,17 +61,19 @@ impl ParseAhead<'_> {
             return consume(None);
         }
         let (sender, receiver) = mpsc::channel::<ParseJob>();
+        let (notify, completed) = mpsc::sync_channel(1);
         let receiver = Arc::new(Mutex::new(receiver));
         let active = AtomicUsize::new(0);
         thread::scope(|scope| {
             let mut started = 0;
             for _ in 0..workers {
                 let receiver = Arc::clone(&receiver);
+                let notify = notify.clone();
                 let active = &active;
                 // Parser extraction walks nested Dart syntax recursively.
                 if thread::Builder::new()
                     .stack_size(8 * 1024 * 1024)
-                    .spawn_scoped(scope, move || worker(&receiver, potential, active))
+                    .spawn_scoped(scope, move || worker(&receiver, potential, active, &notify))
                     .is_ok()
                 {
                     started += 1;
@@ -77,11 +81,13 @@ impl ParseAhead<'_> {
             }
             // Dropping the last worker also closes replies for queued jobs.
             drop(receiver);
+            drop(notify);
             if started == 0 {
                 return consume(None);
             }
             let mut ahead = ParseAhead {
                 sender,
+                completed,
                 pending: BTreeMap::new(),
                 active: &active,
                 active_limit: started * 2,
@@ -97,18 +103,33 @@ impl ParseAhead<'_> {
         queued: impl Iterator<Item = (&'a String, &'a Source)>,
         generated: &BTreeMap<String, String>,
     ) {
-        let already_preparing = !self.pending.is_empty();
-        for (index, (uri, source)) in queued.take(self.limit).enumerate() {
-            if self.pending.len() == self.limit || self.active.load(Relaxed) == self.active_limit {
+        self.fill_queue(queued, generated, false);
+    }
+
+    /// Fills available slots and reports whether completion could free more.
+    fn fill_queue<'a>(
+        &mut self,
+        queued: impl Iterator<Item = (&'a String, &'a Source)>,
+        generated: &BTreeMap<String, String>,
+        waiting_for_head: bool,
+    ) -> bool {
+        // The removed head still counts against the retained and lookahead limits.
+        let limit = self.limit - usize::from(waiting_for_head);
+        let skip_first = !waiting_for_head && !self.pending.is_empty();
+        for (index, (uri, source)) in queued.take(limit).enumerate() {
+            if self.pending.len() >= limit {
                 break;
             }
             // A newly discovered first URI can parse locally without waiting
             // behind earlier work submitted to the pool.
-            if (index == 0 && already_preparing)
+            if (index == 0 && skip_first)
                 || generated.contains_key(uri)
                 || self.pending.contains_key(uri)
             {
                 continue;
+            }
+            if self.active.load(Relaxed) >= self.active_limit {
+                return true;
             }
             let (reply, receiver) = mpsc::channel();
             self.active.fetch_add(1, Relaxed);
@@ -125,6 +146,7 @@ impl ParseAhead<'_> {
             }
             self.pending.insert(uri.clone(), receiver);
         }
+        false
     }
 
     /// Uses a prepared parse only when its input matches the current source.
@@ -133,13 +155,35 @@ impl ParseAhead<'_> {
         source: &Source,
         input: Option<&SourceInput>,
         id: FileId,
+        queue: &BTreeMap<String, Source>,
+        generated: &BTreeMap<String, String>,
     ) -> Option<ParseResult> {
         let response = self.pending.remove(&source.uri)?;
         let input = input?;
         if input.owner.is_some() {
             return None;
         }
-        response.recv().ok()??.rebind(source, input, id)
+        self.wait_for(response, queue, generated)?
+            .rebind(source, input, id)
+    }
+
+    /// Waits for the required URI while keeping the known queue fed.
+    fn wait_for(
+        &mut self,
+        response: mpsc::Receiver<Option<PreparedParse>>,
+        queue: &BTreeMap<String, Source>,
+        generated: &BTreeMap<String, String>,
+    ) -> Option<PreparedParse> {
+        loop {
+            match response.try_recv() {
+                Ok(prepared) => return prepared,
+                Err(mpsc::TryRecvError::Disconnected) => return None,
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+            if !self.fill_queue(queue.iter(), generated, true) || self.completed.recv().is_err() {
+                return response.recv().ok().flatten();
+            }
+        }
     }
 }
 
@@ -166,16 +210,40 @@ impl PreparedParse {
     }
 }
 
+/// Releases the active slot and wakes the coordinator even on worker unwind.
+struct Completion<'a> {
+    /// The required URI's reply must close before the wake is sent.
+    reply: Option<mpsc::Sender<Option<PreparedParse>>>,
+    /// Shared worker notification channel, which can hold one outstanding wake.
+    notify: &'a mpsc::SyncSender<()>,
+    /// Worker slots currently in use.
+    active: &'a AtomicUsize,
+}
+
+impl Drop for Completion<'_> {
+    fn drop(&mut self) {
+        self.active.fetch_sub(1, Relaxed);
+        drop(self.reply.take());
+        let _ = self.notify.try_send(());
+    }
+}
+
 /// Prepares only parser facts, leaving live source errors to the loader.
 fn worker(
     receiver: &Mutex<mpsc::Receiver<ParseJob>>,
     potential: &BTreeSet<PathBuf>,
     active: &AtomicUsize,
+    notify: &mpsc::SyncSender<()>,
 ) {
     loop {
         let job = receiver.lock().expect("parser job lock").recv();
         let Ok(ParseJob { source, reply }) = job else {
             return;
+        };
+        let completion = Completion {
+            reply: Some(reply),
+            notify,
+            active,
         };
         // Speculation must not wait on a device or named pipe in the queue.
         let prepared = fs::metadata(&source.path)
@@ -186,76 +254,14 @@ fn worker(
                 parsed: input.parse(&source, PREPARED_FILE_ID),
                 input,
             });
-        active.fetch_sub(1, Relaxed);
-        let _ = reply.send(prepared);
+        let _ = completion
+            .reply
+            .as_ref()
+            .expect("active parser reply")
+            .send(prepared);
     }
 }
 
 /// Parser facts can be reused only for the exact source snapshot.
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use dust_dart_syntax::DartLanguageVersion;
-
-    #[test]
-    fn prepared_facts_rebind_both_diagnostic_views_to_the_queue_id() {
-        let source = Source {
-            uri: "package:example/bad.dart".to_owned(),
-            path: PathBuf::new(),
-            language_version: DartLanguageVersion::latest_known(),
-        };
-        let input = SourceInput {
-            text: "class Bad {".into(),
-            owner: None,
-            generated_library: false,
-        };
-        let id = FileId::new(3);
-        let expected = input.parse(&source, id);
-        assert!(!expected.diagnostics.is_empty());
-        assert!(!expected.namespace_diagnostics.is_empty());
-        let prepared = PreparedParse {
-            parsed: input.parse(&source, PREPARED_FILE_ID),
-            input: SourceInput {
-                text: input.text.clone(),
-                owner: None,
-                generated_library: false,
-            },
-        };
-        assert_eq!(prepared.rebind(&source, &input, id), Some(expected));
-    }
-
-    #[test]
-    fn prepared_facts_are_discarded_when_input_or_language_changes() {
-        let mut source = Source {
-            uri: "package:example/model.dart".to_owned(),
-            path: PathBuf::new(),
-            language_version: DartLanguageVersion::latest_known(),
-        };
-        let input = SourceInput {
-            text: "class Model {}".into(),
-            owner: None,
-            generated_library: false,
-        };
-        let prepare = |source: &Source| PreparedParse {
-            parsed: input.parse(source, PREPARED_FILE_ID),
-            input: SourceInput {
-                text: input.text.clone(),
-                owner: None,
-                generated_library: false,
-            },
-        };
-        let changed = SourceInput {
-            text: "class Other {}".into(),
-            owner: None,
-            generated_library: false,
-        };
-        assert!(
-            prepare(&source)
-                .rebind(&source, &changed, FileId::new(4))
-                .is_none()
-        );
-        let parsed = prepare(&source);
-        source.language_version = DartLanguageVersion::DART_3_0;
-        assert!(parsed.rebind(&source, &input, FileId::new(4)).is_none());
-    }
-}
+mod tests;

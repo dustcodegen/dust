@@ -124,7 +124,15 @@ impl<'a> Loader<'a> {
     ) -> Result<Unit, String> {
         let owner = self.generated.get(&source.uri).cloned();
         let input = SourceInput::read(&source, owner, self.potential);
-        let prepared = ahead.and_then(|ahead| ahead.take(&source, input.as_ref().ok(), id));
+        let prepared = ahead.and_then(|ahead| {
+            ahead.take(
+                &source,
+                input.as_ref().ok(),
+                id,
+                &self.queue,
+                &self.generated,
+            )
+        });
         let input = input?;
         let parsed = prepared.unwrap_or_else(|| input.parse(&source, id));
         Ok(self.resolve(source, id, input, parsed))
