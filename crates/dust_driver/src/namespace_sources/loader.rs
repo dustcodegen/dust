@@ -6,11 +6,9 @@ use std::{
 
 use dust_diagnostics::Diagnostic;
 use dust_parser_dart::{
-    ParsedDartFileSurface, ParsedDirective, ParsedTypeKind, ParsedUriLiteral,
-    parse_file_with_backend,
+    ParseResult, ParsedDartFileSurface, ParsedDirective, ParsedTypeKind, ParsedUriLiteral,
 };
-use dust_parser_dart_ts::TreeSitterDartBackend;
-use dust_text::{FileId, SourceText, TextRange};
+use dust_text::{FileId, TextRange};
 
 use super::index::{Source, SourceIndex};
 
@@ -18,8 +16,12 @@ use super::index::{Source, SourceIndex};
 mod directives;
 /// Demand-driven import expansion for aliases and actual lexical initializers.
 mod imports;
+/// Snapshot input and parser facts before namespace resolution.
+mod input;
+
 use directives::literals;
 pub(super) use directives::namespace_surface;
+use input::SourceInput;
 
 /// One read source snapshot, shared by graph construction and generation.
 pub(super) struct Unit {
@@ -65,8 +67,6 @@ pub(super) struct Loader<'a> {
     primary_suffix: &'a str,
     /// Plugin-declared paths, provisional until handwritten producer verification.
     potential: &'a BTreeSet<std::path::PathBuf>,
-    /// Shared parser backend used with each source's effective language version.
-    backend: TreeSitterDartBackend,
 }
 
 impl<'a> Loader<'a> {
@@ -87,7 +87,6 @@ impl<'a> Loader<'a> {
             generated: BTreeMap::new(),
             primary_suffix: suffix,
             potential,
-            backend: TreeSitterDartBackend::new(),
         };
         for root in roots {
             loader.imports.insert(root.uri.clone());
@@ -112,42 +111,18 @@ impl<'a> Loader<'a> {
     /// Reads and parses once, excluding marked Dust annotation provenance.
     fn read(&self, source: Source, id: FileId) -> Result<Unit, String> {
         let owner = self.generated.get(&source.uri).cloned();
-        let mut generated_library = false;
-        let text = if owner.is_some() {
-            String::new()
-        } else {
-            let text = match fs::read_to_string(&source.path) {
-                Ok(text) => text,
-                Err(error)
-                    if error.kind() == std::io::ErrorKind::NotFound
-                        && self.potential.contains(&source.path) =>
-                {
-                    generated_library = true;
-                    String::new()
-                }
-                Err(error) => {
-                    return Err(format!(
-                        "cannot read namespace source `{}`: {error}",
-                        source.path.display()
-                    ));
-                }
-            };
-            generated_library |= crate::generated_source::is_dust_generated_source(&text);
-            if generated_library {
-                String::new()
-            } else {
-                text
-            }
-        };
-        let text: Arc<str> = text.into();
-        let parsed = parse_file_with_backend(
-            &self.backend,
-            &SourceText::new(id, Arc::clone(&text)),
-            dust_parser_dart::ParseOptions {
-                language_version: source.language_version,
-                ..Default::default()
-            },
-        );
+        let input = SourceInput::read(&source, owner, self.potential)?;
+        let parsed = input.parse(&source, id);
+        Ok(self.resolve(source, id, input, parsed))
+    }
+
+    /// Resolves parsed directives in the current namespace without mutating the queue.
+    fn resolve(&self, source: Source, id: FileId, input: SourceInput, parsed: ParseResult) -> Unit {
+        let SourceInput {
+            text,
+            owner,
+            generated_library,
+        } = input;
         let mut surface = parsed.library;
         if let Some(owner) = &owner {
             surface.directives.push(ParsedDirective::PartOf {
@@ -169,7 +144,7 @@ impl<'a> Loader<'a> {
                 }
             }
         }
-        Ok(Unit {
+        Unit {
             source,
             file_id: id,
             text,
@@ -180,7 +155,7 @@ impl<'a> Loader<'a> {
             dependencies: BTreeSet::new(),
             generated_owner: owner,
             generated_library,
-        })
+        }
     }
 
     /// Queues required interfaces and verifies potential generated primary parts.
