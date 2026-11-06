@@ -9,13 +9,15 @@ use dust_parser_dart_ts::TreeSitterDartBackend;
 use dust_resolver::NamespaceGraph;
 use dust_text::{FileId, SourceText};
 
-use super::{NamespaceFingerprints, NamespaceSources, hash_text};
+use super::{NamespaceSources, hash_text};
 use crate::namespace_sources::{index::Source, loader::Unit};
 
 const CORE: &str = "dart:core";
 const PART: &str = "dart:core/part.dart";
 const FAILED: &str = "dart:failed";
-const SUFFIX: &str = "package:app/model.g.dart";
+const MISSING: &str = "dart:absent";
+const PACKAGE: &str = "package:app/model.dart";
+const GENERATED: &str = "package:app/model.g.dart";
 
 fn unit(
     uri: &str,
@@ -40,6 +42,7 @@ fn unit(
             },
             file_id,
             text,
+            content_digest: Default::default(),
             parsed: parsed.library,
             diagnostics: parsed.diagnostics,
             namespace_diagnostics: parsed.namespace_diagnostics,
@@ -58,7 +61,8 @@ fn snapshot() -> NamespaceSources {
             unit(CORE, 7, "class Object {} // µ", &[PART, FAILED], None),
             unit(PART, 42, "", &[], Some(CORE)),
             (FAILED.into(), Err("unreadable SDK unit".into())),
-            unit(SUFFIX, 68, "", &[], Some("file:///a.dart")),
+            unit(PACKAGE, 68, "class Model {}", &[GENERATED], None),
+            unit(GENERATED, 69, "", &[], Some("file:///a.dart")),
         ]),
         roots: BTreeMap::new(),
         metadata_hash: 9_321,
@@ -66,10 +70,9 @@ fn snapshot() -> NamespaceSources {
         primary_suffix: ".g.dart".into(),
     };
     for (name, id, dependencies) in [
-        ("a.dart", 101, &[CORE, "dart:absent-a", SUFFIX][..]),
-        ("b.dart", 103, &[CORE, "dart:absent-a"][..]),
-        ("c.dart", 104, &[CORE, "dart:absent-b"][..]),
-        ("plain.dart", 105, &[SUFFIX][..]),
+        ("a.dart", 101, &[CORE, MISSING, PACKAGE][..]),
+        ("b.dart", 103, &[CORE, MISSING][..]),
+        ("unrelated.dart", 105, &[][..]),
     ] {
         let uri = format!("file:///{name}");
         sources.roots.insert(name.into(), uri.clone());
@@ -79,64 +82,116 @@ fn snapshot() -> NamespaceSources {
     sources
 }
 
-fn concatenated_fingerprint(sources: &NamespaceSources, path: &Path) -> u64 {
-    let mut text = format!("{}\0", sources.metadata_hash);
-    if let Some(root) = sources.roots.get(path) {
-        for uri in sources.read_set(root) {
-            text.push_str(uri);
-            text.push('\0');
-            match sources.units.get(uri) {
-                Some(Ok(unit)) => {
-                    text.push_str(&unit.file_id.raw().to_string());
-                    text.push('\0');
-                    text.push_str(&unit.text);
-                    if let Some(owner) = &unit.generated_owner {
-                        text.push_str(owner);
-                    }
-                }
-                Some(Err(error)) => text.push_str(error),
-                None => text.push_str("missing namespace source"),
-            }
-            text.push('\0');
-        }
-    }
-    hash_text(&text)
+/// Returns a source to mutate before its snapshot is fingerprinted.
+fn source_unit<'a>(sources: &'a mut NamespaceSources, uri: &str) -> &'a mut Unit {
+    sources.units.get_mut(uri).unwrap().as_mut().unwrap()
 }
 
 #[test]
-fn shared_and_distinct_sdk_prefixes_match_concatenated_fingerprints() {
-    let sources = snapshot();
-    let mut fingerprints = NamespaceFingerprints::new(&sources);
-    for path in ["a.dart", "b.dart", "c.dart", "plain.dart", "unknown.dart"] {
-        let path = Path::new(path);
-        assert_eq!(
-            fingerprints.fingerprint(path),
-            concatenated_fingerprint(&sources, path),
-            "{path:?}"
-        );
+fn reachable_inputs_invalidate_only_dependent_roots() {
+    type Mutation = fn(&mut NamespaceSources);
+    let cases: &[(&str, Mutation)] = &[
+        ("root text", |sources| {
+            source_unit(sources, "file:///a.dart").text = "// root edited".into();
+        }),
+        ("SDK text", |sources| {
+            source_unit(sources, CORE).text = "class Object {} // ß".into();
+        }),
+        ("package text", |sources| {
+            source_unit(sources, PACKAGE).text = "class Order {}".into();
+        }),
+        ("diagnostic file ID", |sources| {
+            source_unit(sources, PACKAGE).file_id = FileId::new(102);
+        }),
+        ("generated owner", |sources| {
+            source_unit(sources, GENERATED).generated_owner = Some("file:///b.dart".into());
+        }),
+        ("failed read", |sources| {
+            sources
+                .units
+                .insert(FAILED.into(), Err("changed read error".into()));
+        }),
+        ("missing source", |sources| {
+            let (uri, value) = unit(MISSING, 106, "", &[], None);
+            sources.units.insert(uri, value);
+        }),
+        ("dependency URI", |sources| {
+            const ALIAS: &str = "package:app/alias.dart";
+            let value = sources.units.remove(PACKAGE).unwrap();
+            sources.units.insert(ALIAS.into(), value);
+            let root = source_unit(sources, "file:///a.dart");
+            root.dependencies.remove(PACKAGE);
+            root.dependencies.insert(ALIAS.into());
+        }),
+    ];
+    let before = snapshot();
+    let affected = Path::new("a.dart");
+    let unrelated = Path::new("unrelated.dart");
+    let original = before.fingerprint(affected);
+    let unaffected = before.fingerprint(unrelated);
+    for (name, mutate) in cases {
+        let mut after = snapshot();
+        mutate(&mut after);
+        assert_ne!(after.fingerprint(affected), original, "{name}");
+        assert_eq!(after.fingerprint(unrelated), unaffected, "{name}");
     }
-    assert_eq!(fingerprints.sdk_prefixes.len(), 3);
-    assert!(
-        fingerprints
-            .sdk_prefixes
-            .contains_key(&["dart:absent-a", CORE, PART, FAILED][..])
-    );
-    assert!(
-        fingerprints
-            .source_with_fingerprint(Path::new("unknown.dart"))
-            .is_none()
+}
+
+#[test]
+fn cyclic_dependencies_keep_every_reachable_uri_in_sorted_order() {
+    let mut sources = snapshot();
+    source_unit(&mut sources, PACKAGE)
+        .dependencies
+        .insert(CORE.into());
+    source_unit(&mut sources, PART)
+        .dependencies
+        .insert(CORE.into());
+    assert_eq!(
+        sources
+            .read_set("file:///a.dart")
+            .into_iter()
+            .collect::<Vec<_>>(),
+        [
+            MISSING,
+            CORE,
+            PART,
+            FAILED,
+            "file:///a.dart",
+            PACKAGE,
+            GENERATED
+        ]
     );
 }
 
 #[test]
-fn identical_sdk_uris_get_fresh_hashes_in_a_new_snapshot() {
+fn workspace_metadata_affects_every_root() {
     let before = snapshot();
     let mut after = snapshot();
-    after.units.get_mut(CORE).unwrap().as_mut().unwrap().text = "// edited SDK".into();
+    after.metadata_hash += 1;
+    for name in ["a.dart", "b.dart", "unrelated.dart"] {
+        let path = Path::new(name);
+        assert_ne!(before.fingerprint(path), after.fingerprint(path));
+    }
+}
 
-    let path = Path::new("a.dart");
-    let previous = NamespaceFingerprints::new(&before).fingerprint(path);
-    let current = NamespaceFingerprints::new(&after).fingerprint(path);
-    assert_ne!(previous, current);
-    assert_eq!(current, concatenated_fingerprint(&after, path));
+#[test]
+fn source_content_digests_are_lazy_and_shared_within_a_snapshot() {
+    let sources = snapshot();
+    let core = sources.units[CORE].as_ref().unwrap();
+    let package = sources.units[PACKAGE].as_ref().unwrap();
+    assert!(core.content_digest.get().is_none());
+    assert!(package.content_digest.get().is_none());
+
+    let b = Path::new("b.dart");
+    let first = sources.fingerprint(b);
+    assert_eq!(core.content_digest.get(), Some(&hash_text(&core.text)));
+    assert!(package.content_digest.get().is_none());
+
+    sources.fingerprint(Path::new("a.dart"));
+    assert_eq!(
+        package.content_digest.get(),
+        Some(&hash_text(&package.text))
+    );
+    assert_eq!(sources.fingerprint(b), first);
+    assert_eq!(snapshot().fingerprint(b), first);
 }

@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use dust_diagnostics::Diagnostic;
@@ -34,6 +34,8 @@ pub(super) struct Unit {
     pub(super) file_id: FileId,
     /// Exact retained source text, empty for excluded Dust outputs.
     pub(super) text: Arc<str>,
+    /// Lazily shared digest of the retained source text.
+    pub(super) content_digest: OnceLock<u64>,
     /// Original generation-relevant parser facts.
     pub(super) parsed: ParsedDartFileSurface,
     /// Parser failures retained for source-aware diagnostics.
@@ -170,6 +172,7 @@ impl<'a> Loader<'a> {
             source,
             file_id: id,
             text,
+            content_digest: OnceLock::new(),
             parsed: surface,
             diagnostics: parsed.diagnostics,
             namespace_diagnostics: parsed.namespace_diagnostics,

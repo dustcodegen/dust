@@ -4,14 +4,14 @@ use dust_diagnostics::Diagnostic;
 use dust_emitter::hash_output_set;
 use dust_workspace::SourceLibrary;
 
-use crate::{build::process::LoadedLibraryInput, namespace_sources::NamespaceFingerprints};
+use crate::{build::process::LoadedLibraryInput, namespace_sources::NamespaceSources};
 
 use super::tool_hash::{CodegenToolHash, hash_text};
 
 /// Cached source, config, tool, and output metadata for one library.
 #[derive(Clone)]
 pub(crate) struct CacheFingerprint {
-    /// Hash of the previously cached source text.
+    /// Fingerprint of the previously cached source and its dependencies.
     pub(crate) source_hash: u64,
     /// Hash of the package and Dust configuration used by the cache entry.
     pub(crate) package_config_hash: u64,
@@ -29,16 +29,15 @@ pub(crate) fn load_library_input(
     cache_fingerprint: Option<CacheFingerprint>,
     package_config_hash: u64,
     tool_hash: CodegenToolHash,
-    fingerprints: &mut NamespaceFingerprints<'_>,
+    namespaces: &NamespaceSources,
 ) -> Result<LoadedLibraryInput, Diagnostic> {
-    let (source, source_hash) = fingerprints
-        .source_with_fingerprint(&library.source_path)
-        .ok_or_else(|| {
-            Diagnostic::error(format!(
-                "missing namespace source snapshot `{}`",
-                library.source_path.display()
-            ))
-        })?;
+    let source = namespaces.source(&library.source_path).ok_or_else(|| {
+        Diagnostic::error(format!(
+            "missing namespace source snapshot `{}`",
+            library.source_path.display()
+        ))
+    })?;
+    let source_hash = namespaces.fingerprint(&library.source_path);
     let tool_hash = tool_hash.value();
     let previous_output_hash = cache_fingerprint
         .as_ref()

@@ -7,7 +7,6 @@ use crate::build::{
     support::{CacheFingerprint, load_library_input},
     work::{available_worker_count, round_robin_groups},
 };
-use crate::namespace_sources::NamespaceFingerprints;
 
 /// Loads source text and prior output fingerprints for all libraries.
 pub(super) fn load_library_inputs(
@@ -21,7 +20,6 @@ pub(super) fn load_library_inputs(
         let mut handles = Vec::with_capacity(groups.len());
         for group in groups {
             handles.push(scope.spawn(move || {
-                let mut fingerprints = NamespaceFingerprints::new(config.namespaces);
                 group
                     .into_iter()
                     .map(|(index, library)| {
@@ -50,7 +48,7 @@ pub(super) fn load_library_inputs(
                             cache_fingerprint,
                             config.package_config_hash,
                             config.tool_hash,
-                            &mut fingerprints,
+                            config.namespaces,
                         );
                         (index, input)
                     })

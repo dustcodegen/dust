@@ -16,7 +16,7 @@ use crate::{build::hash_text, result::DiagnosticFile};
 mod analysis;
 /// Root discovery and ownership preflight.
 mod discovery;
-/// Exact source fingerprints with shared SDK prefix states.
+/// Transitive source fingerprints with shared content digests.
 mod fingerprint;
 /// Shared provisional/final graph construction.
 mod graph;
@@ -34,8 +34,6 @@ mod primary_part;
 mod sdk;
 /// URI identity normalization, separate from filesystem paths.
 mod uri;
-
-pub(crate) use fingerprint::NamespaceFingerprints;
 
 /// Real public server exports preserve ownership without enabling server registration.
 #[cfg(test)]
@@ -231,14 +229,16 @@ impl NamespaceSources {
 
     /// Collects the root's transitive, actually traversed source dependencies.
     fn read_set<'a>(&'a self, root: &'a str) -> BTreeSet<&'a str> {
-        let mut seen = BTreeSet::new();
-        let mut queue = BTreeSet::from([root]);
-        while let Some(uri) = queue.pop_first() {
-            if !seen.insert(uri) {
-                continue;
-            }
+        let mut seen = BTreeSet::from([root]);
+        let mut pending = vec![root];
+        while let Some(uri) = pending.pop() {
             if let Some(Ok(unit)) = self.units.get(uri) {
-                queue.extend(unit.dependencies.iter().map(String::as_str));
+                pending.extend(
+                    unit.dependencies
+                        .iter()
+                        .map(String::as_str)
+                        .filter(|uri| seen.insert(*uri)),
+                );
             }
         }
         seen

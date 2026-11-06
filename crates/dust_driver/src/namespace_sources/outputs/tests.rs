@@ -23,6 +23,7 @@ fn unit(id: u32, uri: &str, text: &str) -> Unit {
         },
         file_id: FileId::new(id),
         text,
+        content_digest: Default::default(),
         parsed: parsed.library,
         diagnostics: parsed.diagnostics,
         namespace_diagnostics: parsed.namespace_diagnostics,

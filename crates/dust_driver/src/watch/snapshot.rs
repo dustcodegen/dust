@@ -6,10 +6,7 @@ use std::{
 use dust_diagnostics::Diagnostic;
 use dust_workspace::{SourceLibrary, WorkspacePlan};
 
-use crate::{
-    build::read_workspace_config_hash,
-    namespace_sources::{NamespaceFingerprints, NamespaceSources},
-};
+use crate::{build::read_workspace_config_hash, namespace_sources::NamespaceSources};
 
 /// Snapshot of workspace inputs relevant to watch rebuild decisions.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,7 +22,7 @@ pub(crate) struct WorkspaceSnapshot {
 pub(crate) struct SnapshotEntry {
     /// Source and output paths for the library.
     pub(crate) library: SourceLibrary,
-    /// Hash of the current source text.
+    /// Fingerprint of the current source and its dependencies.
     pub(crate) source_hash: u64,
     /// Whether the source contains a route declaration marker.
     pub(crate) contains_route_marker: bool,
@@ -46,13 +43,12 @@ pub(crate) fn build_snapshot(
     )?;
 
     let mut libraries = BTreeMap::new();
-    let mut fingerprints = NamespaceFingerprints::new(namespaces);
     for library in &workspace.libraries {
         libraries.insert(
             library.source_path.clone(),
             SnapshotEntry {
                 library: library.clone(),
-                source_hash: fingerprints.fingerprint(&library.source_path),
+                source_hash: namespaces.fingerprint(&library.source_path),
                 contains_route_marker: namespaces.has_annotation(
                     &library.source_path,
                     "dust_flutter::AppRoute",
