@@ -4,19 +4,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 RouterRuntimeConfig<TestRoute> runtimeConfig({
   RouterBase<TestRoute>? router,
+  TestRoute initialRoute = const TestRoute('/safe'),
+  RouteRequiresAuth<TestRoute>? requiresAuth,
   RouteGuardResolver<TestRoute>? resolveGuards,
   RouteLocation<TestRoute>? routeLocation,
   RouteBranch<TestRoute>? routeBranch,
   RouteStackRestorer<TestRoute>? restoreStack,
   Widget Function(BuildContext context, TestRoute route)? buildChild,
   PageTransitionsBuilder? Function(TestRoute route)? transitionForRoute,
+  bool Function(TestRoute route)? maintainStateForRoute,
 }) {
   return RouterRuntimeConfig<TestRoute>(
     router: router ?? NoRedirectRouter(),
-    initialRoute: const TestRoute('/safe'),
+    initialRoute: initialRoute,
     parseRoute: (uri) => TestRoute(uri.toString()),
     routeLocation: routeLocation ?? (route) => route.location,
-    requiresAuth: (_) => false,
+    requiresAuth: requiresAuth ?? (_) => false,
     routeBranch: routeBranch ??
         (route) => switch (route.location) {
               '/branch' => 'mainTabs',
@@ -30,6 +33,7 @@ RouterRuntimeConfig<TestRoute> runtimeConfig({
       name: route.location,
       onPopInvoked: onPopInvoked,
       transition: transitionForRoute?.call(route),
+      maintainState: maintainStateForRoute?.call(route) ?? true,
       child: Builder(
         builder: (context) =>
             buildChild?.call(context, route) ?? const SizedBox(),

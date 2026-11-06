@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Wait for route guards before showing protected initial and newly exposed
+  pages.
 - Recheck access before showing a cached navigation branch.
 - Update the visible page after a same-location replacement with a custom
   transition while preserving the route key and pending pop result.

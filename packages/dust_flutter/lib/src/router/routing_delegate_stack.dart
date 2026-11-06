@@ -147,14 +147,14 @@ final class _RouteEntry<T extends Object> {
   _RouteEntry(T route, {bool tracksPop = false})
       : this._(
           route,
-          UniqueKey(),
+          _RoutePageKey(),
           tracksPop ? Completer<Object?>() : null,
         );
 
   _RouteEntry._(this.route, this.key, this._popped);
 
   final T route;
-  final LocalKey key;
+  final _RoutePageKey key;
   final Completer<Object?>? _popped;
 
   Future<Object?> get popped => _popped?.future ?? Future<Object?>.value();

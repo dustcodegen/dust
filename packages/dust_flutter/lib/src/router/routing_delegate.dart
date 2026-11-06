@@ -25,6 +25,9 @@ final class GeneratedRouterDelegate<T extends Object> extends RouterDelegate<T>
       initialRoute: config.initialRoute,
       initialBranch: config.routeBranch(config.initialRoute),
     );
+    if (config.requiresAuth(config.initialRoute)) {
+      _history.entries.first.key.readiness.value = _RoutePageReadiness.initial;
+    }
     _logKnownRoutes();
     _log('setting initial route ${_debugRoute(config.initialRoute)}');
     config.router.refreshListenable?.addListener(_scheduleRefresh);
@@ -75,9 +78,12 @@ final class GeneratedRouterDelegate<T extends Object> extends RouterDelegate<T>
         observers: config.router.observers,
         pages: [
           for (final entry in _history.entries)
-            config.buildPage(entry.route, entry.key, (didPop, result) {
-              if (didPop) entry.complete(result);
-            }),
+            if (entry.key.readiness.value == _RoutePageReadiness.initial)
+              _PendingRoutePage(key: entry.key)
+            else
+              config.buildPage(entry.route, entry.key, (didPop, result) {
+                if (didPop) entry.complete(result);
+              }),
         ],
         onDidRemovePage: (page) {
           if (_disposed) return;
@@ -88,8 +94,10 @@ final class GeneratedRouterDelegate<T extends Object> extends RouterDelegate<T>
             final removed = _history.removeAt(index);
             removed.complete(null);
             _log('remove ${_debugRoute(removed.route)}');
-            _finishStackCommit(previous);
-            _revalidateExposedTop();
+            _finishStackRemoval(
+              previous,
+              exposesTop: index == _history.entries.length,
+            );
           }
         },
       ),

@@ -41,6 +41,10 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
         _completeEntries(_history.replaceWithRoutes(checkedRoutes));
         committed = _history.entries.last;
     }
+    // Cached entries can have a pending check from an earlier, superseded pop.
+    for (final entry in resumesBranch ? _history.entries : [committed]) {
+      entry.key.readiness.value = _RoutePageReadiness.ready;
+    }
     _finishStackCommit(previous);
     return committed;
   }
@@ -58,9 +62,14 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
     final removed = _history.entries.removeLast();
     removed.complete(result);
     _log('pop ${_debugRoute(removed.route)}');
+    _finishStackRemoval(previous, exposesTop: true);
+    return true;
+  }
+
+  void _finishStackRemoval(RouteStack<T> previous, {required bool exposesTop}) {
+    if (exposesTop) _history.entries.lastOrNull?.key.waitForCheck();
     _finishStackCommit(previous);
     _revalidateExposedTop();
-    return true;
   }
 
   void _revalidateExposedTop() {
