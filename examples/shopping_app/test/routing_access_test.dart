@@ -103,30 +103,32 @@ void main() {
     expect(staffGuards.single, isA<RouteGuard<ShoppingRoute>>());
   });
 
-  test('guarded admin route denies navigation through the real router',
+  test('admin deep links require admin access through the real router',
       () async {
     final router = await shoppingRouter();
-    final delegate = GeneratedRouterDelegate<ShoppingRoute>(
-      RouterRuntimeConfig<ShoppingRoute>(
-        router: router,
-        initialRoute: const ProductsRoute(),
-        parseRoute: parseShoppingRoute,
-        routeLocation: shoppingRouteLocation,
-        requiresAuth: shoppingRouteRequiresAuth,
-        routeBranch: shoppingRouteBranch,
-        resolveGuards: (route) => shoppingRouteGuards(route, router),
-        buildPage: buildShoppingRoutePage,
-        restoreStack: restoreShoppingRouteStack,
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+    expireSession(router);
+    final routes = await ShoppingRouteProbe.start(router.config);
 
-    await delegate.setNewRoutePath(const AdminRoute());
+    await routes.open('/admin');
 
     expect(
-      delegate.stack.map((route) => route.location),
-      isNot(contains('/admin')),
-      reason: 'AdminGuard must deny a signed-out admin deep link',
+      routes.currentRoute,
+      isA<LoginRoute>().having(
+        (route) => route.redirectPath,
+        'redirectPath',
+        '/admin',
+      ),
     );
+    expect(routes.stack, [isA<ProductsRoute>(), isA<LoginRoute>()]);
+
+    authenticate(router, 'dust');
+    await routes.waitForRefresh();
+    await routes.open('/admin');
+    expect(routes.stack, [isA<ProductsRoute>()]);
+
+    authenticate(router, 'admin');
+    await routes.waitForRefresh();
+    await routes.open('/admin');
+    expect(routes.stack, [isA<ProductsRoute>(), isA<AdminRoute>()]);
   });
 }
