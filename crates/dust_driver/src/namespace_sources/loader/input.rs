@@ -7,6 +7,7 @@ use dust_text::{FileId, SourceText};
 use super::Source;
 
 /// The source text and generated-file classification used by one parse.
+#[derive(PartialEq, Eq)]
 pub(super) struct SourceInput {
     /// Dart text, empty for generated placeholders.
     pub(super) text: Arc<str>,
@@ -62,10 +63,15 @@ impl SourceInput {
         parse_file_with_backend(
             &TreeSitterDartBackend::new(),
             &SourceText::new(id, Arc::clone(&self.text)),
-            ParseOptions {
-                language_version: source.language_version,
-                ..Default::default()
-            },
+            Self::options(source),
         )
+    }
+
+    /// Captures the parser settings independently of source identity.
+    pub(super) fn options(source: &Source) -> ParseOptions {
+        ParseOptions {
+            language_version: source.language_version,
+            ..Default::default()
+        }
     }
 }

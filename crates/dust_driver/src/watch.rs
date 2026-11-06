@@ -56,6 +56,7 @@ fn run_watch_inner(
         &request.cwd,
         RegistrySelection::All,
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -138,6 +139,7 @@ fn run_watch_inner(
             &request.cwd,
             RegistrySelection::All,
             request.sdk_source_root.as_deref(),
+            request.jobs,
         ) {
             Ok(context) => context,
             Err(diagnostic) => {

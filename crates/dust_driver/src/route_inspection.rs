@@ -38,6 +38,7 @@ pub(crate) fn collect_route_inspection(cwd: &Path, sdk_root: Option<&Path>) -> R
         cwd,
         RegistrySelection::for_check(DbRequestOptions::default()),
         sdk_root,
+        None,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {

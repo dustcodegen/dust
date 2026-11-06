@@ -44,7 +44,7 @@ fn lexical_part_requests_promote_owner_imports_and_are_idempotent() {
     let part = index.resolve(&source, "markers.dart").unwrap();
     let leaf = index.resolve(&source, "leaf.dart").unwrap();
     let potential = BTreeSet::new();
-    let mut loader = Loader::load(&index, &[source], ".g.dart", &potential).unwrap();
+    let mut loader = Loader::load(&index, &[source], ".g.dart", &potential, 1).unwrap();
     assert!(loader.units.contains_key(&part.uri));
     assert!(!loader.units.contains_key(&leaf.uri));
     assert!(!loader.imports.contains(&owner.uri));

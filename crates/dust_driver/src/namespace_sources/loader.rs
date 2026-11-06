@@ -18,10 +18,13 @@ mod directives;
 mod imports;
 /// Snapshot input and parser facts before namespace resolution.
 mod input;
+/// Bounded preparation of independent parser facts.
+mod prepare;
 
 use directives::literals;
 pub(super) use directives::namespace_surface;
 use input::SourceInput;
+use prepare::ParseAhead;
 
 /// One read source snapshot, shared by graph construction and generation.
 pub(super) struct Unit {
@@ -67,6 +70,8 @@ pub(super) struct Loader<'a> {
     primary_suffix: &'a str,
     /// Plugin-declared paths, provisional until handwritten producer verification.
     potential: &'a BTreeSet<std::path::PathBuf>,
+    /// Maximum number of source parser workers for this snapshot.
+    workers: usize,
 }
 
 impl<'a> Loader<'a> {
@@ -76,6 +81,7 @@ impl<'a> Loader<'a> {
         roots: &[Source],
         suffix: &'a str,
         potential: &'a BTreeSet<std::path::PathBuf>,
+        workers: usize,
     ) -> Result<Self, String> {
         let mut loader = Self {
             units: BTreeMap::new(),
@@ -87,6 +93,7 @@ impl<'a> Loader<'a> {
             generated: BTreeMap::new(),
             primary_suffix: suffix,
             potential,
+            workers,
         };
         for root in roots {
             loader.imports.insert(root.uri.clone());
@@ -109,10 +116,17 @@ impl<'a> Loader<'a> {
     }
 
     /// Reads and parses once, excluding marked Dust annotation provenance.
-    fn read(&self, source: Source, id: FileId) -> Result<Unit, String> {
+    fn read(
+        &self,
+        source: Source,
+        id: FileId,
+        ahead: Option<&mut ParseAhead>,
+    ) -> Result<Unit, String> {
         let owner = self.generated.get(&source.uri).cloned();
-        let input = SourceInput::read(&source, owner, self.potential)?;
-        let parsed = input.parse(&source, id);
+        let input = SourceInput::read(&source, owner, self.potential);
+        let prepared = ahead.and_then(|ahead| ahead.take(&source, input.as_ref().ok(), id));
+        let input = input?;
+        let parsed = prepared.unwrap_or_else(|| input.parse(&source, id));
         Ok(self.resolve(source, id, input, parsed))
     }
 

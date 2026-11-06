@@ -67,6 +67,7 @@ impl NamespaceSources {
         catalog: &SymbolCatalog,
         registry: &dust_plugin_api::PluginRegistry,
         include_unannotated: bool,
+        jobs: Option<usize>,
     ) -> Result<Self, Diagnostic> {
         let index = index::SourceIndex::load(
             cwd,
@@ -86,7 +87,9 @@ impl NamespaceSources {
         let claims = outputs::plan(&roots, registry)?;
         let potential = claims.keys().cloned().collect();
         let primary_suffix = workspace.dust_config.outputs.primary_suffix.clone();
-        let mut loader = loader::Loader::load(&index, &roots, &primary_suffix, &potential)
+        let available = crate::build::available_worker_count(usize::MAX, None);
+        let workers = jobs.unwrap_or(available).clamp(1, available);
+        let mut loader = loader::Loader::load(&index, &roots, &primary_suffix, &potential, workers)
             .map_err(Diagnostic::error)?;
         for root in &roots {
             if let Some(Err(error)) = loader.units.get(&root.uri) {

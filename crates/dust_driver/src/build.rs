@@ -28,6 +28,7 @@ pub(crate) use support::{
     read_workspace_config_hash, registry_for_selection, registry_for_selection_with_server_clients,
     update_hash_bytes,
 };
+pub(crate) use work::available_worker_count;
 
 /// Runs one writing build across the discovered workspace.
 pub fn run_build(request: BuildRequest) -> CommandResult {
@@ -74,6 +75,7 @@ fn run_build_inner(
         &request.cwd,
         RegistrySelection::for_build(request.db),
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {

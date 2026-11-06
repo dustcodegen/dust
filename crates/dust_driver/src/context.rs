@@ -81,6 +81,7 @@ impl CachedDriverContext {
         cwd: &Path,
         selection: RegistrySelection,
         sdk_root: Option<&Path>,
+        jobs: Option<usize>,
     ) -> Result<Self, Diagnostic> {
         let DriverContext {
             mut workspace,
@@ -98,6 +99,7 @@ impl CachedDriverContext {
             &catalog,
             &registry,
             !matches!(selection, RegistrySelection::All),
+            jobs,
         )?;
         validate_workspace_libraries(&workspace)?;
         validate_workspace_package_versions(&workspace)?;

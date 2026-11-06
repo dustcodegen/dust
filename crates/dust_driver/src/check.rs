@@ -30,6 +30,7 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
         &request.cwd,
         RegistrySelection::for_check(request.db),
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {

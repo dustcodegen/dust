@@ -38,6 +38,7 @@ fn production_loader_preserves_default_server_owners() {
         &catalog,
         &registry,
         false,
+        Some(1),
     )
     .unwrap();
     assert_eq!(plan.libraries.len(), 1);

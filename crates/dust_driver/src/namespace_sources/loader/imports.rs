@@ -33,10 +33,23 @@ impl Loader<'_> {
 
     /// Reuse one parse/read queue and retain the existing named-alias promotion rules.
     pub(super) fn drain(&mut self) -> Result<(), String> {
+        ParseAhead::run(self.workers, self.potential, |ahead| {
+            self.drain_queue(ahead)
+        })
+    }
+
+    /// Preserves queue ordering, including entries newly inserted by expansion.
+    fn drain_queue(&mut self, mut ahead: Option<&mut ParseAhead>) -> Result<(), String> {
         loop {
             while let Some((uri, source)) = self.queue.pop_first() {
                 let id = self.file_id(&uri)?;
-                let unit = self.read(source, id);
+                if let Some(ahead) = ahead.as_deref_mut() {
+                    ahead.fill(
+                        std::iter::once((&uri, &source)).chain(self.queue.iter()),
+                        &self.generated,
+                    );
+                }
+                let unit = self.read(source, id, ahead.as_deref_mut());
                 self.units.insert(uri.clone(), unit);
                 self.expand(&uri)?;
             }
