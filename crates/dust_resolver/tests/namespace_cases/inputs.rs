@@ -125,3 +125,32 @@ fn conflicting_owner_metadata_is_not_resolved_by_registration_order() {
         "declaration `GET` has multiple registered owners: dust_dart::GET, other::GET"
     );
 }
+
+#[test]
+fn appended_directive_resolves_after_all_written_directives() {
+    let mut graph = graph();
+    let parsed = parse(3, &format!("import '{CLIENT}' as p;"));
+    let core = parse(3, "import 'dart:core';");
+    let mut calls = Vec::new();
+    graph
+        .insert_library_with_appended_directive(
+            APP,
+            FileId::new(3),
+            &parsed,
+            Some(&core.directives[0]),
+            |owner, value| {
+                calls.push((owner.to_owned(), value.to_owned()));
+                Ok(value.to_owned())
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        calls,
+        [
+            (APP.to_owned(), CLIENT.to_owned()),
+            (APP.to_owned(), "dart:core".to_owned()),
+        ]
+    );
+    assert_eq!(graph.scope(APP).bind("p.GET", &catalog(false)), owned());
+}

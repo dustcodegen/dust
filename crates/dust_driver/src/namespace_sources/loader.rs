@@ -21,8 +21,8 @@ mod input;
 /// Bounded preparation of independent parser facts.
 mod prepare;
 
+pub(super) use directives::implicit_core;
 use directives::literals;
-pub(super) use directives::namespace_surface;
 use input::SourceInput;
 use prepare::ParseAhead;
 
@@ -157,9 +157,9 @@ impl<'a> Loader<'a> {
                 span: TextRange::empty(0_u32),
             });
         }
-        let graph_surface = namespace_surface(&surface, &source.uri);
+        let core = implicit_core(&surface.directives, &source.uri);
         let mut targets = BTreeMap::new();
-        for directive in &graph_surface.directives {
+        for directive in surface.directives.iter().chain(core.as_ref()) {
             for literal in literals(directive) {
                 if let Some(reference) = literal.value() {
                     targets.insert(reference.clone(), self.index.resolve(&source, &reference));
@@ -185,11 +185,11 @@ impl<'a> Loader<'a> {
         let Some(Ok(unit)) = self.units.get(uri) else {
             return Ok(());
         };
-        let surface = namespace_surface(&unit.parsed, uri);
+        let core = implicit_core(&unit.parsed.directives, uri);
         let output = dust_workspace::primary_output_path(&unit.source.path, self.primary_suffix);
         let mut dependencies = BTreeSet::new();
         let mut pending = Vec::new();
-        for directive in &surface.directives {
+        for directive in unit.parsed.directives.iter().chain(core.as_ref()) {
             if matches!(directive, ParsedDirective::Import { .. }) && !self.imports.contains(uri) {
                 continue;
             }

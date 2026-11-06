@@ -5,7 +5,7 @@ use std::{
 
 use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::SymbolId;
-use dust_parser_dart::{ParsedDartFileSurface, ParsedUriLiteral};
+use dust_parser_dart::{ParsedDartFileSurface, ParsedDirective, ParsedUriLiteral};
 use dust_text::{FileId, TextRange};
 
 use crate::SymbolCatalog;
@@ -98,6 +98,18 @@ impl NamespaceGraph {
         uri: impl Into<String>,
         file_id: FileId,
         parsed: &ParsedDartFileSurface,
+        resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
+    ) -> Result<(), Diagnostic> {
+        self.insert_library_with_appended_directive(uri, file_id, parsed, None, resolve_uri)
+    }
+
+    /// Adds a library with an optional synthetic directive after all written directives.
+    pub fn insert_library_with_appended_directive(
+        &mut self,
+        uri: impl Into<String>,
+        file_id: FileId,
+        parsed: &ParsedDartFileSurface,
+        appended_directive: Option<&ParsedDirective>,
         mut resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
     ) -> Result<(), Diagnostic> {
         let uri = uri.into();
@@ -107,7 +119,7 @@ impl NamespaceGraph {
                 file_id.raw()
             )));
         }
-        let unit = input::unit(&uri, file_id, parsed, &mut resolve_uri);
+        let unit = input::unit(&uri, file_id, parsed, appended_directive, &mut resolve_uri);
         self.file_uris.insert(file_id, uri.clone());
         self.units.insert(uri, unit);
         self.exports

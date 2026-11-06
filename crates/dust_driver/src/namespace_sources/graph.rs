@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use dust_diagnostics::Diagnostic;
 use dust_resolver::NamespaceGraph;
 
-use super::loader::{Unit, namespace_surface};
+use super::loader::{Unit, implicit_core};
 
 /// Builds a graph from retained facts and required interface diagnostics.
 pub(super) fn build(
@@ -14,10 +14,12 @@ pub(super) fn build(
         let Ok(unit) = unit else {
             continue;
         };
-        graph.insert_library(
+        let core = implicit_core(&unit.parsed.directives, uri);
+        graph.insert_library_with_appended_directive(
             uri,
             unit.file_id,
-            &namespace_surface(&unit.parsed, uri),
+            &unit.parsed,
+            core.as_ref(),
             |_, reference| {
                 let source = unit
                     .targets
