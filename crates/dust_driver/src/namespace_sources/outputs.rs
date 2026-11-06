@@ -56,7 +56,7 @@ pub(super) fn verify(
     catalog: &SymbolCatalog,
 ) -> Result<NamespaceGraph, Diagnostic> {
     let mut eligible: BTreeSet<_> = claims.keys().cloned().collect();
-    loop {
+    let graph = loop {
         let graph = graph::build(units)?;
         let mut ownership = HashMap::new();
         let rejected: BTreeSet<_> = eligible
@@ -70,19 +70,12 @@ pub(super) fn verify(
             .cloned()
             .collect();
         if rejected.is_empty() {
-            for unit in units.values().filter_map(|unit| unit.as_ref().ok()) {
-                if eligible.contains(&unit.source.path) && !unit.generated_library {
-                    return Err(Diagnostic::error(format!(
-                        "generated library output `{}` collides with an unmarked existing source",
-                        unit.source.path.display()
-                    )));
-                }
-            }
-            return Ok(graph);
+            break graph;
         }
         for path in &rejected {
             eligible.remove(path);
         }
+        let mut changed_units = false;
         for result in units.values_mut() {
             if let Ok(unit) = result
                 && unit.generated_library
@@ -94,9 +87,23 @@ pub(super) fn verify(
                     path.display(),
                     claims[path].producer.0
                 ));
+                changed_units = true;
             }
         }
+        // Rebuilding drops requests made while checking claims we just rejected.
+        if !changed_units && graph.required_lexical_imports().is_empty() {
+            break graph;
+        }
+    };
+    for unit in units.values().filter_map(|unit| unit.as_ref().ok()) {
+        if eligible.contains(&unit.source.path) && !unit.generated_library {
+            return Err(Diagnostic::error(format!(
+                "generated library output `{}` collides with an unmarked existing source",
+                unit.source.path.display()
+            )));
+        }
     }
+    Ok(graph)
 }
 
 /// Only actual handwritten class metadata can authorize a declared output.

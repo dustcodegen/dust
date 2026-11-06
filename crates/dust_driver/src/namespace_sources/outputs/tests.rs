@@ -223,3 +223,35 @@ fn claims_from_the_same_source_still_require_their_own_producer() {
         ))
     );
 }
+
+#[test]
+fn rejected_claims_discard_lexical_requests_when_no_unit_changes() {
+    let registry = crate::build::registry_for_selection(crate::build::RegistrySelection::All);
+    let catalog = crate::catalog::build_symbol_catalog(&registry).unwrap();
+    let uri = "file:///root.dart";
+    let root = unit(
+        1,
+        uri,
+        "const marker = Marker(); @marker class Example {} class Marker { const Marker(); }",
+    );
+    let output = root.source.path.with_extension("g.dart");
+    let claims = BTreeMap::from([(
+        output.clone(),
+        Claim {
+            source: uri.into(),
+            producer: SymbolId::new("dust_flutter::AppRouter"),
+        },
+    )]);
+    let mut units = BTreeMap::from([(uri.into(), Ok(root))]);
+    let original = graph::build(&units).unwrap();
+    assert!(!owned(&claims[&output], &units, &original, &catalog));
+    assert_eq!(
+        original.required_lexical_imports(),
+        BTreeSet::from([uri.into()])
+    );
+
+    let verified = verify(&mut units, &claims, &catalog).unwrap();
+
+    assert!(units[uri].is_ok());
+    assert!(verified.required_lexical_imports().is_empty());
+}
