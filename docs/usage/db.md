@@ -534,11 +534,12 @@ Use a no-write check in CI:
 dust check --db
 ```
 
-Set `DUST_DATABASE_URL` only when validation must use another SQLite database.
+For SQLite, `dust check --db` always applies migrations to an isolated in-memory
+database. The SQLite `DUST_DATABASE_URL` override applies to `dust db build`.
 
 > [!WARNING]
-> DB validation applies the configured migrations to `DUST_DATABASE_URL`. Never
-> point it at a production or user database.
+> With a SQLite `DUST_DATABASE_URL`, `dust db build` applies the configured
+> migrations to that database. Use a disposable validation database.
 
 ## Offline Validation
 

@@ -21,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **SQL validation**: use an isolated SQLite database for online checks and
+  keep connection credentials out of diagnostics.
+
 - **Flutter routing**: recheck access when restoring a cached branch, show
   updated content after a same-location replacement with a custom transition,
   and escape literal route paths in generated Dart.
