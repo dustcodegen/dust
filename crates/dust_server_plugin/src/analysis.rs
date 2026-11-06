@@ -3,7 +3,11 @@ use dust_ir::{DartFileIr, TypeIr};
 use dust_plugin_api::{WorkspaceAnalysis, WorkspaceAnalysisBuilder};
 use serde::{Deserialize, Serialize};
 
-use crate::plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server};
+use crate::{
+    ServerClientDestination,
+    client::collect_output_claims,
+    plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server},
+};
 
 /// Cross-library Serde query-model facts and plan hydration.
 mod query_models;
@@ -75,6 +79,7 @@ pub(crate) struct ServerParamFact {
 pub(crate) fn collect_server_workspace_analysis_ir(
     file: &DartFileIr,
     analysis: &mut WorkspaceAnalysisBuilder,
+    destinations: &[ServerClientDestination],
 ) {
     collect_query_model_workspace_analysis_ir(file, analysis);
     collect_payload_model_workspace_analysis_ir(file, analysis);
@@ -82,6 +87,7 @@ pub(crate) fn collect_server_workspace_analysis_ir(
         return;
     };
     collect_plan(file, &plan, analysis);
+    collect_output_claims(file, &plan, destinations, analysis);
 }
 
 /// Adds controller and top-level route facts from a validated server plan.

@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Server client generation**: diagnose colliding output paths before writing
+  clients, and preserve paths handed off to another current source.
 - **SQL validation**: use an isolated SQLite database for online checks and
   keep connection credentials out of diagnostics.
 

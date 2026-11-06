@@ -1,17 +1,24 @@
 /// Route-fact to shared HTTP-emitter conversion.
 mod endpoint;
+/// Client output naming and workspace ownership checks.
+mod output;
 /// Public type reachability and import selection.
 mod types;
 
 use std::{
     collections::{BTreeMap, BTreeSet},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use dust_diagnostics::Diagnostic;
 use dust_http_client_plugin::{GeneratedClient, generate_client_library};
 use dust_ir::DartFileIr;
 use dust_plugin_api::{GENERATED_HEADER, WorkspaceAnalysis};
+
+use output::{accepts_tags, main_output_path, plan_group_outputs};
+
+pub(crate) use output::collect_output_claims;
+pub use output::is_client_output_claimed;
 
 use crate::{
     ServerClientDestination,
@@ -33,10 +40,7 @@ pub(crate) fn generate_server_client(
     let facts = route_facts(analysis, &file.source_path)
         .map_err(|error| vec![error])?
         .into_iter()
-        .filter(|fact| {
-            destination.tags.is_empty()
-                || fact.tags.iter().any(|tag| destination.tags.contains(tag))
-        })
+        .filter(|fact| accepts_tags(destination, &fact.tags))
         .collect::<Vec<_>>();
     if facts.is_empty() {
         return Ok(Vec::new());
@@ -50,15 +54,16 @@ pub(crate) fn generate_server_client(
             .push(fact);
     }
     let main_output = main_output_path(file, destination)?;
-    let parent = main_output.parent().unwrap_or(Path::new(""));
-    let main_stem = main_output
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .and_then(|value| value.strip_suffix(".g"))
-        .unwrap();
+    let group_outputs = plan_group_outputs(
+        file,
+        plan,
+        &main_output,
+        groups.keys().map(Option::as_deref),
+        analysis,
+    )?;
     let mut outputs = Vec::new();
     let mut exports = Vec::new();
-    for (controller, group) in groups {
+    for (group, (class_name, output_path)) in groups.into_values().zip(group_outputs) {
         let mut names = BTreeSet::new();
         let mut endpoints = Vec::new();
         for fact in group {
@@ -95,16 +100,15 @@ pub(crate) fn generate_server_client(
             }
         }
         let imports = types::required_imports(file, &endpoints, &mut diagnostics);
-        let (class_name, suffix) = group_identity(controller.as_deref(), &file.source_path)?;
-        let file_name = format!("{main_stem}.{suffix}.g.dart");
         let source = generate_client_library(&GeneratedClient {
             class_name,
             imports,
             endpoints,
         })
         .map_err(|error| vec![error])?;
+        let file_name = output_path.file_name().unwrap().to_str().unwrap();
         exports.push(format!("export '{file_name}';"));
-        outputs.push((parent.join(file_name), source));
+        outputs.push((output_path, source));
     }
     if !diagnostics.is_empty() {
         return Err(diagnostics);
@@ -136,77 +140,4 @@ fn find_handler<'a>(
             .iter()
             .find(|value| value.callable.name() == callable),
     }
-}
-
-/// Converts one route file stem into a Dart class-name prefix.
-fn file_class_name(source: &str) -> Result<String, Vec<Diagnostic>> {
-    let stem = std::path::Path::new(source)
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .ok_or_else(|| vec![Diagnostic::error("server source has no UTF-8 file name")])?;
-    let name = stem
-        .split(|value: char| !value.is_ascii_alphanumeric())
-        .filter(|value| !value.is_empty())
-        .map(|value| {
-            let mut chars = value.chars();
-            chars
-                .next()
-                .map(|first| first.to_ascii_uppercase().to_string() + chars.as_str())
-                .unwrap_or_default()
-        })
-        .collect::<String>();
-    Ok(name)
-}
-
-/// Selects the class name and file suffix for one controller or route module.
-fn group_identity(
-    controller: Option<&str>,
-    source: &str,
-) -> Result<(String, String), Vec<Diagnostic>> {
-    match controller {
-        Some(name) => Ok((format!("{name}Client"), snake_case(name))),
-        None => {
-            let name = file_class_name(source)?;
-            Ok((format!("{name}RoutesClient"), "routes".to_owned()))
-        }
-    }
-}
-
-/// Converts a Dart class name into a deterministic file suffix.
-fn snake_case(value: &str) -> String {
-    let mut output = String::new();
-    for (index, ch) in value.chars().enumerate() {
-        if ch.is_ascii_uppercase() && index > 0 {
-            output.push('_');
-        }
-        output.push(ch.to_ascii_lowercase());
-    }
-    output
-}
-
-/// Returns the generated barrel path inside the configured client package.
-fn main_output_path(
-    file: &DartFileIr,
-    destination: &ServerClientDestination,
-) -> Result<PathBuf, Vec<Diagnostic>> {
-    let source = std::path::Path::new(&file.source_path);
-    let library_root = std::path::Path::new(&file.package_root).join("lib");
-    let relative = source
-        .strip_prefix(&library_root)
-        .or_else(|_| source.strip_prefix("lib"))
-        .map_err(|_| {
-            vec![Diagnostic::error(
-                "generated server clients require the route source to be under `lib/`",
-            )]
-        })?;
-    let stem = relative
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .ok_or_else(|| vec![Diagnostic::error("server source has no UTF-8 file name")])?;
-    let mut output = destination
-        .package_root
-        .join("lib/src/generated")
-        .join(relative);
-    output.set_file_name(format!("{stem}_client.g.dart"));
-    Ok(output)
 }
