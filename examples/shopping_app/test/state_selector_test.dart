@@ -5,11 +5,12 @@ import 'package:shopping_app/features/products/models/products_state.dart';
 import 'state_selector_support.dart';
 
 void main() {
-  testWidgets('selector rebuilds only when selected value changes', (
+  testWidgets('watch and selector rebuild while read stays unsubscribed', (
     tester,
   ) async {
     var fullRebuilds = 0;
     var selectorRebuilds = 0;
+    var readRebuilds = 0;
     final viewModel = TestProductsViewModel(
       ProductsViewModelArgs(repository: MockRepository()),
     );
@@ -20,6 +21,13 @@ void main() {
           value: viewModel,
           child: Column(
             children: [
+              Builder(
+                builder: (context) {
+                  final state = context.readProductsViewModel().state;
+                  readRebuilds++;
+                  return Text('Read: ${state.status}');
+                },
+              ),
               Builder(
                 builder: (context) {
                   final state = context.watchProductsViewModel().value;
@@ -42,14 +50,17 @@ void main() {
 
     expect(find.text('Full: ProductsStatus.initial'), findsOneWidget);
     expect(find.text('Selected: ProductsStatus.initial'), findsOneWidget);
+    expect(find.text('Read: ProductsStatus.initial'), findsOneWidget);
     expect(fullRebuilds, 1);
     expect(selectorRebuilds, 1);
+    expect(readRebuilds, 1);
 
     viewModel.emitForTest(viewModel.state.copyWith(searchQuery: 'backpack'));
     await tester.pump();
 
     expect(fullRebuilds, 2);
     expect(selectorRebuilds, 1);
+    expect(readRebuilds, 1);
 
     viewModel.emitForTest(
       viewModel.state.copyWith(status: ProductsStatus.loading),
@@ -58,7 +69,9 @@ void main() {
 
     expect(fullRebuilds, 3);
     expect(selectorRebuilds, 2);
+    expect(readRebuilds, 1);
     expect(find.text('Selected: ProductsStatus.loading'), findsOneWidget);
+    expect(find.text('Read: ProductsStatus.initial'), findsOneWidget);
   });
 
   testWidgets('selector supports custom equality', (tester) async {
