@@ -145,11 +145,7 @@ impl NamespaceGraph {
             let Some(declaration) = world.declarations.first() else {
                 return Ok(None);
             };
-            let Some(unit) = self
-                .units
-                .values()
-                .find(|unit| unit.file_id == declaration.file_id)
-            else {
+            let Some(unit) = self.unit_by_file_id(declaration.file_id) else {
                 return Err(rejected(
                     NamespaceFailureKind::MissingInput,
                     "qualifying annotation declaration source is missing",

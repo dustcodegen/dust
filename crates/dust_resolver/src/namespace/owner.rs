@@ -109,18 +109,12 @@ impl NamespaceGraph {
         if let Some(owner) = owners.first() {
             return NamespaceBinding::Owned(SymbolId::new(*owner));
         }
-        let kind = self
-            .units
-            .values()
-            .find(|unit| unit.file_id == declaration.file_id)
-            .and_then(|unit| {
-                unit.declarations
-                    .iter()
-                    .find(|(decl, _)| {
-                        decl.name == declaration.name && decl.start == declaration.start
-                    })
-                    .map(|(_, kind)| kind)
-            });
+        let kind = self.unit_by_file_id(declaration.file_id).and_then(|unit| {
+            unit.declarations
+                .iter()
+                .find(|(decl, _)| decl.name == declaration.name && decl.start == declaration.start)
+                .map(|(_, kind)| kind)
+        });
         match kind {
             Some(DeclarationKind::Alias { target, builtin }) => {
                 match self.bind_name(&declaration.uri, target, catalog, active) {

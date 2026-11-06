@@ -22,10 +22,7 @@ impl NamespaceGraph {
                         .declarations
                         .first()
                         .expect("checked declaration count");
-                    if let Some(unit) = self
-                        .units
-                        .values()
-                        .find(|unit| unit.file_id == declaration.file_id)
+                    if let Some(unit) = self.unit_by_file_id(declaration.file_id)
                         && let Some(value) = unit
                             .lexical_scopes
                             .iter()

@@ -64,6 +64,9 @@ for rebuilds; the manifest uses sorted repository-relative paths.
 A library is a cache hit only when those inputs and its generated output set
 still match.
 
+Dust loads the source namespaces and verifies generated output ownership
+before checking the library cache. Warm builds still perform this step.
+
 ### 2. Collect workspace analysis
 
 Cache hits contribute their saved analysis snapshots. Pending libraries are

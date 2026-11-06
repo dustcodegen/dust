@@ -24,11 +24,7 @@ impl NamespaceGraph {
         span: SpanIr,
         active: &mut Active,
     ) -> NamespaceBinding {
-        let Some(unit) = self
-            .units
-            .values()
-            .find(|unit| unit.file_id == span.file_id)
-        else {
+        let Some(unit) = self.unit_by_file_id(span.file_id) else {
             return rejected(
                 NamespaceFailureKind::MissingInput,
                 "metadata source is missing from the namespace graph",

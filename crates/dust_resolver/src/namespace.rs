@@ -66,6 +66,8 @@ pub enum NamespaceBinding {
 pub struct NamespaceGraph {
     /// Source units keyed by already resolved library/part identity.
     units: BTreeMap<String, Unit>,
+    /// URI of each source unit by its diagnostic file identity.
+    file_uris: BTreeMap<FileId, String>,
     /// Name-specific export results are shared safely across resolver workers.
     exports: Mutex<BTreeMap<String, Arc<ExportWorlds>>>,
     /// Library/part import namespaces required by queried lexical initializers.
@@ -99,20 +101,27 @@ impl NamespaceGraph {
         mut resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
     ) -> Result<(), Diagnostic> {
         let uri = uri.into();
-        if self.units.contains_key(&uri) || self.units.values().any(|unit| unit.file_id == file_id)
-        {
+        if self.units.contains_key(&uri) || self.file_uris.contains_key(&file_id) {
             return Err(Diagnostic::error(format!(
                 "duplicate namespace input identity `{uri}` or file id {}",
                 file_id.raw()
             )));
         }
         let unit = input::unit(&uri, file_id, parsed, &mut resolve_uri);
+        self.file_uris.insert(file_id, uri.clone());
         self.units.insert(uri, unit);
         self.exports
             .get_mut()
             .expect("namespace cache is not poisoned")
             .clear();
         Ok(())
+    }
+
+    /// Finds the retained source unit for a diagnostic file identity.
+    fn unit_by_file_id(&self, file_id: FileId) -> Option<&Unit> {
+        self.file_uris
+            .get(&file_id)
+            .and_then(|uri| self.units.get(uri))
     }
 
     /// Creates a scoped view without pretending missing input is a foreign library.

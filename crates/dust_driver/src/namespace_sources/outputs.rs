@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     path::PathBuf,
 };
 
@@ -58,9 +58,15 @@ pub(super) fn verify(
     let mut eligible: BTreeSet<_> = claims.keys().cloned().collect();
     loop {
         let graph = graph::build(units)?;
-        let rejected: Vec<_> = eligible
+        let mut ownership = HashMap::new();
+        let rejected: BTreeSet<_> = eligible
             .iter()
-            .filter(|path| !owned(&claims[*path], units, &graph, catalog))
+            .filter(|path| {
+                let claim = &claims[*path];
+                !*ownership
+                    .entry((&claim.source, &claim.producer))
+                    .or_insert_with(|| owned(claim, units, &graph, catalog))
+            })
             .cloned()
             .collect();
         if rejected.is_empty() {
@@ -74,19 +80,20 @@ pub(super) fn verify(
             }
             return Ok(graph);
         }
-        for path in rejected {
-            eligible.remove(&path);
-            for unit in units.values_mut() {
-                if unit
-                    .as_ref()
-                    .is_ok_and(|unit| unit.source.path == path && unit.generated_library)
-                {
-                    *unit = Err(format!(
-                        "generated library `{}` has no verified handwritten class producer `{}`",
-                        path.display(),
-                        claims[&path].producer.0
-                    ));
-                }
+        for path in &rejected {
+            eligible.remove(path);
+        }
+        for result in units.values_mut() {
+            if let Ok(unit) = result
+                && unit.generated_library
+                && rejected.contains(&unit.source.path)
+            {
+                let path = &unit.source.path;
+                *result = Err(format!(
+                    "generated library `{}` has no verified handwritten class producer `{}`",
+                    path.display(),
+                    claims[path].producer.0
+                ));
             }
         }
     }
