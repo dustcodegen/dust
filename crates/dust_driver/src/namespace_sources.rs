@@ -16,6 +16,8 @@ use crate::{build::hash_text, result::DiagnosticFile};
 mod analysis;
 /// Root discovery and ownership preflight.
 mod discovery;
+/// Exact source fingerprints with shared SDK prefix states.
+mod fingerprint;
 /// Shared provisional/final graph construction.
 mod graph;
 /// Package and SDK import identities and physical source locations.
@@ -32,6 +34,8 @@ mod primary_part;
 mod sdk;
 /// URI identity normalization, separate from filesystem paths.
 mod uri;
+
+pub(crate) use fingerprint::NamespaceFingerprints;
 
 /// Real public server exports preserve ownership without enabling server registration.
 #[cfg(test)]
@@ -199,31 +203,6 @@ impl NamespaceSources {
         Some(Arc::clone(&self.unit(path)?.text))
     }
 
-    /// Hashes metadata, dependency texts, URI identities and diagnostic file IDs.
-    pub(crate) fn fingerprint(&self, path: &Path) -> u64 {
-        let mut text = format!("{}\0", self.metadata_hash);
-        if let Some(uri) = self.roots.get(path) {
-            for uri in self.read_set(uri) {
-                text.push_str(&uri);
-                text.push('\0');
-                match self.units.get(&uri) {
-                    Some(Ok(unit)) => {
-                        text.push_str(&unit.file_id.raw().to_string());
-                        text.push('\0');
-                        text.push_str(&unit.text);
-                        if let Some(owner) = &unit.generated_owner {
-                            text.push_str(owner);
-                        }
-                    }
-                    Some(Err(error)) => text.push_str(error),
-                    None => text.push_str("missing namespace source"),
-                }
-                text.push('\0');
-            }
-        }
-        hash_text(&text)
-    }
-
     /// Supplies contexts for dependency labels without exposing generated contents.
     pub(crate) fn diagnostic_files(&self) -> Vec<DiagnosticFile> {
         self.units
@@ -241,15 +220,15 @@ impl NamespaceSources {
     }
 
     /// Collects the root's transitive, actually traversed source dependencies.
-    fn read_set(&self, root: &str) -> BTreeSet<String> {
+    fn read_set<'a>(&'a self, root: &'a str) -> BTreeSet<&'a str> {
         let mut seen = BTreeSet::new();
-        let mut queue = BTreeSet::from([root.to_owned()]);
+        let mut queue = BTreeSet::from([root]);
         while let Some(uri) = queue.pop_first() {
-            if !seen.insert(uri.clone()) {
+            if !seen.insert(uri) {
                 continue;
             }
-            if let Some(Ok(unit)) = self.units.get(&uri) {
-                queue.extend(unit.dependencies.clone());
+            if let Some(Ok(unit)) = self.units.get(uri) {
+                queue.extend(unit.dependencies.iter().map(String::as_str));
             }
         }
         seen

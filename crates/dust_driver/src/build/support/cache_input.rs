@@ -4,7 +4,7 @@ use dust_diagnostics::Diagnostic;
 use dust_emitter::hash_output_set;
 use dust_workspace::SourceLibrary;
 
-use crate::build::process::LoadedLibraryInput;
+use crate::{build::process::LoadedLibraryInput, namespace_sources::NamespaceFingerprints};
 
 use super::tool_hash::{CodegenToolHash, hash_text};
 
@@ -29,15 +29,16 @@ pub(crate) fn load_library_input(
     cache_fingerprint: Option<CacheFingerprint>,
     package_config_hash: u64,
     tool_hash: CodegenToolHash,
-    namespaces: &crate::namespace_sources::NamespaceSources,
+    fingerprints: &mut NamespaceFingerprints<'_>,
 ) -> Result<LoadedLibraryInput, Diagnostic> {
-    let source = namespaces.source(&library.source_path).ok_or_else(|| {
-        Diagnostic::error(format!(
-            "missing namespace source snapshot `{}`",
-            library.source_path.display()
-        ))
-    })?;
-    let source_hash = namespaces.fingerprint(&library.source_path);
+    let (source, source_hash) = fingerprints
+        .source_with_fingerprint(&library.source_path)
+        .ok_or_else(|| {
+            Diagnostic::error(format!(
+                "missing namespace source snapshot `{}`",
+                library.source_path.display()
+            ))
+        })?;
     let tool_hash = tool_hash.value();
     let previous_output_hash = cache_fingerprint
         .as_ref()

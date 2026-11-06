@@ -12,4 +12,6 @@ pub(crate) use cache_input::{
 pub(crate) use registry::{
     RegistrySelection, registry_for_selection, registry_for_selection_with_server_clients,
 };
-pub(crate) use tool_hash::{CodegenToolHash, codegen_tool_hash_for_selection, hash_text};
+pub(crate) use tool_hash::{
+    CodegenToolHash, codegen_tool_hash_for_selection, hash_text, update_hash_bytes,
+};

@@ -26,6 +26,7 @@ pub(crate) use batch::{BatchConfig, prepare_and_process_batch};
 pub(crate) use support::{
     CodegenToolHash, RegistrySelection, codegen_tool_hash_for_selection, hash_text,
     read_workspace_config_hash, registry_for_selection, registry_for_selection_with_server_clients,
+    update_hash_bytes,
 };
 
 /// Runs one writing build across the discovered workspace.
