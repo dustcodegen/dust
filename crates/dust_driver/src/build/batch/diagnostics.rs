@@ -20,10 +20,5 @@ pub(super) fn dependency_diagnostic_files(
             labels.remove(&file.file_id);
         }
     }
-    config
-        .namespaces
-        .diagnostic_files()
-        .into_iter()
-        .filter(|file| labels.contains(&file.file_id))
-        .collect()
+    config.namespaces.diagnostic_files(&labels)
 }

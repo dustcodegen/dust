@@ -1,6 +1,40 @@
 use std::fs;
 
+use dust_driver::{BuildRequest, DbRequestOptions, run_build};
+
 use super::{MODEL, build, workspace, write_file};
+
+#[test]
+fn db_discovery_reaches_a_missing_origin_through_cyclic_exports() {
+    let workspace = workspace();
+    let root = workspace.path();
+    write_file(
+        &root.join("lib/plain.dart"),
+        "import 'package:bridge/bridge.dart'; class Plain {}",
+    );
+    write_file(&root.join("lib/unrelated.dart"), "class Unrelated {}");
+    write_file(
+        &root.join("deps/bridge/lib/bridge.dart"),
+        "export 'other.dart';",
+    );
+    write_file(
+        &root.join("deps/bridge/lib/other.dart"),
+        "export 'bridge.dart'; export 'package:dust_dart/src/derive/base.dart';",
+    );
+    fs::remove_file(root.join("deps/dust_dart/lib/src/derive/base.dart")).unwrap();
+    let result = run_build(BuildRequest {
+        sdk_source_root: Some(root.join("sdk")),
+        cwd: root.to_path_buf(),
+        fail_fast: false,
+        jobs: None,
+        db: DbRequestOptions {
+            only_db: true,
+            ..Default::default()
+        },
+    });
+    assert_eq!(result.diagnostics, []);
+    assert_eq!(result.cache.unwrap().misses, 1);
+}
 
 #[test]
 fn shared_prefixes_and_qualifier_trivia_preserve_exact_direct_output() {

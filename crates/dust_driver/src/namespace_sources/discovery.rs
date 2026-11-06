@@ -1,6 +1,7 @@
 use super::*;
 use dust_parser_dart::ParsedDirective;
 use dust_workspace::SourceLibrary;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 /// Selects Dust-aware roots using bound metadata and retains ownership failures.
@@ -10,6 +11,7 @@ pub(super) fn select_libraries(
     catalog: &SymbolCatalog,
     include_unannotated: bool,
 ) {
+    let aware = dust_aware_uris(sources, catalog);
     workspace.libraries = sources
         .roots
         .iter()
@@ -23,10 +25,6 @@ pub(super) fn select_libraries(
             {
                 return None;
             }
-            let read_set = sources.read_set(uri);
-            let aware = catalog
-                .annotation_origins()
-                .any(|origin| read_set.contains(origin.library_uri));
             let metadata = metadata::annotations(&unit.parsed);
             let mut owned = false;
             let mut failed_input = false;
@@ -51,7 +49,7 @@ pub(super) fn select_libraries(
             }
             (owned
                 || failed_input
-                || (aware
+                || (aware.contains(uri.as_str())
                     && (!metadata.is_empty()
                         || include_unannotated
                         || !unit.diagnostics.is_empty())))
@@ -105,6 +103,32 @@ pub(super) fn select_libraries(
                 .insert(library.source_path.clone(), errors);
         }
     }
+}
+
+/// Finds every URI that can reach an annotation origin through traversed edges.
+fn dust_aware_uris<'a>(sources: &'a NamespaceSources, catalog: &SymbolCatalog) -> HashSet<&'a str> {
+    let mut dependents = HashMap::<&str, Vec<&str>>::new();
+    for (uri, unit) in &sources.units {
+        if let Ok(unit) = unit {
+            for dependency in &unit.dependencies {
+                dependents.entry(dependency).or_default().push(uri);
+            }
+        }
+    }
+    // A referenced origin may be missing or unreadable and still count for discovery.
+    let mut queue: Vec<_> = catalog
+        .annotation_origins()
+        .map(|origin| origin.library_uri)
+        .collect();
+    let mut aware = HashSet::new();
+    while let Some(uri) = queue.pop() {
+        if aware.insert(uri)
+            && let Some(dependents) = dependents.get(uri)
+        {
+            queue.extend(dependents.iter().copied());
+        }
+    }
+    aware
 }
 
 /// Explain the configured output without mistaking a missing foreign part for it.
