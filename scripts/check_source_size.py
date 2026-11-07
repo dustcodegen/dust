@@ -58,6 +58,9 @@ SOURCE_GLOBS = (
     ("fixtures", "*/lib/**/*.dart"),
     ("fixtures", "*/bin/**/*.dart"),
     ("fixtures", "*/test/**/*.dart"),
+    ("prototypes", "*/bin/**/*.dart"),
+    ("prototypes", "*/lib/**/*.dart"),
+    ("prototypes", "*/test/**/*.dart"),
     ("scripts", "**/*.py"),
     ("scripts", "**/*.sh"),
 )
