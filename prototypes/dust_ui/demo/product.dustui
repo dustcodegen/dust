@@ -1,0 +1,77 @@
+col(id: "product", gap: 16, padding: 24, state: {expanded: false}) {
+  row(gap: 12, align: center) {
+    text(value: "Linen Studio", size: 24, weight: bold)
+    spacer()
+    button(get: "/ui/cart", open: popup) {
+      text(value: "View cart")
+    }
+  }
+
+  zstack(align: bottomEnd) {
+    col(gap: 8, padding: 20) {
+      text(value: "Everyday linen shirt", size: 22, weight: bold)
+      text(value: "$39.00", size: 18)
+      text(value: "Natural linen · relaxed fit")
+    }
+    text(value: "NEW", weight: bold)
+  }
+
+  button(
+    expanded: state.expanded,
+    onTap: {
+      set(expanded: !state.expanded)
+    }
+  ) {
+    text(value: "Product details")
+  }
+
+  text(value: "Pure linen. Machine wash cold and hang to dry.", visible: state.expanded)
+
+  button(onTap: {
+    popup(label: "Size guide") {
+      col(gap: 8, padding: 16) {
+        text(value: "Chest measurements", weight: bold)
+        text(value: "S: 88–94 cm")
+        text(value: "M: 95–101 cm")
+        text(value: "L: 102–108 cm")
+        button(onTap: { dismiss() }) {
+          text(value: "Close")
+        }
+      }
+    }
+  }) {
+    text(value: "Size guide")
+  }
+
+  form(id: "purchase", post: "/ui/cart/items", target: "cart") {
+    col(gap: 12) {
+      input(name: "productId", type: hidden, value: "linen-shirt-01")
+      select(
+        name: "size",
+        label: "Size",
+        options: ["S", "M", "L"],
+        initial: "M",
+        required: true
+      )
+      input(
+        name: "note",
+        label: "Order note",
+        initial: "",
+        maxLength: 200,
+        lines: 2
+      )
+      button(type: submit) {
+        text(value: "Add to cart")
+      }
+    }
+  }
+
+  col(id: "cart", gap: 8) {
+    text(value: "Cart summary", size: 18, weight: bold)
+    text(value: "Your cart is empty.")
+  }
+
+  button(get: "/ui/cart/summary", target: "cart") {
+    text(value: "Refresh cart")
+  }
+}

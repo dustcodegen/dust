@@ -7,6 +7,7 @@ current public guides. Current application behavior belongs in
 ## Active work
 
 - [Class interfaces in IR](./class-interfaces.md): proposal.
+- [Dust UI Lab](../../prototypes/dust_ui/README.md): source-driven UI prototype.
 
 Completed implementation plans are removed after their behavior is represented
 by current usage guides, fixtures, and tests.
