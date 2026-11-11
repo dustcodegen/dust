@@ -1,6 +1,23 @@
 use super::*;
 
 #[test]
+#[cfg(unix)]
+fn new_snapshots_are_private_and_replacements_preserve_existing_mode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let fixture = Fixture::new(MODEL);
+    let control = tempfile::NamedTempFile::new_in(fixture.root.path()).unwrap();
+    let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode(&fixture.path()), mode(control.path()));
+    assert_eq!(mode(&fixture.path()) & 0o077, 0);
+
+    fs::set_permissions(fixture.path(), fs::Permissions::from_mode(0o660)).unwrap();
+    fixture.save();
+    assert_eq!(mode(&fixture.path()), 0o660);
+    assert!(fixture.lookup().is_some());
+}
+
+#[test]
 fn a_nonregular_snapshot_is_a_miss_and_failed_replacement_preserves_it() {
     let fixture = Fixture::new(MODEL);
     fs::remove_file(fixture.path()).unwrap();

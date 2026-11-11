@@ -32,7 +32,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **SQLite validation**: use patched bundled SQLite 3.54.1 through a pinned
   SQLx 0.8.6 fork, addressing RUSTSEC-2026-0459 without raising the Rust floor.
 - **Build cache**: replace cache files atomically and recover from malformed
-  cache contents with a warning.
+  cache contents with a warning. Create new Unix cache files with owner-only
+  permissions while preserving existing cache modes.
 - **Watch mode**: report diagnostics as each rebuild completes, preserve each
   diagnostic’s source text, and save completed cache batches before polling.
 - **Server client generation**: diagnose colliding output paths before writing

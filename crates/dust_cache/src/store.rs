@@ -5,9 +5,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
 use dust_plugin_api::LibraryAnalysisSnapshot;
 use serde::{Deserialize, Serialize};
 
@@ -182,18 +179,9 @@ impl WorkspaceCache {
             Err(error) if error.kind() == io::ErrorKind::NotFound => None,
             Err(error) => return Err(error),
         };
-        #[cfg(unix)]
-        let mut temporary = tempfile::Builder::new()
-            .permissions(
-                existing_permissions
-                    .clone()
-                    .unwrap_or_else(|| fs::Permissions::from_mode(0o666)),
-            )
-            .tempfile_in(parent)?;
-        #[cfg(not(unix))]
         let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
         temporary.write_all(&json)?;
-        // The umask only applies to creating a new cache. Keep an existing cache's mode.
+        // New caches stay private; replacements retain an existing cache's mode.
         #[cfg(unix)]
         if let Some(permissions) = existing_permissions {
             temporary.as_file().set_permissions(permissions)?;

@@ -57,19 +57,19 @@ fn workspace_cache_persists_updates_and_cached_analysis() {
 
 #[cfg(unix)]
 #[test]
-fn workspace_cache_uses_normal_creation_mode_and_preserves_existing_mode() {
+fn workspace_cache_uses_private_creation_mode_and_preserves_existing_mode() {
     use std::os::unix::fs::PermissionsExt;
 
     let root = tempdir().unwrap();
     let source_path = root.path().join("lib/user.dart");
-    let control_file = root.path().join("ordinary-file");
-    fs::write(&control_file, "").unwrap();
+    let control_file = tempfile::NamedTempFile::new_in(root.path()).unwrap();
     let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
 
     let mut cache = WorkspaceCache::load(root.path()).unwrap();
     cache.insert(root.path(), &source_path, cache_entry());
     cache.flush().unwrap();
-    assert_eq!(mode(cache.path()), mode(&control_file));
+    assert_eq!(mode(cache.path()), mode(control_file.path()));
+    assert_eq!(mode(cache.path()) & 0o077, 0);
 
     fs::set_permissions(cache.path(), fs::Permissions::from_mode(0o660)).unwrap();
     cache.remove(root.path(), &source_path);

@@ -4,9 +4,6 @@ use std::{
     io::{self, Write},
 };
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
 use super::*;
 
 /// Caller joins this optional write before recording elapsed command time.
@@ -63,17 +60,9 @@ fn persist(path: &Path, bytes: &[u8]) -> io::Result<()> {
         .ok()
         .filter(|metadata| metadata.file_type().is_file())
         .map(|metadata| metadata.permissions());
-    #[cfg(unix)]
-    let mut temporary = tempfile::Builder::new()
-        .permissions(
-            existing_permissions
-                .clone()
-                .unwrap_or_else(|| fs::Permissions::from_mode(0o666)),
-        )
-        .tempfile_in(parent)?;
-    #[cfg(not(unix))]
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     temporary.write_all(bytes)?;
+    // New snapshots stay private; replacements retain an existing snapshot's mode.
     #[cfg(unix)]
     if let Some(permissions) = existing_permissions {
         temporary.as_file().set_permissions(permissions)?;
