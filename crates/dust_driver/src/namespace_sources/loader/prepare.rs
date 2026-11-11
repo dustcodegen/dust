@@ -1,6 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
+    collections::{BTreeMap, BTreeSet, HashSet},
     path::PathBuf,
     sync::{
         Arc, Mutex,
@@ -13,7 +12,14 @@ use std::{
 use dust_parser_dart::ParseResult;
 use dust_text::FileId;
 
-use super::{Source, SourceInput};
+use super::{ParsePolicy, ResolvedTargets, Source, SourceIndex, SourceInput, resolve_targets};
+
+/// Shared construction and exact rebinding of immutable prepared facts.
+mod facts;
+/// Completed facts may prepare descendants without changing canonical discovery.
+mod prefetch;
+/// Scoped workers prepare immutable parser and directive facts.
+mod worker;
 
 /// Speculative parse results use a neutral ID until the queue consumes them.
 const PREPARED_FILE_ID: FileId = FileId::new(0);
@@ -27,21 +33,52 @@ struct ParseJob {
 }
 
 /// One parse tied to the source snapshot the worker read.
-struct PreparedParse {
+pub(super) struct PreparedParse {
     /// Exact input used by the worker.
     input: SourceInput,
     /// Original parser facts with provisional diagnostic labels.
     parsed: ParseResult,
+    /// Immutable directive identities derived from those exact parser facts.
+    targets: ResolvedTargets,
+}
+
+/// Canonical units and independently cached roots need no speculative preparation.
+#[derive(Default)]
+pub(super) struct KnownSources {
+    /// Sources already retained as canonical units.
+    pub(super) loaded: HashSet<String>,
+    /// URI-keyed root facts retained outside the parser pool.
+    pub(super) cached: HashSet<String>,
+}
+
+/// Retained work counts against one bound before and after worker completion.
+enum PendingParse {
+    /// The worker owns its result until the coordinator harvests it.
+    Waiting(mpsc::Receiver<Option<PreparedParse>>),
+    /// Completed facts remain speculative until their canonical queue turn.
+    Ready(Option<Box<PreparedParse>>),
 }
 
 /// Bounded parsing of known queue entries. Only the loader consumes them.
 pub(super) struct ParseAhead<'a> {
     /// Sends new requests to the scoped pool.
     sender: mpsc::Sender<ParseJob>,
-    /// Coalesced worker completions that let the coordinator refill during a wait.
-    completed: mpsc::Receiver<()>,
+    /// Completed URIs let the coordinator harvest any ready parent during a wait.
+    completed: mpsc::Receiver<String>,
     /// In-flight requests and completed results awaiting their queue turn.
-    pending: BTreeMap<String, mpsc::Receiver<Option<PreparedParse>>>,
+    pending: BTreeMap<String, PendingParse>,
+    /// Import eligibility captured once for this canonical drain.
+    imports: HashSet<String>,
+    /// Loaded, consumed or previously submitted identities prevent speculative cycles.
+    known: HashSet<String>,
+    /// Cached roots are skipped by canonical dispatch as well as speculation.
+    cached_roots: HashSet<String>,
+    /// Bounded descendant identities awaiting speculative worker slots.
+    speculative: BTreeMap<String, Source>,
+    /// Retained speculative requests cannot fill the canonical result window.
+    speculative_jobs: HashSet<String>,
+    /// Last visited URI in the current refill range.
+    cursor: Option<String>,
     /// Counts requests still queued or being parsed.
     active: &'a AtomicUsize,
     /// Limits the amount of unfinished work ahead of newly queued sources.
@@ -54,14 +91,18 @@ impl ParseAhead<'_> {
     /// Runs the queue coordinator with scoped parser workers when available.
     pub(super) fn run<T>(
         workers: usize,
+        index: &SourceIndex,
         potential: &BTreeSet<PathBuf>,
+        policy: &ParsePolicy,
+        imports: HashSet<String>,
+        known: KnownSources,
         consume: impl FnOnce(Option<&mut ParseAhead<'_>>) -> T,
     ) -> T {
         if workers == 1 {
             return consume(None);
         }
         let (sender, receiver) = mpsc::channel::<ParseJob>();
-        let (notify, completed) = mpsc::sync_channel(1);
+        let (notify, completed) = mpsc::sync_channel(workers * 2);
         let receiver = Arc::new(Mutex::new(receiver));
         let active = AtomicUsize::new(0);
         thread::scope(|scope| {
@@ -73,7 +114,9 @@ impl ParseAhead<'_> {
                 // Parser extraction walks nested Dart syntax recursively.
                 if thread::Builder::new()
                     .stack_size(8 * 1024 * 1024)
-                    .spawn_scoped(scope, move || worker(&receiver, potential, active, &notify))
+                    .spawn_scoped(scope, move || {
+                        worker::run(&receiver, index, potential, policy, active, &notify)
+                    })
                     .is_ok()
                 {
                     started += 1;
@@ -85,68 +128,66 @@ impl ParseAhead<'_> {
             if started == 0 {
                 return consume(None);
             }
+            let KnownSources { mut loaded, cached } = known;
+            loaded.extend(cached.iter().cloned());
             let mut ahead = ParseAhead {
                 sender,
                 completed,
                 pending: BTreeMap::new(),
+                imports,
+                known: loaded,
+                cached_roots: cached,
+                speculative: BTreeMap::new(),
+                speculative_jobs: HashSet::new(),
+                cursor: None,
                 active: &active,
                 active_limit: started * 2,
-                limit: started * 8,
+                // Prepared facts move into Units, so the census bounds this frontier.
+                limit: policy.root_count().max(started * 8),
             };
             consume(Some(&mut ahead))
         })
     }
 
     /// Starts preparing the next queue entries, without reserving any file IDs.
-    pub(super) fn fill<'a>(
+    pub(super) fn fill(
         &mut self,
-        queued: impl Iterator<Item = (&'a String, &'a Source)>,
+        queued: &BTreeMap<String, Source>,
         generated: &BTreeMap<String, String>,
     ) {
         self.fill_queue(queued, generated, false);
     }
 
-    /// Fills available slots and reports whether completion could free more.
-    fn fill_queue<'a>(
+    /// Fills available slots without waiting for a particular source.
+    fn fill_queue(
         &mut self,
-        queued: impl Iterator<Item = (&'a String, &'a Source)>,
+        queued: &BTreeMap<String, Source>,
         generated: &BTreeMap<String, String>,
         waiting_for_head: bool,
-    ) -> bool {
-        // The removed head still counts against the retained and lookahead limits.
+    ) {
+        self.pump_completed(generated);
+        // The removed head still counts against the retained result limit.
         let limit = self.limit - usize::from(waiting_for_head);
-        let skip_first = !waiting_for_head && !self.pending.is_empty();
-        for (index, (uri, source)) in queued.take(limit).enumerate() {
+        // New earlier dependencies need one slot, not another full worker window.
+        let priority = queued.first_key_value().is_some_and(|(uri, _)| {
+            self.cursor.as_ref().is_some_and(|cursor| uri < cursor)
+                && !self.pending.contains_key(uri)
+                && !generated.contains_key(uri)
+                && !self.cached_roots.contains(uri)
+        });
+        if priority && let Some((uri, _)) = queued.first_key_value() {
             if self.pending.len() >= limit {
-                break;
+                self.discard_farthest(Some(uri));
             }
-            // A newly discovered first URI can parse locally without waiting
-            // behind earlier work submitted to the pool.
-            if (index == 0 && skip_first)
-                || generated.contains_key(uri)
-                || self.pending.contains_key(uri)
-            {
-                continue;
-            }
-            if self.active.load(Relaxed) >= self.active_limit {
-                return true;
-            }
-            let (reply, receiver) = mpsc::channel();
-            self.active.fetch_add(1, Relaxed);
-            if self
-                .sender
-                .send(ParseJob {
-                    source: source.clone(),
-                    reply,
-                })
-                .is_err()
-            {
-                self.active.fetch_sub(1, Relaxed);
-                break;
-            }
-            self.pending.insert(uri.clone(), receiver);
+            self.cursor = None;
         }
-        false
+        if !priority {
+            self.fill_speculative(queued, generated, limit);
+        }
+        self.fill_canonical(queued, generated, limit);
+        if priority {
+            self.fill_speculative(queued, generated, limit);
+        }
     }
 
     /// Uses a prepared parse only when its input matches the current source.
@@ -157,14 +198,21 @@ impl ParseAhead<'_> {
         id: FileId,
         queue: &BTreeMap<String, Source>,
         generated: &BTreeMap<String, String>,
-    ) -> Option<ParseResult> {
+    ) -> Option<(ParseResult, ResolvedTargets)> {
+        self.known.insert(source.uri.clone());
+        self.speculative.remove(&source.uri);
+        self.speculative_jobs.remove(&source.uri);
         let response = self.pending.remove(&source.uri)?;
         let input = input?;
         if input.owner.is_some() {
             return None;
         }
-        self.wait_for(response, queue, generated)?
-            .rebind(source, input, id)
+        let prepared = match response {
+            PendingParse::Ready(prepared) => prepared.map(|prepared| *prepared),
+            PendingParse::Waiting(response) => self.wait_for(response, queue, generated),
+        }?;
+        self.discover_children(&source.uri, &prepared, generated);
+        prepared.rebind(source, input, id)
     }
 
     /// Waits for the required URI while keeping the known queue fed.
@@ -175,90 +223,17 @@ impl ParseAhead<'_> {
         generated: &BTreeMap<String, String>,
     ) -> Option<PreparedParse> {
         loop {
+            self.fill_queue(queue, generated, true);
             match response.try_recv() {
                 Ok(prepared) => return prepared,
                 Err(mpsc::TryRecvError::Disconnected) => return None,
                 Err(mpsc::TryRecvError::Empty) => {}
             }
-            if !self.fill_queue(queue.iter(), generated, true) || self.completed.recv().is_err() {
-                return response.recv().ok().flatten();
+            match self.completed.recv() {
+                Ok(uri) => self.harvest(&uri, generated),
+                Err(_) => return response.recv().ok().flatten(),
             }
         }
-    }
-}
-
-impl PreparedParse {
-    /// Validates the input and installs the canonical ID on both diagnostic views.
-    fn rebind(self, source: &Source, input: &SourceInput, id: FileId) -> Option<ParseResult> {
-        let Self {
-            input: before,
-            mut parsed,
-        } = self;
-        if before != *input || parsed.options != SourceInput::options(source) {
-            return None;
-        }
-        for diagnostic in parsed
-            .diagnostics
-            .iter_mut()
-            .chain(&mut parsed.namespace_diagnostics)
-        {
-            for label in &mut diagnostic.labels {
-                label.file_id = id;
-            }
-        }
-        Some(parsed)
-    }
-}
-
-/// Releases the active slot and wakes the coordinator even on worker unwind.
-struct Completion<'a> {
-    /// The required URI's reply must close before the wake is sent.
-    reply: Option<mpsc::Sender<Option<PreparedParse>>>,
-    /// Shared worker notification channel, which can hold one outstanding wake.
-    notify: &'a mpsc::SyncSender<()>,
-    /// Worker slots currently in use.
-    active: &'a AtomicUsize,
-}
-
-impl Drop for Completion<'_> {
-    fn drop(&mut self) {
-        self.active.fetch_sub(1, Relaxed);
-        drop(self.reply.take());
-        let _ = self.notify.try_send(());
-    }
-}
-
-/// Prepares only parser facts, leaving live source errors to the loader.
-fn worker(
-    receiver: &Mutex<mpsc::Receiver<ParseJob>>,
-    potential: &BTreeSet<PathBuf>,
-    active: &AtomicUsize,
-    notify: &mpsc::SyncSender<()>,
-) {
-    loop {
-        let job = receiver.lock().expect("parser job lock").recv();
-        let Ok(ParseJob { source, reply }) = job else {
-            return;
-        };
-        let completion = Completion {
-            reply: Some(reply),
-            notify,
-            active,
-        };
-        // Speculation must not wait on a device or named pipe in the queue.
-        let prepared = fs::metadata(&source.path)
-            .ok()
-            .filter(|metadata| metadata.is_file())
-            .and_then(|_| SourceInput::read(&source, None, potential).ok())
-            .map(|input| PreparedParse {
-                parsed: input.parse(&source, PREPARED_FILE_ID),
-                input,
-            });
-        let _ = completion
-            .reply
-            .as_ref()
-            .expect("active parser reply")
-            .send(prepared);
     }
 }
 

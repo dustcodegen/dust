@@ -18,9 +18,11 @@ pub(crate) fn extract(
     node: Node<'_>,
     source: &SourceText,
 ) -> Option<ParsedFunctionFormalTypeSurface> {
+    let parameters = direct_named_child(node, "formal_parameter_list")?;
     let name = parse_text::parameter_name_node(node)?;
-    let parameters = direct_named_child(node, "formal_parameter_list")
-        .filter(|parameters| parameters.start_byte() >= name.end_byte())?;
+    if parameters.start_byte() < name.end_byte() {
+        return None;
+    }
     let mut cursor = node.walk();
     let nullable = node.children(&mut cursor).any(|child| {
         matches!(child.kind(), "nullable_type" | "?") && child.start_byte() >= parameters.end_byte()

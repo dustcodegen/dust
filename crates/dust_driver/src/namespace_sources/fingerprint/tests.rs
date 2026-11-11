@@ -56,6 +56,7 @@ fn unit(
 
 fn snapshot() -> NamespaceSources {
     let mut sources = NamespaceSources {
+        parser_facts_changed: false,
         graph: NamespaceGraph::new(),
         units: BTreeMap::from([
             unit(CORE, 7, "class Object {} // µ", &[PART, FAILED], None),
@@ -65,7 +66,9 @@ fn snapshot() -> NamespaceSources {
             unit(GENERATED, 69, "", &[], Some("file:///a.dart")),
         ]),
         roots: BTreeMap::new(),
+        fingerprint_index: Default::default(),
         metadata_hash: 9_321,
+        metadata_inputs: BTreeMap::new(),
         binding_errors: BTreeMap::new(),
         primary_suffix: ".g.dart".into(),
     };
@@ -133,6 +136,11 @@ fn reachable_inputs_invalidate_only_dependent_roots() {
         let mut after = snapshot();
         mutate(&mut after);
         assert_ne!(after.fingerprint(affected), original, "{name}");
+        assert_eq!(
+            after.fingerprint(affected),
+            reference::fingerprint(&after, affected),
+            "{name}"
+        );
         assert_eq!(after.fingerprint(unrelated), unaffected, "{name}");
     }
 }
@@ -195,3 +203,8 @@ fn source_content_digests_are_lazy_and_shared_within_a_snapshot() {
     assert_eq!(sources.fingerprint(b), first);
     assert_eq!(snapshot().fingerprint(b), first);
 }
+
+/// Rank traversal covers alias, missing, cyclic and concurrent snapshots.
+mod indexed;
+/// The former hash stream is independent of the indexed byte encoder.
+mod reference;

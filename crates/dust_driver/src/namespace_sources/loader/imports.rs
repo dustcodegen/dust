@@ -5,7 +5,7 @@ use super::*;
 mod tests;
 
 impl Loader<'_> {
-    /// Promote only namespaces actually queried while resolving constant provenance.
+    /// Promote only namespaces queried through constants or transparent type aliases.
     pub(in crate::namespace_sources) fn require_lexical_imports(
         &mut self,
         uris: &BTreeSet<String>,
@@ -31,57 +31,47 @@ impl Loader<'_> {
         Ok(changed)
     }
 
-    /// Reuse one parse/read queue and retain the existing named-alias promotion rules.
-    pub(super) fn drain(&mut self) -> Result<(), String> {
-        ParseAhead::run(self.workers, self.potential, |ahead| {
-            self.drain_queue(ahead)
+    /// Checks the same owner promotion without changing source or import state.
+    pub(in crate::namespace_sources) fn imports_ready(&self, uris: &BTreeSet<String>) -> bool {
+        uris.iter().all(|uri| {
+            self.part_owners.get(uri).map_or_else(
+                || self.imports.contains(uri),
+                |owners| owners.iter().all(|owner| self.imports.contains(owner)),
+            )
         })
+    }
+
+    /// Reuses one parse/read queue for imports already required by real lookups.
+    pub(super) fn drain(&mut self) -> Result<(), String> {
+        let policy = Arc::clone(&self.parse_policy);
+        let imports = self.imports.clone();
+        let known = KnownSources {
+            loaded: self.units.keys().cloned().collect(),
+            cached: self.prepared_roots.uris().cloned().collect(),
+        };
+        ParseAhead::run(
+            self.workers,
+            self.index,
+            self.potential,
+            &policy,
+            imports,
+            known,
+            |ahead| self.drain_queue(ahead),
+        )
     }
 
     /// Preserves queue ordering, including entries newly inserted by expansion.
     fn drain_queue(&mut self, mut ahead: Option<&mut ParseAhead>) -> Result<(), String> {
-        loop {
-            while let Some((uri, source)) = self.queue.pop_first() {
-                let id = self.file_id(&uri)?;
-                if let Some(ahead) = ahead.as_deref_mut() {
-                    ahead.fill(
-                        std::iter::once((&uri, &source)).chain(self.queue.iter()),
-                        &self.generated,
-                    );
-                }
-                let unit = self.read(source, id, ahead.as_deref_mut());
-                self.units.insert(uri.clone(), unit);
-                self.expand(&uri)?;
+        while !self.queue.is_empty() {
+            if let Some(ahead) = ahead.as_deref_mut() {
+                ahead.fill(&self.prepare_queue, &self.generated);
             }
-            let mut promote = BTreeSet::new();
-            for (uri, unit) in &self.units {
-                let Ok(unit) = unit else {
-                    continue;
-                };
-                if !unit.parsed.typedefs.iter().any(|alias| {
-                    alias
-                        .parsed_aliased_type
-                        .as_ref()
-                        .is_some_and(|ty| matches!(ty.kind, ParsedTypeKind::Named { .. }))
-                }) {
-                    continue;
-                }
-                if let Some(owners) = self.part_owners.get(uri) {
-                    promote.extend(owners.clone());
-                } else {
-                    promote.insert(uri.clone());
-                }
-            }
-            let mut promoted = false;
-            for uri in promote {
-                if self.imports.insert(uri.clone()) {
-                    self.expand(&uri)?;
-                    promoted = true;
-                }
-            }
-            if !promoted {
-                break;
-            }
+            let (uri, source) = self.pop_source().expect("nonempty source queue");
+            let id = self.file_id(&uri)?;
+            let unit = self.read(source, id, ahead.as_deref_mut());
+            self.units.insert(uri.clone(), unit);
+            self.revision += 1;
+            self.expand(&uri)?;
         }
         Ok(())
     }

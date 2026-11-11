@@ -31,12 +31,29 @@ use tree_sitter::Node;
 
 /// Extracts all class declarations from a parsed Dart compilation unit.
 pub(crate) fn extract_classes(root: Node<'_>, source: &SourceText) -> Vec<ParsedClassSurface> {
+    extract_class_surfaces(root, source, false)
+}
+
+/// Keeps declaration identities while omitting class generation payloads.
+pub(crate) fn extract_namespace_classes(
+    root: Node<'_>,
+    source: &SourceText,
+) -> Vec<ParsedClassSurface> {
+    extract_class_surfaces(root, source, true)
+}
+
+/// Both projections use the same class recognition and source-order traversal.
+fn extract_class_surfaces(
+    root: Node<'_>,
+    source: &SourceText,
+    namespace_only: bool,
+) -> Vec<ParsedClassSurface> {
     let mut classes = Vec::new();
     let mut cursor = root.walk();
 
     for child in root.children(&mut cursor).filter(|node| node.is_named()) {
         if matches!(child.kind(), "class_declaration" | "class_definition") {
-            classes.push(class_decl::extract_class(child, source));
+            classes.push(class_decl::extract_class(child, source, namespace_only));
         }
     }
 

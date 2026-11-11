@@ -3,6 +3,22 @@ use dust_parser_dart::ParsedDirective;
 use dust_workspace::SourceLibrary;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+
+/// Parallel source identities in discovery order.
+mod indexed;
+pub(super) use indexed::index_sources;
+/// Optional parser snapshots load alongside mandatory discovery reads.
+mod inputs;
+pub(super) use inputs::read_inputs;
+
+/// Complete metadata ownership validation before output mutation.
+mod ownership;
+/// Parallel root selection with deterministic library order.
+mod selection;
+
+#[cfg(test)]
+mod tests;
 
 /// Selects Dust-aware roots using bound metadata and retains ownership failures.
 pub(super) fn select_libraries(
@@ -10,103 +26,41 @@ pub(super) fn select_libraries(
     workspace: &mut WorkspacePlan,
     catalog: &SymbolCatalog,
     include_unannotated: bool,
-) {
-    let aware = dust_aware_uris(sources, catalog);
-    workspace.libraries = sources
-        .roots
-        .iter()
-        .filter_map(|(path, uri)| {
-            let unit = sources.unit(path)?;
-            if unit
-                .parsed
-                .directives
-                .iter()
-                .any(|directive| matches!(directive, ParsedDirective::PartOf { .. }))
-            {
-                return None;
-            }
-            let metadata = metadata::annotations(&unit.parsed);
-            let mut owned = false;
-            let mut failed_input = false;
-            for annotation in &metadata {
-                let name = annotation.prefix.as_ref().map_or_else(
-                    || annotation.name.clone(),
-                    |prefix| format!("{prefix}.{}", annotation.name),
-                );
-                match sources.graph.scope(uri).bind_at(
-                    &name,
-                    catalog,
-                    dust_ir::SpanIr::new(unit.file_id, annotation.span),
-                ) {
-                    NamespaceBinding::Owned(_) => owned = true,
-                    NamespaceBinding::Rejected { kind, .. }
-                        if kind != dust_resolver::NamespaceFailureKind::Hidden =>
-                    {
-                        failed_input = true;
-                    }
-                    _ => {}
-                }
-            }
-            (owned
-                || failed_input
-                || (aware.contains(uri.as_str())
-                    && (!metadata.is_empty()
-                        || include_unannotated
-                        || !unit.diagnostics.is_empty())))
-            .then(|| SourceLibrary {
-                source_path: path.clone(),
-                output_path: dust_workspace::primary_output_path(
-                    path,
-                    &workspace.dust_config.outputs.primary_suffix,
-                ),
-            })
-        })
-        .collect();
+) -> HashSet<String> {
+    let aware = dust_aware_uris(sources, catalog)
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<HashSet<_>>();
+    workspace.libraries = selection::libraries(
+        sources,
+        &aware,
+        &workspace.dust_config.outputs.primary_suffix,
+        catalog,
+        include_unannotated,
+    );
     workspace.dust_packages = dust_workspace::dust_runtime_packages()
         .into_iter()
         .filter(|name| {
-            sources
-                .units
-                .keys()
-                .any(|uri| uri.starts_with(&format!("package:{name}/")))
+            let prefix = format!("package:{name}/");
+            sources.units.keys().any(|uri| uri.starts_with(&prefix))
         })
         .map(str::to_owned)
         .collect();
-    for library in &workspace.libraries {
-        let unit = sources.unit(&library.source_path).expect("selected source");
-        if !unit.diagnostics.is_empty() {
-            continue;
-        }
-        let bindings =
-            dust_resolver::BindingContext::new(catalog, sources.scope(&library.source_path));
-        let mut diagnostics = Vec::new();
-        for annotation in metadata::annotations(&unit.parsed) {
-            let _ = bindings.annotation_ir(unit.file_id, annotation, &mut diagnostics);
-        }
-        let part_note = unresolved_part_note(
-            sources,
-            library,
-            unit,
-            &workspace.dust_config.outputs.primary_suffix,
-        );
-        let errors = diagnostics
-            .into_iter()
-            .filter(Diagnostic::is_error)
-            .map(|diagnostic| match &part_note {
-                Some(note) => diagnostic.with_note(note),
-                None => diagnostic,
-            })
-            .collect::<Vec<_>>();
-        if !errors.is_empty() {
-            sources
-                .binding_errors
-                .insert(library.source_path.clone(), errors);
-        }
-    }
+    let errors = ownership::collect_errors(
+        sources,
+        &workspace.libraries,
+        catalog,
+        &workspace.dust_config.outputs.primary_suffix,
+    );
+    sources.binding_errors.extend(errors);
+    aware
 }
 
 /// Finds every URI that can reach an annotation origin through traversed edges.
-fn dust_aware_uris<'a>(sources: &'a NamespaceSources, catalog: &SymbolCatalog) -> HashSet<&'a str> {
+pub(super) fn dust_aware_uris<'a>(
+    sources: &'a NamespaceSources,
+    catalog: &SymbolCatalog,
+) -> HashSet<&'a str> {
     let mut dependents = HashMap::<&str, Vec<&str>>::new();
     for (uri, unit) in &sources.units {
         if let Ok(unit) = unit {
@@ -131,46 +85,89 @@ fn dust_aware_uris<'a>(sources: &'a NamespaceSources, catalog: &SymbolCatalog) -
     aware
 }
 
-/// Explain the configured output without mistaking a missing foreign part for it.
-fn unresolved_part_note(
-    sources: &NamespaceSources,
-    library: &SourceLibrary,
-    unit: &loader::Unit,
-    primary_suffix: &str,
-) -> Option<String> {
-    let mut has_expected = false;
-    let mut has_failed = false;
-    for directive in &unit.parsed.directives {
-        let ParsedDirective::Part {
-            uri_literal: Some(uri),
-            ..
-        } = directive
-        else {
-            continue;
-        };
-        let Some(reference) = uri.value() else {
-            continue;
-        };
-        match unit.targets.get(&reference) {
-            Some(Ok(target)) => {
-                has_expected |= target.path == library.output_path;
-                has_failed |= matches!(sources.units.get(&target.uri), Some(Err(_)));
-            }
-            Some(Err(_)) => has_failed = true,
-            None => {}
-        }
-    }
-    (has_failed && !has_expected).then(|| format!(
-        "Dust's configured primary output for this library is `{}`; other parts must already exist",
-        dust_workspace::expected_part_uri(&library.source_path, primary_suffix)
-    ))
-}
-
 /// Finds handwritten or foreign-generated Dart sources, excluding marked Dust output.
 pub(super) fn collect_sources(
     directory: &Path,
-    sources: &mut Vec<PathBuf>,
+    sources: &mut BTreeMap<PathBuf, Arc<str>>,
 ) -> Result<(), Diagnostic> {
+    let mut paths = Vec::new();
+    collect_paths(directory, &mut paths)?;
+    sort_paths(directory, &mut paths);
+    let workers = crate::build::available_worker_count(paths.len(), None);
+    let next = AtomicUsize::new(0);
+    let read = || {
+        let mut selected = Vec::new();
+        loop {
+            let order = next.fetch_add(1, Relaxed);
+            let Some(path) = paths.get(order) else {
+                return selected;
+            };
+            let input = fs::read_to_string(path)
+                .map(|text| {
+                    if crate::generated_source::is_dust_generated_source(&text) {
+                        None
+                    } else {
+                        Some((path.clone(), Arc::<str>::from(text)))
+                    }
+                })
+                .map_err(|error| {
+                    Diagnostic::error(format!("cannot read `{}`: {error}", path.display()))
+                });
+            selected.push((order, input));
+        }
+    };
+    let mut selected = std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        let mut selected = Vec::new();
+        let mut fallback = false;
+        let read = &read;
+        for _ in 0..workers {
+            match std::thread::Builder::new().spawn_scoped(scope, read) {
+                Ok(handle) => handles.push(handle),
+                Err(_) => fallback = true,
+            }
+        }
+        if fallback {
+            // Failed spawns reserve no indices; the coordinator shares all remaining work.
+            selected.extend(read());
+        }
+        for handle in handles {
+            selected.extend(handle.join().expect("source scan must not panic"));
+        }
+        selected
+    });
+    selected.sort_by_key(|(index, _)| *index);
+    let mut discovered = Vec::new();
+    for (_, input) in selected {
+        match input {
+            Ok(Some(source)) => discovered.push(source),
+            Ok(None) => {}
+            Err(error) => {
+                sources.extend(discovered);
+                return Err(error);
+            }
+        }
+    }
+    if sources.is_empty() {
+        *sources = discovered.into_iter().collect();
+    } else {
+        // Insert semantics retain an existing equal path's original spelling.
+        sources.extend(discovered);
+    }
+    Ok(())
+}
+
+/// One shared prefix cannot affect ordering; cache short keys instead of rescanning it.
+fn sort_paths(directory: &Path, paths: &mut [PathBuf]) {
+    paths.sort_by_cached_key(|path| {
+        path.strip_prefix(directory)
+            .expect("collected source paths share their discovery directory")
+            .to_path_buf()
+    });
+}
+
+/// Collects paths before reading independent source files in parallel.
+fn collect_paths(directory: &Path, sources: &mut Vec<PathBuf>) -> Result<(), Diagnostic> {
     if !directory.exists() {
         return Ok(());
     }
@@ -183,18 +180,13 @@ pub(super) fn collect_sources(
             .map_err(|error| Diagnostic::error(error.to_string()))?;
         let path = entry.path();
         if kind.is_dir() {
-            collect_sources(&path, sources)?;
+            collect_paths(&path, sources)?;
         } else if kind.is_file()
             && path
                 .extension()
                 .is_some_and(|extension| extension == "dart")
         {
-            let text = fs::read_to_string(&path).map_err(|error| {
-                Diagnostic::error(format!("cannot read `{}`: {error}", path.display()))
-            })?;
-            if !crate::generated_source::is_dust_generated_source(&text) {
-                sources.push(path);
-            }
+            sources.push(path);
         }
     }
     Ok(())

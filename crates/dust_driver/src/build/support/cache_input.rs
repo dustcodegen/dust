@@ -19,8 +19,6 @@ pub(crate) struct CacheFingerprint {
     pub(crate) tool_hash: u64,
     /// Primary and auxiliary generated output paths covered by the cache entry.
     pub(crate) output_paths: Vec<std::path::PathBuf>,
-    /// Whether the primary output may be missing for route-only analysis files.
-    pub(crate) allow_missing_primary: bool,
 }
 
 /// Loads source text and cache-sensitive hashes for one source library.
@@ -125,7 +123,7 @@ fn cached_output_hash(
     entry: &CacheFingerprint,
     source_path: &Path,
 ) -> Result<Option<u64>, Diagnostic> {
-    read_optional_hashes(&entry.output_paths, entry.allow_missing_primary).map_err(|error| {
+    read_optional_hashes(&entry.output_paths).map_err(|error| {
         Diagnostic::error(format!(
             "failed to read generated outputs for `{}`: {error}",
             source_path.display()
@@ -134,14 +132,13 @@ fn cached_output_hash(
 }
 
 /// Reads all generated outputs and hashes them as one ordered output set.
-fn read_optional_hashes(
-    paths: &[std::path::PathBuf],
-    allow_missing_primary: bool,
-) -> io::Result<Option<u64>> {
+fn read_optional_hashes(paths: &[std::path::PathBuf]) -> io::Result<Option<u64>> {
     let mut sources = Vec::with_capacity(paths.len());
     for (index, path) in paths.iter().enumerate() {
         let Some(source) = read_previous_output(path)? else {
-            if allow_missing_primary && index == 0 {
+            // Empty emit results leave the primary absent; the expected set hash
+            // still distinguishes this from a missing required output.
+            if index == 0 {
                 sources.push((path.as_path(), String::new()));
                 continue;
             }
@@ -162,5 +159,42 @@ fn read_previous_output(path: &Path) -> io::Result<Option<String>> {
         Ok(source) => Ok(Some(source)),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(error) => Err(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn absent_primary_hashes_as_empty_but_missing_auxiliary_is_a_miss() {
+        let root = tempfile::tempdir().unwrap();
+        let primary = root.path().join("model.g.dart");
+        let auxiliary = root.path().join("client.g.dart");
+        let expected_empty = hash_output_set([(primary.as_path(), "")]);
+        assert_eq!(
+            read_optional_hashes(std::slice::from_ref(&primary)).unwrap(),
+            Some(expected_empty)
+        );
+        fs::write(&primary, "required output").unwrap();
+        let expected_required = read_optional_hashes(std::slice::from_ref(&primary)).unwrap();
+        assert_ne!(expected_required, Some(expected_empty));
+        fs::remove_file(&primary).unwrap();
+        assert_ne!(
+            read_optional_hashes(std::slice::from_ref(&primary)).unwrap(),
+            expected_required
+        );
+        assert_eq!(
+            read_optional_hashes(&[primary.clone(), auxiliary.clone()]).unwrap(),
+            None
+        );
+        fs::write(&auxiliary, "client output").unwrap();
+        assert_eq!(
+            read_optional_hashes(&[primary.clone(), auxiliary.clone()]).unwrap(),
+            Some(hash_output_set([
+                (primary.as_path(), ""),
+                (auxiliary.as_path(), "client output")
+            ]))
+        );
     }
 }

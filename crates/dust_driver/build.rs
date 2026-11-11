@@ -7,6 +7,28 @@ use std::{
 
 /// Generated manifest filename included by `tool_hash.rs`.
 const FINGERPRINT_MANIFEST: &str = "codegen_tool_fingerprint.txt";
+/// Parser facts remain reusable when unrelated code generation implementation changes.
+const PARSER_MANIFEST: &str = "parser_fingerprint.txt";
+
+/// Every implementation input that can affect the serialized parser surface.
+const PARSER_FINGERPRINT_ROOTS: &[&str] = &[
+    "Cargo.lock",
+    "crates/dust_dart_syntax/Cargo.toml",
+    "crates/dust_dart_syntax/src",
+    "crates/dust_text/Cargo.toml",
+    "crates/dust_text/src",
+    "crates/dust_parser_dart/Cargo.toml",
+    "crates/dust_parser_dart/src",
+    "crates/dust_parser_dart_ts/Cargo.toml",
+    "crates/dust_parser_dart_ts/src",
+    "crates/dust_driver/src/namespace_sources/parser_cache",
+    "crates/dust_driver/src/namespace_sources/loader/input.rs",
+    "vendor/tree-sitter-dart/Cargo.toml",
+    "vendor/tree-sitter-dart/UPSTREAM.json",
+    "vendor/tree-sitter-dart/bindings/rust",
+    "vendor/tree-sitter-dart/grammar.js",
+    "vendor/tree-sitter-dart/src",
+];
 
 /// Source roots that can affect generated Dart output.
 const CODEGEN_FINGERPRINT_ROOTS: &[&str] = &[
@@ -50,7 +72,17 @@ fn main() -> io::Result<()> {
     let out_dir = env::var_os("OUT_DIR")
         .map(PathBuf::from)
         .expect("Cargo must set OUT_DIR for build scripts");
-    fs::write(out_dir.join(FINGERPRINT_MANIFEST), manifest)
+    fs::write(out_dir.join(FINGERPRINT_MANIFEST), manifest)?;
+    let mut parser_files = Vec::new();
+    for relative_root in PARSER_FINGERPRINT_ROOTS {
+        collect_fingerprint_files(&repo_root.join(relative_root), &mut parser_files)?;
+    }
+    parser_files.sort();
+    let mut parser_manifest = build_fingerprint_manifest(&repo_root, &parser_files)?;
+    parser_manifest.push_str("target\0");
+    parser_manifest.push_str(&env::var("TARGET").expect("Cargo must set the compilation target"));
+    parser_manifest.push('\n');
+    fs::write(out_dir.join(PARSER_MANIFEST), parser_manifest)
 }
 
 /// Returns the repository root from the `dust_driver` crate root.

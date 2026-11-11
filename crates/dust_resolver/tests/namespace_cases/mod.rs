@@ -1,13 +1,17 @@
 use super::*;
 use dust_resolver::NamespaceFailureKind as Failure;
 
+mod alias_requests;
 mod aliases;
 mod exports;
 mod inputs;
 mod lexical_boundaries;
 mod lexical_conditionals;
 mod lexical_shadowing;
+mod local_requests;
+mod lookup_memo;
 mod mixin_applications;
+mod neutral_exports;
 mod parts;
 mod roles;
 mod scoped;

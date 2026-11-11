@@ -3,7 +3,7 @@ use dust_text::TextRange;
 use crate::ParsedTypeSurface;
 
 /// One class type parameter with its original source locations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedTypeParamSurface {
     /// The written parameter name.
     pub name: String,

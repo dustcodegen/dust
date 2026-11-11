@@ -1,10 +1,61 @@
-use std::{collections::BTreeSet, fs, path::PathBuf, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    fs,
+    path::PathBuf,
+    sync::Arc,
+};
 
 use dust_parser_dart::{ParseOptions, ParseResult, parse_file_with_backend};
 use dust_parser_dart_ts::TreeSitterDartBackend;
 use dust_text::{FileId, SourceText};
 
 use super::Source;
+
+/// Generation roots keep complete payloads; external libraries need interfaces.
+#[derive(Default)]
+pub(super) struct ParsePolicy {
+    /// Every discovered handwritten workspace source is a generation input.
+    roots: HashSet<String>,
+    /// External metadata with these structured names needs plugin analysis.
+    annotations: Vec<&'static str>,
+    /// Exact handwritten bytes retained by the initial discovery read.
+    snapshots: HashMap<PathBuf, Arc<str>>,
+    /// Source-exact parser facts shared by this command's preparation workers.
+    pub(super) cache: Option<Arc<crate::namespace_sources::parser_cache::Cache>>,
+}
+
+impl ParsePolicy {
+    /// Keeps one immutable extraction policy for local and prepared parses.
+    pub(super) fn new(
+        roots: &[Source],
+        annotations: &[&'static str],
+        snapshots: &BTreeMap<PathBuf, Arc<str>>,
+    ) -> Self {
+        Self {
+            roots: roots.iter().map(|source| source.uri.clone()).collect(),
+            annotations: annotations.to_vec(),
+            snapshots: snapshots
+                .iter()
+                .map(|(path, text)| (path.clone(), Arc::clone(text)))
+                .collect(),
+            cache: None,
+        }
+    }
+
+    /// Speculation may reuse discovery bytes; the coordinator still rereads them.
+    pub(super) fn preloaded_input(&self, source: &Source) -> Option<SourceInput> {
+        Some(SourceInput {
+            text: Arc::clone(self.snapshots.get(&source.path)?),
+            owner: None,
+            generated_library: false,
+        })
+    }
+
+    /// Counts the known workspace sources whose facts will be retained after loading.
+    pub(super) fn root_count(&self) -> usize {
+        self.roots.len()
+    }
+}
 
 /// The source text and generated-file classification used by one parse.
 #[derive(PartialEq, Eq)]
@@ -59,12 +110,34 @@ impl SourceInput {
     }
 
     /// Extracts parser facts independently of directive resolution and the graph.
-    pub(super) fn parse(&self, source: &Source, id: FileId) -> ParseResult {
-        parse_file_with_backend(
-            &TreeSitterDartBackend::new(),
-            &SourceText::new(id, Arc::clone(&self.text)),
-            Self::options(source),
-        )
+    pub(super) fn parse(&self, source: &Source, id: FileId, policy: &ParsePolicy) -> ParseResult {
+        let options = Self::options(source);
+        let full_root = policy.roots.contains(&source.uri);
+        if self.owner.is_none()
+            && !self.generated_library
+            && let Some(cached) = policy
+                .cache
+                .as_ref()
+                .and_then(|cache| cache.lookup(source, &self.text, options, full_root))
+        {
+            return cached;
+        }
+        let backend = TreeSitterDartBackend::new();
+        let text = SourceText::new(id, Arc::clone(&self.text));
+        let parsed = if full_root {
+            parse_file_with_backend(&backend, &text, options)
+        } else {
+            backend.parse_namespace_file(&text, options, &policy.annotations)
+        };
+        if self.owner.is_none()
+            && !self.generated_library
+            && parsed.diagnostics.is_empty()
+            && parsed.namespace_diagnostics.is_empty()
+            && let Some(cache) = &policy.cache
+        {
+            cache.note_parsed();
+        }
+        parsed
     }
 
     /// Captures the parser settings independently of source identity.
@@ -75,3 +148,7 @@ impl SourceInput {
         }
     }
 }
+
+/// The same input policy governs synchronous and prepared source extraction.
+#[cfg(test)]
+mod tests;

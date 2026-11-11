@@ -3,8 +3,9 @@ use dust_ir::DartFileIr;
 use dust_parser_dart::ParsedDartFileSurface;
 use dust_plugin_api::{LibraryAnalysisSnapshot, PluginRegistry, WorkspaceAnalysisBuilder};
 use dust_resolver::SymbolCatalog;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::build::work::{available_worker_count, round_robin_groups};
+use crate::build::work::available_worker_count;
 
 use super::{LoweringConfig, PendingLibrary, execute::resolve_and_lower_library};
 
@@ -79,7 +80,7 @@ pub(crate) fn collect_workspace_analysis(
     }
 
     let threads = available_worker_count(pending.len(), None);
-    let groups = round_robin_groups(pending.iter().enumerate(), threads);
+    let next = AtomicUsize::new(0);
     let lowering = LoweringConfig {
         package_root,
         package_name,
@@ -89,13 +90,18 @@ pub(crate) fn collect_workspace_analysis(
     let lowering = &lowering;
 
     std::thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(groups.len());
-        for group in groups {
+        let mut handles = Vec::with_capacity(threads);
+        for _ in 0..threads {
+            let next = &next;
             handles.push(scope.spawn(move || {
                 let mut local_analysis = WorkspaceAnalysisBuilder::default();
                 let mut local_results = Vec::new();
 
-                for (index, pending) in group {
+                loop {
+                    let index = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(pending) = pending.get(index) else {
+                        break;
+                    };
                     let (parsed, parse_diagnostics) = namespaces
                         .parsed(&pending.library.source_path)
                         .expect("discovered namespace root has parser facts");
@@ -117,10 +123,11 @@ pub(crate) fn collect_workspace_analysis(
                     }
                     let analysis_snapshot = library_analysis.snapshot();
                     local_analysis.merge(library_analysis);
+                    let parsed = lowered.is_none().then(|| parsed.clone());
                     local_results.push((
                         index,
                         analysis_snapshot,
-                        parsed.clone(),
+                        parsed,
                         parse_diagnostics.to_vec(),
                         lowered,
                     ));
@@ -141,7 +148,7 @@ pub(crate) fn collect_workspace_analysis(
             workspace_analysis.merge(local_analysis);
             for (index, analysis_snapshot, parsed, diagnostics, lowered) in local {
                 analysis_snapshots[index] = analysis_snapshot;
-                ordered_surfaces[index] = Some(parsed);
+                ordered_surfaces[index] = parsed;
                 ordered_diagnostics[index] = diagnostics;
                 ordered_lowered[index] = lowered;
             }
@@ -164,6 +171,9 @@ pub(crate) fn collect_remaining_workspace_analysis(
     lowering: &LoweringConfig<'_>,
     namespaces: &crate::namespace_sources::NamespaceSources,
 ) -> WorkspaceAnalysisBuilder {
+    if std::ptr::eq(libraries, processing) {
+        return WorkspaceAnalysisBuilder::default();
+    }
     let processing = processing
         .iter()
         .map(|library| &library.source_path)

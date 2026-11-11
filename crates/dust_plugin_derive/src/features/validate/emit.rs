@@ -96,38 +96,38 @@ pub(crate) fn emit_validate(
     };
 
     Some(ValidateEmission {
-        mixin_member: render_validate_template(&context, "validate_mixin", "validate_mixin.jinja"),
-        support_type: render_validate_template(
-            &context,
-            "validate_support",
-            "validate_support.jinja",
-        ),
+        mixin_member: render_validate_template(&context, "validate_mixin"),
+        support_type: render_validate_template(&context, "validate_support"),
     })
 }
 
-/// Renders a validation template with the rule-line helper registered.
-fn render_validate_template(
-    context: &ValidateContext<'_>,
-    name: &str,
-    source_name: &str,
-) -> String {
-    let mut env = Environment::new();
-    env.add_function("rule_line", rule_line);
-    let source = match source_name {
-        "validate_mixin.jinja" => include_str!("templates/validate_mixin.jinja"),
-        "validate_support.jinja" => include_str!("templates/validate_support.jinja"),
-        _ => unreachable!("unknown validate template"),
+thread_local! {
+    /// Both validation templates share the same pure rule-line helper per worker.
+    static TEMPLATES: Environment<'static> = {
+        let mut env = Environment::new();
+        env.add_function("rule_line", rule_line);
+        for (name, source) in [
+            ("validate_mixin", include_str!("templates/validate_mixin.jinja")),
+            ("validate_support", include_str!("templates/validate_support.jinja")),
+        ] {
+            env.add_template(name, source).expect("Dust validate template source must be valid");
+        }
+        env
     };
-    env.add_template(name, source)
-        .expect("Dust validate template source must be valid");
-    let rendered = env
-        .get_template(name)
-        .expect("Dust validate template must be registered")
-        .render(context)
-        .expect("Dust validate template context must satisfy template variables")
-        .trim_matches('\n')
-        .to_owned();
-    collapse_excess_blank_lines(rendered)
+}
+
+/// Renders a validation template with the rule-line helper registered.
+fn render_validate_template(context: &ValidateContext<'_>, name: &str) -> String {
+    TEMPLATES.with(|env| {
+        let rendered = env
+            .get_template(name)
+            .expect("Dust validate template must be registered")
+            .render(context)
+            .expect("Dust validate template context must satisfy template variables")
+            .trim_matches('\n')
+            .to_owned();
+        collapse_excess_blank_lines(rendered)
+    })
 }
 
 /// Collapses accidental triple blank lines after template rendering.

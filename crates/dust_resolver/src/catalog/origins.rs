@@ -9,6 +9,19 @@ const DERIVE_ORIGIN: AnnotationOrigin = AnnotationOrigin::new(
     "Derive",
 );
 
+impl Default for SymbolCatalog {
+    fn default() -> Self {
+        let mut catalog = Self {
+            by_symbol: BTreeMap::new(),
+            by_name: BTreeMap::new(),
+            origins: BTreeMap::new(),
+            by_origin: BTreeMap::new(),
+        };
+        catalog.index_origin(DERIVE_ORIGIN);
+        catalog
+    }
+}
+
 impl SymbolCatalog {
     /// Enumerates explicit declarations, including the intrinsic grouping marker.
     pub fn annotation_origins(&self) -> impl Iterator<Item = &AnnotationOrigin> {
@@ -41,8 +54,32 @@ impl SymbolCatalog {
                 origin.symbol
             )));
         }
+        self.index_origin(origin);
         self.origins.insert(origin.symbol.to_owned(), origin);
         Ok(())
+    }
+
+    /// Enumerates one declaration's canonical owners in deterministic identity order.
+    pub fn annotation_owners(
+        &self,
+        library_uri: &str,
+        declaration: &str,
+    ) -> impl Iterator<Item = &str> {
+        self.by_origin
+            .get(library_uri)
+            .and_then(|declarations| declarations.get(declaration))
+            .into_iter()
+            .flat_map(|owners| owners.iter().copied())
+    }
+
+    /// Keeps lookup facts synchronized only after origin validation succeeds.
+    fn index_origin(&mut self, origin: AnnotationOrigin) {
+        self.by_origin
+            .entry(origin.library_uri)
+            .or_default()
+            .entry(origin.declaration)
+            .or_default()
+            .insert(origin.symbol);
     }
 
     /// Returns a registered origin, or the intrinsic grouping declaration.

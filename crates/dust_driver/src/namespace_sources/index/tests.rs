@@ -240,3 +240,9 @@ fn sdk_relative_sources_cannot_escape_the_declaring_library_directory() {
         "relative SDK URI escapes its declaring library directory"
     );
 }
+
+/// Absolute resolution results stay local to one immutable metadata snapshot.
+mod memo;
+
+/// File roots preserve nested, defaulted, and normalized package ownership.
+mod roots;

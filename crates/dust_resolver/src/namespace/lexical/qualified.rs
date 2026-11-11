@@ -138,7 +138,7 @@ impl NamespaceGraph {
             return Err(ownership);
         }
         let mut result = Vec::new();
-        for world in &worlds {
+        for world in worlds.iter() {
             if !world.problems.is_empty() || world.declarations.len() > 1 {
                 return Err(self.bind_name(uri, name, catalog, &mut BTreeSet::new()));
             }

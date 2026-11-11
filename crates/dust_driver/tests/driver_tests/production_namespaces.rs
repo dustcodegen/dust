@@ -7,6 +7,8 @@ use dust_driver::{
 
 use super::support::{make_workspace, write_file};
 
+#[path = "production_namespaces/alias_imports.rs"]
+mod alias_imports;
 #[path = "production_namespaces/boundaries.rs"]
 mod boundaries;
 #[path = "production_namespaces/cache_watch.rs"]

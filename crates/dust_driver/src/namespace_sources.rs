@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use dust_diagnostics::Diagnostic;
@@ -10,10 +10,12 @@ use dust_resolver::{NamespaceBinding, NamespaceGraph, NamespaceScope, SymbolCata
 use dust_text::FileId;
 use dust_workspace::WorkspacePlan;
 
-use crate::{build::hash_text, result::DiagnosticFile};
+use crate::build::hash_text;
 
 /// Imported annotated libraries available to structured plugin analysis.
 mod analysis;
+/// Diagnostic sources retained from the canonical graph snapshot.
+mod diagnostics;
 /// Root discovery and ownership preflight.
 mod discovery;
 /// Transitive source fingerprints with shared content digests.
@@ -28,12 +30,21 @@ mod loader;
 mod metadata;
 /// Verification of standalone generated library producers.
 mod outputs;
+/// Optional source-exact parser facts, independent of code generation cache entries.
+pub(crate) mod parser_cache;
 /// Source-preserving primary-part decisions for the resolver.
 mod primary_part;
 /// Active SDK discovery and target-independent source maps.
 mod sdk;
+/// Exact source snapshots for unchanged-build proofs.
+mod snapshot;
 /// URI identity normalization, separate from filesystem paths.
 mod uri;
+
+/// Shared source-only package and SDK fixtures for driver unit tests.
+#[cfg(test)]
+#[path = "../../../fixtures/namespace_sources/workspace.rs"]
+pub(crate) mod test_workspace;
 
 /// Real public server exports preserve ownership without enabling server registration.
 #[cfg(test)]
@@ -48,8 +59,14 @@ pub(crate) struct NamespaceSources {
     units: BTreeMap<String, Result<loader::Unit, String>>,
     /// Workspace entrypoints and their file URI identities.
     roots: BTreeMap<PathBuf, String>,
+    /// Shared URI ranks, dependency edges and lazy exact fingerprint records.
+    fingerprint_index: OnceLock<fingerprint::Index>,
     /// Package configuration and SDK source-map fingerprint.
     metadata_hash: u64,
+    /// Exact package and SDK metadata snapshot.
+    metadata_inputs: BTreeMap<PathBuf, u64>,
+    /// Native parsing requested a replacement for the optional parser snapshot.
+    pub(crate) parser_facts_changed: bool,
     /// Fatal ownership diagnostics to reject before any output mutation.
     binding_errors: BTreeMap<PathBuf, Vec<Diagnostic>>,
     /// Generated primary suffix used for dependency-library identities.
@@ -74,21 +91,38 @@ impl NamespaceSources {
             workspace.is_flutter_package,
         )
         .map_err(Diagnostic::error)?;
-        let mut files = Vec::new();
-        discovery::collect_sources(&workspace.package_root.join("lib"), &mut files)?;
-        files.sort();
-        let roots = files
-            .iter()
-            .map(|path| index.file(path))
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(Diagnostic::error)?;
-        let claims = outputs::plan(&roots, registry)?;
-        let potential = claims.keys().cloned().collect();
-        let primary_suffix = workspace.dust_config.outputs.primary_suffix.clone();
+        let supported_annotations = registry.all_supported_annotations();
+        let inputs = discovery::read_inputs(
+            &workspace.package_root.join("lib"),
+            &workspace.cache_root,
+            &supported_annotations,
+        )?;
+        let files = inputs.sources;
+        let parser_cache = inputs.parser_cache;
+        let roots = discovery::index_sources(&index, &files)?;
         let available = crate::build::available_worker_count(usize::MAX, None);
         let workers = jobs.unwrap_or(available).clamp(1, available);
-        let mut loader = loader::Loader::load(&index, &roots, &primary_suffix, &potential, workers)
-            .map_err(Diagnostic::error)?;
+        let (claims, prepared) = loader::prepare_roots(
+            &index,
+            &roots,
+            workers,
+            &supported_annotations,
+            &files,
+            Some(Arc::clone(&parser_cache)),
+            || outputs::plan(&roots, registry),
+        );
+        let claims = claims?;
+        let potential = claims.keys().cloned().collect();
+        let primary_suffix = workspace.dust_config.outputs.primary_suffix.clone();
+        let mut loader = loader::Loader::load(
+            &index,
+            &roots,
+            &primary_suffix,
+            &potential,
+            workers,
+            prepared,
+        )
+        .map_err(Diagnostic::error)?;
         for root in &roots {
             if let Some(Err(error)) = loader.units.get(&root.uri) {
                 return Err(Diagnostic::error(error));
@@ -124,8 +158,28 @@ impl NamespaceSources {
             metadata.push_str(text);
             metadata.push('\0');
         }
+        let mut reusable_graph = None;
         loop {
-            let graph = outputs::verify(&mut loader.units, &claims, catalog)?;
+            let graph = match reusable_graph.take() {
+                Some(graph) => graph,
+                None => {
+                    let mut units = std::mem::take(&mut loader.units);
+                    let verified =
+                        outputs::verify_ready(&mut units, &claims, catalog, |required| {
+                            loader.imports_ready(required)
+                        });
+                    loader.units = units;
+                    match verified? {
+                        outputs::Verification::Ready(graph) => graph,
+                        outputs::Verification::NeedsImports(graph) => {
+                            loader
+                                .require_lexical_imports(&graph.required_lexical_imports())
+                                .map_err(Diagnostic::error)?;
+                            continue;
+                        }
+                    }
+                }
+            };
             let mut sources = Self {
                 graph,
                 units: std::mem::take(&mut loader.units),
@@ -133,17 +187,41 @@ impl NamespaceSources {
                     .iter()
                     .map(|root| (root.path.clone(), root.uri.clone()))
                     .collect(),
+                fingerprint_index: OnceLock::new(),
                 metadata_hash: hash_text(&metadata),
+                metadata_inputs: index
+                    .inputs
+                    .iter()
+                    .map(|(path, text)| (path.clone(), hash_text(text)))
+                    .collect(),
+                parser_facts_changed: parser_cache.needs_save(),
                 binding_errors: BTreeMap::new(),
                 primary_suffix: primary_suffix.clone(),
             };
-            discovery::select_libraries(&mut sources, workspace, catalog, include_unannotated);
+            let previous_awareness =
+                discovery::select_libraries(&mut sources, workspace, catalog, include_unannotated);
             let required = sources.graph.required_lexical_imports();
             loader.units = std::mem::take(&mut sources.units);
+            let before_revision = loader.revision;
             if loader
                 .require_lexical_imports(&required)
                 .map_err(Diagnostic::error)?
             {
+                if loader.revision == before_revision {
+                    sources.units = std::mem::take(&mut loader.units);
+                    let unchanged = {
+                        let awareness = discovery::dust_aware_uris(&sources, catalog);
+                        awareness.len() == previous_awareness.len()
+                            && awareness
+                                .iter()
+                                .all(|uri| previous_awareness.contains(*uri))
+                    };
+                    if unchanged {
+                        return Ok(sources);
+                    }
+                    loader.units = std::mem::take(&mut sources.units);
+                    reusable_graph = Some(sources.graph);
+                }
                 continue;
             }
             sources.units = std::mem::take(&mut loader.units);
@@ -199,35 +277,8 @@ impl NamespaceSources {
         Some((&unit.parsed, &unit.diagnostics))
     }
 
-    /// Shares the exact text used for parsing and diagnostic ranges.
-    pub(crate) fn source(&self, path: &Path) -> Option<Arc<str>> {
-        Some(Arc::clone(&self.unit(path)?.text))
-    }
-
-    /// Supplies contexts for dependency labels without exposing generated contents.
-    pub(crate) fn diagnostic_files(&self, labels: &BTreeSet<FileId>) -> Vec<DiagnosticFile> {
-        if labels.is_empty() {
-            return Vec::new();
-        }
-        self.units
-            .values()
-            .filter_map(|unit| unit.as_ref().ok())
-            .filter(|unit| {
-                labels.contains(&unit.file_id)
-                    && unit.generated_owner.is_none()
-                    && !unit.generated_library
-            })
-            .map(|unit| {
-                DiagnosticFile::new(
-                    unit.file_id,
-                    unit.source.path.clone(),
-                    Arc::clone(&unit.text),
-                )
-            })
-            .collect()
-    }
-
-    /// Collects the root's transitive, actually traversed source dependencies.
+    /// Reference traversal used to prove exact fingerprint compatibility.
+    #[cfg(test)]
     fn read_set<'a>(&'a self, root: &'a str) -> BTreeSet<&'a str> {
         let mut seen = BTreeSet::from([root]);
         let mut pending = vec![root];

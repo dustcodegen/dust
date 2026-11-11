@@ -74,9 +74,9 @@ fn missing_failed_generated_and_part_units_cannot_authorize_outputs() {
     };
     let mut units = BTreeMap::new();
     let graph = graph::build(&units).unwrap();
-    assert!(!owned(&claim, &units, &graph, &catalog));
+    assert!(!owners(&claim.source, &units, &graph, &catalog).contains(&claim.producer));
     units.insert(claim.source.clone(), Err("unreadable".into()));
-    assert!(!owned(&claim, &units, &graph, &catalog));
+    assert!(!owners(&claim.source, &units, &graph, &catalog).contains(&claim.producer));
     for source in [
         "",
         "class {",
@@ -88,7 +88,7 @@ fn missing_failed_generated_and_part_units_cannot_authorize_outputs() {
         }
         units.insert(claim.source.clone(), Ok(root));
         let graph = graph::build(&units).unwrap();
-        assert!(!owned(&claim, &units, &graph, &catalog));
+        assert!(!owners(&claim.source, &units, &graph, &catalog).contains(&claim.producer));
     }
 }
 
@@ -225,34 +225,5 @@ fn claims_from_the_same_source_still_require_their_own_producer() {
     );
 }
 
-#[test]
-fn rejected_claims_discard_lexical_requests_when_no_unit_changes() {
-    let registry = crate::build::registry_for_selection(crate::build::RegistrySelection::All);
-    let catalog = crate::catalog::build_symbol_catalog(&registry).unwrap();
-    let uri = "file:///root.dart";
-    let root = unit(
-        1,
-        uri,
-        "const marker = Marker(); @marker class Example {} class Marker { const Marker(); }",
-    );
-    let output = root.source.path.with_extension("g.dart");
-    let claims = BTreeMap::from([(
-        output.clone(),
-        Claim {
-            source: uri.into(),
-            producer: SymbolId::new("dust_flutter::AppRouter"),
-        },
-    )]);
-    let mut units = BTreeMap::from([(uri.into(), Ok(root))]);
-    let original = graph::build(&units).unwrap();
-    assert!(!owned(&claims[&output], &units, &original, &catalog));
-    assert_eq!(
-        original.required_lexical_imports(),
-        BTreeSet::from([uri.into()])
-    );
-
-    let verified = verify(&mut units, &claims, &catalog).unwrap();
-
-    assert!(units[uri].is_ok());
-    assert!(verified.required_lexical_imports().is_empty());
-}
+mod readiness;
+mod requests;

@@ -1,7 +1,9 @@
 use std::{
+    cmp::Reverse,
     collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 use dust_dart_syntax::DartLanguageVersion;
@@ -28,10 +30,14 @@ pub(super) struct Source {
 pub(super) struct SourceIndex {
     /// Resolved package entries keyed by their configured names.
     packages: BTreeMap<String, packages::Package>,
+    /// Package roots ordered deepest first for file language-version selection.
+    file_roots: Vec<(PathBuf, Option<DartLanguageVersion>)>,
     /// Active SDK libraries and their target-independent source alternatives.
     sdk: SdkSources,
     /// Exact package and SDK metadata reads for dependency fingerprints.
     pub(super) inputs: BTreeMap<PathBuf, String>,
+    /// Base-independent package and SDK directive resolutions for this snapshot.
+    absolute: Mutex<BTreeMap<String, Result<Source, String>>>,
 }
 
 impl SourceIndex {
@@ -62,10 +68,19 @@ impl SourceIndex {
         let sdk = SdkSources::load(cwd, sdk_root, flutter_package.map(PathBuf::as_path))?;
         let mut inputs = sdk.inputs.clone();
         inputs.insert(config.to_path_buf(), contents);
+        let mut file_roots = packages
+            .values()
+            .rev()
+            .map(|package| (package.root.clone(), package.language_version))
+            .collect::<Vec<_>>();
+        // A stable sort retains the last package-name preference for equal depths.
+        file_roots.sort_by_key(|(root, _)| Reverse(root.components().count()));
         Ok(Self {
             packages,
+            file_roots,
             sdk,
             inputs,
+            absolute: Mutex::new(BTreeMap::new()),
         })
     }
 
@@ -73,11 +88,10 @@ impl SourceIndex {
     pub(super) fn file(&self, path: &Path) -> Result<Source, String> {
         let path = normalize_path(path);
         let language_version = self
-            .packages
-            .values()
-            .filter(|package| path.starts_with(&package.root))
-            .max_by_key(|package| package.root.components().count())
-            .and_then(|package| package.language_version)
+            .file_roots
+            .iter()
+            .find(|(root, _)| path.starts_with(root))
+            .and_then(|(_, language_version)| *language_version)
             .unwrap_or(self.sdk.language_version);
         Ok(Source {
             uri: uri::file_uri(&path)?,
@@ -92,11 +106,27 @@ impl SourceIndex {
             return Err("source URI must not contain a query or fragment".into());
         }
         if let Some((scheme, path)) = reference.split_once(':').filter(|(s, _)| !s.contains('/')) {
-            if scheme.eq_ignore_ascii_case("package") {
-                return self.package(path);
-            }
-            if scheme.eq_ignore_ascii_case("dart") {
-                return self.dart(path);
+            let package = scheme.eq_ignore_ascii_case("package");
+            if package || scheme.eq_ignore_ascii_case("dart") {
+                if let Some(resolved) = self
+                    .absolute
+                    .lock()
+                    .expect("source index cache lock")
+                    .get(reference)
+                    .cloned()
+                {
+                    return resolved;
+                }
+                let resolved = if package {
+                    self.package(path)
+                } else {
+                    self.dart(path)
+                };
+                self.absolute
+                    .lock()
+                    .expect("source index cache lock")
+                    .insert(reference.to_owned(), resolved.clone());
+                return resolved;
             }
             let path = resolve_file_reference(&base.path, reference)?;
             let mut source = self.file(&path)?;

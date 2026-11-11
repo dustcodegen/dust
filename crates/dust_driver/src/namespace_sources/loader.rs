@@ -1,14 +1,12 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     fs,
     sync::{Arc, OnceLock},
 };
 
 use dust_diagnostics::Diagnostic;
-use dust_parser_dart::{
-    ParseResult, ParsedDartFileSurface, ParsedDirective, ParsedTypeKind, ParsedUriLiteral,
-};
-use dust_text::{FileId, TextRange};
+use dust_parser_dart::{ParsedDartFileSurface, ParsedDirective};
+use dust_text::FileId;
 
 use super::index::{Source, SourceIndex};
 
@@ -20,11 +18,21 @@ mod imports;
 mod input;
 /// Bounded preparation of independent parser facts.
 mod prepare;
+/// Canonical work and the subset eligible for independent parser preparation.
+mod queue;
+/// Root snapshot preparation overlaps output planning without committing units.
+mod roots;
+/// Shared immutable directive resolution for local and prepared sources.
+mod targets;
+/// Assembly of retained source facts and generated primary placeholders.
+mod unit;
 
 pub(super) use directives::implicit_core;
 use directives::literals;
-use input::SourceInput;
-use prepare::ParseAhead;
+use input::{ParsePolicy, SourceInput};
+use prepare::{KnownSources, ParseAhead};
+pub(super) use roots::{PreparedRoots, prepare_roots};
+use targets::{ResolvedTargets, resolve_targets};
 
 /// One read source snapshot, shared by graph construction and generation.
 pub(super) struct Unit {
@@ -56,14 +64,18 @@ pub(super) struct Unit {
 pub(super) struct Loader<'a> {
     /// Read or failed units keyed by canonical library identity.
     pub(super) units: BTreeMap<String, Result<Unit, String>>,
+    /// Processed source snapshots, including replacements and read failures.
+    pub(super) revision: usize,
     /// Resolved package and SDK metadata for directive lookup.
     index: &'a SourceIndex,
     /// Deterministically ordered sources awaiting parsing.
     queue: BTreeMap<String, Source>,
+    /// Only unowned, uncached sources awaiting independent parser preparation.
+    prepare_queue: BTreeMap<String, Source>,
     /// Diagnostic IDs already allocated for source identities.
-    ids: BTreeMap<String, FileId>,
+    ids: HashMap<String, FileId>,
     /// Libraries whose imports must be traversed for metadata or named aliases.
-    imports: BTreeSet<String>,
+    imports: HashSet<String>,
     /// Declaring libraries for parts whose aliases need their owner's imports.
     part_owners: BTreeMap<String, BTreeSet<String>>,
     /// Generated primary part identities and their declared owners.
@@ -74,6 +86,10 @@ pub(super) struct Loader<'a> {
     potential: &'a BTreeSet<std::path::PathBuf>,
     /// Maximum number of source parser workers for this snapshot.
     workers: usize,
+    /// Root/external extraction choices shared by coordinator and parser workers.
+    parse_policy: Arc<ParsePolicy>,
+    /// Preparsed roots are consumed once and never also enter the foreign pool.
+    prepared_roots: PreparedRoots,
 }
 
 impl<'a> Loader<'a> {
@@ -84,22 +100,27 @@ impl<'a> Loader<'a> {
         suffix: &'a str,
         potential: &'a BTreeSet<std::path::PathBuf>,
         workers: usize,
+        prepared_roots: PreparedRoots,
     ) -> Result<Self, String> {
         let mut loader = Self {
             units: BTreeMap::new(),
+            revision: 0,
             index,
             queue: BTreeMap::new(),
-            ids: BTreeMap::new(),
-            imports: BTreeSet::new(),
+            prepare_queue: BTreeMap::new(),
+            ids: HashMap::new(),
+            imports: HashSet::new(),
             part_owners: BTreeMap::new(),
             generated: BTreeMap::new(),
             primary_suffix: suffix,
             potential,
             workers,
+            parse_policy: Arc::clone(&prepared_roots.policy),
+            prepared_roots,
         };
         for root in roots {
             loader.imports.insert(root.uri.clone());
-            loader.queue.insert(root.uri.clone(), root.clone());
+            loader.enqueue(root.clone());
         }
         loader.drain()?;
         Ok(loader)
@@ -119,68 +140,37 @@ impl<'a> Loader<'a> {
 
     /// Reads and parses once, excluding marked Dust annotation provenance.
     fn read(
-        &self,
+        &mut self,
         source: Source,
         id: FileId,
         ahead: Option<&mut ParseAhead>,
     ) -> Result<Unit, String> {
         let owner = self.generated.get(&source.uri).cloned();
         let input = SourceInput::read(&source, owner, self.potential);
-        let prepared = ahead.and_then(|ahead| {
-            ahead.take(
-                &source,
-                input.as_ref().ok(),
-                id,
-                &self.queue,
-                &self.generated,
-            )
-        });
+        let cached = self.prepared_roots.contains(&source.uri);
+        let prepared = if cached {
+            self.prepared_roots.take(&source, input.as_ref().ok(), id)
+        } else {
+            ahead.and_then(|ahead| {
+                ahead.take(
+                    &source,
+                    input.as_ref().ok(),
+                    id,
+                    &self.prepare_queue,
+                    &self.generated,
+                )
+            })
+        };
         let input = input?;
-        let parsed = prepared.unwrap_or_else(|| input.parse(&source, id));
-        Ok(self.resolve(source, id, input, parsed))
-    }
-
-    /// Resolves parsed directives in the current namespace without mutating the queue.
-    fn resolve(&self, source: Source, id: FileId, input: SourceInput, parsed: ParseResult) -> Unit {
-        let SourceInput {
-            text,
-            owner,
-            generated_library,
-        } = input;
-        let mut surface = parsed.library;
-        if let Some(owner) = &owner {
-            surface.directives.push(ParsedDirective::PartOf {
-                uri_literal: Some(ParsedUriLiteral {
-                    source: dust_dart_emit::dart_string_literal(owner),
-                    span: TextRange::empty(0_u32),
-                }),
-                library_name: None,
-                uri: Some(owner.clone()),
-                span: TextRange::empty(0_u32),
-            });
-        }
-        let core = implicit_core(&surface.directives, &source.uri);
-        let mut targets = BTreeMap::new();
-        for directive in surface.directives.iter().chain(core.as_ref()) {
-            for literal in literals(directive) {
-                if let Some(reference) = literal.value() {
-                    targets.insert(reference.clone(), self.index.resolve(&source, &reference));
-                }
+        let (parsed, targets) = match prepared {
+            Some((parsed, targets)) => (parsed, Some(targets)),
+            None => {
+                let result = input.parse(&source, id, &self.parse_policy);
+                (result, None)
             }
-        }
-        Unit {
-            source,
-            file_id: id,
-            text,
-            content_digest: OnceLock::new(),
-            parsed: surface,
-            diagnostics: parsed.diagnostics,
-            namespace_diagnostics: parsed.namespace_diagnostics,
-            targets,
-            dependencies: BTreeSet::new(),
-            generated_owner: owner,
-            generated_library,
-        }
+        };
+        let result = self.resolve(source, id, input, parsed, targets);
+        Ok(result)
     }
 
     /// Queues required interfaces and verifies potential generated primary parts.
@@ -189,7 +179,7 @@ impl<'a> Loader<'a> {
             return Ok(());
         };
         let core = implicit_core(&unit.parsed.directives, uri);
-        let output = dust_workspace::primary_output_path(&unit.source.path, self.primary_suffix);
+        let mut output = None;
         let mut dependencies = BTreeSet::new();
         let mut pending = Vec::new();
         for directive in unit.parsed.directives.iter().chain(core.as_ref()) {
@@ -209,7 +199,13 @@ impl<'a> Loader<'a> {
                 dependencies.insert(target.uri.clone());
                 let part = matches!(directive, ParsedDirective::Part { .. });
                 let generated = part
-                    && target.path == output
+                    && target.path
+                        == *output.get_or_insert_with(|| {
+                            dust_workspace::primary_output_path(
+                                &unit.source.path,
+                                self.primary_suffix,
+                            )
+                        })
                     && match fs::read_to_string(&target.path) {
                         Ok(text) => crate::generated_source::is_dust_generated_source(&text),
                         Err(error) => error.kind() == std::io::ErrorKind::NotFound,
@@ -230,14 +226,16 @@ impl<'a> Loader<'a> {
                     .or_default()
                     .insert(uri.to_owned());
             }
-            if generated
-                && let Some(previous) = self.generated.insert(target.uri.clone(), uri.to_owned())
-                && previous != uri
-            {
-                return Err(format!(
-                    "generated part `{}` has conflicting owners",
-                    target.uri
-                ));
+            if generated {
+                self.prepare_queue.remove(&target.uri);
+                if let Some(previous) = self.generated.insert(target.uri.clone(), uri.to_owned())
+                    && previous != uri
+                {
+                    return Err(format!(
+                        "generated part `{}` has conflicting owners",
+                        target.uri
+                    ));
+                }
             }
             if !self.units.contains_key(&target.uri)
                 || (generated
@@ -247,7 +245,7 @@ impl<'a> Loader<'a> {
                         .and_then(|unit| unit.as_ref().ok())
                         .is_some_and(|unit| unit.generated_owner.is_some()))
             {
-                self.queue.insert(target.uri.clone(), target);
+                self.enqueue(target);
             }
         }
         Ok(())

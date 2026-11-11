@@ -67,6 +67,8 @@ pub struct WorkspaceCache {
     entries: BTreeMap<String, CacheEntry>,
     /// Whether the in-memory cache has changes that need flushing.
     dirty: bool,
+    /// Digest of bytes successfully loaded or persisted, never a later external edit.
+    persisted_hash: Option<u64>,
 }
 
 impl WorkspaceCache {
@@ -93,6 +95,7 @@ impl WorkspaceCache {
             path,
             entries: parsed.entries,
             dirty: false,
+            persisted_hash: Some(Self::hash_contents(contents.as_bytes())),
         })
     }
 
@@ -116,12 +119,25 @@ impl WorkspaceCache {
             path,
             entries: BTreeMap::new(),
             dirty: false,
+            persisted_hash: None,
         }
     }
 
     /// Returns the on-disk cache file path.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// Returns the digest of the last successfully loaded or persisted cache bytes.
+    pub fn persisted_hash(&self) -> Option<u64> {
+        self.persisted_hash
+    }
+
+    /// Computes Dust's stable byte digest for cache-content identity checks.
+    pub fn hash_contents(contents: &[u8]) -> u64 {
+        contents.iter().fold(1469598103934665603_u64, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(1099511628211)
+        })
     }
 
     /// Returns the cache entry for one source file if present.
@@ -183,6 +199,7 @@ impl WorkspaceCache {
             temporary.as_file().set_permissions(permissions)?;
         }
         temporary.persist(&self.path).map_err(|error| error.error)?;
+        self.persisted_hash = Some(Self::hash_contents(&json));
         self.dirty = false;
         Ok(())
     }
@@ -223,3 +240,8 @@ fn cache_dir_path(root: &Path) -> PathBuf {
 #[cfg(test)]
 #[path = "store/tests.rs"]
 mod tests;
+
+/// Provenance for bytes read or atomically replaced by this cache instance.
+#[cfg(test)]
+#[path = "store/contents_tests.rs"]
+mod contents_tests;

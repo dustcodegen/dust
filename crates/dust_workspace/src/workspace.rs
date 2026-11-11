@@ -48,6 +48,15 @@ pub fn discover_workspace(
     cwd: &Path,
     supported_annotations: &SupportedAnnotations,
 ) -> Result<WorkspacePlan, Diagnostic> {
+    let mut workspace = load_workspace(cwd)?;
+    let discovery = discover_libraries_with_usage(&workspace.package_root, supported_annotations)?;
+    workspace.libraries = discovery.libraries;
+    workspace.dust_packages = discovery.dust_packages;
+    Ok(workspace)
+}
+
+/// Loads workspace metadata before parser-led library discovery.
+pub fn load_workspace(cwd: &Path) -> Result<WorkspacePlan, Diagnostic> {
     let package_root = detect_workspace_root(cwd)?;
     let package_name = load_package_name(&package_root)?;
     let is_flutter_package = load_is_flutter_package(&package_root)?;
@@ -55,7 +64,6 @@ pub fn discover_workspace(
     let dart_sdk_lower_bound = load_dart_sdk_lower_bound(&package_root)?;
     let package_config = load_package_config(&package_root)?;
     let dust_config = load_dust_config(&package_root)?;
-    let library_discovery = discover_libraries_with_usage(&package_root, supported_annotations)?;
 
     Ok(WorkspacePlan {
         cache_root: package_root.clone(),
@@ -66,7 +74,7 @@ pub fn discover_workspace(
         package_root,
         package_config,
         dust_config,
-        libraries: library_discovery.libraries,
-        dust_packages: library_discovery.dust_packages,
+        libraries: Vec::new(),
+        dust_packages: Vec::new(),
     })
 }

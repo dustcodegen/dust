@@ -2,7 +2,7 @@ use dust_dart_syntax::{find_top_level_char, has_top_level_char, split_top_level_
 use dust_text::TextRange;
 
 /// A parser-owned normalized Dart type surface.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedTypeSurface {
     /// The exact type source preserved from the parsed Dart syntax.
     pub source: String,
@@ -15,7 +15,7 @@ pub struct ParsedTypeSurface {
 }
 
 /// Parser-owned Dart type shapes.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedTypeKind {
     /// A common built-in type name.
     Builtin(String),

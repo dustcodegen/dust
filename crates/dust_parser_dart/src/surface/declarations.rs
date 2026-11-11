@@ -11,7 +11,7 @@ use crate::{
 };
 
 /// One method extracted from a class.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedMethodSurface {
     /// The method name.
     pub name: String,
@@ -36,7 +36,7 @@ pub struct ParsedMethodSurface {
 }
 
 /// One extracted method parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedMethodParamSurface {
     /// The parameter name.
     pub name: String,
@@ -61,7 +61,7 @@ pub struct ParsedMethodParamSurface {
 }
 
 /// A parsed enum declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedEnumSurface {
     /// The enum name
     pub name: String,
@@ -74,7 +74,7 @@ pub struct ParsedEnumSurface {
 }
 
 /// One enum variant extracted from an enum declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedEnumVariantSurface {
     /// The variant name.
     pub name: String,
@@ -85,7 +85,7 @@ pub struct ParsedEnumVariantSurface {
 }
 
 /// One parsed mixin declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedMixinSurface {
     /// The mixin name.
     pub name: String,
@@ -98,7 +98,7 @@ pub struct ParsedMixinSurface {
 }
 
 /// One parsed extension declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedExtensionSurface {
     /// The optional extension name.
     pub name: Option<String>,
@@ -113,7 +113,7 @@ pub struct ParsedExtensionSurface {
 }
 
 /// One parsed extension type declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedExtensionTypeSurface {
     /// The extension type name.
     pub name: String,
@@ -130,7 +130,7 @@ pub struct ParsedExtensionTypeSurface {
 }
 
 /// One parsed top-level function declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedFunctionSurface {
     /// The function name.
     pub name: String,
@@ -147,7 +147,7 @@ pub struct ParsedFunctionSurface {
 }
 
 /// One parsed top-level variable declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedTopLevelVariableSurface {
     /// The variable name.
     pub name: String,
@@ -166,7 +166,7 @@ pub struct ParsedTopLevelVariableSurface {
 }
 
 /// One parsed typedef declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedTypedefSurface {
     /// The typedef name.
     pub name: String,

@@ -1,11 +1,10 @@
 use crate::build::{
     batch::ProgressReporter,
     process::{IndexedBuildOutcome, PendingLibrary, ProcessingConfig, process_pending_library},
-    work::round_robin_groups,
 };
 
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -43,19 +42,25 @@ pub(super) fn process_pending_parallel(
     processing: &ProcessingConfig<'_>,
     reporter: &ProgressReporter<'_>,
 ) -> Vec<IndexedBuildOutcome> {
-    let groups = round_robin_groups(pending, jobs);
+    let jobs = jobs.max(1).min(pending.len());
+    let pending = Mutex::new(pending.into_iter());
     let stop = Arc::new(AtomicBool::new(false));
 
     std::thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(groups.len());
-        for group in groups {
+        let mut handles = Vec::with_capacity(jobs);
+        for _ in 0..jobs {
+            let pending = &pending;
             let stop = Arc::clone(&stop);
             handles.push(scope.spawn(move || {
-                let mut processed = Vec::with_capacity(group.len());
-                for pending in group {
+                let mut processed = Vec::new();
+                loop {
                     if fail_fast && stop.load(Ordering::Relaxed) {
                         break;
                     }
+                    let next = pending.lock().expect("job queue must not poison").next();
+                    let Some(pending) = next else {
+                        break;
+                    };
                     let outcome = process_pending_library(pending, processing, reporter);
                     if fail_fast
                         && outcome

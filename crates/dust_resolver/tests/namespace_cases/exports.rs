@@ -171,3 +171,61 @@ fn nonconverging_broken_conditional_cycles_do_not_poison_independent_owners() {
     );
     assert_eq!(graph.scope(APP).bind("good.GET", &catalog(true)), owned());
 }
+
+#[test]
+fn importing_an_existing_barrel_invalidates_its_previously_unused_exports() {
+    let mut graph = graph();
+    let barrel = "package:barrel/unused.dart";
+    let consumer = "package:app/consumer.dart";
+    add(&mut graph, 3, barrel, &format!("export '{CLIENT}';"));
+    add(&mut graph, 4, APP, &format!("import '{CLIENT}';"));
+    assert_eq!(graph.scope(APP).bind("GET", &catalog(false)), owned());
+
+    add(&mut graph, 5, consumer, &format!("import '{barrel}';"));
+    assert_eq!(graph.scope(consumer).bind("GET", &catalog(false)), owned());
+    assert_eq!(graph.scope(APP).bind("GET", &catalog(true)), owned());
+}
+
+#[test]
+fn concurrent_cyclic_exports_recompute_when_missing_input_is_inserted() {
+    let mut graph = graph();
+    let a = "package:barrel/a.dart";
+    let b = "package:barrel/b.dart";
+    let future = "package:barrel/future.dart";
+    add(&mut graph, 3, a, &format!("export '{b}';"));
+    add(
+        &mut graph,
+        4,
+        b,
+        &format!("export '{a}'; export '{future}';"),
+    );
+    add(&mut graph, 5, APP, &format!("import '{a}';"));
+    let bind_concurrently = |graph: &NamespaceGraph| {
+        let barrier = std::sync::Barrier::new(8);
+        std::thread::scope(|scope| {
+            let readers = (0..8)
+                .map(|index| {
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        barrier.wait();
+                        graph.scope(APP).bind("GET", &catalog(index % 2 == 0))
+                    })
+                })
+                .collect::<Vec<_>>();
+            readers
+                .into_iter()
+                .map(|reader| reader.join().unwrap())
+                .collect::<Vec<_>>()
+        })
+    };
+    let missing = bind_concurrently(&graph);
+    assert!(missing.iter().all(|binding| binding == &missing[0]));
+    rejection(missing[0].clone(), Failure::MissingInput);
+
+    add(&mut graph, 6, future, &format!("export '{CLIENT}';"));
+    assert!(
+        bind_concurrently(&graph)
+            .into_iter()
+            .all(|binding| binding == owned())
+    );
+}

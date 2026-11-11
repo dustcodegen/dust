@@ -1,4 +1,7 @@
-use std::{collections::BTreeSet, path::Path};
+use std::{
+    collections::{BTreeSet, HashSet},
+    path::Path,
+};
 
 use dust_diagnostics::Diagnostic;
 use dust_parser_dart::ParsedDartFileSurface;
@@ -36,11 +39,15 @@ impl NamespaceSources {
             .all_supported_annotations()
             .into_iter()
             .collect::<BTreeSet<_>>();
-        let roots = self.roots.values().cloned().collect::<BTreeSet<_>>();
+        let roots = self
+            .roots
+            .values()
+            .map(String::as_str)
+            .collect::<HashSet<_>>();
         self.units
             .iter()
             .filter_map(|(uri, unit)| {
-                if roots.contains(uri) {
+                if roots.contains(uri.as_str()) {
                     return None;
                 }
                 let unit = unit.as_ref().ok()?;

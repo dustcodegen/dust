@@ -27,7 +27,7 @@ pub use self::{annotations::*, declarations::*, members::*};
 ///
 /// This type is intentionally smaller than a full AST. It carries only the
 /// file surface that Dust needs for resolution and lowering.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedDartFileSurface {
     /// The full source span for the parsed file.
     pub span: TextRange,
@@ -72,7 +72,7 @@ impl ParsedDartFileSurface {
 }
 
 /// One top-level Dart directive extracted from a library.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedDirective {
     /// A `library` directive.
     Library {
@@ -145,7 +145,7 @@ impl ParsedDirective {
 }
 
 /// A parsed class declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedClassKind {
     /// A normal Dart `class` declaration.
     Class,
@@ -158,7 +158,7 @@ pub enum ParsedClassKind {
 }
 
 /// A parsed class declaration relevant to Dust generation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedClassSurface {
     /// The declaration kind.
     pub kind: ParsedClassKind,

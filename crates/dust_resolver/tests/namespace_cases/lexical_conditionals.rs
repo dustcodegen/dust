@@ -112,5 +112,13 @@ fn conditional_class_constants_preserve_the_actual_failure_and_declaration_label
             error.labels[1].message,
             "lexical declaration `marker` shadows imported names"
         );
+        assert_eq!(
+            graph.required_lexical_imports(),
+            if initializer.starts_with("client") {
+                std::collections::BTreeSet::from(["package:right/a.dart".into()])
+            } else {
+                Default::default()
+            }
+        );
     }
 }

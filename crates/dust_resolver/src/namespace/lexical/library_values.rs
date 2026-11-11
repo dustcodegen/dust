@@ -13,33 +13,36 @@ impl NamespaceGraph {
             .rsplit_once('.')
             .map_or((None, name), |(prefix, short)| (Some(prefix), short));
         let worlds = self.lookup(uri, prefix, short).ok()?;
-        let mut inspected = false;
-        let bindings = worlds
+        let values = worlds
             .iter()
             .map(|world| {
-                if world.problems.is_empty() && world.declarations.len() == 1 {
-                    let declaration = world
-                        .declarations
-                        .first()
-                        .expect("checked declaration count");
-                    if let Some(unit) = self.unit_by_file_id(declaration.file_id)
-                        && let Some(value) = unit
-                            .lexical_scopes
-                            .iter()
-                            .filter(|scope| scope.kind == ParsedLexicalScopeKind::Library)
-                            .flat_map(|scope| &scope.declarations)
-                            .find(|value| value.name.name == declaration.name)
-                    {
-                        inspected = true;
-                        return self.constant(&declaration.uri, unit, value, catalog, active);
-                    }
+                if !world.problems.is_empty() || world.declarations.len() != 1 {
+                    return None;
+                }
+                let declaration = world.declarations.first()?;
+                let unit = self.unit_by_file_id(declaration.file_id)?;
+                let value = unit
+                    .lexical_scopes
+                    .iter()
+                    .filter(|scope| scope.kind == ParsedLexicalScopeKind::Library)
+                    .flat_map(|scope| &scope.declarations)
+                    .find(|value| value.name.name == declaration.name)?;
+                Some((&declaration.uri, unit, value))
+            })
+            .collect::<Vec<_>>();
+        if values.iter().all(Option::is_none) {
+            return None;
+        }
+        let bindings = worlds
+            .iter()
+            .zip(values)
+            .map(|(world, value)| {
+                if let Some((uri, unit, value)) = value {
+                    return self.constant(uri, unit, value, catalog, active);
                 }
                 self.bind_world(world, short, catalog, &mut BTreeSet::new())
             })
             .collect::<Vec<_>>();
-        if !inspected {
-            return None;
-        }
         agree(name, &bindings, || {
             worlds
                 .iter()

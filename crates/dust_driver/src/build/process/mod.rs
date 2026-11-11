@@ -1,5 +1,7 @@
 /// Per-library processing pipeline.
 mod execute;
+/// Successful output assembly and private digests of freshly emitted bytes.
+mod outcome;
 /// Emission and optional persistence of generated output.
 mod output;
 /// Workspace analysis scan for pending libraries.
@@ -21,6 +23,7 @@ use crate::result::{BuildArtifact, DiagnosticFile};
 
 pub(crate) use self::{
     execute::process_pending_library,
+    outcome::{OutputSnapshot, OutputSnapshots, collect_output_snapshots},
     output::emit_or_write_library,
     scan::{
         collect_dependency_workspace_analysis, collect_remaining_workspace_analysis,
@@ -79,6 +82,8 @@ pub(crate) struct BuildOutcome {
     pub(crate) artifact: BuildArtifact,
     /// Hash of the expected generated output set when processing succeeded.
     pub(crate) expected_output_hash: Option<u64>,
+    /// Fresh generated-byte digests available only from current write-mode processing.
+    pub(crate) output_snapshot: Option<OutputSnapshot>,
     /// Whether this library intentionally leaves the primary output absent.
     pub(crate) suppress_primary_output: bool,
     /// Plugin analysis facts collected for this library.
@@ -97,6 +102,7 @@ impl BuildOutcome {
             diagnostic_file,
             artifact: build_artifact(library, Vec::new(), false, false, false),
             expected_output_hash: None,
+            output_snapshot: None,
             suppress_primary_output: false,
             analysis_snapshot: LibraryAnalysisSnapshot::default(),
         }
@@ -115,6 +121,7 @@ impl BuildOutcome {
                 false,
             ),
             expected_output_hash: Some(success.expected_output_hash),
+            output_snapshot: success.output_snapshot,
             suppress_primary_output: success.suppress_primary_output,
             analysis_snapshot: LibraryAnalysisSnapshot::default(),
         }
@@ -129,6 +136,8 @@ pub(crate) struct SuccessfulBuildOutcome {
     pub(crate) diagnostic_file: Option<DiagnosticFile>,
     /// Hash of the expected generated output set.
     pub(crate) expected_output_hash: u64,
+    /// Fresh generated-byte digests for optional unchanged-build proof creation.
+    pub(crate) output_snapshot: Option<OutputSnapshot>,
     /// Additional generated outputs owned by this library.
     pub(crate) auxiliary_output_paths: Vec<std::path::PathBuf>,
     /// Whether this library intentionally leaves the primary output absent.

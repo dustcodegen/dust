@@ -91,3 +91,30 @@ fn ownership_preflight_covers_every_represented_metadata_site_and_nested_group()
         }
     }
 }
+
+#[test]
+fn import_promotion_reselects_roots_when_existing_facts_gain_dust_reachability() {
+    let workspace = workspace();
+    let root = workspace.path();
+    write_file(
+        &root.join("lib/model.dart"),
+        &format!("import 'package:dust_dart/derive.dart';\n{MODEL}"),
+    );
+    let foreign = root.join("lib/foreign.dart");
+    write_file(
+        &foreign,
+        "import 'package:bridge/bridge.dart'; @foreignMarker class Foreign {}",
+    );
+    write_file(
+        &root.join("deps/bridge/lib/bridge.dart"),
+        "import 'package:dust_dart/derive.dart'; const foreignMarker = Object();",
+    );
+    let result = build(root);
+    assert_eq!(result.diagnostics, []);
+    assert!(
+        result
+            .build_artifacts
+            .iter()
+            .any(|artifact| artifact.source_path == foreign)
+    );
+}

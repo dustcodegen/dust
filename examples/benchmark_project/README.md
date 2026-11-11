@@ -26,11 +26,7 @@ This writes the generated sources into `lib/generated_models/`.
 
 ## Run Dust
 
-```bash
-cargo run -p dust_cli -- build --root /Users/yelinaung/Projects/Coursera/RustProjects/dart_codegeneration_engine/dust/examples/benchmark_project
-```
-
-From the Dust repo root, the shorter equivalent is:
+From the Dust repository root:
 
 ```bash
 cargo run -p dust_cli -- build --root examples/benchmark_project
@@ -66,8 +62,8 @@ flutter test
   additions follow the same cleanliness rules as the Rust workspace
 - static `lib/support/http_*.dart` fixtures keep HTTP generation in the same
   benchmark package without bloating the file generator
-- CI runs a smaller generated corpus for analyzer and runtime smoke coverage,
-  while the ignored perf test still validates the full 5k corpus
+- the local gate runs a smaller generated corpus for analyzer and runtime smoke
+  coverage; the ignored perf test validates the full 5k corpus
 
 ## Perf Test
 
@@ -77,11 +73,20 @@ Run the ignored release benchmark test:
 cargo test -p dust_cli benchmark_project_release_build_benchmark -- --ignored --nocapture
 ```
 
-Optional thresholds:
+The default budgets are 2,000 ms cold, 800 ms warm, and 1,400 ms after
+invalidating every cached tool hash. The invalidated build uses `--fail-fast`.
+Run acceptance checks with these defaults.
+The cold phase clears all Dust caches, including parser facts. Tool-hash
+invalidation retains valid parser facts while rerunning analysis and emission.
+
+After the performance run, restore the smaller fixture before normal checks:
 
 ```bash
-DUST_PERF_COLD_MAX_MS=2000 DUST_PERF_WARM_MAX_MS=800 \
-  cargo test -p dust_cli benchmark_project_release_build_benchmark -- --ignored --nocapture
+cd examples/benchmark_project
+./generate.sh --count 64
+cd ../..
+cargo run -p dust_cli -- clean --root examples/benchmark_project
+cargo run -p dust_cli -- build --root examples/benchmark_project
 ```
 
 See [../../CONTRIBUTING.md](../../CONTRIBUTING.md) for the normal contributor

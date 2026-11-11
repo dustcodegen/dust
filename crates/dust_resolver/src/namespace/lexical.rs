@@ -10,6 +10,8 @@ use super::*;
 mod library_values;
 /// Qualified constants use actual type declarations, not import-prefix spelling.
 mod qualified;
+/// Local declarations can resolve an initializer or alias without traversing imports.
+mod requests;
 
 /// Source declaration identity bounds recursion through direct constant aliases.
 type Active = BTreeSet<(u32, u32)>;
@@ -87,12 +89,6 @@ impl NamespaceGraph {
         let result = match &declaration.kind {
             Kind::EnumValue => NamespaceBinding::Foreign,
             Kind::Constant(Some(initializer)) => {
-                if !matches!(initializer.kind, Value::Opaque) {
-                    self.lexical_imports
-                        .lock()
-                        .expect("lexical import requests are not poisoned")
-                        .insert(uri.to_owned());
-                }
                 let span = SpanIr::new(unit.file_id, initializer.span);
                 match &initializer.kind {
                     Value::Reference(names) => {
@@ -101,6 +97,7 @@ impl NamespaceGraph {
                             .map(|name| name.name.as_str())
                             .collect::<Vec<_>>()
                             .join(".");
+                        self.request_imports_for(uri, &name);
                         self.bind_at(uri, &name, catalog, span, active)
                     }
                     Value::Constructor { callee, .. } => {
@@ -109,6 +106,7 @@ impl NamespaceGraph {
                             .map(|name| name.name.as_str())
                             .collect::<Vec<_>>()
                             .join(".");
+                        self.request_imports_for(uri, &name);
                         self.constructor_value(uri, &name, catalog, span, active)
                     }
                     Value::Opaque => unsupported(

@@ -88,26 +88,24 @@ impl NamespaceGraph {
                 Vec::new(),
             );
         };
-        let owners = catalog
-            .annotation_origins()
-            .filter(|origin| {
-                origin.library_uri == declaration.uri && origin.declaration == declaration.name
-            })
-            .map(|origin| origin.symbol)
-            .collect::<BTreeSet<_>>();
-        if owners.len() > 1 {
-            return rejected(
-                NamespaceFailureKind::Ambiguous,
-                format!(
-                    "declaration `{}` has multiple registered owners: {}",
-                    declaration.name,
-                    owners.into_iter().collect::<Vec<_>>().join(", ")
-                ),
-                vec![declaration.label()],
-            );
-        }
-        if let Some(owner) = owners.first() {
-            return NamespaceBinding::Owned(SymbolId::new(*owner));
+        let mut owners = catalog.annotation_owners(&declaration.uri, &declaration.name);
+        if let Some(owner) = owners.next() {
+            if let Some(other) = owners.next() {
+                return rejected(
+                    NamespaceFailureKind::Ambiguous,
+                    format!(
+                        "declaration `{}` has multiple registered owners: {}",
+                        declaration.name,
+                        std::iter::once(owner)
+                            .chain(std::iter::once(other))
+                            .chain(owners)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    vec![declaration.label()],
+                );
+            }
+            return NamespaceBinding::Owned(SymbolId::new(owner));
         }
         let kind = self.unit_by_file_id(declaration.file_id).and_then(|unit| {
             unit.declarations
@@ -117,6 +115,7 @@ impl NamespaceGraph {
         });
         match kind {
             Some(DeclarationKind::Alias { target, builtin }) => {
+                self.request_imports_for(&declaration.uri, target);
                 match self.bind_name(&declaration.uri, target, catalog, active) {
                     NamespaceBinding::Rejected {
                         kind: NamespaceFailureKind::Hidden,

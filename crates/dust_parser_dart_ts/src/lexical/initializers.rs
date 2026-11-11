@@ -7,7 +7,11 @@ use crate::{annotations::extract_annotation_arguments, syntax::text_range};
 use super::identifier;
 
 /// Keep only direct initializer nodes after `=`, excluding extra/comment nodes.
-pub(super) fn extract(node: Node<'_>, source: &SourceText) -> Option<ParsedLexicalInitializer> {
+pub(super) fn extract(
+    node: Node<'_>,
+    source: &SourceText,
+    namespace_only: bool,
+) -> Option<ParsedLexicalInitializer> {
     let mut cursor = node.walk();
     let mut after_equal = false;
     let values = node
@@ -34,7 +38,11 @@ pub(super) fn extract(node: Node<'_>, source: &SourceText) -> Option<ParsedLexic
     } else if let Some(arguments) = arguments {
         ParsedLexicalInitializerKind::Constructor {
             callee: names,
-            arguments: extract_annotation_arguments(arguments, source),
+            arguments: if namespace_only {
+                Default::default()
+            } else {
+                extract_annotation_arguments(arguments, source)
+            },
         }
     } else {
         ParsedLexicalInitializerKind::Reference(names)

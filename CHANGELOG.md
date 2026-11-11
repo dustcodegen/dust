@@ -16,14 +16,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Build performance**: index namespace source lookups, reuse ownership checks
   for the same source and producer, discard rejected placeholders in one scan,
   share annotation discovery across workspace roots, and build diagnostic line
-  indexes only for referenced dependencies.
-- **Dart parsing**: reuse one tree cursor for syntax diagnostics and
-  language-feature detection.
+  indexes only for referenced dependencies. Prepare parser facts in parallel,
+  load alias imports on demand, share compiled templates, and reuse successful
+  unchanged builds only after checking all recorded input and output contents.
+  Reuse source-exact parser facts across codegen cache misses while rerunning
+  analysis and emission.
+- **Dart parsing**: share structured syntax candidates between diagnostics and
+  language-feature detection while preserving language-version checks.
 - **Build fingerprints**: hash each reachable source once per snapshot and
   share the digest across dependent roots. Local build caches refresh on first use.
 
 ### Fixed
 
+- **Build dependencies**: update rustix to 1.1.6 for RUSTSEC-2026-0486.
 - **SQLite validation**: use patched bundled SQLite 3.54.1 through a pinned
   SQLx 0.8.6 fork, addressing RUSTSEC-2026-0459 without raising the Rust floor.
 - **Build cache**: replace cache files atomically and recover from malformed

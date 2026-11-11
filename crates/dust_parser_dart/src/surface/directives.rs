@@ -1,7 +1,7 @@
 use dust_text::TextRange;
 
 /// One exact URI literal, not an evaluated or host-selected URI.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedUriLiteral {
     /// Exact literal source, including raw/quoted delimiters and escapes.
     pub source: String,
@@ -17,7 +17,7 @@ impl ParsedUriLiteral {
 }
 
 /// One conditional URI alternative in source order.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedConditionalUri {
     /// Exact condition source, including its parentheses and internal trivia.
     pub condition_source: String,
@@ -30,7 +30,7 @@ pub struct ParsedConditionalUri {
 }
 
 /// The visibility operation of one directive combinator.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedCombinatorKind {
     /// Retain only these names from the preceding visible set.
     Show,
@@ -39,7 +39,7 @@ pub enum ParsedCombinatorKind {
 }
 
 /// One ordered `show` or `hide` clause.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedVisibilityCombinator {
     /// The operation to apply at this position.
     pub kind: ParsedCombinatorKind,
@@ -50,7 +50,7 @@ pub struct ParsedVisibilityCombinator {
 }
 
 /// Source-preserving namespace inputs for one import or export.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedNamespaceDirective {
     /// The unconditional default URI literal.
     pub default_uri: ParsedUriLiteral,
