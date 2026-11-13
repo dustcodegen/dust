@@ -208,7 +208,8 @@ def check_primary(run, dust: Path, dart: Path, output: Path,
     else:
         required.update(("lib/models.g.dart", "lib/private_models.g.dart",
                          "lib/language_models.g.dart", "lib/api.g.dart", "lib/database.g.dart",
-                         "lib/generic_models.g.dart", "lib/generic_imported.g.dart"))
+                         "lib/generic_models.g.dart", "lib/generic_imported.g.dart",
+                         "lib/skipped_nullable.g.dart"))
     if not required.issubset(hashes):
         raise ValueError(f"Missing fresh primary outputs: {required - hashes.keys()}")
     run([str(dart), "format", "--output=none", "--set-exit-if-changed", *sources], app, env=env)

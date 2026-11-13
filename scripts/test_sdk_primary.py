@@ -13,7 +13,7 @@ from sqlite_sdk_consumer import stage_consumer
 
 
 PARTS = ("models", "private_models", "language_models", "api",
-         "generic_models", "generic_imported", "database")
+         "generic_models", "generic_imported", "skipped_nullable", "database")
 MODES = ("all", "execute", "one", "one", "optional")
 
 
@@ -99,10 +99,10 @@ class PrimarySdkTests(unittest.TestCase):
             self.assertEqual(calls[-2][0], ["/sdk/bin/dart", "analyze", "--fatal-infos"])
             expected_sources = [f"lib/{part}.dart" for part in
                                 ("api", "checked_queries", "database", "generic_imported", "generic_models", "language_models",
-                                 "models", "private_models")]
+                                 "models", "private_models", "skipped_nullable")]
             expected_sources += [f"test/{part}_test.dart" for part in
                                  ("api", "checked_queries", "generic_models", "language_models", "models",
-                                  "private_models", "sqlite_runtime")]
+                                  "private_models", "skipped_nullable", "sqlite_runtime")]
             self.assertEqual(calls[-3][0][4:], expected_sources)
             self.assertEqual(calls[-1][0], ["/sdk/bin/dart", "test", "--reporter=expanded"])
             self.assertEqual(calls[-1][1], app)

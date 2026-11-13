@@ -141,9 +141,24 @@ Apply `@SerDe` to a class, enum, enum variant, or field.
 | `using` | Uses a `SerDeCodec` for the field. |
 
 > [!IMPORTANT]
-> Fields skipped during deserialization must have a `defaultValue` so Dust can
-> still call the model constructor. In strict-key mode, skipped input keys are
-> rejected rather than silently ignored.
+> Non-nullable fields skipped during deserialization must have a valid
+> `defaultValue`. Nullable skipped fields can omit it: dust preserves optional
+> constructor defaults and field initializers, otherwise uses null. An explicit
+> `defaultValue` (including null) takes precedence over constructor defaults.
+> In strict-key mode, skipped input keys are rejected rather than silently ignored.
+
+```dart
+@SerDe(skip: true)
+final String? localCache;
+
+@SerDe(skipDeserializing: true)
+final String? lastRequest;
+```
+
+Neither nullable field needs `defaultValue: null` or a lint ignore. These rules
+also apply to primary constructor fields. Ordinary decoded fields still need
+`@SerDe(defaultValue: ...)` to default a missing JSON key; a constructor default
+alone does not change missing-key decoding. See the [verified example](../../fixtures/serde_json_app/lib/src/skipped_nullable.dart).
 
 ## Rename Strategies
 

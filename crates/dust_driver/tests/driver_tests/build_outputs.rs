@@ -12,3 +12,6 @@ mod diagnostics;
 
 #[path = "build_outputs/serde.rs"]
 mod serde;
+
+#[path = "build_outputs/serde_nullable_skip.rs"]
+mod serde_nullable_skip;

@@ -108,8 +108,10 @@ fn validate_library_inner(library: &DartFileIr, context: JsonModelContext<'_>) -
 
         for field in &class.fields {
             if let Some(serde) = &field.serde {
-                // Ensure default values are provided for skipped fields.
-                if serde.skip_deserializing && serde.default_value_source.is_none() {
+                if serde.skip_deserializing
+                    && serde.default_value_source.is_none()
+                    && !field.ty.is_nullable()
+                {
                     diagnostics.push(Diagnostic::error(format!(
                         "field `{}` on class `{}` uses `skipDeserializing` without a `defaultValue`",
                         field.name, class.name
