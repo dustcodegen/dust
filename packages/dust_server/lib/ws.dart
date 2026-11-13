@@ -15,7 +15,9 @@
 /// Everything here is also exported from `package:dust_server/server.dart`.
 library;
 
+export 'package:dust_dart/ws.dart' show WebSocketConnection;
 export 'package:web_socket_channel/web_socket_channel.dart'
     show WebSocketChannel;
 
+export 'src/annotations/websocket.dart';
 export 'src/ws/ws.dart';

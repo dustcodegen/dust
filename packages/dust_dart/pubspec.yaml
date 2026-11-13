@@ -19,6 +19,7 @@ dependencies:
   collection: ^1.19.1
   dio: ^5.9.2
   meta: ^1.16.0
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   coverage: ^1.11.0

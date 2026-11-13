@@ -30,6 +30,7 @@ fn endpoint_request_modes_and_function_spans_are_derived_from_facts() {
         };
         let handler = HandlerPlan {
             callable: Callable::Function(&function),
+            websocket: None,
             method: "POST",
             path: "/upload".to_owned(),
             status: 200,

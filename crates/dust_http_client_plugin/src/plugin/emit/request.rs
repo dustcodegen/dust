@@ -1,7 +1,7 @@
 use dust_dart_emit::render_template;
 use serde::Serialize;
 
-use crate::plugin::emit::path::{PathSegment, path_segments};
+use crate::plugin::emit::path::{PathSegment, path_segments_from};
 use crate::plugin::emit::types::{render_body_value, render_serde_body_value};
 use crate::plugin::model::{EndpointParam, EndpointSpec, RequestMode};
 use crate::plugin::util::escape_single_quoted;
@@ -64,7 +64,12 @@ fn render_standard_data(value: String) -> String {
 
 /// Renders the generated Dart expression for an endpoint path.
 pub(super) fn render_path_expression(endpoint: &EndpointSpec<'_>) -> String {
-    let pieces = path_segments(endpoint)
+    render_bound_path_expression(&endpoint.path, &endpoint.params)
+}
+
+/// Renders an encoded path without requiring an HTTP response contract.
+pub(super) fn render_bound_path_expression(path: &str, params: &[EndpointParam<'_>]) -> String {
+    let pieces = path_segments_from(path, params)
         .into_iter()
         .map(|segment| match segment {
             PathSegment::Literal(value) => format!("'{}'", escape_single_quoted(value)),

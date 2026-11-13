@@ -8,6 +8,8 @@ use crate::plan::{Callable, ExtractionWrapper, HandlerPlan, ParamPlan, RouteMeta
 
 mod collection;
 mod edges;
+/// Directional object-codec capability contracts for typed sessions.
+mod ws;
 
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(9), TextRange::new(0_u32, 1_u32))
@@ -101,6 +103,7 @@ fn plan<'a>(function: &'a FunctionIr, body: Option<&'a MethodParamIr>) -> Server
         controllers: Vec::new(),
         functions: vec![HandlerPlan {
             callable: Callable::Function(function),
+            websocket: None,
             method: "POST",
             path: "/".to_owned(),
             status: 200,

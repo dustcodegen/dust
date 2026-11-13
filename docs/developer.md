@@ -68,6 +68,13 @@ Dust prepares each root's parser facts and output plan from its discovery read,
 then loads imported namespaces and verifies generated output ownership before
 checking library caches. Prepared facts retain exact input bytes and parser options;
 canonical loading rereads the source before reusing them.
+Root preparation starts larger snapshots first while retaining the original
+merge order. Each parser worker can reuse a bounded set of small native trees
+through bounded edits to changed text. Facts, source labels, language gates and
+namespace projections are extracted from the current input; syntax errors use a
+fresh parse.
+Root selection and ownership validation assign metadata work as workers become
+available, then merge by the original root order and source paths.
 Imports needed by constant and transparent typedef aliases are loaded when
 annotation lookup follows those aliases. Unused aliases do not expand their
 implementation imports. Output ownership waits for pending alias imports.

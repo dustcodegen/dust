@@ -155,3 +155,25 @@ fn equal_paths_keep_distinct_uri_facts_and_language_options() {
             .is_none()
     );
 }
+
+#[test]
+fn root_preparation_orders_existing_snapshot_sizes_with_stable_ties_and_missing_bytes() {
+    let (root, index, first, mut snapshots) = fixture("medium");
+    let mut roots = vec![first];
+    for (name, text) in [
+        ("large", Some("largest snapshot")),
+        ("equal", Some("medium")),
+        ("empty", Some("")),
+        ("missing", None),
+    ] {
+        let path = root.path().join(format!("lib/{name}.dart"));
+        if let Some(text) = text {
+            snapshots.insert(path.clone(), Arc::from(text));
+        }
+        roots.push(index.file(&path).unwrap());
+    }
+    let policy = ParsePolicy::new(&roots, &[], &snapshots);
+    assert_eq!(root_order(&roots, &policy), [1, 0, 2, 3, 4]);
+    assert_eq!(snapshots[&roots[0].path].as_ref(), "medium");
+    assert!(!snapshots.contains_key(&roots[4].path));
+}

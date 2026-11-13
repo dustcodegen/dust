@@ -146,7 +146,13 @@ impl<'a> Loader<'a> {
         ahead: Option<&mut ParseAhead>,
     ) -> Result<Unit, String> {
         let owner = self.generated.get(&source.uri).cloned();
-        let input = SourceInput::read(&source, owner, self.potential);
+        let snapshot = self.parse_policy.preloaded_input(&source);
+        let input = SourceInput::read_with_snapshot(
+            &source,
+            owner,
+            self.potential,
+            snapshot.as_ref().map(|input| &input.text),
+        );
         let cached = self.prepared_roots.contains(&source.uri);
         let prepared = if cached {
             self.prepared_roots.take(&source, input.as_ref().ok(), id)

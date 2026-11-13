@@ -32,6 +32,7 @@ const PARSER_FINGERPRINT_ROOTS: &[&str] = &[
 
 /// Source roots that can affect generated Dart output.
 const CODEGEN_FINGERPRINT_ROOTS: &[&str] = &[
+    "Cargo.lock",
     "crates/dust_dart_emit/src",
     "crates/dust_dart_syntax/src",
     "crates/dust_db_plugin/src",

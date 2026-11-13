@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Unreleased typed JSON-object WebSockets for planned 0.4.0 through explicit
+  `package:dust_dart/ws.dart`: directional codecs, readiness-aware send,
+  ordered single-subscription messages, close metadata and injectable native
+  or browser connectors. Browser connectors reject explicit handshake headers.
+  The main barrel remains unchanged; use matching local CLI/runtime builds.
 - `JsonHelper.decodeWithCodecResult`, returning typed JSON input and custom
   codec failures while keeping `decodeWithCodec` as the throwing adapter.
 

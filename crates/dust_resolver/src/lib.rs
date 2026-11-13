@@ -45,7 +45,7 @@ pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
 pub use function_formals::lower_parameter_type_ir;
 pub use namespace::{
     NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope,
-    PreparedNamespaceLibrary,
+    PreparedNamespaceLibrary, TypeDeclarationOrigin,
 };
 pub use primary_part::PrimaryPart;
 pub use resolve::{

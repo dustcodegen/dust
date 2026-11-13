@@ -1,4 +1,5 @@
 use std::{
+    cmp::Reverse,
     collections::BTreeMap,
     path::PathBuf,
     sync::{
@@ -80,14 +81,15 @@ pub(in crate::namespace_sources) fn prepare_roots<T>(
         facts: BTreeMap::new(),
     };
     let policy = &prepared.policy;
+    let preparation_order = root_order(roots, policy);
     let next = AtomicUsize::new(0);
     let prepare = || {
         let mut facts = Vec::new();
         loop {
-            let order = next.fetch_add(1, Relaxed);
-            let Some(source) = roots.get(order) else {
+            let Some(&order) = preparation_order.get(next.fetch_add(1, Relaxed)) else {
                 return facts;
             };
+            let source = &roots[order];
             if let Some(input) = policy.preloaded_input(source) {
                 facts.push((
                     order,
@@ -123,6 +125,22 @@ pub(in crate::namespace_sources) fn prepare_roots<T>(
         .map(|(_, uri, facts)| (uri, facts))
         .collect();
     (planned, prepared)
+}
+
+/// Larger snapshots start first while equal sizes retain their original root order.
+fn root_order(roots: &[Source], policy: &ParsePolicy) -> Vec<usize> {
+    let mut order = (0..roots.len()).collect::<Vec<_>>();
+    order.sort_by_cached_key(|&index| {
+        (
+            Reverse(
+                policy
+                    .preloaded_input(&roots[index])
+                    .map_or(0, |input| input.text.len()),
+            ),
+            index,
+        )
+    });
+    order
 }
 
 /// Root caches preserve canonical source validation and full URI identity.

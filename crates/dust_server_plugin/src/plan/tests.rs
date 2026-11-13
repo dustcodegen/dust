@@ -11,6 +11,8 @@ use super::*;
 
 mod routes;
 mod symbols;
+/// Typed connection, handshake, and route-collision contracts.
+mod ws;
 
 fn span() -> SpanIr {
     SpanIr::new(FileId::new(5), TextRange::new(0_u32, 1_u32))

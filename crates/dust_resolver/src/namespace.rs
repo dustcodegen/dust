@@ -24,8 +24,11 @@ mod model;
 mod owner;
 /// Owning normalization can precede ordered graph insertion.
 mod prepared;
+/// Concrete type identities independent of annotation ownership.
+mod type_origin;
 
 pub use prepared::PreparedNamespaceLibrary;
+pub use type_origin::TypeDeclarationOrigin;
 
 use agreement::agree;
 use model::*;

@@ -1,0 +1,16 @@
+/// HTTP and typed WebSocket client generated from Dust server routes.
+final class {{ class_name }} {
+  /// Creates a client with optional base URL and WebSocket connector overrides.
+  {{ class_name }}(
+    this._dio, {
+    String? baseUrl,
+    {{ runtime_prefix }}.WebSocketConnector? webSocketConnector,
+  }) : _baseUrl = baseUrl,
+       _webSocketConnector = webSocketConnector;
+
+  final Dio _dio;
+  final String? _baseUrl;
+  final {{ runtime_prefix }}.WebSocketConnector? _webSocketConnector;
+
+{{ methods }}
+}

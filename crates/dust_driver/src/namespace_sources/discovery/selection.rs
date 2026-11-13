@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
 /// Select roots independently and merge them in the original BTreeMap order.
 pub(super) fn libraries(
@@ -8,30 +9,34 @@ pub(super) fn libraries(
     catalog: &SymbolCatalog,
     include_unannotated: bool,
 ) -> Vec<SourceLibrary> {
-    let groups = crate::build::round_robin_groups(
-        sources.roots.iter().enumerate(),
-        crate::build::available_worker_count(sources.roots.len(), None),
-    );
+    let roots = sources.roots.iter().collect::<Vec<_>>();
+    let workers = crate::build::available_worker_count(roots.len(), None);
+    let next = AtomicUsize::new(0);
     let mut selected = std::thread::scope(|scope| {
-        let handles = groups
-            .into_iter()
-            .map(|group| {
+        let handles = (0..workers)
+            .map(|_| {
+                let roots = &roots;
+                let next = &next;
                 scope.spawn(move || {
-                    group
-                        .into_iter()
-                        .filter_map(|(index, (path, uri))| {
-                            library(
-                                sources,
-                                path,
-                                uri,
-                                aware,
-                                primary_suffix,
-                                catalog,
-                                include_unannotated,
-                            )
-                            .map(|library| (index, library))
-                        })
-                        .collect::<Vec<_>>()
+                    let mut selected = Vec::new();
+                    loop {
+                        let index = next.fetch_add(1, Relaxed);
+                        let Some(&(path, uri)) = roots.get(index) else {
+                            break;
+                        };
+                        if let Some(library) = library(
+                            sources,
+                            path,
+                            uri,
+                            aware,
+                            primary_suffix,
+                            catalog,
+                            include_unannotated,
+                        ) {
+                            selected.push((index, library));
+                        }
+                    }
+                    selected
                 })
             })
             .collect::<Vec<_>>();

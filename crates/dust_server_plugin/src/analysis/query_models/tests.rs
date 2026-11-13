@@ -93,6 +93,7 @@ fn plan<'a>(function: &'a FunctionIr, params: Vec<ParamPlan<'a>>) -> ServerPlan<
         controllers: Vec::new(),
         functions: vec![HandlerPlan {
             callable: Callable::Function(function),
+            websocket: None,
             method: "GET",
             path: "/search".to_owned(),
             status: 200,

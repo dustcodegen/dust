@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Typed WebSockets**: add unreleased `@WS` server routes and derived typed
+  client methods for planned 0.4.0, using explicit JSON-object Serde contracts,
+  pre-upgrade extraction, optional connectors and owned connection lifecycles.
+  Existing HTTP-only client output and handwritten WebSocket sessions remain
+  compatible. Requires matching local CLI/runtime builds; published 0.3.1 does
+  not include this feature.
 - **Functional Dart**: add typed custom-codec decoding results while preserving
   the existing throwing JSON helper as a compatibility adapter.
 
@@ -26,8 +32,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unchanged builds only after checking all recorded input and output contents.
   Reuse source-exact parser facts across codegen cache misses while rerunning
   analysis and emission.
-  Prepare larger discovered dependencies first while keeping canonical loading
+  Prepare larger roots and dependencies first while keeping canonical loading
   order, reuse namespace ownership lookups, and use hash maps for output claims.
+  Reuse bounded small native syntax trees across related inputs, extracting
+  current parser facts and diagnostics after every edit.
+  Balance metadata binding across available workers and avoid per-query lexical
+  walk allocations and unnecessary declaration scans.
+  Validate ownership without constructing annotation IR that callers discard.
+  Reuse discovery text storage only after matching a complete live source read.
 - **Dart parsing**: share structured syntax candidates between diagnostics and
   language-feature detection while preserving language-version checks.
 - **Build fingerprints**: hash each reachable source once per snapshot and
@@ -35,6 +47,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Dependency cache invalidation**: include the Rust dependency lockfile in
+  generation fingerprints so runtime updates cannot reuse stale output proofs.
 - **Dependency parsing**: project valid Dart 3.13 constructor defaults without
   changing diagnostics, and limit generic-argument lookup to the containing
   type range. Select file language versions through normalized package-root

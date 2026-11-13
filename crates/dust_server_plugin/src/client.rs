@@ -11,7 +11,7 @@ use std::{
 };
 
 use dust_diagnostics::Diagnostic;
-use dust_http_client_plugin::{GeneratedClient, generate_client_library};
+use dust_http_client_plugin::{GeneratedClient, generate_client_library_with_ws};
 use dust_ir::DartFileIr;
 use dust_plugin_api::{GENERATED_HEADER, WorkspaceAnalysis};
 
@@ -22,7 +22,7 @@ pub use output::is_client_output_claimed;
 
 use crate::{
     ServerClientDestination,
-    analysis::{PayloadCapabilityIndex, response_serde_types, route_facts},
+    analysis::{PayloadCapabilityIndex, response_serde_types, route_facts, ws_facts},
     plan::{HandlerPlan, ServerPlan},
 };
 
@@ -42,15 +42,28 @@ pub(crate) fn generate_server_client(
         .into_iter()
         .filter(|fact| accepts_tags(destination, &fact.tags))
         .collect::<Vec<_>>();
-    if facts.is_empty() {
+    let socket_facts = ws_facts(analysis, &file.source_path)
+        .map_err(|error| vec![error])?
+        .into_iter()
+        .filter(|fact| accepts_tags(destination, &fact.route.tags))
+        .collect::<Vec<_>>();
+    if facts.is_empty() && socket_facts.is_empty() {
         return Ok(Vec::new());
     }
     let mut diagnostics = Vec::new();
-    let mut groups = BTreeMap::<Option<String>, Vec<_>>::new();
+    let mut groups = BTreeMap::<Option<String>, (Vec<_>, Vec<_>)>::new();
     for fact in &facts {
         groups
             .entry(fact.controller.clone())
             .or_default()
+            .0
+            .push(fact);
+    }
+    for fact in &socket_facts {
+        groups
+            .entry(fact.route.controller.clone())
+            .or_default()
+            .1
             .push(fact);
     }
     let main_output = main_output_path(file, destination)?;
@@ -63,7 +76,9 @@ pub(crate) fn generate_server_client(
     )?;
     let mut outputs = Vec::new();
     let mut exports = Vec::new();
-    for (group, (class_name, output_path)) in groups.into_values().zip(group_outputs) {
+    for ((group, socket_group), (class_name, output_path)) in
+        groups.into_values().zip(group_outputs)
+    {
         let mut names = BTreeSet::new();
         let mut endpoints = Vec::new();
         for fact in group {
@@ -99,12 +114,59 @@ pub(crate) fn generate_server_client(
                 Err(error) => diagnostics.push(error),
             }
         }
-        let imports = types::required_imports(file, &endpoints, &mut diagnostics);
-        let source = generate_client_library(&GeneratedClient {
-            class_name,
-            imports,
-            endpoints,
-        })
+        let mut sockets = Vec::new();
+        if !socket_group.is_empty() {
+            let prefix = types::runtime_prefix(
+                file,
+                &class_name,
+                names.iter().map(String::as_str).chain(
+                    socket_group
+                        .iter()
+                        .map(|fact| fact.route.operation_id.as_str()),
+                ),
+            );
+            for fact in socket_group {
+                if !names.insert(fact.route.operation_id.clone()) {
+                    diagnostics.push(Diagnostic::error(format!(
+                        "generated client operation `{}` is declared more than once in one route group",
+                        fact.route.operation_id
+                    )));
+                    continue;
+                }
+                let Some(handler) =
+                    find_handler(plan, fact.route.controller.as_deref(), &fact.route.callable)
+                else {
+                    diagnostics.push(Diagnostic::error(format!(
+                        "route fact `{}` no longer matches a server handler",
+                        fact.route.operation_id
+                    )));
+                    continue;
+                };
+                match endpoint::build_ws_endpoint(fact, handler, &prefix) {
+                    Ok(endpoint) => sockets.push(endpoint),
+                    Err(error) => diagnostics.push(error),
+                }
+            }
+        }
+        let imports = if sockets.is_empty() {
+            types::required_imports(file, &endpoints, &mut diagnostics)
+        } else {
+            types::required_imports_with_ws(
+                file,
+                &class_name,
+                &endpoints,
+                &sockets,
+                &mut diagnostics,
+            )
+        };
+        let source = generate_client_library_with_ws(
+            &GeneratedClient {
+                class_name,
+                imports,
+                endpoints,
+            },
+            &sockets,
+        )
         .map_err(|error| vec![error])?;
         let file_name = output_path.file_name().unwrap().to_str().unwrap();
         exports.push(format!("export '{file_name}';"));

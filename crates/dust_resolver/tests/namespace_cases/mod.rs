@@ -12,6 +12,7 @@ mod local_requests;
 mod lookup_memo;
 mod mixin_applications;
 mod neutral_exports;
+mod ownership_validation;
 mod parts;
 mod roles;
 mod scoped;

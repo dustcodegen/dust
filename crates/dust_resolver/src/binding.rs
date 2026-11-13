@@ -75,6 +75,16 @@ impl<'a> BindingContext<'a> {
         ir
     }
 
+    /// Validates ownership and nested derive traits without building unused annotation IR.
+    pub fn validate_annotation_ownership(
+        &self,
+        file_id: FileId,
+        annotation: &ParsedAnnotation,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        let _ = self.application(file_id, annotation, diagnostics);
+    }
+
     /// Uses the same trait/config parameter resolution as class methods.
     pub fn parameter(
         &self,

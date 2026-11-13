@@ -17,6 +17,10 @@ use self::params::*;
 mod body;
 use self::body::*;
 
+/// Typed WebSocket methods and optional connector wiring.
+mod websocket;
+pub(crate) use websocket::{render_ws_client_class, render_ws_endpoint_method};
+
 /// Template context for the generated HTTP client class.
 #[derive(Serialize)]
 struct ClientClassContext<'a> {

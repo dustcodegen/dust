@@ -8,3 +8,4 @@ export 'http_methods.dart';
 export 'parameters.dart';
 export 'routes.dart';
 export 'verb.dart';
+export 'websocket.dart';

@@ -119,6 +119,18 @@ pub(crate) fn collect_workspace_analysis(
                         ),
                     );
                     if let Some(lowered) = lowered.as_ref() {
+                        super::type_origins::collect(
+                            lowered,
+                            registry,
+                            || {
+                                namespaces.bindings(
+                                    &pending.library.source_path,
+                                    &pending.library.output_path,
+                                    catalog,
+                                )
+                            },
+                            &mut library_analysis,
+                        );
                         registry.collect_workspace_analysis_ir(lowered, &mut library_analysis);
                     }
                     let analysis_snapshot = library_analysis.snapshot();
@@ -196,6 +208,18 @@ pub(crate) fn collect_remaining_workspace_analysis(
             lowering,
             namespaces.bindings(&library.source_path, &library.output_path, lowering.catalog),
         ) {
+            super::type_origins::collect(
+                &lowered,
+                lowering.registry,
+                || {
+                    namespaces.bindings(
+                        &library.source_path,
+                        &library.output_path,
+                        lowering.catalog,
+                    )
+                },
+                &mut analysis,
+            );
             lowering
                 .registry
                 .collect_workspace_analysis_ir(&lowered, &mut analysis);

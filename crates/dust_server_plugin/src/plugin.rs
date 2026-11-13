@@ -2,7 +2,7 @@ use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use dust_plugin_api::{
     AnnotationOrigin, AuxiliaryOutputContribution, DustPlugin, PluginContext, PluginContribution,
-    SymbolPlan, WorkspaceAnalysisBuilder,
+    SymbolPlan, TypeOriginRequest, WorkspaceAnalysisBuilder,
 };
 use std::path::PathBuf;
 
@@ -14,73 +14,16 @@ use crate::{
     },
     client::generate_server_client,
     emit::emit_server,
-    plan::plan_server,
+    plan::{plan_server, plan_server_with_type_origins},
 };
 
-/// Server configuration symbols owned by this plugin.
-const CLAIMED_CONFIGS: &[&str] = &[
-    "dust_server::Controller",
-    "dust_server::Routes",
-    "dust_server::GET",
-    "dust_server::POST",
-    "dust_server::PUT",
-    "dust_server::PATCH",
-    "dust_server::DELETE",
-    "dust_server::HEAD",
-    "dust_server::OPTIONS",
-    "dust_server::Extract",
-    "dust_server::Path",
-    "dust_server::Query",
-    "dust_server::Queries",
-    "dust_server::RawQuery",
-    "dust_server::Header",
-    "dust_server::HeaderMap",
-    "dust_server::Body",
-    "dust_server::Field",
-    "dust_server::Part",
-    "dust_server::RawBody",
-    "dust_server::State",
-    "dust_server::Peer",
-    "dust_server::FormUrlEncoded",
-    "dust_server::MultiPart",
-];
+/// Annotation ownership and discovery registration.
+mod registration;
+/// Requests and canonical checks for typed socket declaration origins.
+mod type_origins;
 
-/// Surface names used by workspace discovery.
-const SUPPORTED_ANNOTATIONS: &[&str] = &[
-    "Controller",
-    "Routes",
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "HEAD",
-    "OPTIONS",
-    "Extract",
-    "Path",
-    "Query",
-    "Queries",
-    "RawQuery",
-    "Header",
-    "HeaderMap",
-    "Body",
-    "Field",
-    "Part",
-    "RawBody",
-    "State",
-    "Peer",
-    "FormUrlEncoded",
-    "MultiPart",
-];
-
-/// Declaring library for `Controller`.
-const CONTROLLER_LIBRARY: &str = "package:dust_server/src/annotations/controller.dart";
-/// Declaring library for `Routes`.
-const ROUTES_LIBRARY: &str = "package:dust_server/src/annotations/routes.dart";
-/// Declaring library for HTTP method annotations.
-const METHODS_LIBRARY: &str = "package:dust_server/src/annotations/http_methods.dart";
-/// Declaring library for parameter and body-mode annotations.
-const PARAMETERS_LIBRARY: &str = "package:dust_server/src/annotations/parameters.dart";
+use registration::{CLAIMED_CONFIGS, SUPPORTED_ANNOTATIONS};
+pub(crate) use type_origins::{CONNECTION_LIBRARY, CONNECTION_NAME, type_origin_request};
 
 /// Dust plugin for Dart HTTP servers.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -132,38 +75,7 @@ impl DustPlugin for ServerPlugin {
     }
 
     fn annotation_origins(&self) -> &'static [AnnotationOrigin] {
-        const {
-            &[
-                AnnotationOrigin::new("dust_server::Controller", CONTROLLER_LIBRARY, "Controller"),
-                AnnotationOrigin::new("dust_server::Routes", ROUTES_LIBRARY, "Routes"),
-                AnnotationOrigin::new("dust_server::GET", METHODS_LIBRARY, "GET"),
-                AnnotationOrigin::new("dust_server::POST", METHODS_LIBRARY, "POST"),
-                AnnotationOrigin::new("dust_server::PUT", METHODS_LIBRARY, "PUT"),
-                AnnotationOrigin::new("dust_server::PATCH", METHODS_LIBRARY, "PATCH"),
-                AnnotationOrigin::new("dust_server::DELETE", METHODS_LIBRARY, "DELETE"),
-                AnnotationOrigin::new("dust_server::HEAD", METHODS_LIBRARY, "HEAD"),
-                AnnotationOrigin::new("dust_server::OPTIONS", METHODS_LIBRARY, "OPTIONS"),
-                AnnotationOrigin::new("dust_server::Extract", PARAMETERS_LIBRARY, "Extract"),
-                AnnotationOrigin::new("dust_server::Path", PARAMETERS_LIBRARY, "Path"),
-                AnnotationOrigin::new("dust_server::Query", PARAMETERS_LIBRARY, "Query"),
-                AnnotationOrigin::new("dust_server::Queries", PARAMETERS_LIBRARY, "Queries"),
-                AnnotationOrigin::new("dust_server::RawQuery", PARAMETERS_LIBRARY, "RawQuery"),
-                AnnotationOrigin::new("dust_server::Header", PARAMETERS_LIBRARY, "Header"),
-                AnnotationOrigin::new("dust_server::HeaderMap", PARAMETERS_LIBRARY, "HeaderMap"),
-                AnnotationOrigin::new("dust_server::Body", PARAMETERS_LIBRARY, "Body"),
-                AnnotationOrigin::new("dust_server::Field", PARAMETERS_LIBRARY, "Field"),
-                AnnotationOrigin::new("dust_server::Part", PARAMETERS_LIBRARY, "Part"),
-                AnnotationOrigin::new("dust_server::RawBody", PARAMETERS_LIBRARY, "RawBody"),
-                AnnotationOrigin::new("dust_server::State", PARAMETERS_LIBRARY, "State"),
-                AnnotationOrigin::new("dust_server::Peer", PARAMETERS_LIBRARY, "Peer"),
-                AnnotationOrigin::new(
-                    "dust_server::FormUrlEncoded",
-                    PARAMETERS_LIBRARY,
-                    "FormUrlEncoded",
-                ),
-                AnnotationOrigin::new("dust_server::MultiPart", PARAMETERS_LIBRARY, "MultiPart"),
-            ]
-        }
+        registration::ORIGINS
     }
 
     fn partless_configs(&self) -> &'static [&'static str] {
@@ -172,6 +84,10 @@ impl DustPlugin for ServerPlugin {
 
     fn supported_annotations(&self) -> &'static [&'static str] {
         SUPPORTED_ANNOTATIONS
+    }
+
+    fn type_origin_requests(&self, file: &DartFileIr) -> Vec<TypeOriginRequest> {
+        type_origins::requests(file)
     }
 
     fn collect_workspace_analysis_ir(
@@ -196,7 +112,17 @@ impl DustPlugin for ServerPlugin {
     }
 
     fn validate_with_plan(&self, file: &DartFileIr, symbols: &SymbolPlan) -> Vec<Diagnostic> {
-        match plan_server(file) {
+        let analysis = symbols.workspace_analysis();
+        match plan_server_with_type_origins(file, &|param| {
+            type_origin_request(param).is_some_and(|request| {
+                analysis.has_type_origin(
+                    &file.source_path,
+                    &request,
+                    CONNECTION_LIBRARY,
+                    CONNECTION_NAME,
+                )
+            })
+        }) {
             Ok(Some(mut plan)) => {
                 let models =
                     match PayloadCapabilityIndex::from_analysis(symbols.workspace_analysis()) {
@@ -223,7 +149,17 @@ impl DustPlugin for ServerPlugin {
     }
 
     fn generate(&self, file: &DartFileIr, context: &PluginContext<'_>) -> Vec<PluginContribution> {
-        match plan_server(file) {
+        let analysis = context.symbol_plan.workspace_analysis();
+        match plan_server_with_type_origins(file, &|param| {
+            type_origin_request(param).is_some_and(|request| {
+                analysis.has_type_origin(
+                    &file.source_path,
+                    &request,
+                    CONNECTION_LIBRARY,
+                    CONNECTION_NAME,
+                )
+            })
+        }) {
             Ok(Some(mut plan)) => {
                 let models = match PayloadCapabilityIndex::from_analysis(
                     context.symbol_plan.workspace_analysis(),

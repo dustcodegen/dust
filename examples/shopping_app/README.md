@@ -67,6 +67,49 @@ flutter pub get
 flutter run
 ```
 
+## Isolated generated WebSocket example
+
+[`lib/generated_websocket_example.dart`](lib/generated_websocket_example.dart)
+uses the backend-derived `ChatClient` and shared models from the client-only
+`server_client_app` fixture. It has a separate entrypoint; shopping routes and
+support-chat behavior stay unchanged. The widget owns its message subscription
+and socket, including a connection that becomes ready after widget disposal.
+
+This is unreleased source for planned 0.4.0. Use the matching locally built CLI
+and runtime packages. Generate the shared models and server/client output from
+the repository root before running the example:
+
+```bash
+cargo run -q -p dust_cli -- build --root fixtures/server_client_app --fail-fast
+cargo run -q -p dust_cli -- build --root fixtures/server_client_server --fail-fast
+```
+
+Start the local authenticated server in a separate terminal from the repository
+root:
+
+```bash
+cd fixtures/server_client_server
+dart run bin/websocket_example.dart
+```
+
+Then run the Flutter example against `http://127.0.0.1:8080`:
+
+```bash
+cd examples/shopping_app
+flutter pub get
+flutter run -t lib/generated_websocket_example.dart --dart-define=CHAT_BASE_URL=http://127.0.0.1:8080
+```
+
+Select a native target. The fixture authenticates through an explicit native
+handshake header; browser connectors reject that header. A browser build is a
+compilation check, not proof that this authenticated example runs in a browser.
+The [loopback widget test](test/generated_websocket_example_test.dart) starts
+its own local peer and checks typed messages and both disposal cases:
+
+```bash
+flutter test test/generated_websocket_example_test.dart
+```
+
 ## Validate
 
 ```bash

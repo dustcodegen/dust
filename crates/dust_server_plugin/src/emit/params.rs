@@ -227,7 +227,8 @@ fn render_base_extractor(plan: &ParamPlan<'_>) -> (String, bool) {
         Extraction::Field(_)
         | Extraction::Part { .. }
         | Extraction::Request
-        | Extraction::RequestParts => unreachable!("handled before extractor rendering"),
+        | Extraction::RequestParts
+        | Extraction::WebSocket => unreachable!("handled before extractor rendering"),
     }
 }
 

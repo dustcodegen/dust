@@ -83,7 +83,7 @@ pub(crate) fn lower_library_with_bindings(
                 for parameter in &constructor.surface.params {
                     if let Some(formal) = &parameter.function_formal {
                         for annotation in formal.annotations() {
-                            let _ = bindings.annotation_ir(
+                            bindings.validate_annotation_ownership(
                                 class.span.file_id,
                                 annotation,
                                 &mut diagnostics,
@@ -91,7 +91,7 @@ pub(crate) fn lower_library_with_bindings(
                         }
                     }
                     for annotation in &parameter.annotations {
-                        let _ = bindings.annotation_ir(
+                        bindings.validate_annotation_ownership(
                             class.span.file_id,
                             annotation,
                             &mut diagnostics,

@@ -39,12 +39,21 @@ pub(super) fn validate_unique_routes(
         .chain(std::iter::once(functions))
     {
         let mut seen = BTreeSet::new();
+        let mut operations = BTreeSet::new();
+        let has_websocket = handlers.iter().any(|handler| handler.websocket.is_some());
         for handler in handlers {
             if !seen.insert((handler.method, handler.path.as_str())) {
                 diagnostics.push(error(
                     handler.callable.span(),
                     "duplicate server route",
                     "change the HTTP method or path",
+                ));
+            }
+            if has_websocket && !operations.insert(handler.metadata.operation_id.as_str()) {
+                diagnostics.push(error(
+                    handler.callable.span(),
+                    "duplicate server operation identifier in a WebSocket route group",
+                    "give HTTP and WebSocket handlers distinct operationId values",
                 ));
             }
         }
@@ -122,7 +131,7 @@ fn validate_handler_names(
 }
 
 /// Finds the source span for one handwritten top-level declaration.
-fn top_level_declaration_span(file: &DartFileIr, name: &str) -> Option<SpanIr> {
+pub(super) fn top_level_declaration_span(file: &DartFileIr, name: &str) -> Option<SpanIr> {
     top_level_declarations(file).find_map(|(candidate, span)| (candidate == name).then_some(span))
 }
 

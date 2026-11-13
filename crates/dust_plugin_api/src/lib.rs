@@ -16,6 +16,8 @@ mod plugin;
 mod registry;
 /// Generated symbol planning.
 mod symbols;
+/// Requests for canonical type declaration ownership.
+mod type_origin;
 
 pub use analysis::{
     LibraryAnalysisSnapshot, PACKAGE_FEATURE_FLUTTER, PACKAGE_FEATURES_ANALYSIS_KEY,
@@ -28,6 +30,7 @@ pub use mode::{MetadataOutput, PluginExecutionMode, ValidationAccess};
 pub use plugin::{DustPlugin, PluginContext};
 pub use registry::PluginRegistry;
 pub use symbols::{RequestedSymbol, SymbolPlan, short_symbol_name};
+pub use type_origin::TypeOriginRequest;
 
 /// The unified header prepended to all Dust-generated Dart files.
 pub const GENERATED_HEADER: &str = concat!(

@@ -128,17 +128,14 @@ pub(super) fn render_decode_expr_nonnull_with(
 
 /// Renders the public Dust deserializer instance for one response model.
 fn serde_deserializer(name: &str, args: &[TypeIr]) -> String {
-    let helper = match name.split_once('.') {
-        Some((prefix, name)) => format!("{prefix}.${name}Deserializer"),
-        None => format!("${name}Deserializer"),
-    };
-    let arguments = if args.is_empty() {
-        String::new()
-    } else {
-        let rendered = args.iter().map(render_type).collect::<Vec<_>>().join(", ");
-        format!("<{rendered}>")
-    };
-    format!("const {helper}{arguments}()")
+    format!(
+        "const {}",
+        dust_dart_emit::render_serde_codec_constructor(
+            name,
+            args,
+            dust_dart_emit::SerdeCodecDirection::Deserialize
+        )
+    )
 }
 
 /// Returns true when decoding should be moved to a generated isolate helper.

@@ -3,6 +3,9 @@ use dust_plugin_api::WorkspaceAnalysisBuilder;
 use dust_text::{FileId, TextRange};
 use serde_json::json;
 
+/// Typed WebSocket client generation and output-claim contracts.
+mod websocket;
+
 use super::output::{file_class_name, group_identity, snake_case};
 use super::*;
 use crate::{
@@ -62,6 +65,7 @@ fn function(name: &str) -> FunctionIr {
 fn handler<'a>(function: &'a FunctionIr, operation_id: &str) -> HandlerPlan<'a> {
     HandlerPlan {
         callable: Callable::Function(function),
+        websocket: None,
         method: "GET",
         path: "/".to_owned(),
         status: 200,

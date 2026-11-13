@@ -2,12 +2,14 @@
 mod const_value;
 /// Parameter extraction and unwrapping emission.
 mod params;
+/// Typed upgrade callbacks and message codec adaptation.
+mod ws;
 
 use dust_dart_emit::dart_string_literal;
 use dust_ir::{ParamKind, TypeIr};
 use dust_plugin_api::PluginContribution;
 
-use crate::plan::{HandlerPlan, RouteMetadataPlan, ServerPlan, generated_handler_name};
+use crate::plan::{Extraction, HandlerPlan, RouteMetadataPlan, ServerPlan, generated_handler_name};
 use const_value::render_const;
 use params::ParamEmitter;
 #[cfg(test)]
@@ -149,7 +151,9 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
     let mut lines = vec![format!("Future<Response> {name}(Request request) async {{")];
     let mut param_emitter = ParamEmitter::default();
     for (index, param) in handler.params.iter().enumerate() {
-        param_emitter.push(&mut lines, index, param);
+        if !matches!(param.extraction, Extraction::WebSocket) {
+            param_emitter.push(&mut lines, index, param);
+        }
     }
     let arguments = handler
         .params
@@ -163,6 +167,13 @@ fn emit_handler(handler: &HandlerPlan<'_>, controller: Option<&str>) -> String {
     let target = controller
         .map(|name| format!("(this as {name})."))
         .unwrap_or_default();
+    if let Some(websocket) = &handler.websocket {
+        ws::push_upgrade(
+            &mut lines, handler, websocket, &target, &arguments, controller,
+        );
+        lines.push("}".to_owned());
+        return lines.join("\n");
+    }
     if returns_void(handler.callable.return_type()) {
         lines.push("  return guard(() async {".to_owned());
         push_call(

@@ -1,5 +1,5 @@
 use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, EnumIr, TypeIr};
+use dust_ir::{DartFileIr, MethodParamIr, TypeIr};
 
 use crate::plan::{
     body::{parse_body_media, validate_body_order},
@@ -10,6 +10,7 @@ use crate::plan::{
         error, parse_middleware, parse_route_metadata, parse_status, path_keys, required_string,
         validate_named, validate_route_path,
     },
+    websocket::{is_websocket, parse_websocket, socket_param, validate_handshake},
 };
 
 /// Validates shared handler arguments and builds its route plan.
@@ -17,8 +18,8 @@ pub(super) fn parse_handler<'a>(
     callable: Callable<'a>,
     verbs: Vec<(Args<'a>, &'static str)>,
     inherited_tags: &[String],
-    classes: &[ClassIr],
-    enums: &[EnumIr],
+    file: &'a DartFileIr,
+    has_type_origin: &dyn Fn(&MethodParamIr) -> bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     if verbs.len() != 1 {
@@ -30,8 +31,20 @@ pub(super) fn parse_handler<'a>(
         return None;
     }
     let (args, method) = &verbs[0];
-    validate_named(
-        args,
+    let is_ws = is_websocket(args);
+    let allowed = if is_ws {
+        &[
+            "protocols",
+            "allowedOrigins",
+            "summary",
+            "description",
+            "tags",
+            "middleware",
+            "operationId",
+            "deprecated",
+            "hidden",
+        ][..]
+    } else {
         &[
             "status",
             "summary",
@@ -41,33 +54,52 @@ pub(super) fn parse_handler<'a>(
             "operationId",
             "deprecated",
             "hidden",
-        ],
-        diagnostics,
-    );
+        ][..]
+    };
+    validate_named(args, allowed, diagnostics);
     let path = required_string(args, 0, "verb path", diagnostics)?;
     validate_route_path(&path, args.span(), diagnostics);
-    let status =
-        parse_status(args, diagnostics).unwrap_or_else(|| default_status(callable.return_type()));
+    let status = if is_ws {
+        101
+    } else {
+        parse_status(args, diagnostics).unwrap_or_else(|| default_status(callable.return_type()))
+    };
     let middleware = parse_middleware(args, diagnostics);
     let metadata = parse_route_metadata(args, inherited_tags, callable.name());
     let placeholders = path_keys(&path);
     let body_media = parse_body_media(callable, diagnostics);
+    let websocket = if is_ws {
+        parse_websocket(file, callable, args, has_type_origin, diagnostics)
+    } else {
+        None
+    };
     let params = callable
         .params()
         .iter()
-        .filter_map(|param| {
+        .enumerate()
+        .filter_map(|(index, param)| {
+            if websocket
+                .as_ref()
+                .is_some_and(|ws| ws.socket_index == index)
+            {
+                return Some(socket_param(param));
+            }
             parse_param(
                 param,
                 &placeholders,
                 body_media,
-                classes,
-                enums,
+                &file.classes,
+                &file.enums,
                 diagnostics,
             )
         })
         .collect::<Vec<_>>();
-    validate_body_order(callable, body_media, &params, diagnostics);
-    if unsupported_return(callable.return_type()) {
+    if is_ws {
+        validate_handshake(callable, body_media, &params, diagnostics);
+    } else {
+        validate_body_order(callable, body_media, &params, diagnostics);
+    }
+    if !is_ws && unsupported_return(callable.return_type()) {
         diagnostics.push(error(
             callable.span(),
             "handler return type is not supported by generated server handlers",
@@ -82,6 +114,7 @@ pub(super) fn parse_handler<'a>(
         params,
         middleware,
         metadata,
+        websocket,
     })
 }
 

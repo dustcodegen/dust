@@ -1,5 +1,7 @@
 /// Handler body-media and ordering validation.
 mod body;
+/// Controller and top-level group metadata.
+mod group;
 /// Shared handler validation and planning.
 mod handler;
 /// Dart identifier validation for generated declarations.
@@ -14,13 +16,15 @@ mod param;
 mod types;
 /// Annotation-value and path validation.
 mod values;
+/// Typed WebSocket handshake and message contracts.
+mod websocket;
 
 /// End-to-end planning tests for private validation branches.
 #[cfg(test)]
 mod tests;
 
 use dust_diagnostics::Diagnostic;
-use dust_ir::{ClassIr, DartFileIr, EnumIr, FunctionIr, MethodIr};
+use dust_ir::{DartFileIr, FunctionIr, MethodIr, MethodParamIr};
 
 pub(crate) use model::{
     BodyFormat, Callable, ControllerPlan, Extraction, ExtractionWrapper, HandlerPlan, ParamPlan,
@@ -28,22 +32,29 @@ pub(crate) use model::{
     ServerPlan,
 };
 
+use group::parse_group;
 use handler::parse_handler;
-use identifier::is_emittable_identifier;
+pub(crate) use identifier::is_emittable_identifier;
 pub(crate) use library::generated_handler_name;
 use library::{
     default_routes_name, first_server_span, is_server_config, validate_generated_names,
     validate_part, validate_unique_routes, verb_config,
 };
-use model::{Args, GroupPlan, VERBS};
+use model::{Args, VERBS};
 pub(crate) use types::query_model_plan_for_class;
-use values::{
-    error, parse_middleware, parse_tags, required_string, string_value, validate_named,
-    validate_route_path,
-};
+use values::error;
+pub(crate) use websocket::WebSocketPlan;
 
 /// Builds the validated server plan for one Dart library.
 pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, Vec<Diagnostic>> {
+    plan_server_with_type_origins(file, &|_| false)
+}
+
+/// Builds typed upgrades only when their concrete declaration origin is proven.
+pub(crate) fn plan_server_with_type_origins<'a>(
+    file: &'a DartFileIr,
+    has_type_origin: &dyn Fn(&MethodParamIr) -> bool,
+) -> Result<Option<ServerPlan<'a>>, Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut controllers = Vec::new();
     let mut routes = None;
@@ -95,13 +106,7 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
             .methods
             .iter()
             .filter_map(|method| {
-                parse_method(
-                    method,
-                    &group.tags,
-                    &file.classes,
-                    &file.enums,
-                    &mut diagnostics,
-                )
+                parse_method(method, &group.tags, file, has_type_origin, &mut diagnostics)
             })
             .collect();
         controllers.push(ControllerPlan {
@@ -120,8 +125,8 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
             parse_function(
                 function,
                 &function_group.tags,
-                &file.classes,
-                &file.enums,
+                file,
+                has_type_origin,
                 &mut diagnostics,
             )
         })
@@ -179,8 +184,8 @@ pub(crate) fn plan_server(file: &DartFileIr) -> Result<Option<ServerPlan<'_>>, V
 fn parse_method<'a>(
     method: &'a MethodIr,
     inherited_tags: &[String],
-    classes: &[ClassIr],
-    enums: &[EnumIr],
+    file: &'a DartFileIr,
+    has_type_origin: &dyn Fn(&MethodParamIr) -> bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = method
@@ -217,8 +222,8 @@ fn parse_method<'a>(
             .map(|(args, verb)| (Args::Config(args), verb))
             .collect(),
         inherited_tags,
-        classes,
-        enums,
+        file,
+        has_type_origin,
         diagnostics,
     )
 }
@@ -227,8 +232,8 @@ fn parse_method<'a>(
 fn parse_function<'a>(
     function: &'a FunctionIr,
     inherited_tags: &[String],
-    classes: &[ClassIr],
-    enums: &[EnumIr],
+    file: &'a DartFileIr,
+    has_type_origin: &dyn Fn(&MethodParamIr) -> bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<HandlerPlan<'a>> {
     let verbs = function
@@ -266,29 +271,8 @@ fn parse_function<'a>(
         Callable::Function(function),
         verbs,
         inherited_tags,
-        classes,
-        enums,
+        file,
+        has_type_origin,
         diagnostics,
     )
-}
-
-/// Reads a controller or top-level route-group annotation.
-fn parse_group(args: Args<'_>, name: &str, diagnostics: &mut Vec<Diagnostic>) -> Option<GroupPlan> {
-    let allowed = if name == "Routes" {
-        &["name", "tags", "middleware"][..]
-    } else {
-        &["tags", "middleware"][..]
-    };
-    validate_named(&args, allowed, diagnostics);
-    let path = required_string(&args, 0, "route prefix", diagnostics)?;
-    validate_route_path(&path, args.span(), diagnostics);
-    let configured_name = args.named().get("name").and_then(string_value);
-    let middleware = parse_middleware(&args, diagnostics);
-    let tags = parse_tags(&args);
-    Some(GroupPlan {
-        prefix: path,
-        configured_name,
-        middleware,
-        tags,
-    })
 }

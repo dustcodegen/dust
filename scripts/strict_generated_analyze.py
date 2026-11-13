@@ -138,6 +138,11 @@ def write_strict_root_analysis_options(temp_root: Path) -> None:
 def link_runtime_packages(repo: Path, temp_root: Path) -> None:
     packages = temp_root / "packages"
     packages.symlink_to(repo / "packages", target_is_directory=True)
+    # The Flutter WebSocket example consumes this client-only fixture.
+    client = temp_root / "fixtures/server_client_app"
+    if not client.exists():
+        client.parent.mkdir(parents=True, exist_ok=True)
+        client.symlink_to(repo / "fixtures/server_client_app", target_is_directory=True)
 
 
 def strip_type_lint_ignores(package: Path) -> tuple[int, int]:

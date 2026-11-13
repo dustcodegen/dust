@@ -37,6 +37,11 @@ Use the [handwritten runtime examples](../../packages/dust_server/example/README
 when you do not want code generation. Both styles use the same `Router`,
 extractors, responses, and serving runtime.
 
+For generated typed WebSocket clients, follow the
+[two-terminal WebSocket walkthrough](../../docs/dust_server/websockets.md#run-the-generated-example).
+It includes shared Serde models, an authenticated server, a runnable Dart client,
+expected output, and the matching Flutter UI and loopback tests.
+
 Runnable coverage includes route modules, controllers, all seven supported
 HTTP verbs, route metadata and middleware, built-in parameter/body
 extraction, required/optional/fallible extraction, validation, and standard
