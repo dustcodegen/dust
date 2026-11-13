@@ -46,6 +46,9 @@ fn dependency_defaults_preserve_exact_generation_and_warm_checks() {
         DEFAULT,
         "Kind choose([Kind value = .ready]) => value;",
         "Kind choose({List<Kind> values = const [.ready]}) => values.first;",
+        "class C { C([Kind value = .ready]); }",
+        "class C { const C({this.value = .ready}); final Kind value; }",
+        "class C { factory C([Kind value = .ready]) = D; }",
     ] {
         bridge(root, "3.13", declaration);
         let rebuilt = build(root);
@@ -72,7 +75,11 @@ fn rejected_dependency_defaults_and_root_defaults_preserve_previous_success() {
     let cache = fs::read(&cache_path).unwrap();
     for (version, declaration) in [
         ("3.6", DEFAULT),
-        ("3.13", "class C { C([Kind value = .ready]); }"),
+        ("3.6", "class C { C([Kind value = .ready]); }"),
+        (
+            "3.13",
+            "class C { C({@Marker(.ready) Kind value = Kind.ready}); }",
+        ),
         (
             "3.13",
             "void choose([@Marker(.ready) Kind value = Kind.ready]) {}",
@@ -92,29 +99,36 @@ fn rejected_dependency_defaults_and_root_defaults_preserve_previous_success() {
     }
     bridge(root, "3.13", DEFAULT);
     assert_eq!(build(root).cache.unwrap().hits, 1);
-    write_file(
-        &model,
-        &format!(
-            "// @dart=3.13\n{initial}\nenum LocalKind {{ ready }}\nvoid choose([LocalKind value = .ready]) {{}}"
-        ),
-    );
-    for result in [build(root), check(root)] {
-        assert!(result.has_errors());
-        assert_eq!(result.diagnostics.len(), 1);
-        assert_eq!(
-            result.diagnostics[0].message,
-            "Dust does not support dot shorthands yet"
+    for declaration in [
+        "void choose([LocalKind value = .ready]) {}",
+        "class C { const C({this.value = .ready}); final LocalKind value; }",
+    ] {
+        write_file(
+            &model,
+            &format!("// @dart=3.13\n{initial}\nenum LocalKind {{ ready }}\n{declaration}"),
         );
-        assert_eq!(fs::read(&output_path).unwrap(), output);
-        assert_eq!(fs::read(&cache_path).unwrap(), cache);
+        for result in [build(root), check(root)] {
+            assert!(result.has_errors());
+            assert_eq!(result.diagnostics.len(), 1);
+            assert_eq!(
+                result.diagnostics[0].message,
+                "Dust does not support dot shorthands yet"
+            );
+            assert_eq!(fs::read(&output_path).unwrap(), output);
+            assert_eq!(fs::read(&cache_path).unwrap(), cache);
+        }
     }
 }
 
 #[test]
-fn watch_reloads_defaults_and_preserves_cache_when_a_constructor_default_is_rejected() {
+fn watch_reloads_defaults_and_preserves_cache_when_parameter_metadata_is_rejected() {
     for (changed_source, rejects) in [
         ("Kind choose([Kind value = .ready]) => value;", false),
-        ("class C { C([Kind value = .ready]); }", true),
+        ("class C { C([Kind value = .ready]); }", false),
+        (
+            "class C { C({@Marker(.ready) Kind value = Kind.ready}); }",
+            true,
+        ),
     ] {
         let workspace = workspace();
         let root = workspace.path();

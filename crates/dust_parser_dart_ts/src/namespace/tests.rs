@@ -221,3 +221,51 @@ fn namespace_constants_keep_exact_provenance_without_constructor_arguments() {
     assert_eq!(projected.diagnostics, full.diagnostics);
     assert_eq!(projected.namespace_diagnostics, full.namespace_diagnostics);
 }
+
+#[test]
+fn constructor_defaults_retain_generation_errors_and_exact_parameter_facts() {
+    let source = "enum Clip { hardEdge, antiAlias } enum Overlap { followEdge }
+      class Border { static const zero = Border(); const Border(); }
+      class RectClip {
+        const RectClip({this.clip = .hardEdge, this.overlap = .followEdge});
+        final Clip clip; final Overlap overlap;
+      }
+      class RoundedClip {
+        const RoundedClip({this.border = .zero, this.clip = .antiAlias, this.overlap = .followEdge});
+        final Border border; final Clip clip; final Overlap overlap;
+      }";
+    let (full, projected) = parse(source, DartLanguageVersion::DART_3_13, &[]);
+    assert_eq!(projected, full);
+    assert_eq!(full.namespace_diagnostics, []);
+    let expected = match env!("CARGO_PKG_NAME") {
+        "dust_parser_dart_ts" => 5,
+        "dust_legacy_parser_parity" => 0,
+        grammar => panic!("unexpected parser grammar harness: {grammar}"),
+    };
+    assert_eq!(full.diagnostics.len(), expected);
+    for diagnostic in &full.diagnostics {
+        assert_eq!(
+            diagnostic.message,
+            "Dust does not support dot shorthands yet"
+        );
+        assert_eq!(diagnostic.labels[0].file_id, FileId::new(7));
+    }
+    let defaults = full
+        .library
+        .classes
+        .iter()
+        .flat_map(|class| &class.constructors)
+        .flat_map(|constructor| &constructor.params)
+        .filter_map(|parameter| parameter.default_value_source.as_deref())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        defaults,
+        [
+            ".hardEdge",
+            ".followEdge",
+            ".zero",
+            ".antiAlias",
+            ".followEdge"
+        ]
+    );
+}

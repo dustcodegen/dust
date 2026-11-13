@@ -28,6 +28,14 @@ fn declared_callable_defaults_keep_exact_root_errors_only() {
         "Kind choose([Holder value = const Holder(.ready)]) => value.kind;",
         "Kind choose([Kind value /* default */ = /* value */ .ready]) => value;",
         "Kind choose() { Kind local([Kind value = .ready]) => value; return local(); }",
+        "class C { C([Kind value = .ready]); }",
+        "class C { C.named({Kind value = .ready}); }",
+        "class C { const C({this.value = .ready}); final Kind value; }",
+        "class B { B({Kind? value}); } class C extends B { C({super.value = .ready}); }",
+        "class C { factory C({Kind value = .ready}) => C.named(); C.named(); }",
+        "class C { factory C({Kind value = .ready}) = D; }",
+        "class C { C({List<Kind> values = const [.ready]}); }",
+        "class C { C({Kind value /* default */ = /* value */ .ready}); }",
     ] {
         let source = format!("// @dart=3.13\n{declaration}");
         let result = parse(148, &source);
@@ -42,12 +50,11 @@ fn declared_callable_defaults_keep_exact_root_errors_only() {
 }
 
 #[test]
-fn constructor_and_nested_metadata_or_callable_type_defaults_stay_strict() {
+fn primary_constructor_and_nested_metadata_or_callable_type_defaults_stay_strict() {
     for declaration in [
-        "class C { C([Kind value = .ready]); }",
-        "class C { const C({Kind value = .ready}); }",
-        "class C { factory C([Kind value = .ready]) = D; }",
         "class C({final Kind value = .ready});",
+        "class C { C({@Marker(.ready) Kind value = Kind.ready}); }",
+        "class C { C(void callback([Kind value = .ready])); }",
         "@Marker(.ready) void choose([Kind value = Kind.ready]) {}",
         "void choose([@Marker(.ready) Kind value = Kind.ready]) {}",
         "void choose({@Marker(.ready) Kind value = Kind.ready}) {}",
@@ -71,27 +78,34 @@ fn constructor_and_nested_metadata_or_callable_type_defaults_stay_strict() {
 
 #[test]
 fn callable_default_syntax_and_version_errors_remain_namespace_failures() {
-    let source = "// @dart=3.6\nKind choose([Kind value = .ready]) => value;";
-    let result = parse(148, source);
-    let start = source.find(".ready").unwrap() as u32;
-    assert_eq!(result.diagnostics[0], generation_error(source));
-    assert_eq!(
-        result.namespace_diagnostics,
-        [Diagnostic::error(
-            "dot shorthands require Dart 3.10 or newer; current language version is 3.6"
-        )
-        .with_label(SourceLabel::new(
-            FileId::new(148),
-            TextRange::new(start, start + 1),
-            "requires Dart 3.10"
-        ))]
-    );
-    assert_eq!(result.diagnostics.len(), 2);
+    for declaration in [
+        "Kind choose([Kind value = .ready]) => value;",
+        "class C { C([Kind value = .ready]); }",
+        "class C { const C({Kind value = .ready}); }",
+    ] {
+        let source = format!("// @dart=3.6\n{declaration}");
+        let result = parse(148, &source);
+        let start = source.find(".ready").unwrap() as u32;
+        assert_eq!(result.diagnostics[0], generation_error(&source));
+        assert_eq!(
+            result.namespace_diagnostics,
+            [Diagnostic::error(
+                "dot shorthands require Dart 3.10 or newer; current language version is 3.6"
+            )
+            .with_label(SourceLabel::new(
+                FileId::new(148),
+                TextRange::new(start, start + 1),
+                "requires Dart 3.10"
+            ))]
+        );
+        assert_eq!(result.diagnostics.len(), 2);
+    }
     for declaration in [
         "void choose([Kind value = .ready(,)]) {}",
         "void choose([Kind value = .ready) {}",
         "void choose([Kind value = .ready]) { broken( ; }",
         "void choose([@Marker(.ready(,)) Kind value = Kind.ready]) {}",
+        "class C { C([Kind value = .ready(,)]); }",
     ] {
         let source = format!("// @dart=3.13\n{declaration}");
         let result = parse(148, &source);

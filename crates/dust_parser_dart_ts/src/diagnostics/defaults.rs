@@ -1,6 +1,6 @@
 use tree_sitter::Node;
 
-/// Only defaults owned by declared functions/methods are namespace-only values.
+/// Declared callable defaults do not supply annotation namespace identities.
 pub(super) fn is_callable_default_dot(node: Node<'_>) -> bool {
     let mut expression = node;
     while let Some(parent) = expression.parent() {
@@ -17,7 +17,15 @@ pub(super) fn is_callable_default_dot(node: Node<'_>) -> bool {
                 .and_then(|list| list.parent());
             if parent.has_error()
                 || !signature.is_some_and(|signature| {
-                    signature.kind() == "function_signature" && !signature.has_error()
+                    // Namespace binding uses constructor identity, never its default values.
+                    matches!(
+                        signature.kind(),
+                        "function_signature"
+                            | "constructor_signature"
+                            | "constant_constructor_signature"
+                            | "factory_constructor_signature"
+                            | "redirecting_factory_constructor_signature"
+                    ) && !signature.has_error()
                 })
             {
                 return false;
