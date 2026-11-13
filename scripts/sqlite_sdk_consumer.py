@@ -56,7 +56,7 @@ def stage_consumer(
         package: {"path": str(root / "packages" / package)} for package in packages
     }
     if "dust_db_sqlite3" in packages:
-        overrides["sqlite3"] = "3.5.2"
+        overrides["sqlite3"] = "3.7.1"
     # Only lint tooling varies with the SDK, never production constraints.
     overrides["very_good_analysis"] = lint_version
     (target / "pubspec_overrides.yaml").write_text(
@@ -85,6 +85,14 @@ def validate_sdk_pair(dart_version: str, flutter: dict[str, object]) -> None:
         raise ValueError("Explicit Dart binary does not match the Flutter SDK")
 
 
+def require_fixed_sqlite(version: str) -> None:
+    """Require the native CVE-2026-119375 fix, not only older WAL-reset backports."""
+    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise ValueError(f"Unrecognized SQLite version: {version}")
+    if tuple(map(int, version.split("."))) < (3, 54, 0):
+        raise ValueError(f"SQLite {version} predates the CVE-2026-119375 fix in 3.54.0")
+
+
 def validate_proof(value: object) -> list[dict[str, object]]:
     """Reject incomplete CLI output; ordinary exceptions remain failures in AOT."""
     if not isinstance(value, list) or len(value) != 2:
@@ -97,6 +105,7 @@ def validate_proof(value: object) -> list[dict[str, object]]:
         for key in ("sqliteVersion", "sqliteSourceId", "migrationChecksum"):
             if not isinstance(entry.get(key), str) or not entry[key]:
                 raise ValueError(f"Missing {mode} {key}")
+        require_fixed_sqlite(entry["sqliteVersion"])
     for key in ("sqliteVersion", "sqliteSourceId", "migrationChecksum"):
         if value[0][key] != value[1][key]:
             raise ValueError(f"Sync/worker disagree on {key}")

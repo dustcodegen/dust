@@ -40,6 +40,16 @@ To contribute to Dust, you'll need both the Rust and Dart toolchains installed o
    Use `--scope packages` or `--scope rust` only for focused local development
    checks; a commit still requires the complete hook.
 
+   If an SDK manager stores Dart outside the Flutter checkout, set
+   `FLUTTER_ROOT` to the selected Flutter checkout so Dart commands can resolve
+   this workspace's Flutter dependencies. With Puro, put that checkout's
+   `bin/cache/dart-sdk/bin` before `bin` on `PATH`; its Dart shim can clear the
+   Flutter context. Keep both binaries from the same installation.
+
+   Give concurrent worktrees separate Cargo target directories, including the
+   test script's `target/nextest`. Cargo's timestamp-based freshness checks can
+   otherwise reuse artifacts built from another worktree's newer sources.
+
 ---
 
 ## 📂 Repository Map

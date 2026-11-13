@@ -8,14 +8,14 @@ from pathlib import Path
 
 from sqlite_sdk_consumer import (
     ROOT, compare_proofs, compatible_lints, native_assets, parse_jit_proof, stage_consumer,
-    validate_proof, validate_sdk_pair,
+    require_fixed_sqlite, validate_proof, validate_sdk_pair,
 )
 
 
 def proof() -> list[dict[str, object]]:
     """Return a minimal pair of valid, independently timestamped proofs."""
     return [
-        {"mode": mode, "rows": 1, "integrity": "ok", "sqliteVersion": "3.53.4",
+        {"mode": mode, "rows": 1, "integrity": "ok", "sqliteVersion": "3.54.0",
          "sqliteSourceId": "source", "migrationChecksum": "checksum",
          "migrationAppliedAt": str(index)}
         for index, mode in enumerate(("sync", "worker"))
@@ -77,7 +77,7 @@ class ConsumerTests(unittest.TestCase):
                 overrides = json.loads(
                     (consumer / "pubspec_overrides.yaml").read_text()
                 )["dependency_overrides"]
-                self.assertEqual(overrides["sqlite3"], "3.5.2")
+                self.assertEqual(overrides["sqlite3"], "3.7.1")
                 self.assertEqual(overrides["dust_db_sqlite3"]["path"],
                                  str(ROOT / "packages/dust_db_sqlite3"))
                 if relative.startswith("examples/"):
@@ -100,6 +100,34 @@ class ConsumerTests(unittest.TestCase):
 
     def test_accepts_complete_proof(self) -> None:
         self.assertEqual(validate_proof(proof()), proof())
+
+    def test_native_security_floor_rejects_old_backports_and_malformed_versions(self) -> None:
+        for version in ("3.54.0", "3.54.1", "3.55.0", "4.0.0"):
+            require_fixed_sqlite(version)
+            value = proof()
+            for entry in value:
+                entry["sqliteVersion"] = version
+            self.assertEqual(validate_proof(value), value)
+            compare_proofs(value, copy.deepcopy(value))
+        for version in ("3.44.6", "3.44.7", "3.50.7", "3.51.3", "3.53.4",
+                        "", "vendor-patched", "3.54", "3.54.0.1", "3.54.0-beta",
+                        " 3.54.0", "3.54.0\n", None, 35400):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                require_fixed_sqlite(version)
+
+    def test_each_mode_and_both_jit_aot_proofs_must_use_a_patched_engine(self) -> None:
+        for version in ("3.53.4", "3.50.7", "3.54.0-beta"):
+            for index in (0, 1):
+                value = proof()
+                value[index]["sqliteVersion"] = version
+                with self.subTest(mode=index, version=version), self.assertRaises(ValueError):
+                    validate_proof(value)
+            affected = proof()
+            for entry in affected:
+                entry["sqliteVersion"] = version
+            for jit, aot in ((affected, proof()), (proof(), affected), (affected, affected)):
+                with self.subTest(version=version), self.assertRaises(ValueError):
+                    compare_proofs(jit, aot)
 
     def test_native_bundle_records_exact_bytes_and_rejects_missing_library(self) -> None:
         with tempfile.TemporaryDirectory() as name:

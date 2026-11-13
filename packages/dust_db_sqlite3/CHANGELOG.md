@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Require `sqlite3 >=3.7.1` so bundled SQLite includes the fix for
+  CVE-2026-119375, preserving the standalone Dart 3.10 floor. Flutter SQLite
+  consumers now require Flutter 3.47.0 or newer.
+
 ## [0.3.1] - 2026-11-02
 
 ### Fixed

@@ -29,8 +29,9 @@ with the results.
 
 The repository is mounted read-only. The runner copies unchanged package
 manifests/source into owned staging, retaining workspace markers. Only that
-temporary workspace selects the native engine and pins the existing sqlite3
-3.5.2 binding. No source lock, cache or SDK default is overwritten.
+temporary workspace selects the native engine and pins sqlite3 3.7.1. Its
+default bundle contains SQLite 3.54.0; the fault phase uses the pinned system
+engine instead. No source lock, cache or SDK default is overwritten.
 The container has bounded CPU/memory/process counts, dropped capabilities and
 no Docker socket, device, home-directory or privileged access. It is removed
 after execution; ignored host evidence is retained under `.dart_tool/`.
@@ -63,7 +64,28 @@ container then runs the relocated consumer bundle **offline**, with no source,
 Pub cache or staging from the first container. Its native/data/migration proof
 must match; only independently created database timestamps may differ.
 
-## Pre-upgrade functional evidence (2026-11-12)
+## Patched engine evidence (2026-11-12)
+
+With sqlite3 3.7.1 and Dart 3.12.1 on Linux/aarch64, the prepared configuration
+passed strict consumer formatting/analysis, seven consumer tests, JIT and
+relocated AOT, 375 bundled-engine portable tests, and 507 full-API tests
+(375 portable + 132 native VFS I/O). Unfiltered executable runtime coverage
+was **965/965 (100%)**, with no new skip or exclusion.
+
+The relocated consumer also passed in a fresh, network-disabled container with
+no source, Pub cache or staging from the first container. Native/data/migration
+facts matched the first run.
+
+| Engine | SQLite | Library SHA-256 |
+| --- | --- | --- |
+| Bundle | 3.54.0 | `c2858e7048931194b4acd71258ac36bdb7c881c697b1d972b7206142bdaa68f6` |
+| Debian full API, package 3.54.1-2 | 3.54.1 | `afb264d5392f72416a29d91a01d49d3c0a9e7c6127e66f0a2156d2ad2b4ca52d` |
+
+The bundled bytes exactly matched sqlite3 3.7.1's published Linux arm64 asset
+hash. The native VFS fault matrix exercised only the separate full-API system
+engine; the bundle's portable/runtime and offline AOT results are distinct.
+
+## Historical pre-upgrade functional evidence (2026-11-12)
 
 With the unchanged sqlite3 3.5.2 binding and Dart 3.12.1 on Linux/aarch64,
 the signed-snapshot harness passed seven consumer tests, strict analysis and

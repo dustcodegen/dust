@@ -7,6 +7,12 @@ shopping example's generated `ShoppingCacheDatabase.openBackground` facade.
 It does not change normal app startup, contact live shopping endpoints, add a
 pool or retry application writes.
 
+The current runtime requires sqlite3 ^3.7.1 and the consumer pins 3.7.1, which
+bundles SQLite 3.54.0. Flutter SQLite consumers require **Flutter 3.47.0 or newer**;
+standalone Dart 3.10.0 support is unchanged. The Android/iOS results below predate
+this security upgrade and do not validate the new bundle. Fresh lifecycle and
+native-packaging runs are required on each target before claiming current platform proof.
+
 ## Android: two separate processes
 
 Use a designated test device/emulator with no unrelated installation of
@@ -64,7 +70,7 @@ gate; nothing silently skips.
 Use a dedicated, fully booted simulator and a clean worktree or staged copy of
 the shopping example, including `ios/`. Never replace an unrelated installation
 of `com.example.shoppingApp`. The simulator supports debug mode, not profile
-performance evidence. The recorded run used the independent SDK consumer's
+performance evidence. The historical run used the independent SDK consumer's
 source-package overrides and sqlite3 3.5.2 pin; production locks were untouched.
 
 Build explicitly without signing, then drive the prebuilt application. This
@@ -131,7 +137,7 @@ Run this additional gate explicitly. The helper regressions are part of normal
 `flutter test`, and source-size/strict-analysis/current-floor-format gates
 include integration tests and their driver.
 
-## Recorded local evidence
+## Historical local evidence (before security upgrade)
 
 On 2026-10-15 the API 35 arm64 Android emulator passed two final fresh-ID,
 two-process profile runs with Flutter 3.44.1 and Dart 3.12.1. Each checked 128
@@ -152,9 +158,9 @@ execution result; see the separate [SDK consumer gate](db-sdk-validation.md).
 
 Probe development dependencies are Flutter SDK test tooling, `path_provider`
 for durable test storage and an explicit reference to the already-resolved
-sqlite3 binding for the internal native busy-handler fixture. No existing
-resolved dependency version was upgraded; Dust runtime dependencies/APIs are
-unchanged. The example's existing Kotlin/plugin DSL remains selected without
+sqlite3 binding for the internal native busy-handler fixture. At the time, no
+existing resolved dependency version was upgraded; Dust runtime dependencies/APIs
+were unchanged. The example's existing Kotlin/plugin DSL remains selected without
 upgrading its build-tool versions; current Flutter still warns about their
 future support window.
 

@@ -13,21 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from sqlite_sdk_consumer import ROOT, run_matrix
-
-
-def require_fixed_sqlite(version: str) -> None:
-    """Enforce upstream's WAL-reset fixed releases; vendor backports need review."""
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-        raise ValueError(f"Unrecognized SQLite version: {version}")
-    major, minor, patch = map(int, version.split("."))
-    if (major, minor, patch) >= (3, 51, 3):
-        return
-    if (major, minor) == (3, 44) and patch >= 6:
-        return
-    if (major, minor) == (3, 50) and patch >= 7:
-        return
-    raise ValueError(f"SQLite {version} requires verified WAL-reset backport evidence")
+from sqlite_sdk_consumer import ROOT, require_fixed_sqlite, run_matrix
 
 
 def select_library(sdk: Path, proof: dict[str, object]) -> Path:
@@ -62,7 +48,7 @@ def stage_runtime(root: Path, workspace: Path, library: Path | None) -> Path:
     (workspace / "pubspec.yaml").write_text(json.dumps({
         "name": "dust_sqlite_linux_validation", "publish_to": "none",
         "environment": {"sdk": ">=3.10.0 <4.0.0"}, "workspace": packages,
-        "dependency_overrides": {"sqlite3": "3.5.2"},
+        "dependency_overrides": {"sqlite3": "3.7.1"},
     }, indent=2) + "\n", encoding="utf-8")
     configure_runtime_engine(workspace, library)
     return workspace / "packages/dust_db_sqlite3"
@@ -109,6 +95,7 @@ def validate_runtime_engine(output: str, proof: dict[str, object]) -> None:
     expected = f"{proof['sqliteVersion']} / {proof['sqliteSourceId']}"
     if observed != [expected] * 4:
         raise ValueError(f"Runtime engine attribution failed: {observed}")
+    require_fixed_sqlite(proof["sqliteVersion"])
 
 
 def run(evidence: Path) -> None:

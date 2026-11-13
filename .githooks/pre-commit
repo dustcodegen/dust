@@ -23,7 +23,7 @@ ensure_generated_outputs_are_staged() {
 }
 
 # A fresh checkout has no package configuration for the Dart formatter yet.
-run_without_git_env flutter pub get >/dev/null
+run_without_git_env python3 scripts/flutter_pub_get.py >/dev/null
 run_without_git_env ./scripts/lint.sh
 run_without_git_env ./scripts/security/audit.sh
 python3 scripts/validate_compatibility_contract.py --self-test
