@@ -79,6 +79,16 @@ fn dependency_edits_invalidate_only_affected_hits_and_errors_preserve_success() 
     let recovered = build(root);
     assert_eq!(recovered.diagnostics, []);
     assert_eq!(recovered.cache.unwrap().hits, 2);
+
+    let sdk_core = root.join("sdk/lib/core/core.dart");
+    let core = fs::read_to_string(&sdk_core).unwrap();
+    write_file(&sdk_core, &format!("{core}\n// SDK dependency changed\n"));
+    let refreshed = build(root);
+    assert_eq!(refreshed.diagnostics, []);
+    assert_eq!(refreshed.cache.unwrap().misses, 2);
+    assert_eq!(fs::read(root.join("lib/a.g.dart")).unwrap(), a);
+    assert_eq!(fs::read(root.join("lib/b.g.dart")).unwrap(), b);
+    assert_eq!(build(root).cache.unwrap().hits, 2);
 }
 
 #[test]

@@ -4,7 +4,8 @@
 /// next state differs from the current one, so a state that wraps data without
 /// comparing it makes that check useless: an async view model re-emitting equal
 /// data rebuilt every listener, while a synchronous one holding the same type
-/// did not. The type's own `==` decides, as it already did outside async mode.
+/// did not. Equality requires matching type arguments, and the data type's own
+/// `==` determines whether the data values match.
 library;
 
 /// Lifecycle state for generated async ViewModels.
@@ -45,7 +46,8 @@ final class AsyncInitial<T> extends AsyncState<T> {
   bool get isLoading => false;
 
   @override
-  bool operator ==(Object other) => other is AsyncInitial<T>;
+  bool operator ==(Object other) =>
+      other is AsyncInitial<T> && other.runtimeType == runtimeType;
 
   @override
   int get hashCode => (AsyncInitial<T>).hashCode;
@@ -80,6 +82,7 @@ final class AsyncLoading<T> extends AsyncState<T> {
   @override
   bool operator ==(Object other) =>
       other is AsyncLoading<T> &&
+      other.runtimeType == runtimeType &&
       other.previousData == previousData &&
       other.hasPreviousData == hasPreviousData;
 
@@ -108,7 +111,10 @@ final class AsyncData<T> extends AsyncState<T> {
   bool get isLoading => false;
 
   @override
-  bool operator ==(Object other) => other is AsyncData<T> && other.data == data;
+  bool operator ==(Object other) =>
+      other is AsyncData<T> &&
+      other.runtimeType == runtimeType &&
+      other.data == data;
 
   @override
   int get hashCode => Object.hash(AsyncData<T>, data);
@@ -153,6 +159,7 @@ final class AsyncFailure<T> extends AsyncState<T> {
   @override
   bool operator ==(Object other) =>
       other is AsyncFailure<T> &&
+      other.runtimeType == runtimeType &&
       other.error == error &&
       other.stackTrace == stackTrace &&
       other.previousData == previousData &&

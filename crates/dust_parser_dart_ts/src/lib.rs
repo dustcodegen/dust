@@ -20,6 +20,8 @@ mod i18n;
 mod language_gates;
 /// Lexical scope and initializer identities for metadata binding.
 mod lexical;
+/// Namespace interfaces without unused generation payloads.
+mod namespace;
 /// Query helper extraction.
 mod queries;
 /// Tree-sitter utility helpers.
@@ -33,12 +35,18 @@ mod parity_tests;
 /// Backend failure keeps both error views complete without timer-based tests.
 #[cfg(test)]
 mod tests_diagnostics;
+/// Empty placeholders retain exact native parser facts without initializing it.
+#[cfg(test)]
+mod tests_empty;
 /// Exact lexical scope/declaration contracts before namespace consumption.
 #[cfg(test)]
 mod tests_lexical;
 
 use dust_diagnostics::Diagnostic;
-use dust_parser_dart::{ParseBackend, ParseOptions, ParseResult, ParsedDartFileSurface};
+use dust_parser_dart::{
+    ParseBackend, ParseOptions, ParseResult, ParsedDartFileSurface, ParsedLexicalScope,
+    ParsedLexicalScopeKind,
+};
 use dust_text::SourceText;
 use std::cell::RefCell;
 use tree_sitter::Parser;
@@ -77,6 +85,32 @@ impl TreeSitterDartBackend {
     pub const fn new() -> Self {
         Self
     }
+
+    /// Parses an external namespace while retaining complete diagnostics.
+    ///
+    /// Generation payloads are omitted unless an annotation's structured
+    /// short name appears in `full_surface_annotations`, or language validation
+    /// requires those payloads. Call [`ParseBackend::parse_file`] for generation.
+    pub fn parse_namespace_file(
+        &self,
+        source: &SourceText,
+        options: ParseOptions,
+        full_surface_annotations: &[&str],
+    ) -> ParseResult {
+        if source.as_str().is_empty() {
+            return empty_parse_result(source, options);
+        }
+        PARSER.with(|parser_cell| {
+            let mut parser = parser_cell.borrow_mut();
+            let tree = parser.parse(source.as_str(), None);
+            extract_parse_result_with_projection(
+                tree,
+                source,
+                options,
+                Some(full_surface_annotations),
+            )
+        })
+    }
 }
 
 impl Default for TreeSitterDartBackend {
@@ -87,10 +121,32 @@ impl Default for TreeSitterDartBackend {
 
 impl ParseBackend for TreeSitterDartBackend {
     fn parse_file(&self, source: &SourceText, options: ParseOptions) -> ParseResult {
+        if source.as_str().is_empty() {
+            return empty_parse_result(source, options);
+        }
         PARSER.with(|parser_cell| {
             let mut parser = parser_cell.borrow_mut();
             extract_parse_result(parser.parse(source.as_str(), None), source, options)
         })
+    }
+}
+
+/// A successful empty compilation unit still owns its library lexical scope.
+fn empty_parse_result(source: &SourceText, options: ParseOptions) -> ParseResult {
+    let mut library = empty_library(source);
+    library.lexical_scopes.push(ParsedLexicalScope {
+        parent: None,
+        name: None,
+        kind: ParsedLexicalScopeKind::Library,
+        visibility: source.full_range(),
+        span: source.full_range(),
+        declarations: Vec::new(),
+    });
+    ParseResult {
+        library,
+        diagnostics: Vec::new(),
+        namespace_diagnostics: Vec::new(),
+        options,
     }
 }
 
@@ -99,6 +155,16 @@ fn extract_parse_result(
     tree: Option<tree_sitter::Tree>,
     source: &SourceText,
     options: ParseOptions,
+) -> ParseResult {
+    extract_parse_result_with_projection(tree, source, options, None)
+}
+
+/// Chooses an extraction surface without changing the native parse or diagnostics.
+fn extract_parse_result_with_projection(
+    tree: Option<tree_sitter::Tree>,
+    source: &SourceText,
+    options: ParseOptions,
+    full_surface_annotations: Option<&[&str]>,
 ) -> ParseResult {
     let Some(tree) = tree else {
         return ParseResult {
@@ -110,6 +176,10 @@ fn extract_parse_result(
     };
 
     let root = tree.root_node();
+    let effective_language_version = options.effective_language_version_for_source(source.as_str());
+    let namespace_only = full_surface_annotations.is_some_and(|annotations| {
+        namespace::can_project(root, source, effective_language_version, annotations)
+    });
     let declarations = if declarations::has_extractable_top_level_declarations(root) {
         extract_top_level_declarations(root, source)
     } else {
@@ -117,9 +187,17 @@ fn extract_parse_result(
     };
     let library = ParsedDartFileSurface {
         span: text_range(root),
-        lexical_scopes: lexical::extract(root, source),
+        lexical_scopes: if namespace_only {
+            lexical::extract_namespace(root, source)
+        } else {
+            lexical::extract(root, source)
+        },
         directives: extract_directives(root, source),
-        classes: extract_classes(root, source),
+        classes: if namespace_only {
+            classes::extract_namespace_classes(root, source)
+        } else {
+            extract_classes(root, source)
+        },
         enums: extract_enums(root, source),
         mixins: declarations.mixins,
         extensions: declarations.extensions,
@@ -127,11 +205,19 @@ fn extract_parse_result(
         functions: declarations.functions,
         variables: declarations.variables,
         typedefs: declarations.typedefs,
-        query_calls: extract_query_calls(root, source),
+        query_calls: if namespace_only {
+            Vec::new()
+        } else {
+            extract_query_calls(root, source)
+        },
     };
-    let effective_language_version = options.effective_language_version_for_source(source.as_str());
     let mut occurrences = Vec::new();
-    let mut views = extract_diagnostics(&tree, source, &mut occurrences);
+    let mut views = extract_diagnostics(
+        &tree,
+        source,
+        &mut occurrences,
+        Some(effective_language_version),
+    );
     let language_diagnostics = extract_language_version_diagnostics(
         root,
         &library,

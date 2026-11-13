@@ -4,7 +4,7 @@ use dust_cache::WorkspaceCache;
 use dust_diagnostics::Diagnostic;
 use dust_plugin_api::PluginRegistry;
 use dust_resolver::SymbolCatalog;
-use dust_workspace::{SupportedAnnotations, WorkspacePlan, discover_workspace};
+use dust_workspace::{SupportedAnnotations, WorkspacePlan, discover_workspace, load_workspace};
 
 use crate::{
     build::{
@@ -42,6 +42,14 @@ impl DriverContext {
             }
         };
         let workspace = discover_workspace(cwd, &supported_annotations)?;
+        Self::with_workspace(workspace, selection)
+    }
+
+    /// Builds the registry after either lexical or parser-led workspace discovery.
+    fn with_workspace(
+        workspace: WorkspacePlan,
+        selection: RegistrySelection,
+    ) -> Result<Self, Diagnostic> {
         let destinations = crate::server_client::resolve_destinations(&workspace)?;
         let registry =
             crate::build::registry_for_selection_with_server_clients(selection, destinations);
@@ -73,6 +81,8 @@ pub(crate) struct CachedDriverContext {
     pub(crate) cache: WorkspaceCache,
     /// Cache report initialized with the cache storage path.
     pub(crate) cache_report: CacheReport,
+    /// A recoverable error from loading disposable cache contents.
+    pub(crate) cache_warning: Option<Diagnostic>,
 }
 
 impl CachedDriverContext {
@@ -81,33 +91,48 @@ impl CachedDriverContext {
         cwd: &Path,
         selection: RegistrySelection,
         sdk_root: Option<&Path>,
+        jobs: Option<usize>,
     ) -> Result<Self, Diagnostic> {
         let DriverContext {
             mut workspace,
             registry,
             catalog,
-        } = DriverContext::load(cwd, selection)?;
+        } = DriverContext::with_workspace(load_workspace(cwd)?, selection)?;
         if !workspace.package_root.join("lib").exists() {
             validate_workspace_libraries(&workspace)?;
         }
         validate_workspace_package_versions(&workspace)?;
-        let namespaces = NamespaceSources::load(
-            cwd,
-            &mut workspace,
-            sdk_root,
-            &catalog,
-            &registry,
-            !matches!(selection, RegistrySelection::All),
-        )?;
-        validate_workspace_libraries(&workspace)?;
-        validate_workspace_package_versions(&workspace)?;
-        let tool_hash = codegen_tool_hash_for_selection(selection);
-        let package_config_hash = read_workspace_config_hash(
-            &workspace.package_config.path,
-            workspace.dust_config.path.as_deref(),
-            &workspace.package_root.join("pubspec.yaml"),
-        )?;
-        let cache = load_workspace_cache(&workspace)?;
+        let cache_root = workspace.cache_root.clone();
+        let (namespaces, tool_hash, package_config_hash, (cache, cache_warning)) =
+            std::thread::scope(|scope| {
+                // Missing or nonregular paths retain the deferred read and error ordering.
+                let cache = cache_root
+                    .join(".dart_tool/dust/build_cache_v1.json")
+                    .is_file()
+                    .then(|| scope.spawn(|| load_workspace_cache(&cache_root)));
+                let namespaces = NamespaceSources::load(
+                    cwd,
+                    &mut workspace,
+                    sdk_root,
+                    &catalog,
+                    &registry,
+                    !matches!(selection, RegistrySelection::All),
+                    jobs,
+                )?;
+                validate_workspace_libraries(&workspace)?;
+                validate_workspace_package_versions(&workspace)?;
+                let tool_hash = codegen_tool_hash_for_selection(selection);
+                let package_config_hash = read_workspace_config_hash(
+                    &workspace.package_config.path,
+                    workspace.dust_config.path.as_deref(),
+                    &workspace.package_root.join("pubspec.yaml"),
+                )?;
+                let cache = match cache {
+                    Some(handle) => handle.join().expect("cache loader worker panicked"),
+                    None => load_workspace_cache(&cache_root),
+                }?;
+                Ok::<_, Diagnostic>((namespaces, tool_hash, package_config_hash, cache))
+            })?;
         let cache_report = CacheReport {
             path: cache.path().to_path_buf(),
             ..CacheReport::default()
@@ -122,6 +147,7 @@ impl CachedDriverContext {
             package_config_hash,
             cache,
             cache_report,
+            cache_warning,
         })
     }
 }
@@ -138,14 +164,26 @@ fn validate_workspace_libraries(workspace: &WorkspacePlan) -> Result<(), Diagnos
 }
 
 /// Loads the workspace cache and converts IO failures into diagnostics.
-fn load_workspace_cache(workspace: &WorkspacePlan) -> Result<WorkspaceCache, Diagnostic> {
-    WorkspaceCache::load(&workspace.cache_root).map_err(|error| {
+fn load_workspace_cache(
+    cache_root: &Path,
+) -> Result<(WorkspaceCache, Option<Diagnostic>), Diagnostic> {
+    let (cache, ignored) = WorkspaceCache::load_with_recovery(cache_root).map_err(|error| {
         Diagnostic::error(format!(
             "failed to load Dust cache `{}`: {error}",
-            workspace
-                .cache_root
+            cache_root
                 .join(".dart_tool/dust/build_cache_v1.json")
                 .display()
         ))
-    })
+    })?;
+    let warning = ignored.map(|error| {
+        Diagnostic::warning(format!(
+            "ignoring invalid Dust cache `{}`: {error}",
+            cache.path().display()
+        ))
+    });
+    Ok((cache, warning))
 }
+
+/// Concurrent cache reads retain source error priority and the original loaded bytes.
+#[cfg(test)]
+mod tests;

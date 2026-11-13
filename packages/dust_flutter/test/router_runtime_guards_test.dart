@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dust_flutter/route.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -139,6 +141,30 @@ void main() {
 
     expect(calls, ['/parent']);
     expect(delegate.stack.map((route) => route.location), ['/login']);
+  });
+
+  test('a newer location supersedes deep-link restoration blocked by a guard',
+      () async {
+    final guardResult = Completer<TestRoute?>();
+    final delegate = GeneratedRouterDelegate<TestRoute>(
+      runtimeConfig(
+        restoreStack: (route) => route.location == '/child'
+            ? [const TestRoute('/parent'), route]
+            : [route],
+        resolveGuards: (route) => route.location == '/parent'
+            ? [BlockingGuard(guardResult.future)]
+            : const [],
+      ),
+    );
+    addTearDown(delegate.dispose);
+    await delegate.debugWaitForScheduledRefresh();
+
+    final pendingRestore = delegate.setNewRoutePath(const TestRoute('/child'));
+    await delegate.setNewRoutePath(const TestRoute('/detail'));
+    guardResult.complete(const TestRoute('/login'));
+    await pendingRestore;
+
+    expect(delegate.stack.map((route) => route.location), ['/detail']);
   });
 
   test('route stack observer records final guard redirect stack once',

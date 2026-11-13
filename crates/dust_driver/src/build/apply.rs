@@ -42,6 +42,7 @@ pub(crate) fn apply_indexed_outcomes(
             diagnostic_file,
             artifact,
             expected_output_hash,
+            output_snapshot: _,
             suppress_primary_output,
             analysis_snapshot,
         } = outcome;

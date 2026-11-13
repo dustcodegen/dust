@@ -108,3 +108,52 @@ fn query(sql: &str, function: QueryFunction, parameters: usize) -> QuerySpec {
         display_name: Some("Items.all".to_owned()),
     }
 }
+
+#[tokio::test]
+async fn postgres_connection_failure_keeps_credentials_out_of_diagnostics() {
+    let url = "postgres://audit:synthetic-password@127.0.0.1:invalid/db";
+    let error = connect_for_validation::<PgConnection>(DbDriver::Postgres, url)
+        .await
+        .expect_err("the port must be rejected before connecting");
+
+    assert_eq!(
+        error,
+        "failed to connect SQL validation database for `postgres`: invalid connection URL or options"
+    );
+}
+
+#[test]
+fn sqlite_check_does_not_apply_migrations_to_the_configured_file() {
+    let dir = migrations_dir(&[("0001_items.sql", "CREATE TABLE items (id INTEGER);")]);
+    let database = dir.path().join("existing.sqlite");
+    fs::File::create(&database).unwrap();
+    let url = format!("sqlite://{}", database.display());
+    let request = DescribeRequest {
+        dialect: DbDriver::Sqlite3.dialect(),
+        migrations: ".",
+        schema_hash: "test",
+        queries: &[],
+        row_columns: &HashMap::new(),
+        typed_columns: &HashMap::new(),
+    };
+
+    run_sqlx_validation(
+        dir.path(),
+        &request,
+        MetadataOutput::ReadOnly,
+        Some(url.clone()),
+        &mut Vec::new(),
+    )
+    .expect("the check should validate against an isolated schema");
+    assert!(fs::read(&database).unwrap().is_empty());
+
+    run_sqlx_validation(
+        dir.path(),
+        &request,
+        MetadataOutput::Write,
+        Some(url),
+        &mut Vec::new(),
+    )
+    .expect("the build should honor an explicit SQLite validation target");
+    assert!(!fs::read(&database).unwrap().is_empty());
+}

@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs, io,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -63,6 +64,8 @@ pub struct WorkspaceCache {
     entries: BTreeMap<String, CacheEntry>,
     /// Whether the in-memory cache has changes that need flushing.
     dirty: bool,
+    /// Digest of bytes successfully loaded or persisted, never a later external edit.
+    persisted_hash: Option<u64>,
 }
 
 impl WorkspaceCache {
@@ -74,11 +77,7 @@ impl WorkspaceCache {
         let contents = match fs::read_to_string(&path) {
             Ok(contents) => contents,
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                return Ok(Self {
-                    path,
-                    entries: BTreeMap::new(),
-                    dirty: false,
-                });
+                return Ok(Self::empty(path));
             }
             Err(error) => return Err(error),
         };
@@ -86,23 +85,56 @@ impl WorkspaceCache {
         let parsed = serde_json::from_str::<CacheFile>(&contents)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
         if parsed.schema_version != CACHE_SCHEMA_VERSION {
-            return Ok(Self {
-                path,
-                entries: BTreeMap::new(),
-                dirty: false,
-            });
+            return Ok(Self::empty(path));
         }
 
         Ok(Self {
             path,
             entries: parsed.entries,
             dirty: false,
+            persisted_hash: Some(Self::hash_contents(contents.as_bytes())),
         })
+    }
+
+    /// Opens the cache, treating malformed build metadata as a miss.
+    ///
+    /// The returned error describes any malformed contents that were ignored.
+    /// Other read errors are returned normally.
+    pub fn load_with_recovery(root: &Path) -> io::Result<(Self, Option<io::Error>)> {
+        match Self::load(root) {
+            Ok(cache) => Ok((cache, None)),
+            Err(error) if error.kind() == io::ErrorKind::InvalidData => {
+                Ok((Self::empty(cache_file_path(root)), Some(error)))
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Constructs a cache with no saved entries.
+    fn empty(path: PathBuf) -> Self {
+        Self {
+            path,
+            entries: BTreeMap::new(),
+            dirty: false,
+            persisted_hash: None,
+        }
     }
 
     /// Returns the on-disk cache file path.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// Returns the digest of the last successfully loaded or persisted cache bytes.
+    pub fn persisted_hash(&self) -> Option<u64> {
+        self.persisted_hash
+    }
+
+    /// Computes Dust's stable byte digest for cache-content identity checks.
+    pub fn hash_contents(contents: &[u8]) -> u64 {
+        contents.iter().fold(1469598103934665603_u64, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(1099511628211)
+        })
     }
 
     /// Returns the cache entry for one source file if present.
@@ -132,9 +164,8 @@ impl WorkspaceCache {
             return Ok(());
         }
 
-        if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent)?;
-        }
+        let parent = self.path.parent().unwrap_or_else(|| Path::new("."));
+        fs::create_dir_all(parent)?;
 
         let file = CacheFileRef {
             schema_version: CACHE_SCHEMA_VERSION,
@@ -142,7 +173,21 @@ impl WorkspaceCache {
         };
         let json = serde_json::to_vec(&file)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        fs::write(&self.path, json)?;
+        #[cfg(unix)]
+        let existing_permissions = match fs::metadata(&self.path) {
+            Ok(metadata) => Some(metadata.permissions()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error),
+        };
+        let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+        temporary.write_all(&json)?;
+        // New caches stay private; replacements retain an existing cache's mode.
+        #[cfg(unix)]
+        if let Some(permissions) = existing_permissions {
+            temporary.as_file().set_permissions(permissions)?;
+        }
+        temporary.persist(&self.path).map_err(|error| error.error)?;
+        self.persisted_hash = Some(Self::hash_contents(&json));
         self.dirty = false;
         Ok(())
     }
@@ -183,3 +228,8 @@ fn cache_dir_path(root: &Path) -> PathBuf {
 #[cfg(test)]
 #[path = "store/tests.rs"]
 mod tests;
+
+/// Provenance for bytes read or atomically replaced by this cache instance.
+#[cfg(test)]
+#[path = "store/contents_tests.rs"]
+mod contents_tests;

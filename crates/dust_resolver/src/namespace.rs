@@ -1,11 +1,11 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use dust_diagnostics::{Diagnostic, SourceLabel};
 use dust_ir::SymbolId;
-use dust_parser_dart::{ParsedDartFileSurface, ParsedUriLiteral};
+use dust_parser_dart::{ParsedDartFileSurface, ParsedDirective, ParsedUriLiteral};
 use dust_text::{FileId, TextRange};
 
 use crate::SymbolCatalog;
@@ -22,6 +22,10 @@ mod lookup;
 mod model;
 /// Declaration-origin ownership and transparent alias binding.
 mod owner;
+/// Owning normalization can precede ordered graph insertion.
+mod prepared;
+
+pub use prepared::PreparedNamespaceLibrary;
 
 use agreement::agree;
 use model::*;
@@ -66,9 +70,13 @@ pub enum NamespaceBinding {
 pub struct NamespaceGraph {
     /// Source units keyed by already resolved library/part identity.
     units: BTreeMap<String, Unit>,
+    /// URI of each source unit by its diagnostic file identity.
+    file_uris: BTreeMap<FileId, String>,
     /// Name-specific export results are shared safely across resolver workers.
-    exports: Mutex<BTreeMap<String, Arc<ExportWorlds>>>,
-    /// Library/part import namespaces required by queried lexical initializers.
+    exports: Mutex<BTreeMap<String, Arc<OnceLock<Arc<ExportWorlds>>>>>,
+    /// Namespace-only queries remain independent of catalog and lexical use sites.
+    lookups: lookup::LookupCache,
+    /// Library/part imports required by queried initializers and type aliases.
     lexical_imports: Mutex<BTreeSet<String>>,
 }
 
@@ -96,23 +104,31 @@ impl NamespaceGraph {
         uri: impl Into<String>,
         file_id: FileId,
         parsed: &ParsedDartFileSurface,
-        mut resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
+        resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
+    ) -> Result<(), Diagnostic> {
+        self.insert_library_with_appended_directive(uri, file_id, parsed, None, resolve_uri)
+    }
+
+    /// Adds a library with an optional synthetic directive after all written directives.
+    pub fn insert_library_with_appended_directive(
+        &mut self,
+        uri: impl Into<String>,
+        file_id: FileId,
+        parsed: &ParsedDartFileSurface,
+        appended_directive: Option<&ParsedDirective>,
+        resolve_uri: impl FnMut(&str, &str) -> Result<String, String>,
     ) -> Result<(), Diagnostic> {
         let uri = uri.into();
-        if self.units.contains_key(&uri) || self.units.values().any(|unit| unit.file_id == file_id)
-        {
-            return Err(Diagnostic::error(format!(
-                "duplicate namespace input identity `{uri}` or file id {}",
-                file_id.raw()
-            )));
-        }
-        let unit = input::unit(&uri, file_id, parsed, &mut resolve_uri);
-        self.units.insert(uri, unit);
-        self.exports
-            .get_mut()
-            .expect("namespace cache is not poisoned")
-            .clear();
-        Ok(())
+        self.check_input_identity(&uri, file_id)?;
+        let prepared = Self::prepare_library(uri, file_id, parsed, appended_directive, resolve_uri);
+        self.insert_prepared_library(prepared)
+    }
+
+    /// Finds the retained source unit for a diagnostic file identity.
+    fn unit_by_file_id(&self, file_id: FileId) -> Option<&Unit> {
+        self.file_uris
+            .get(&file_id)
+            .and_then(|uri| self.units.get(uri))
     }
 
     /// Creates a scoped view without pretending missing input is a foreign library.
@@ -120,7 +136,15 @@ impl NamespaceGraph {
         NamespaceScope { graph: self, uri }
     }
 
-    /// Actual initializer namespaces needed before a production binding is final.
+    /// Clears discovery requests between sequential ownership passes.
+    pub fn clear_required_lexical_imports(&mut self) {
+        self.lexical_imports
+            .get_mut()
+            .expect("lexical import requests are not poisoned")
+            .clear();
+    }
+
+    /// Queried initializer and alias namespaces needed before a binding is final.
     pub fn required_lexical_imports(&self) -> BTreeSet<String> {
         self.lexical_imports
             .lock()

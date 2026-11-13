@@ -3,15 +3,15 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// Completed watch batch reporting.
+mod report;
 /// Workspace snapshot construction and diffing for watch mode.
 mod snapshot;
-
-use dust_cache::WorkspaceCache;
 
 use crate::{
     build::{
         ApplyOutcomeConfig, BatchConfig, RegistrySelection, apply_indexed_outcomes,
-        flush_cache_into_result, prepare_and_process_batch,
+        prepare_and_process_batch,
     },
     context::CachedDriverContext,
     progress::{ProgressEvent, ProgressPhase},
@@ -19,11 +19,14 @@ use crate::{
     result::{CacheReport, CommandResult, WatchReport},
 };
 
-use self::snapshot::{build_snapshot, changed_libraries, expand_route_rebuilds};
+use self::{
+    report::finish_batch,
+    snapshot::{build_snapshot, changed_libraries, expand_route_rebuilds},
+};
 
 /// Runs initial build plus repeated poll-based rebuild detection.
 pub fn run_watch(request: WatchRequest) -> CommandResult {
-    run_watch_inner(request, None)
+    run_watch_inner(request, None, None)
 }
 
 /// Runs initial build plus repeated poll-based rebuild detection while emitting progress events.
@@ -31,13 +34,23 @@ pub fn run_watch_with_progress<F>(request: WatchRequest, progress: F) -> Command
 where
     F: Fn(ProgressEvent) + Send + Sync,
 {
-    run_watch_inner(request, Some(&progress))
+    run_watch_inner(request, Some(&progress), None)
 }
 
-/// Shared implementation for watch commands with optional progress reporting.
+/// Runs watch and reports each completed batch after persisting its cache.
+pub fn run_watch_with_reports(
+    request: WatchRequest,
+    progress: Option<&(dyn Fn(ProgressEvent) + Send + Sync)>,
+    report: impl Fn(&CommandResult),
+) -> CommandResult {
+    run_watch_inner(request, progress, Some(&report))
+}
+
+/// Shared implementation for watch commands with optional progress and batch reporting.
 fn run_watch_inner(
     request: WatchRequest,
     progress: Option<&(dyn Fn(ProgressEvent) + Send + Sync + '_)>,
+    report: Option<&dyn Fn(&CommandResult)>,
 ) -> CommandResult {
     let started = Instant::now();
     let mut result = CommandResult::default();
@@ -51,11 +64,13 @@ fn run_watch_inner(
         tool_hash,
         mut cache,
         mut cache_report,
+        cache_warning,
         ..
     } = match CachedDriverContext::load(
         &request.cwd,
         RegistrySelection::All,
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -64,6 +79,7 @@ fn run_watch_inner(
             return result;
         }
     };
+    result.diagnostics.extend(cache_warning);
     let mut snapshot = match build_snapshot(&workspace, &namespaces, &catalog) {
         Ok(snapshot) => snapshot,
         Err(diagnostic) => {
@@ -101,8 +117,13 @@ fn run_watch_inner(
         &mut cache_report,
     );
 
-    result.diagnostic_files.extend(initial.diagnostic_files);
-    if apply_indexed_outcomes(
+    let mut last_file_id = 0;
+    let mut batch = CommandResult {
+        diagnostics: std::mem::take(&mut result.diagnostics),
+        diagnostic_files: initial.diagnostic_files,
+        ..CommandResult::default()
+    };
+    let stop = apply_indexed_outcomes(
         initial.outcomes,
         ApplyOutcomeConfig {
             cache_root: &workspace.cache_root,
@@ -111,16 +132,12 @@ fn run_watch_inner(
             fail_fast: request.fail_fast,
         },
         &mut cache,
-        &mut result,
+        &mut batch,
         None,
-    ) {
-        return finish_watch_result(
-            result,
-            &mut cache,
-            cache_report,
-            empty_watch_report(),
-            started,
-        );
+    );
+    finish_batch(batch, &mut result, &mut last_file_id, &mut cache, report);
+    if stop {
+        return finish_watch_result(result, cache_report, empty_watch_report(), started);
     }
 
     let mut watch = WatchReport {
@@ -138,6 +155,7 @@ fn run_watch_inner(
             &request.cwd,
             RegistrySelection::All,
             request.sdk_source_root.as_deref(),
+            request.jobs,
         ) {
             Ok(context) => context,
             Err(diagnostic) => {
@@ -191,8 +209,11 @@ fn run_watch_inner(
             &mut cache_report,
         );
 
-        result.diagnostic_files.extend(rebuilt.diagnostic_files);
-        if apply_indexed_outcomes(
+        let mut batch = CommandResult {
+            diagnostic_files: rebuilt.diagnostic_files,
+            ..CommandResult::default()
+        };
+        let stop = apply_indexed_outcomes(
             rebuilt.outcomes,
             ApplyOutcomeConfig {
                 cache_root: &workspace.cache_root,
@@ -201,14 +222,16 @@ fn run_watch_inner(
                 fail_fast: request.fail_fast,
             },
             &mut cache,
-            &mut result,
+            &mut batch,
             Some(&mut watch.rebuilt_libraries),
-        ) {
-            return finish_watch_result(result, &mut cache, cache_report, watch, started);
+        );
+        finish_batch(batch, &mut result, &mut last_file_id, &mut cache, report);
+        if stop {
+            break;
         }
     }
 
-    finish_watch_result(result, &mut cache, cache_report, watch, started)
+    finish_watch_result(result, cache_report, watch, started)
 }
 
 /// Builds an empty watch report for early exits.
@@ -220,15 +243,13 @@ fn empty_watch_report() -> WatchReport {
     }
 }
 
-/// Finalizes cache state and attaches watch metadata to the command result.
+/// Attaches watch and cache metadata to the command result.
 fn finish_watch_result(
     mut result: CommandResult,
-    cache: &mut WorkspaceCache,
     cache_report: CacheReport,
     watch: WatchReport,
     started: Instant,
 ) -> CommandResult {
-    flush_cache_into_result(cache, &mut result);
     result.watch = Some(watch);
     result.cache = Some(cache_report);
     result.elapsed_ms = started.elapsed().as_millis();

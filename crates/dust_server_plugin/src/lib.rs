@@ -13,6 +13,7 @@ mod plan;
 /// Server plugin implementation and registration surface.
 mod plugin;
 
+pub use client::is_client_output_claimed;
 pub use plugin::{
     ServerClientDestination, ServerPlugin, register_plugin, register_plugin_with_clients,
 };

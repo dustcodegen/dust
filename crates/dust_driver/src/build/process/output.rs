@@ -3,6 +3,7 @@ use std::{fs, io, path::Path};
 use dust_emitter::{
     AuxiliaryWriteResult, EmitResult, WriteResult, emit_library_with_plan, persist_emit_result,
 };
+use dust_plugin_api::WorkspaceAnalysis;
 use dust_workspace::SourceLibrary;
 
 use super::ProcessingConfig;
@@ -26,7 +27,6 @@ pub(crate) fn emit_or_write_library(
                 library.output_path.clone(),
                 emitted.with_output_hash(&library.output_path),
                 previous_hash,
-                &[],
                 processing.write_output,
             );
         }
@@ -42,7 +42,11 @@ pub(crate) fn emit_or_write_library(
 
     if processing.write_output {
         let result = persist_emit_result(library.output_path.clone(), emitted)?;
-        remove_obsolete_auxiliary(previous_output_paths, &result, true)?;
+        remove_obsolete_auxiliary(
+            previous_output_paths,
+            &result,
+            &processing.workspace_analysis,
+        )?;
         Ok(result)
     } else {
         let emitted = emitted.with_output_hash(&library.output_path);
@@ -67,9 +71,13 @@ pub(crate) fn emit_or_write_library(
         } else {
             emitted.changed
         };
-        let obsolete_changed = obsolete_auxiliary(previous_output_paths, &auxiliary_outputs)
-            .iter()
-            .any(|path| path.is_file());
+        let obsolete_changed = obsolete_auxiliary(
+            previous_output_paths,
+            &auxiliary_outputs,
+            &processing.workspace_analysis,
+        )
+        .iter()
+        .any(|path| path.is_file());
         let changed = primary_changed
             || auxiliary_outputs.iter().any(|output| output.changed)
             || obsolete_changed;
@@ -93,7 +101,6 @@ fn persist_with_previous_hash(
     output_path: std::path::PathBuf,
     emitted: EmitResult,
     previous_hash: u64,
-    previous_output_paths: &[std::path::PathBuf],
     write_output: bool,
 ) -> io::Result<WriteResult> {
     let output_hash = emitted
@@ -128,7 +135,7 @@ fn persist_with_previous_hash(
         })
         .collect::<io::Result<Vec<_>>>()?;
 
-    let result = WriteResult {
+    Ok(WriteResult {
         source: emitted.source,
         output_hash,
         symbols: emitted.symbols,
@@ -138,24 +145,21 @@ fn persist_with_previous_hash(
         suppress_primary_output: emitted.suppress_primary_output,
         output_path,
         auxiliary_outputs,
-    };
-    remove_obsolete_auxiliary(previous_output_paths, &result, should_write)?;
-    Ok(result)
+    })
 }
 
 /// Removes auxiliary files that belonged to the prior successful output set.
 fn remove_obsolete_auxiliary(
     previous: &[std::path::PathBuf],
     current: &WriteResult,
-    remove: bool,
+    analysis: &WorkspaceAnalysis,
 ) -> io::Result<()> {
-    if remove
-        && !current
-            .diagnostics
-            .iter()
-            .any(dust_diagnostics::Diagnostic::is_error)
+    if !current
+        .diagnostics
+        .iter()
+        .any(dust_diagnostics::Diagnostic::is_error)
     {
-        for path in obsolete_auxiliary(previous, &current.auxiliary_outputs) {
+        for path in obsolete_auxiliary(previous, &current.auxiliary_outputs, analysis) {
             remove_output_file(path)?;
         }
     }
@@ -166,6 +170,7 @@ fn remove_obsolete_auxiliary(
 fn obsolete_auxiliary<'a>(
     previous: &'a [std::path::PathBuf],
     current: &[AuxiliaryWriteResult],
+    analysis: &WorkspaceAnalysis,
 ) -> Vec<&'a Path> {
     if current.is_empty() {
         return Vec::new();
@@ -175,6 +180,7 @@ fn obsolete_auxiliary<'a>(
         .skip(1)
         .filter(|path| !current.iter().any(|output| output.output_path == **path))
         .map(std::path::PathBuf::as_path)
+        .filter(|path| !dust_server_plugin::is_client_output_claimed(analysis, path))
         .collect()
 }
 

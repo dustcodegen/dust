@@ -1,4 +1,4 @@
-use dust_dart_emit::render_template;
+use dust_dart_emit::{dart_string_literal, render_template};
 use dust_ir::{BuiltinType, TypeIr};
 use serde::Serialize;
 
@@ -167,7 +167,10 @@ fn render_parse_case(route: &RouteSpec) -> String {
     }];
     for (index, segment) in path_segments.iter().enumerate() {
         if !segment.starts_with(':') {
-            conditions.push(format!("segments[{index}] == '{segment}'"));
+            conditions.push(format!(
+                "segments[{index}] == {}",
+                dart_string_literal(segment)
+            ));
         }
     }
     let mut decoders = Vec::new();

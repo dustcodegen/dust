@@ -1,7 +1,7 @@
 use dust_text::TextRange;
 
 /// One supported Database query helper call found in a Dart library.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedQueryCallSurface {
     /// The query helper function name.
     pub function: ParsedQueryFunction,
@@ -28,7 +28,7 @@ pub struct ParsedQueryCallSurface {
 }
 
 /// Database query helper function shapes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedQueryFunction {
     /// `queryAs<T>(...)`.
     As,

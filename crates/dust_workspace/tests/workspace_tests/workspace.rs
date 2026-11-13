@@ -1,5 +1,5 @@
 use dust_dart_syntax::DartLanguageVersion;
-use dust_workspace::{PackageConfigKind, discover_workspace};
+use dust_workspace::{PackageConfigKind, discover_workspace, load_workspace};
 use tempfile::{tempdir, tempdir_in};
 
 use crate::support::{test_annotations, write_file};
@@ -58,6 +58,11 @@ fn discover_workspace_composes_root_config_and_library_scan() {
         plan.package_root.join("lib/models/user.g.dart")
     );
     assert_eq!(plan.dust_config.outputs.primary_suffix, ".g.dart");
+    let metadata = load_workspace(&nested).unwrap();
+    let mut expected = plan;
+    expected.libraries.clear();
+    expected.dust_packages.clear();
+    assert_eq!(metadata, expected);
 }
 
 #[test]

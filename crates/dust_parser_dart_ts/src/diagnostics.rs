@@ -1,12 +1,23 @@
 use dust_diagnostics::{Diagnostic, SourceLabel};
+use dust_parser_dart::DartLanguageVersion;
 use dust_text::SourceText;
-use tree_sitter::{Node, Tree};
+use tree_sitter::{Node, Tree, TreeCursor};
 
 use crate::language_gates::{FeatureOccurrence, record_syntax_occurrence};
 use crate::syntax::{direct_named_child, node_text, text_range};
 
+/// Native queries visit diagnostic candidates without a Rust token walk.
+mod candidates;
+/// Concise constructor classification shared by both traversals.
+mod constructors;
 /// Dependency method/function defaults, not constructor or metadata defaults.
 mod defaults;
+
+/// Effective-version filtering preserves both complete diagnostic views.
+#[cfg(test)]
+mod language_tests;
+#[cfg(test)]
+mod tests;
 
 /// Two diagnostic projections of the same immutable tree and source facts.
 #[derive(Default)]
@@ -28,26 +39,91 @@ enum UnsupportedFeature {
     ConciseConstructors,
 }
 
-/// Extracts both diagnostic views in the existing syntax-occurrence walk.
+/// Extracts both views; `None` retains every syntax-feature occurrence for callers.
+/// An effective version may omit only occurrences whose language gates are enabled.
 pub(crate) fn extract_diagnostics(
     tree: &Tree,
     source: &SourceText,
     occurrences: &mut Vec<FeatureOccurrence>,
+    version: Option<DartLanguageVersion>,
 ) -> DiagnosticViews {
     let mut views = DiagnosticViews::default();
-    collect_error_diagnostics(tree.root_node(), source, &mut views, occurrences);
+    if !tree.root_node().has_error()
+        && let Some(nodes) = candidates::collect(tree, source, version)
+    {
+        for node in nodes {
+            collect_node_diagnostics(
+                node,
+                node.parent().map(|parent| parent.kind()),
+                source,
+                &mut views,
+                occurrences,
+                false,
+            );
+        }
+        return views;
+    }
+    collect_error_diagnostics(
+        &mut tree.walk(),
+        None,
+        source,
+        &mut views,
+        occurrences,
+        tree.root_node().has_error(),
+    );
     views
 }
 
 /// Records parse errors and grammar forms whose generation is still unsupported.
 fn collect_error_diagnostics(
-    node: Node<'_>,
+    cursor: &mut TreeCursor<'_>,
+    parent_kind: Option<&str>,
     source: &SourceText,
     views: &mut DiagnosticViews,
     occurrences: &mut Vec<FeatureOccurrence>,
+    has_syntax_errors: bool,
 ) {
-    record_syntax_occurrence(node, source, occurrences);
-    if let Some(feature) = unsupported_feature(node, source) {
+    let node = cursor.node();
+    let kind = node.kind();
+    collect_node_diagnostics(
+        node,
+        parent_kind,
+        source,
+        views,
+        occurrences,
+        has_syntax_errors,
+    );
+
+    if cursor.goto_first_child() {
+        loop {
+            collect_error_diagnostics(
+                cursor,
+                Some(kind),
+                source,
+                views,
+                occurrences,
+                has_syntax_errors,
+            );
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+        cursor.goto_parent();
+    }
+}
+
+/// Both traversals retain the same feature classification and diagnostic order.
+fn collect_node_diagnostics(
+    node: Node<'_>,
+    parent_kind: Option<&str>,
+    source: &SourceText,
+    views: &mut DiagnosticViews,
+    occurrences: &mut Vec<FeatureOccurrence>,
+    has_syntax_errors: bool,
+) {
+    let kind = node.kind();
+    record_syntax_occurrence(node, kind, parent_kind, source, occurrences);
+    if let Some(feature) = unsupported_feature(node, kind, source) {
         let (name, guidance) = match feature {
             UnsupportedFeature::DotShorthands => (
                 "dot shorthands",
@@ -71,7 +147,7 @@ fn collect_error_diagnostics(
         }
         views.diagnostics.push(diagnostic);
     }
-    if node.is_error() || node.is_missing() {
+    if has_syntax_errors && (node.is_error() || node.is_missing()) {
         let mut diagnostic =
             Diagnostic::error("tree-sitter reported a Dart syntax error").with_label(
                 SourceLabel::new(source.file_id(), text_range(node), "invalid syntax"),
@@ -84,26 +160,25 @@ fn collect_error_diagnostics(
         views.namespace_diagnostics.push(diagnostic.clone());
         views.diagnostics.push(diagnostic);
     }
-
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        collect_error_diagnostics(child, source, views, occurrences);
-    }
 }
 
 /// Keeps newly parseable syntax gated until its generated consumers are verified.
-fn unsupported_feature(node: Node<'_>, source: &SourceText) -> Option<UnsupportedFeature> {
-    match node.kind() {
+fn unsupported_feature(
+    node: Node<'_>,
+    kind: &str,
+    source: &SourceText,
+) -> Option<UnsupportedFeature> {
+    match kind {
         "dot_shorthand" if !is_generic_receiver_member(node, source) => {
             Some(UnsupportedFeature::DotShorthands)
         }
         "constructor_signature" | "constant_constructor_signature"
-            if is_concise_constructor(node) =>
+            if constructors::is_concise_constructor(node) =>
         {
             Some(UnsupportedFeature::ConciseConstructors)
         }
         "factory_constructor_signature" | "redirecting_factory_constructor_signature"
-            if is_concise_factory(node, source) =>
+            if constructors::is_concise_factory(node, source) =>
         {
             Some(UnsupportedFeature::ConciseConstructors)
         }
@@ -201,35 +276,4 @@ pub(crate) fn is_generic_receiver_member(node: Node<'_>, source: &SourceText) ->
         && receiver
             .named_children(&mut cursor)
             .any(|child| child.kind() == "relational_operator" && node_text(child, source) == "<")
-}
-
-/// Only a leading `new` is concise; a traditional `Type.new` is not.
-fn is_concise_constructor(node: Node<'_>) -> bool {
-    let mut cursor = node.walk();
-    node.children(&mut cursor)
-        .find(|child| matches!(child.kind(), "new" | "identifier"))
-        .is_some_and(|child| child.kind() == "new")
-}
-
-/// Concise factories omit the containing class name from the signature.
-fn is_concise_factory(node: Node<'_>, source: &SourceText) -> bool {
-    std::iter::successors(node.parent(), |parent| parent.parent())
-        .find(|parent| {
-            matches!(
-                parent.kind(),
-                "class_definition" | "class_declaration" | "enum_declaration"
-            )
-        })
-        .is_some_and(|parent| {
-            let class_name = parent
-                .child_by_field_name("name")
-                .or_else(|| direct_named_child(parent, "identifier"));
-            let constructor_name = direct_named_child(node, "identifier");
-            match (class_name, constructor_name) {
-                (Some(class), Some(constructor)) => {
-                    node_text(class, source) != node_text(constructor, source)
-                }
-                _ => true,
-            }
-        })
 }

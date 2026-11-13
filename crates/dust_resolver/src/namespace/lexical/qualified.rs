@@ -138,18 +138,14 @@ impl NamespaceGraph {
             return Err(ownership);
         }
         let mut result = Vec::new();
-        for world in &worlds {
+        for world in worlds.iter() {
             if !world.problems.is_empty() || world.declarations.len() > 1 {
                 return Err(self.bind_name(uri, name, catalog, &mut BTreeSet::new()));
             }
             let Some(declaration) = world.declarations.first() else {
                 return Ok(None);
             };
-            let Some(unit) = self
-                .units
-                .values()
-                .find(|unit| unit.file_id == declaration.file_id)
-            else {
+            let Some(unit) = self.unit_by_file_id(declaration.file_id) else {
                 return Err(rejected(
                     NamespaceFailureKind::MissingInput,
                     "qualifying annotation declaration source is missing",

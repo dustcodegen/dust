@@ -42,7 +42,10 @@ pub(crate) fn extract_annotation(node: Node<'_>, source: &SourceText) -> ParsedA
 }
 
 /// Splits an annotation name into short, prefix, and qualified forms.
-fn annotation_name(node: Node<'_>, source: &SourceText) -> (String, Option<String>, String) {
+pub(crate) fn annotation_name(
+    node: Node<'_>,
+    source: &SourceText,
+) -> (String, Option<String>, String) {
     let qualified_name = node_text(node, source);
     if !matches!(node.kind(), "qualified" | "scoped_identifier") {
         return (qualified_name.clone(), None, qualified_name);

@@ -79,7 +79,7 @@ pub use result::{
     WatchReport,
 };
 pub use route_table::run_route_table;
-pub use watch::{run_watch, run_watch_with_progress};
+pub use watch::{run_watch, run_watch_with_progress, run_watch_with_reports};
 
 /// Runs one driver command request.
 pub fn run(request: CommandRequest) -> CommandResult {

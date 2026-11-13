@@ -135,9 +135,10 @@ void main() {
     expect(viewModel.state, 2);
   });
 
-  test('runAction handles current error', () async {
+  test('runAction calls onError or propagates the current error', () async {
     final viewModel = CounterViewModel();
     final completer = Completer<int>();
+    final error = StateError('failed');
 
     final action = viewModel.runTestAction(
       () => completer.future,
@@ -147,10 +148,34 @@ void main() {
       },
     );
 
-    completer.completeError(StateError('failed'));
+    completer.completeError(error);
 
     expect(await action, isTrue);
     expect(viewModel.state, -2);
+    final unhandled = viewModel.runTestAction(() => Future<int>.error(error));
+    await expectLater(unhandled, throwsA(same(error)));
+  });
+
+  test('disposed view model drops pending and new actions and effects',
+      () async {
+    final observer = RecordingStateObserver();
+    final viewModel = CounterViewModel(observer: observer);
+    final pending = Completer<int>();
+    final action = viewModel.runTestAction(() => pending.future);
+
+    viewModel
+      ..dispose()
+      ..emitTestEffect('ignored')
+      ..invalidateSelf();
+    pending.complete(4);
+
+    expect(await action, isFalse);
+    expect(
+      await viewModel.runTestAction(() async => fail('started after disposal')),
+      isFalse,
+    );
+    expect(viewModel.state, -1);
+    expect(observer.effects, isEmpty);
   });
 
   test('init runs onInit once for concurrent calls', () async {

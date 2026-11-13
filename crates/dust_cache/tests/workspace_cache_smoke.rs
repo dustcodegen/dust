@@ -39,14 +39,42 @@ fn workspace_cache_persists_updates_and_cached_analysis() {
         Some(&["DashboardRoute".to_owned(), "LoginRoute".to_owned()][..])
     );
 
+    // A reader holding the old file must still see the complete previous cache.
+    let previous_cache_path = root.path().join("previous-cache.json");
+    fs::hard_link(cache.path(), &previous_cache_path).unwrap();
+    let previous_cache = fs::read(&previous_cache_path).unwrap();
+
     let mut updated = reloaded.clone();
     updated.remove(root.path(), &source_path);
     updated.flush().unwrap();
+    assert_eq!(fs::read(previous_cache_path).unwrap(), previous_cache);
     let after_remove = WorkspaceCache::load(root.path()).unwrap();
     assert_eq!(after_remove.get(root.path(), &source_path), None);
 
     assert!(WorkspaceCache::delete_storage(root.path()).unwrap());
     assert!(!WorkspaceCache::delete_storage(root.path()).unwrap());
+}
+
+#[cfg(unix)]
+#[test]
+fn workspace_cache_uses_private_creation_mode_and_preserves_existing_mode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempdir().unwrap();
+    let source_path = root.path().join("lib/user.dart");
+    let control_file = tempfile::NamedTempFile::new_in(root.path()).unwrap();
+    let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+
+    let mut cache = WorkspaceCache::load(root.path()).unwrap();
+    cache.insert(root.path(), &source_path, cache_entry());
+    cache.flush().unwrap();
+    assert_eq!(mode(cache.path()), mode(control_file.path()));
+    assert_eq!(mode(cache.path()) & 0o077, 0);
+
+    fs::set_permissions(cache.path(), fs::Permissions::from_mode(0o660)).unwrap();
+    cache.remove(root.path(), &source_path);
+    cache.flush().unwrap();
+    assert_eq!(mode(cache.path()), 0o660);
 }
 
 fn cache_entry() -> CacheEntry {

@@ -21,11 +21,16 @@ const List<GeneratedRoute> $testRoutes = [
     resultType: 'void',
   ),
   GeneratedRoute(
-    '/dashboard',
-    page: DashboardPage,
-    name: 'dashboard',
-    resultType: 'void',
-    branch: testBranchTeamSMain,
+    '/today\'s',
+    routes: [
+      GeneratedRoute(
+        '\$deals',
+        page: DashboardPage,
+        name: 'dashboard',
+        resultType: 'void',
+        branch: testBranchTeamSMain,
+      ),
+    ],
   ),
 ];
 
@@ -137,7 +142,7 @@ final class DashboardRoute extends TestRoute<void> {
   @override
   String get location {
     return generatedRoutePath(
-      ['dashboard'],
+      ['today\'s', '\$deals'],
       uriExtras: generatedRouteUriExtrasOf(this),
     );
   }
@@ -152,7 +157,11 @@ TestRoute parseTestRoute(Uri uri) {
     final route = NotFoundRoute();
     return withGeneratedRouteUriExtras(route, uri, const <String>{});
   }
-  if (segments.length == 1 && segments[0] == 'dashboard') {
+  if (
+    segments.length == 2 &&
+    segments[0] == 'today\'s' &&
+    segments[1] == '\$deals'
+  ) {
     final route = DashboardRoute();
     return withGeneratedRouteUriExtras(route, uri, const <String>{});
   }

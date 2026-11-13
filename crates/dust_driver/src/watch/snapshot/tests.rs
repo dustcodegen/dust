@@ -47,6 +47,7 @@ fn build_snapshot(root: &Path) -> Result<WorkspaceSnapshot, Diagnostic> {
         &catalog,
         &registry,
         false,
+        Some(1),
     )?;
     super::build_snapshot(&workspace, &namespaces, &catalog)
 }

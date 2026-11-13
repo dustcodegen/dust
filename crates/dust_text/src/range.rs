@@ -5,7 +5,19 @@ use std::ops::{Add, Sub};
 /// Dust uses byte offsets because parser backends and generated spans are
 /// naturally byte-based. Higher layers can convert these offsets into
 /// line/column pairs through [`crate::LineIndex`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub struct TextSize(u32);
 
 impl TextSize {
@@ -63,12 +75,27 @@ impl Sub for TextSize {
 /// A half-open byte range inside UTF-8 source text.
 ///
 /// The range includes `start` and excludes `end`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, serde::Serialize)]
 pub struct TextRange {
     /// Inclusive start offset.
     start: TextSize,
     /// Exclusive end offset.
     end: TextSize,
+}
+
+impl<'de> serde::Deserialize<'de> for TextRange {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        struct Bounds {
+            start: TextSize,
+            end: TextSize,
+        }
+        let Bounds { start, end } = <Bounds as serde::Deserialize<'de>>::deserialize(deserializer)?;
+        if start > end {
+            return Err(serde::de::Error::custom("text range start must be <= end"));
+        }
+        Ok(Self { start, end })
+    }
 }
 
 impl TextRange {

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     path::PathBuf,
 };
 
@@ -23,84 +23,111 @@ pub(super) struct Claim {
     producer: SymbolId,
 }
 
-/// Computes paths without inferring ownership from any filename or spelling.
-pub(super) fn plan(
-    roots: &[Source],
-    registry: &PluginRegistry,
-) -> Result<BTreeMap<PathBuf, Claim>, Diagnostic> {
-    let mut claims = BTreeMap::new();
-    for root in roots {
-        for output in registry.potential_generated_libraries(&root.path)? {
-            let path = crate::source_uri::normalize_path(&output.path);
-            let claim = Claim {
-                source: root.uri.clone(),
-                producer: output.producer,
-            };
-            if let Some(previous) = claims.insert(path.clone(), claim)
-                && claims[&path] != previous
-            {
-                return Err(Diagnostic::error(format!(
-                    "generated library `{}` has conflicting producers",
-                    path.display()
-                )));
-            }
-        }
-    }
-    Ok(claims)
+/// Independent output planning preserves deterministic conflicts and errors.
+mod plan;
+pub(super) use plan::plan;
+
+/// Ownership queries may need another import drain before outputs can be classified.
+pub(super) enum Verification {
+    /// Every query was resolved against imports already traversed by the loader.
+    Ready(NamespaceGraph),
+    /// Pending namespace requests must complete before any rejection in this round.
+    NeedsImports(NamespaceGraph),
 }
 
-/// Removes unsupported placeholders monotonically and rechecks surviving owners.
-pub(super) fn verify(
+/// Removes unsupported placeholders only after each ownership round's imports are ready.
+pub(super) fn verify_ready(
+    units: &mut BTreeMap<String, Result<Unit, String>>,
+    claims: &BTreeMap<PathBuf, Claim>,
+    catalog: &SymbolCatalog,
+    imports_ready: impl Fn(&BTreeSet<String>) -> bool,
+) -> Result<Verification, Diagnostic> {
+    let mut eligible: BTreeSet<_> = claims.keys().collect();
+    let graph = loop {
+        let mut graph = graph::build(units)?;
+        let mut ownership = HashMap::new();
+        let rejected: BTreeSet<_> = eligible
+            .iter()
+            .copied()
+            .filter(|path| {
+                let claim = &claims[*path];
+                !ownership
+                    .entry(&claim.source)
+                    .or_insert_with(|| owners(&claim.source, units, &graph, catalog))
+                    .contains(&claim.producer)
+            })
+            .collect();
+        if !imports_ready(&graph.required_lexical_imports()) {
+            return Ok(Verification::NeedsImports(graph));
+        }
+        if rejected.is_empty() {
+            break graph;
+        }
+        for path in &rejected {
+            eligible.remove(path);
+        }
+        let mut changed_units = false;
+        for result in units.values_mut() {
+            if let Ok(unit) = result
+                && unit.generated_library
+                && rejected.contains(&unit.source.path)
+            {
+                let path = &unit.source.path;
+                *result = Err(format!(
+                    "generated library `{}` has no verified handwritten class producer `{}`",
+                    path.display(),
+                    claims[path].producer.0
+                ));
+                changed_units = true;
+            }
+        }
+        if !changed_units {
+            // Keep cached namespaces, retaining requests only from surviving producers.
+            if !graph.required_lexical_imports().is_empty() {
+                graph.clear_required_lexical_imports();
+                let sources = eligible
+                    .iter()
+                    .map(|path| claims[*path].source.as_str())
+                    .collect::<BTreeSet<_>>();
+                for source in sources {
+                    let _ = owners(source, units, &graph, catalog);
+                }
+            }
+            break graph;
+        }
+    };
+    for unit in units.values().filter_map(|unit| unit.as_ref().ok()) {
+        if eligible.contains(&unit.source.path) && !unit.generated_library {
+            return Err(Diagnostic::error(format!(
+                "generated library output `{}` collides with an unmarked existing source",
+                unit.source.path.display()
+            )));
+        }
+    }
+    Ok(Verification::Ready(graph))
+}
+
+/// Existing graph-only tests provide all required imports up front.
+#[cfg(test)]
+fn verify(
     units: &mut BTreeMap<String, Result<Unit, String>>,
     claims: &BTreeMap<PathBuf, Claim>,
     catalog: &SymbolCatalog,
 ) -> Result<NamespaceGraph, Diagnostic> {
-    let mut eligible: BTreeSet<_> = claims.keys().cloned().collect();
-    loop {
-        let graph = graph::build(units)?;
-        let rejected: Vec<_> = eligible
-            .iter()
-            .filter(|path| !owned(&claims[*path], units, &graph, catalog))
-            .cloned()
-            .collect();
-        if rejected.is_empty() {
-            for unit in units.values().filter_map(|unit| unit.as_ref().ok()) {
-                if eligible.contains(&unit.source.path) && !unit.generated_library {
-                    return Err(Diagnostic::error(format!(
-                        "generated library output `{}` collides with an unmarked existing source",
-                        unit.source.path.display()
-                    )));
-                }
-            }
-            return Ok(graph);
-        }
-        for path in rejected {
-            eligible.remove(&path);
-            for unit in units.values_mut() {
-                if unit
-                    .as_ref()
-                    .is_ok_and(|unit| unit.source.path == path && unit.generated_library)
-                {
-                    *unit = Err(format!(
-                        "generated library `{}` has no verified handwritten class producer `{}`",
-                        path.display(),
-                        claims[&path].producer.0
-                    ));
-                }
-            }
-        }
-    }
+    verify_ready(units, claims, catalog, |_| true).map(|verified| match verified {
+        Verification::Ready(graph) | Verification::NeedsImports(graph) => graph,
+    })
 }
 
 /// Only actual handwritten class metadata can authorize a declared output.
-fn owned(
-    claim: &Claim,
+fn owners(
+    source: &str,
     units: &BTreeMap<String, Result<Unit, String>>,
     graph: &NamespaceGraph,
     catalog: &SymbolCatalog,
-) -> bool {
-    let Some(Ok(unit)) = units.get(&claim.source) else {
-        return false;
+) -> Vec<SymbolId> {
+    let Some(Ok(unit)) = units.get(source) else {
+        return Vec::new();
     };
     if unit.generated_library
         || !unit.namespace_diagnostics.is_empty()
@@ -110,10 +137,25 @@ fn owned(
             .iter()
             .any(|directive| matches!(directive, dust_parser_dart::ParsedDirective::PartOf { .. }))
     {
-        return false;
+        return Vec::new();
     }
-    unit.parsed.classes.iter().flat_map(|class| &class.annotations).any(|annotation| {
-        let name = annotation.prefix.as_ref().map_or_else(|| annotation.name.clone(), |prefix| format!("{prefix}.{}", annotation.name));
-        matches!(graph.scope(&claim.source).bind_at(&name, catalog, dust_ir::SpanIr::new(unit.file_id, annotation.span)), NamespaceBinding::Owned(owner) if owner == claim.producer)
-    })
+    unit.parsed
+        .classes
+        .iter()
+        .flat_map(|class| &class.annotations)
+        .filter_map(|annotation| {
+            let name = annotation.prefix.as_ref().map_or_else(
+                || annotation.name.clone(),
+                |prefix| format!("{prefix}.{}", annotation.name),
+            );
+            match graph.scope(source).bind_at(
+                &name,
+                catalog,
+                dust_ir::SpanIr::new(unit.file_id, annotation.span),
+            ) {
+                NamespaceBinding::Owned(owner) => Some(owner),
+                _ => None,
+            }
+        })
+        .collect()
 }

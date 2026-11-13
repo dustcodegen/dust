@@ -34,10 +34,12 @@ pub(crate) fn collect_route_inspection(cwd: &Path, sdk_root: Option<&Path>) -> R
         package_config_hash,
         cache,
         mut cache_report,
+        cache_warning,
     } = match CachedDriverContext::load(
         cwd,
         RegistrySelection::for_check(DbRequestOptions::default()),
         sdk_root,
+        None,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -51,6 +53,7 @@ pub(crate) fn collect_route_inspection(cwd: &Path, sdk_root: Option<&Path>) -> R
         }
     };
 
+    result.diagnostics.extend(cache_warning);
     let batch = prepare_and_process_batch(
         BatchConfig {
             analysis_libraries: &workspace.libraries,

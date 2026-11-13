@@ -3,6 +3,7 @@ use dust_plugin_api::WorkspaceAnalysisBuilder;
 use dust_text::{FileId, TextRange};
 use serde_json::json;
 
+use super::output::{file_class_name, group_identity, snake_case};
 use super::*;
 use crate::{
     ServerClientDestination,

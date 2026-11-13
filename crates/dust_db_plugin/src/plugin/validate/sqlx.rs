@@ -82,6 +82,8 @@ pub(super) fn validate_sqlx_describe(
             row_columns,
             typed_columns,
         },
+        options.execution.metadata,
+        std::env::var("DUST_DATABASE_URL").ok(),
         &mut warnings,
     );
     diagnostics.extend(warnings.into_iter().map(Diagnostic::warning));
@@ -118,6 +120,8 @@ pub(super) struct DescribeRequest<'a> {
 fn run_sqlx_validation(
     migrations_path: &Path,
     request: &DescribeRequest<'_>,
+    metadata: MetadataOutput,
+    named_url: Option<String>,
     warnings: &mut Vec<String>,
 ) -> Result<Vec<QueryCacheEntry>, String> {
     let driver = request.dialect.driver;
@@ -130,16 +134,22 @@ fn run_sqlx_validation(
     runtime.block_on(async move {
         match driver {
             DbDriver::Sqlite3 => {
-                let mut conn =
-                    connect_for_validation::<SqliteConnection>(driver, Some("sqlite::memory:"))
-                        .await?;
+                // A check validates the migration-defined schema in an isolated database.
+                let named = if matches!(metadata, MetadataOutput::ReadOnly) {
+                    None
+                } else {
+                    named_url
+                };
+                let url = validation_database_url(driver, named, Some("sqlite::memory:"))?;
+                let mut conn = connect_for_validation::<SqliteConnection>(driver, &url).await?;
                 apply_migrations(&mut conn, migrations_path).await?;
                 describe_queries(&mut conn, request, warnings).await
             }
             DbDriver::Postgres => {
                 // No in-memory Postgres, so there is no default to fall back
                 // to: validation needs a server or it does not run.
-                let mut conn = connect_for_validation::<PgConnection>(driver, None).await?;
+                let url = validation_database_url(driver, named_url, None)?;
+                let mut conn = connect_for_validation::<PgConnection>(driver, &url).await?;
                 describe_in_scratch_schema(&mut conn, migrations_path, request, warnings).await
             }
         }
@@ -186,24 +196,23 @@ async fn describe_in_scratch_schema(
     described
 }
 
-/// Opens the database SQL is validated against.
-///
-/// `DUST_DATABASE_URL` names it. SQLite has an in-memory default because it can
-/// build the schema from the migrations alone; PostgreSQL has no equivalent, so
-/// it says what is missing rather than failing to connect to nothing.
-///
-/// A URL for another driver is ignored rather than opened. One workspace can
-/// hold projects on both drivers while one environment variable names one
-/// database, and a SQLite project handed a PostgreSQL URL would otherwise fail
-/// with whatever the other driver's URL parser disliked.
+/// Opens the validation target without exposing URL credentials in diagnostics.
 async fn connect_for_validation<C: Connection>(
     driver: DbDriver,
-    fallback: Option<&str>,
+    database_url: &str,
 ) -> Result<C, String> {
-    let database_url =
-        validation_database_url(driver, std::env::var("DUST_DATABASE_URL").ok(), fallback)?;
-    C::connect(&database_url).await.map_err(|error| {
-        format!("failed to connect SQL validation database `{database_url}`: {error}")
+    C::connect(database_url).await.map_err(|error| {
+        let reason = match error {
+            sqlx::Error::Configuration(_) => "invalid connection URL or options".to_owned(),
+            sqlx::Error::Io(error) => error.kind().to_string(),
+            sqlx::Error::Tls(_) => "TLS negotiation failed".to_owned(),
+            sqlx::Error::Database(_) => "database rejected the connection".to_owned(),
+            _ => "connection could not be established".to_owned(),
+        };
+        format!(
+            "failed to connect SQL validation database for `{}`: {reason}",
+            driver.as_str()
+        )
     })
 }
 

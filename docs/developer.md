@@ -64,6 +64,26 @@ for rebuilds; the manifest uses sorted repository-relative paths.
 A library is a cache hit only when those inputs and its generated output set
 still match.
 
+Dust prepares each root's parser facts and output plan from its discovery read,
+then loads imported namespaces and verifies generated output ownership before
+checking library caches. Prepared facts retain exact input bytes and parser options;
+canonical loading rereads the source before reusing them.
+Imports needed by constant and transparent typedef aliases are loaded when
+annotation lookup follows those aliases. Unused aliases do not expand their
+implementation imports. Output ownership waits for pending alias imports.
+
+Successful parser facts have a separate optional snapshot under `.dart_tool/dust`.
+Reuse requires the exact source, parser implementation, options and annotation
+policy; import targets are resolved again. Codegen cache misses still run analysis
+and emission. `dust clean` removes this snapshot, and its writes finish before
+the command reports elapsed time.
+
+A successful, diagnostic-free normal build can save an optional unchanged-build
+proof. Reuse requires matching tool and cache identities, current package/SDK
+metadata, the discovered file set, and complete input/output content checks.
+An invalid proof or changed cache takes the ordinary pipeline. DB validation,
+configured server destinations, and i18n retain their ordinary pipelines.
+
 ### 2. Collect workspace analysis
 
 Cache hits contribute their saved analysis snapshots. Pending libraries are
@@ -199,11 +219,10 @@ cargo clippy -p dust_driver --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-Run the repository scripts before handoff:
+Run the authoritative local gate before every commit:
 
 ```bash
-./scripts/lint.sh
-./scripts/test.sh
+./.githooks/pre-commit
 ```
 
 Changes affecting discovery, caching, workers, parsing, resolution, or emission
@@ -215,6 +234,8 @@ cargo test -p dust_cli benchmark_project_release_build_benchmark \
 ```
 
 The benchmark creates a 5,000-file fixture and checks cold, warm, and
-single-file-invalidated builds. See the
+tool-invalidated builds. The last phase invalidates every cached tool hash and
+runs with `--fail-fast`. The default budgets remain 2,000 ms, 800 ms, and
+1,400 ms respectively. See the
 [benchmark project](../examples/benchmark_project/README.md) for manual setup
-and threshold overrides.
+and fixture restoration.

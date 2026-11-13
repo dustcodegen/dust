@@ -2,9 +2,7 @@ use super::*;
 use dust_ir::{SpanIr, SymbolId};
 use std::fs;
 
-/// Shared source-only dependency and SDK fixtures; no installed SDK is selected.
-#[path = "../../../../fixtures/namespace_sources/workspace.rs"]
-mod namespace_fixture;
+use crate::namespace_sources::test_workspace as namespace_fixture;
 /// Actual runtime library trees are the same in unit and command-level checks.
 #[path = "../../../../fixtures/namespace_server_barrel/workspace.rs"]
 mod public_fixture;
@@ -38,6 +36,7 @@ fn production_loader_preserves_default_server_owners() {
         &catalog,
         &registry,
         false,
+        Some(1),
     )
     .unwrap();
     assert_eq!(plan.libraries.len(), 1);

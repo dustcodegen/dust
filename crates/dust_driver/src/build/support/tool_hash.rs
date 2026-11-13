@@ -31,7 +31,7 @@ fn hash_bytes(bytes: &[u8]) -> u64 {
 }
 
 /// Mixes bytes into an existing FNV-1a hash state.
-fn update_hash_bytes(hash: &mut u64, bytes: &[u8]) {
+pub(crate) fn update_hash_bytes(hash: &mut u64, bytes: &[u8]) {
     for byte in bytes {
         *hash ^= u64::from(*byte);
         *hash = (*hash).wrapping_mul(1099511628211);

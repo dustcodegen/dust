@@ -1,10 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_app/core/services/storage_service.dart';
 import 'package:shopping_app/features/checkout/models/checkout_quote.dart';
+import 'package:shopping_app/features/product_detail/views/product_detail_screen.dart';
 import 'package:shopping_app/features/products/models/product.dart';
+import 'package:shopping_app/features/products/views/products_screen.dart';
 import 'package:shopping_app/features/support/models/chat_message.dart';
+import 'package:shopping_app/features/support/views/support_chat_screen.dart';
+import 'package:shopping_app/features/wishlist/views/wishlist_screen.dart';
 import 'package:shopping_app/i18n/app_i18n.g.dart';
 import 'package:shopping_app/main.dart';
 import 'package:shopping_app/route.dart';
@@ -105,6 +109,57 @@ void main() {
 
     expect(find.text('Second Scoped Backpack'), findsOneWidget);
     expect(find.text('First Scoped Backpack'), findsNothing);
+  });
+
+  testWidgets('generated navigation helpers drive the real shopping router', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      AppI18n(
+        child: ShoppingApp(
+          storage: StorageService(prefs),
+          repository: FakeShoppingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final products = find.byType(ProductsScreen);
+    final detail = find.byType(ProductDetailScreen);
+    final wishlist = find.byType(WishlistScreen);
+    final provider = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .routerConfig!
+        .routeInformationProvider!;
+
+    final productResult =
+        tester.element(products).navigator.productDetail(productId: 42).push();
+    await tester.pumpAndSettle();
+    expect(tester.widget<ProductDetailScreen>(detail).productId, 42);
+    expect(provider.value.uri.path, '/product/42');
+
+    tester.element(detail).navigator.wishlist().replace();
+    await tester.pumpAndSettle();
+    expect(wishlist, findsOneWidget);
+    await expectLater(productResult, completion(isNull));
+    final router = RouterController.of<ShoppingRoute>(tester.element(wishlist));
+    expect(router.stack, [isA<ProductsRoute>(), isA<WishlistRoute>()]);
+
+    final chatResult = tester.element(wishlist).navigator.supportChat().push();
+    await tester.pumpAndSettle();
+    expect(find.byType(SupportChatScreen), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await expectLater(chatResult, completion(isFalse));
+    expect(wishlist, findsOneWidget);
+
+    await tester.tap(find.text('Browse products'));
+    await tester.pumpAndSettle();
+    expect(products, findsOneWidget);
+    expect(router.stack, [isA<ProductsRoute>()]);
+    expect(provider.value.uri.path, '/');
   });
 
   test('generated routes include new shopping showcase destinations', () {

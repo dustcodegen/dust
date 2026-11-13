@@ -66,14 +66,14 @@ fn duplicate_identity_is_rejected_without_changing_graph_or_cached_results() {
     let mut graph = graph();
     add(&mut graph, 3, APP, &format!("import '{CLIENT}' as p;"));
     assert_eq!(graph.scope(APP).bind("p.GET", &catalog(false)), owned());
-    for (uri, id) in [(APP, 9), ("package:app/duplicate.dart", 3)] {
+    let new_uri = "package:app/new.dart";
+    let new_id = u32::MAX;
+    let source = format!("import '{CLIENT}' as p; @p.GET('/a') class Api {{}}");
+    for (uri, id) in [(APP, new_id), (new_uri, 3)] {
         let error = graph
-            .insert_library(
-                uri,
-                FileId::new(id),
-                &parse(id, "class GET {}"),
-                |_, value| Ok(value.to_owned()),
-            )
+            .insert_library(uri, FileId::new(id), &parse(id, &source), |_, _| {
+                panic!("duplicate identity must be rejected before resolving imports")
+            })
             .unwrap_err();
         assert_eq!(
             error.message,
@@ -81,6 +81,14 @@ fn duplicate_identity_is_rejected_without_changing_graph_or_cached_results() {
         );
     }
     assert_eq!(graph.scope(APP).bind("p.GET", &catalog(false)), owned());
+
+    add(&mut graph, new_id, new_uri, &source);
+    let annotation = &parse(new_id, &source).classes[0].annotations[0];
+    let span = dust_ir::SpanIr::new(FileId::new(new_id), annotation.span);
+    assert_eq!(
+        graph.scope(new_uri).bind_at("p.GET", &catalog(false), span),
+        owned()
+    );
 }
 
 #[test]
@@ -116,4 +124,33 @@ fn conflicting_owner_metadata_is_not_resolved_by_registration_order() {
         diagnostic.message,
         "declaration `GET` has multiple registered owners: dust_dart::GET, other::GET"
     );
+}
+
+#[test]
+fn appended_directive_resolves_after_all_written_directives() {
+    let mut graph = graph();
+    let parsed = parse(3, &format!("import '{CLIENT}' as p;"));
+    let core = parse(3, "import 'dart:core';");
+    let mut calls = Vec::new();
+    graph
+        .insert_library_with_appended_directive(
+            APP,
+            FileId::new(3),
+            &parsed,
+            Some(&core.directives[0]),
+            |owner, value| {
+                calls.push((owner.to_owned(), value.to_owned()));
+                Ok(value.to_owned())
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        calls,
+        [
+            (APP.to_owned(), CLIENT.to_owned()),
+            (APP.to_owned(), "dart:core".to_owned()),
+        ]
+    );
+    assert_eq!(graph.scope(APP).bind("p.GET", &catalog(false)), owned());
 }

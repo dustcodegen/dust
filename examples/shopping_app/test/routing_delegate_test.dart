@@ -54,6 +54,36 @@ void main() {
     }
   });
 
+  test('an encoded order deep link resumes after sign-in', () async {
+    final router = await shoppingRouter();
+    expireSession(router);
+    final routes = await ShoppingRouteProbe.start(router.config);
+    const location =
+        '/orders/ORDER%201%2F2?campaign=spring&campaign=launch#receipt';
+    final destination = isA<OrderDetailRoute>()
+        .having((route) => route.orderId, 'orderId', 'ORDER 1/2')
+        .having((route) => route.location, 'location', location);
+
+    await routes.open(location);
+
+    expect(routes.stack, [
+      isA<ProductsRoute>(),
+      isA<LoginRoute>()
+          .having((route) => route.redirectPath, 'redirectPath', location),
+    ]);
+
+    await router.auth.login('dust', 'password');
+    await routes.waitForRefresh();
+
+    expect(router.auth.state.isAuthenticated, isTrue);
+    expect(routes.stack, [isA<ProductsRoute>(), destination]);
+
+    await routes.open(location);
+
+    expect(
+        routes.stack, [isA<ProductsRoute>(), isA<OrdersRoute>(), destination]);
+  });
+
   test('shopping router waits while auth state is unresolved', () async {
     final router = await shoppingRouter();
 

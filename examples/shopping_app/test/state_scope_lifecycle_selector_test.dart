@@ -42,18 +42,30 @@ void main() {
     expect(find.text('externalexternal'), findsNothing);
   });
 
-  testWidgets('.value scope does not retry failed init on parent rebuild', (
+  testWidgets('.value scope retries failed init only on demand', (
     tester,
   ) async {
     final viewModel = FailingInitProductsViewModel(
       ProductsViewModelArgs(repository: MockRepository()),
     );
+    var successfulRetries = 0;
+    addTearDown(viewModel.dispose);
 
     Widget build() {
       return MaterialApp(
         home: ProductsViewModelScope.value(
           value: viewModel,
-          child: const SizedBox(),
+          child: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  await context.readProductsViewModel().retryInit();
+                  successfulRetries += 1;
+                },
+                child: const Text('Retry initialization'),
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -63,15 +75,30 @@ void main() {
 
     expect(viewModel.initCalls, 1);
 
-    viewModel.initCompleters.single.completeError(StateError('init failed'));
+    final failure = StateError('init failed');
+    viewModel.initCompleters.single.completeError(failure);
     await tester.pump();
 
-    expect(tester.takeException(), isA<StateError>());
+    expect(tester.takeException(), same(failure));
 
     await tester.pumpWidget(build());
     await tester.pump();
 
     expect(viewModel.initCalls, 1);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Retry initialization'));
+    await tester.pump();
+    expect(viewModel.initCalls, 2);
+    expect(successfulRetries, 0);
+
+    viewModel.initCompleters.last.complete();
+    await tester.pump();
+    expect(successfulRetries, 1);
+
+    await tester.pumpWidget(build());
+    expect(viewModel.initCalls, 2);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('owned scope recreates when identity changes', (tester) async {

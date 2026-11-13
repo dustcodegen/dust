@@ -5,7 +5,7 @@ use dust_text::TextRange;
 use super::ParsedAnnotationArguments;
 
 /// One identifier in a lexical declaration or a constant reference.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedLexicalName {
     /// Semantic identifier spelling, excluding qualifier trivia.
     pub name: String,
@@ -14,7 +14,7 @@ pub struct ParsedLexicalName {
 }
 
 /// One scope relevant to represented metadata uses.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedLexicalScope {
     /// Parent index in the same file's ordered scope vector.
     pub parent: Option<usize>,
@@ -31,7 +31,7 @@ pub struct ParsedLexicalScope {
 }
 
 /// Lexical scope shape, without claiming full Dart type checking.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedLexicalScopeKind {
     /// File-level constants and the parent of declaration scopes.
     Library,
@@ -42,7 +42,7 @@ pub enum ParsedLexicalScopeKind {
 }
 
 /// One declared name which can shadow an imported spelling.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedLexicalDeclaration {
     /// Name and exact declaration identifier span.
     pub name: ParsedLexicalName,
@@ -53,7 +53,7 @@ pub struct ParsedLexicalDeclaration {
 }
 
 /// Minimal declaration facts needed before annotation ownership is selected.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedLexicalDeclarationKind {
     /// A written constant with its original initializer, if present.
     Constant(Option<ParsedLexicalInitializer>),
@@ -66,7 +66,7 @@ pub enum ParsedLexicalDeclarationKind {
 }
 
 /// A constant initializer retains both exact source and structural provenance.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedLexicalInitializer {
     /// Exact written expression, without surrounding declaration punctuation.
     pub source: String,
@@ -77,7 +77,7 @@ pub struct ParsedLexicalInitializer {
 }
 
 /// Structured identity, not evaluated Dart constant values.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedLexicalInitializerKind {
     /// A direct invocation, retaining actual argument values for later normalization.
     Constructor {

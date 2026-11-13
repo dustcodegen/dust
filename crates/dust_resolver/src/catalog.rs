@@ -35,7 +35,7 @@ pub struct ResolvedSymbol {
 /// assert_eq!(catalog.candidate_ids("GET").collect::<Vec<_>>(),
 ///            ["dust_dart::GET", "dust_server::GET"]);
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SymbolCatalog {
     /// All semantic roles, indexed by canonical identity rather than short name.
     by_symbol: BTreeMap<String, ResolvedSymbols>,
@@ -43,6 +43,8 @@ pub struct SymbolCatalog {
     by_name: BTreeMap<String, SymbolCandidates>,
     /// Actual Dart declarations supplied by the effective plugin ownership set.
     origins: BTreeMap<String, AnnotationOrigin>,
+    /// Canonical owners indexed by their actual declaring library and declaration.
+    by_origin: BTreeMap<&'static str, BTreeMap<&'static str, BTreeSet<&'static str>>>,
 }
 
 /// Trait/config roles retained for one canonical identity.

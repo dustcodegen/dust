@@ -1,4 +1,4 @@
-use dust_dart_emit::render_template;
+use dust_dart_emit::{dart_string_literal, render_template};
 use dust_ir::TypeIr;
 use serde::Serialize;
 
@@ -213,7 +213,7 @@ fn render_location_body(route: &RouteSpec) -> String {
                     name,
                 )
             } else {
-                format!("'{segment}'")
+                dart_string_literal(segment)
             }
         })
         .collect::<Vec<_>>();

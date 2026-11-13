@@ -34,7 +34,7 @@ pub use pubspec::{
     load_is_pub_workspace_root, load_package_name,
 };
 pub use root::detect_workspace_root;
-pub use workspace::{SourceLibrary, WorkspacePlan, discover_workspace};
+pub use workspace::{SourceLibrary, WorkspacePlan, discover_workspace, load_workspace};
 
 /// Dust runtime packages discovery recognises in Dart imports.
 ///

@@ -1,15 +1,15 @@
-use std::{env, path::PathBuf};
+use std::{cell::Cell, env, path::PathBuf};
 
 use dust_driver::{
     BuildRequest, CheckRequest, CleanRequest, CommandRequest, CommandResult, DbRequestOptions,
     DoctorRequest, I18nBuildRequest, I18nCheckRequest, I18nScanRequest, RouteTableRequest,
-    WatchRequest, run, run_build_with_progress, run_watch_with_progress,
+    WatchRequest, run, run_build_with_progress, run_watch_with_progress, run_watch_with_reports,
 };
 
 use crate::{
     args::{CliCommand, ParsedCli, parse_cli_args, parse_cli_from_env},
     exit_code::ExitCode,
-    render::render_result,
+    render::{render_batch_diagnostics, render_result},
     terminal::{ProgressHandle, create_progress_handle, finish_progress, handle_progress},
     upgrade::run_upgrade,
 };
@@ -27,16 +27,21 @@ pub struct CliRun {
 
 /// Runs the CLI from the current process environment.
 pub fn run_from_env() -> CliRun {
-    run_parsed_cli(parse_cli_from_env())
+    run_parsed_cli(parse_cli_from_env(), false)
+}
+
+/// Runs the process CLI, writing each completed watch batch's diagnostics to stderr.
+pub fn run_from_env_with_live_watch() -> CliRun {
+    run_parsed_cli(parse_cli_from_env(), true)
 }
 
 /// Runs the CLI with explicit arguments, excluding the executable name.
 pub fn run_cli(args: impl IntoIterator<Item = impl Into<String>>) -> CliRun {
-    run_parsed_cli(parse_cli_args(args))
+    run_parsed_cli(parse_cli_args(args), false)
 }
 
 /// Runs a parsed CLI result or converts Clap parse errors to CLI output.
-fn run_parsed_cli(parsed: Result<ParsedCli, clap::Error>) -> CliRun {
+fn run_parsed_cli(parsed: Result<ParsedCli, clap::Error>, live_watch: bool) -> CliRun {
     let parsed = match parsed {
         Ok(parsed) => parsed,
         Err(error) => {
@@ -56,12 +61,24 @@ fn run_parsed_cli(parsed: Result<ParsedCli, clap::Error>) -> CliRun {
     let command = parsed.command.clone();
     let ai_mode = ai_mode_enabled();
     let progress = create_progress_handle(&command, ai_mode);
-    let result = run_command(parsed, progress.as_ref());
+    let reported = Cell::new(0);
+    let report = |batch: &CommandResult| {
+        if batch.diagnostics.is_empty() {
+            return;
+        }
+        if let Some(progress) = &progress {
+            finish_progress(progress);
+        }
+        eprint!("{}", render_batch_diagnostics(batch));
+        reported.set(reported.get() + batch.diagnostics.len());
+    };
+    let watch_report = live_watch.then_some(&report as &dyn Fn(&CommandResult));
+    let result = run_command(parsed, progress.as_ref(), watch_report);
     if let Some(progress) = &progress {
         finish_progress(progress);
     }
     let exit_code = ExitCode::from_result(&command, &result) as i32;
-    let rendered = render_result(&command, &result, ai_mode);
+    let rendered = render_result(&command, &result, ai_mode, reported.get());
 
     let (stdout, stderr) = split_output(exit_code, rendered);
     CliRun {
@@ -72,7 +89,11 @@ fn run_parsed_cli(parsed: Result<ParsedCli, clap::Error>) -> CliRun {
 }
 
 /// Executes one parsed CLI command through the driver.
-fn run_command(parsed: ParsedCli, progress: Option<&ProgressHandle>) -> CommandResult {
+fn run_command(
+    parsed: ParsedCli,
+    progress: Option<&ProgressHandle>,
+    watch_report: Option<&dyn Fn(&CommandResult)>,
+) -> CommandResult {
     let cwd = command_root(&parsed);
 
     match parsed.command {
@@ -125,7 +146,18 @@ fn run_command(parsed: ParsedCli, progress: Option<&ProgressHandle>) -> CommandR
                 poll_interval_ms: parsed.options.poll_interval_ms,
                 max_cycles: parsed.options.max_cycles,
             };
-            if let Some(progress) = progress {
+            if let Some(watch_report) = watch_report {
+                let render_progress = |event| {
+                    if let Some(progress) = progress {
+                        handle_progress(progress, event);
+                    }
+                };
+                run_watch_with_reports(
+                    request,
+                    progress.map(|_| &render_progress as _),
+                    watch_report,
+                )
+            } else if let Some(progress) = progress {
                 run_watch_with_progress(request, |event| handle_progress(progress, event))
             } else {
                 run(CommandRequest::Watch(request))

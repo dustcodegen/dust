@@ -22,7 +22,7 @@ pub(crate) struct WorkspaceSnapshot {
 pub(crate) struct SnapshotEntry {
     /// Source and output paths for the library.
     pub(crate) library: SourceLibrary,
-    /// Hash of the current source text.
+    /// Fingerprint of the current source and its dependencies.
     pub(crate) source_hash: u64,
     /// Whether the source contains a route declaration marker.
     pub(crate) contains_route_marker: bool,

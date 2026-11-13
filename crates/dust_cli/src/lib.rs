@@ -16,4 +16,4 @@ mod terminal;
 mod upgrade;
 
 pub use args::{CliCommand, CliOptions, ParsedCli, parse_cli_args, parse_cli_from_env};
-pub use run::{CliRun, run_cli, run_from_env};
+pub use run::{CliRun, run_cli, run_from_env, run_from_env_with_live_watch};

@@ -179,7 +179,7 @@ impl DustPlugin for ServerPlugin {
         file: &DartFileIr,
         analysis: &mut WorkspaceAnalysisBuilder,
     ) {
-        collect_server_workspace_analysis_ir(file, analysis);
+        collect_server_workspace_analysis_ir(file, analysis, &self.clients);
     }
 
     fn collect_dependency_analysis_ir(

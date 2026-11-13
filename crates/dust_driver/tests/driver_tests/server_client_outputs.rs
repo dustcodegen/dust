@@ -1,12 +1,11 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use dust_driver::{BuildRequest, CheckRequest, run_build, run_check};
 use dust_plugin_api::GENERATED_HEADER;
 
 use super::support::{make_pub_workspace_member, sdk_source_root, write_file};
 
-#[test]
-fn builds_and_checks_standalone_clients_in_a_sibling_package() {
+pub(super) fn client_workspace() -> (tempfile::TempDir, PathBuf, PathBuf) {
     let (workspace, server) = make_pub_workspace_member();
     let client = workspace.path().join("packages/todo_client");
     write_file(
@@ -54,6 +53,12 @@ fn builds_and_checks_standalone_clients_in_a_sibling_package() {
         &server.join("dust.yaml"),
         "server:\n  client_package: todo_client\n",
     );
+    (workspace, server, client.join("lib/src/generated"))
+}
+
+#[test]
+fn builds_and_checks_standalone_clients_in_a_sibling_package() {
+    let (_workspace, server, client) = client_workspace();
     write_file(
         &server.join("lib/todos.dart"),
         r#"import 'package:dust_server/annotations.dart';
@@ -84,8 +89,8 @@ class Todos with _$Todos {
     let built = run_build(request.clone());
 
     assert!(!built.has_errors(), "{:?}", built.diagnostics);
-    let barrel = client.join("lib/src/generated/todos_client.g.dart");
-    let output = client.join("lib/src/generated/todos_client.todos.g.dart");
+    let barrel = client.join("todos_client.g.dart");
+    let output = client.join("todos_client.todos.g.dart");
     assert_eq!(
         fs::read_to_string(&barrel).unwrap(),
         format!("{GENERATED_HEADER}\nexport 'todos_client.todos.g.dart';\n")
@@ -114,7 +119,7 @@ class Todos with _$Todos {
     let rebuilt = run_build(request.clone());
     assert!(!rebuilt.has_errors(), "{:?}", rebuilt.diagnostics);
     assert!(!output.exists());
-    let output = client.join("lib/src/generated/todos_client.tasks.g.dart");
+    let output = client.join("todos_client.tasks.g.dart");
     assert!(output.exists());
 
     write_file(&output, "stale\n");

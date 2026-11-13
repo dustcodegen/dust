@@ -88,10 +88,7 @@ fn enum_values_and_imported_reexported_library_constants_are_foreign() {
                 .bind_at(annotation, &catalog(false), use_span(&source)),
             NamespaceBinding::Foreign
         );
-        assert_eq!(
-            graph.required_lexical_imports().is_empty(),
-            annotation == "Kind.marker"
-        );
+        assert!(graph.required_lexical_imports().is_empty());
     }
 }
 

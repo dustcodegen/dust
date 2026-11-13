@@ -138,3 +138,34 @@ fn cli_watch_reports_rebuilt_library() {
     assert!(run.stdout.contains("watch  scanned:"));
     assert!(run.stdout.contains("rebuilds: 1"));
 }
+
+#[test]
+fn cli_build_and_check_recover_from_truncated_cache_without_changing_output() {
+    let workspace = make_workspace();
+    let root = workspace.path();
+    let root_arg = root.to_str().unwrap();
+    write_dust_file(
+        &root.join("lib/user.dart"),
+        &[DustImport::Derive],
+        "part 'user.g.dart'; @ToString() class User { const User(this.id); final String id; }",
+    );
+    let first = run_cli(["build", "--root", root_arg]);
+    assert_eq!(first.exit_code, 0, "{}", first.stderr);
+    let output_path = root.join("lib/user.g.dart");
+    let expected = std::fs::read(&output_path).unwrap();
+    let cache = root.join(".dart_tool/dust/build_cache_v1.json");
+    for command in ["build", "check"] {
+        write_file(&cache, r#"{"schema_version":"#);
+        let recovered = run_cli([command, "--root", root_arg]);
+        assert_eq!(recovered.exit_code, 0, "{}", recovered.stderr);
+        assert!(
+            recovered
+                .stdout
+                .contains("warning: ignoring invalid Dust cache")
+        );
+        assert_eq!(std::fs::read(&output_path).unwrap(), expected);
+        let warm = run_cli(["check", "--root", root_arg]);
+        assert_eq!(warm.exit_code, 0, "{}", warm.stderr);
+        assert!(!warm.stdout.contains("ignoring invalid Dust cache"));
+    }
+}

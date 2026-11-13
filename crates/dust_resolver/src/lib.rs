@@ -43,7 +43,10 @@ pub use annotations::{
 pub use binding::BindingContext;
 pub use catalog::{ResolvedSymbol, SymbolCatalog, SymbolKind};
 pub use function_formals::lower_parameter_type_ir;
-pub use namespace::{NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope};
+pub use namespace::{
+    NamespaceBinding, NamespaceFailureKind, NamespaceGraph, NamespaceScope,
+    PreparedNamespaceLibrary,
+};
 pub use primary_part::PrimaryPart;
 pub use resolve::{
     resolve_library, resolve_library_in_namespace, resolve_library_with_bindings,

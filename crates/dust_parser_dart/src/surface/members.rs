@@ -5,7 +5,7 @@ use dust_text::TextRange;
 use crate::{ParsedFunctionFormalTypeSurface, ParsedTypeSurface, surface::ParsedAnnotation};
 
 /// One field declaration extracted from a class.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedFieldSurface {
     /// The field name.
     pub name: String,
@@ -33,7 +33,7 @@ impl ParsedFieldSurface {
 }
 
 /// The parameter style used by a constructor parameter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParameterKind {
     /// A positional parameter.
     Positional,
@@ -42,7 +42,7 @@ pub enum ParameterKind {
 }
 
 /// One constructor extracted from a class.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedConstructorSurface {
     /// The named constructor suffix, if present.
     pub name: Option<String>,
@@ -65,7 +65,7 @@ pub struct ParsedConstructorSurface {
 }
 
 /// A redirect's applied target type and optional named constructor.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedRedirectTargetSurface {
     /// The target type, including written arguments and its original span.
     pub ty: ParsedTypeSurface,
@@ -78,7 +78,7 @@ pub struct ParsedRedirectTargetSurface {
 }
 
 /// One identifier in a redirect's type path or constructor suffix.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedRedirectIdentifierSurface {
     /// The identifier, or the explicit unnamed-constructor suffix `new`.
     pub name: String,
@@ -87,7 +87,7 @@ pub struct ParsedRedirectIdentifierSurface {
 }
 
 /// One extracted constructor parameter.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedConstructorParamSurface {
     /// The parameter name.
     pub name: String,

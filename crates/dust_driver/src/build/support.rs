@@ -1,5 +1,7 @@
 /// Cache input loading and fingerprint comparison.
 mod cache_input;
+/// Parser-only implementation and target identity for optional parser fact reuse.
+mod parser_identity;
 /// Plugin registry selection for full and DB-only generation modes.
 mod registry;
 /// Stable toolchain hash inputs used for cache invalidation.
@@ -9,7 +11,10 @@ pub(crate) use cache_input::{
     CacheFingerprint, load_library_input, matches_cache_metadata, read_workspace_config_hash,
     route_only_analysis,
 };
+pub(crate) use parser_identity::parser_identity;
 pub(crate) use registry::{
     RegistrySelection, registry_for_selection, registry_for_selection_with_server_clients,
 };
-pub(crate) use tool_hash::{CodegenToolHash, codegen_tool_hash_for_selection, hash_text};
+pub(crate) use tool_hash::{
+    CodegenToolHash, codegen_tool_hash_for_selection, hash_text, update_hash_bytes,
+};

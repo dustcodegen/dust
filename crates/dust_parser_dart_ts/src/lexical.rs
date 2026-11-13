@@ -18,6 +18,20 @@ mod scopes;
 
 /// Extracts a deterministic parent-first scope tree without a second parse.
 pub(crate) fn extract(root: Node<'_>, source: &SourceText) -> Vec<ParsedLexicalScope> {
+    extract_scopes(root, source, false)
+}
+
+/// Namespace ownership needs constructor identities, not their argument payloads.
+pub(crate) fn extract_namespace(root: Node<'_>, source: &SourceText) -> Vec<ParsedLexicalScope> {
+    extract_scopes(root, source, true)
+}
+
+/// Both projections retain the same scopes, declarations and initializer spans.
+fn extract_scopes(
+    root: Node<'_>,
+    source: &SourceText,
+    namespace_only: bool,
+) -> Vec<ParsedLexicalScope> {
     let mut scopes = vec![ParsedLexicalScope {
         parent: None,
         name: None,
@@ -26,7 +40,7 @@ pub(crate) fn extract(root: Node<'_>, source: &SourceText) -> Vec<ParsedLexicalS
         span: text_range(root),
         declarations: Vec::new(),
     }];
-    members(root, 0, source, &mut scopes);
+    members(root, 0, source, &mut scopes, namespace_only);
     scopes
 }
 
@@ -36,6 +50,7 @@ fn members(
     parent: usize,
     source: &SourceText,
     scopes: &mut Vec<ParsedLexicalScope>,
+    namespace_only: bool,
 ) {
     let mut constant = false;
     let mut cursor = node.walk();
@@ -49,14 +64,14 @@ fn members(
             | "enum_declaration"
             | "extension_declaration"
             | "extension_type_declaration" => {
-                scopes::type_scope(child, parent, source, scopes);
+                scopes::type_scope(child, parent, source, scopes, namespace_only);
                 constant = false;
             }
             "class_member" | "declaration" | "top_level_definition" => {
-                members(child, parent, source, scopes);
+                members(child, parent, source, scopes, namespace_only);
             }
             "initialized_identifier_list" | "static_final_declaration_list" => {
-                values(child, parent, constant, source, scopes);
+                values(child, parent, constant, source, scopes, namespace_only);
             }
             "identifier_list" if scopes[parent].kind == Scope::Type => {
                 let mut cursor = child.walk();
@@ -107,6 +122,7 @@ fn values(
     constant: bool,
     source: &SourceText,
     scopes: &mut [ParsedLexicalScope],
+    namespace_only: bool,
 ) {
     let mut cursor = node.walk();
     for value in node.named_children(&mut cursor).filter(|node| {
@@ -120,7 +136,7 @@ fn values(
             .or_else(|| direct_named_child(value, "identifier"))
         {
             let kind = if constant {
-                Declaration::Constant(initializers::extract(value, source))
+                Declaration::Constant(initializers::extract(value, source, namespace_only))
             } else {
                 Declaration::Member
             };

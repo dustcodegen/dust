@@ -141,10 +141,11 @@ final class TabHomeDetailsPage extends StatelessWidget {
 ```
 
 Switching to another branch and back restores the first branch's stack, so
-`/tabs/home` reopens with `/tabs/home/details` still on top. Child paths inherit
-the nearest parent `branch:` just as they inherit `shell:`, and Dust generates a
-stable constant per branch value, such as `shopBranchMainTabs`, reused in route
-metadata and debug helpers.
+`/tabs/home` reopens with `/tabs/home/details` still on top when access checks
+allow it. Dust runs the router redirect and route guards before showing the
+cached pages again. Child paths inherit the nearest parent `branch:` just as
+they inherit `shell:`, and Dust generates a stable constant per branch value,
+such as `shopBranchMainTabs`, reused in route metadata and debug helpers.
 
 ## Multiple Tabs
 

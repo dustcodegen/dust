@@ -22,7 +22,11 @@ pub(crate) fn class_header(node: Node<'_>) -> Node<'_> {
 }
 
 /// Extracts a Dust class surface from one tree-sitter class declaration.
-pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassSurface {
+pub(super) fn extract_class(
+    node: Node<'_>,
+    source: &SourceText,
+    namespace_only: bool,
+) -> ParsedClassSurface {
     let header = class_header(node);
     let is_sealed = has_direct_child_kind(node, "sealed");
     let kind = if header.kind() == "mixin_application_class" {
@@ -41,7 +45,9 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
         .or_else(|| direct_named_child(header, "identifier"))
         .map(|name| node_text(name, source))
         .unwrap_or_default();
-    let superclass = extract_class_superclass(header, source);
+    let superclass = (!namespace_only)
+        .then(|| extract_class_superclass(header, source))
+        .flatten();
     let superclass_name = superclass
         .as_ref()
         .and_then(|superclass| match &superclass.kind {
@@ -54,21 +60,23 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     let mut fields = Vec::new();
     let mut constructors = Vec::new();
     let mut methods = Vec::new();
-    if let Some(primary) = node.child_by_field_name("primary_constructor") {
+    if !namespace_only && let Some(primary) = node.child_by_field_name("primary_constructor") {
         let mut constructor = extract_constructor(primary, &[], source);
         constructor.is_const = has_const_modifier(node);
         fields.extend(extract_declaring_fields(primary, &constructor.params));
         constructors.push(constructor);
     }
 
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor).filter(|child| child.is_named()) {
-        if child.kind() == "annotation" {
-            annotations.push(extract_annotation(child, source));
+    if !namespace_only {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor).filter(|child| child.is_named()) {
+            if child.kind() == "annotation" {
+                annotations.push(extract_annotation(child, source));
+            }
         }
     }
 
-    if let Some(body) = node.child_by_field_name("body") {
+    if !namespace_only && let Some(body) = node.child_by_field_name("body") {
         for (declaration, member_annotations) in annotated_members(body, source) {
             match classify_class_member(declaration) {
                 Some(ClassMemberShape::PrimaryBody) => {
@@ -100,8 +108,16 @@ pub(super) fn extract_class(node: Node<'_>, source: &SourceText) -> ParsedClassS
     ParsedClassSurface {
         kind,
         name: class_name,
-        type_parameters: extract_class_type_parameters(header, source),
-        mixins: extract_class_mixins(header, source),
+        type_parameters: if namespace_only {
+            Vec::new()
+        } else {
+            extract_class_type_parameters(header, source)
+        },
+        mixins: if namespace_only {
+            Vec::new()
+        } else {
+            extract_class_mixins(header, source)
+        },
         is_abstract,
         is_interface,
         superclass_name,

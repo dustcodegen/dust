@@ -153,6 +153,17 @@ void main() {
       expect(await server.close(drain: const Duration(seconds: 5)), isTrue);
     });
 
+    test('a zero drain budget still releases the listening socket', () async {
+      final app = Router()..route('/a', get((request) async => noContent()));
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+
+      expect(await server.close(drain: Duration.zero), isTrue);
+
+      final rebound = await ServerSocket.bind(server.address, server.port);
+      addTearDown(rebound.close);
+      expect(rebound.port, server.port);
+    });
+
     test('drains sustained accepted traffic during shutdown', () async {
       const requestCount = 20;
       final allStarted = Completer<void>();

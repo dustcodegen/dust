@@ -3,7 +3,7 @@
 use dust_text::TextRange;
 
 /// One metadata annotation attached to a declaration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedAnnotation {
     /// The short annotation name without `@` or import prefix.
     pub name: String,
@@ -30,7 +30,7 @@ impl ParsedAnnotation {
 }
 
 /// Parsed annotation argument facts.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct ParsedAnnotationArguments {
     /// Positional annotation arguments.
     pub positional: Vec<ParsedAnnotationArgument>,
@@ -39,7 +39,7 @@ pub struct ParsedAnnotationArguments {
 }
 
 /// A parser-owned annotation value with exact source and root CST kind.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedAnnotationValue {
     /// The exact value expression source.
     pub source: String,
@@ -50,7 +50,7 @@ pub struct ParsedAnnotationValue {
 }
 
 /// Parser-owned annotation value root kinds.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedAnnotationValueRootKind {
     /// The `null` literal.
     Null,
@@ -86,7 +86,7 @@ pub enum ParsedAnnotationValueRootKind {
 }
 
 /// Parser-owned annotation numeric literal kind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParsedAnnotationNumberKind {
     /// An integer literal.
     Int,
@@ -95,7 +95,7 @@ pub enum ParsedAnnotationNumberKind {
 }
 
 /// One positional annotation argument.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedAnnotationArgument {
     /// The raw argument expression source.
     pub source: String,
@@ -106,7 +106,7 @@ pub struct ParsedAnnotationArgument {
 }
 
 /// One named annotation argument.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedAnnotationNamedArgument {
     /// The argument name before `:`.
     pub name: String,

@@ -31,6 +31,18 @@ final class _Throwing implements DisposableLayer {
   Future<void> dispose() async => throw StateError('bad teardown');
 }
 
+final class _OnDispose implements DisposableLayer {
+  _OnDispose(this.callback);
+
+  final Future<void> Function() callback;
+
+  @override
+  Middleware toMiddleware() => (inner) => inner;
+
+  @override
+  Future<void> dispose() => callback();
+}
+
 void main() {
   group('DisposableLayer', () {
     test('is disposed when the server closes', () async {
@@ -120,39 +132,114 @@ void main() {
       expect(closed, ['same-name', 'same-name']);
     });
 
-    test('a wedged request does not skip disposal', () async {
-      // close() reports failure when the drain budget runs out. The layers
-      // still have to be released — a shutdown that gives up on the request
-      // must not also give up on the resource.
-      final closed = <String>[];
-      final gate = Completer<void>();
-      // The handler says when it has been entered. Sleeping a fixed interval
-      // instead is a race: under load the request has not reached the handler
-      // yet, `close` finds nothing in flight, and the drain settles — which is
-      // the opposite of what this test is about.
+    test('the deadline starts disposal with requests and tasks pending',
+        () async {
+      final requestGate = Completer<void>();
+      final taskGate = Completer<void>();
       final entered = Completer<void>();
+      final disposed = Completer<void>();
+      final tasks = BackgroundTasks();
       final app = Router()
-        ..layer(_Owning('after-wedge', closed))
+        ..layer(_OnDispose(() async => disposed.complete()))
         ..route('/hang', get((request) async {
+          tasks.run('pending', () => taskGate.future);
           entered.complete();
-          await gate.future;
+          await requestGate.future;
           return 'late';
         }));
 
-      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
-      final origin = 'http://127.0.0.1:${server.port}';
-      unawaited(
-        http.get(Uri.parse('$origin/hang')).catchError(
-              (Object _) => http.Response('', 499),
-            ),
+      final server = await serve(
+        app,
+        InternetAddress.loopbackIPv4,
+        0,
+        background: tasks,
       );
+      addTearDown(() {
+        if (!requestGate.isCompleted) requestGate.complete();
+        if (!taskGate.isCompleted) taskGate.complete();
+      });
+      final request =
+          http.get(Uri.parse('http://127.0.0.1:${server.port}/hang'));
       await entered.future.timeout(const Duration(seconds: 10));
 
       final settled =
-          await server.close(drain: const Duration(milliseconds: 200));
-      expect(settled, isFalse, reason: 'the request never finished');
-      expect(closed, ['after-wedge'], reason: 'the layer was still released');
-      gate.complete();
+          await server.close(drain: const Duration(milliseconds: 50));
+      expect(settled, isFalse);
+      expect(tasks.isClosed, isTrue);
+      expect(disposed.isCompleted, isTrue);
+
+      requestGate.complete();
+      expect((await request).body, 'late');
+
+      taskGate.complete();
+      expect(await tasks.settled(const Duration(seconds: 2)), isTrue);
+    });
+
+    test('the deadline releases a stream owned by a disposable layer',
+        () async {
+      final events = StreamController<List<int>>();
+      final app = Router()
+        ..layer(_OnDispose(events.close))
+        ..route('/', get((request) {
+          events.add([1]);
+          return Response.ok(events.stream);
+        }));
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+      final client = HttpClient();
+      addTearDown(() {
+        client.close(force: true);
+        if (!events.isClosed) unawaited(events.close());
+      });
+      final request = await client.getUrl(
+        Uri.parse('http://127.0.0.1:${server.port}/'),
+      );
+      final response = await request.close();
+      final responseDone = response.drain<void>();
+
+      try {
+        expect(
+          await server.close(drain: const Duration(milliseconds: 50)),
+          isFalse,
+        );
+        expect(events.isClosed, isTrue);
+      } finally {
+        if (!events.isClosed) unawaited(events.close());
+        await responseDone.timeout(const Duration(seconds: 2));
+      }
+    });
+
+    test('concurrent closes share the first deadline and one disposal',
+        () async {
+      final started = Completer<void>();
+      final disposeGate = Completer<void>();
+      final nextDisposed = Completer<void>();
+      var disposeCalls = 0;
+      final app = Router()
+        ..layer(_OnDispose(() async {
+          disposeCalls++;
+          if (!started.isCompleted) started.complete();
+          await disposeGate.future;
+          throw StateError('late teardown failure');
+        }))
+        ..layer(_OnDispose(() async => nextDisposed.complete()))
+        ..route('/', get((request) => 'ok'));
+      final server = await serve(app, InternetAddress.loopbackIPv4, 0);
+      addTearDown(() {
+        if (!disposeGate.isCompleted) disposeGate.complete();
+      });
+
+      final first = server.close(drain: const Duration(milliseconds: 50));
+      final second = server.close(drain: const Duration(seconds: 10));
+      expect(second, same(first));
+      await started.future.timeout(const Duration(seconds: 2));
+      expect(await first.timeout(const Duration(seconds: 2)), isFalse);
+      expect(disposeCalls, 1);
+      expect(nextDisposed.isCompleted, isFalse);
+
+      disposeGate.complete();
+      await nextDisposed.future.timeout(const Duration(seconds: 2));
+      expect(await server.close(), isFalse);
+      expect(disposeCalls, 1);
     });
 
     test('is disposed once, not again on a second close', () async {

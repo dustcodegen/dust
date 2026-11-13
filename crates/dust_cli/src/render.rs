@@ -1,7 +1,12 @@
-use dust_diagnostics::{Diagnostic, Severity, render_to_string_with_files};
+use dust_diagnostics::{Diagnostic, Severity};
 use dust_driver::CommandResult;
 
 use crate::args::CliCommand;
+
+/// Source-aware diagnostic rendering shared with live watch.
+mod diagnostics;
+use diagnostics::append_diagnostic_blocks;
+pub(crate) use diagnostics::render_batch_diagnostics;
 
 /// Embedded ASCII banner shown before command summaries.
 const BANNER: &str = include_str!("../assets/dust-logo-cli.txt");
@@ -12,7 +17,12 @@ fn render_banner() -> &'static str {
 }
 
 /// Renders a complete command result for stdout or stderr.
-pub(crate) fn render_result(command: &CliCommand, result: &CommandResult, ai_mode: bool) -> String {
+pub(crate) fn render_result(
+    command: &CliCommand,
+    result: &CommandResult,
+    ai_mode: bool,
+    reported_diagnostics: usize,
+) -> String {
     let mut lines = Vec::new();
     if !ai_mode {
         lines.push(render_banner().to_owned());
@@ -167,8 +177,11 @@ pub(crate) fn render_result(command: &CliCommand, result: &CommandResult, ai_mod
 
     if !result.diagnostics.is_empty() {
         lines.push(render_diagnostic_summary(&result.diagnostics));
-        lines.push(String::new());
-        append_diagnostic_blocks(&mut lines, result, &result.diagnostics);
+        let pending = &result.diagnostics[reported_diagnostics..];
+        if !pending.is_empty() {
+            lines.push(String::new());
+            append_diagnostic_blocks(&mut lines, result, pending);
+        }
     }
 
     if lines.is_empty() {
@@ -265,29 +278,6 @@ impl DiagnosticCounts {
             }
         }
         counts
-    }
-}
-
-/// Appends rendered diagnostic blocks with source context.
-fn append_diagnostic_blocks(
-    lines: &mut Vec<String>,
-    result: &CommandResult,
-    diagnostics: &[Diagnostic],
-) {
-    let files = result
-        .diagnostic_files
-        .iter()
-        .map(|file| file.render_context())
-        .collect::<Vec<_>>();
-    for (index, diagnostic) in diagnostics.iter().enumerate() {
-        lines.extend(
-            render_to_string_with_files(diagnostic, &files)
-                .lines()
-                .map(str::to_owned),
-        );
-        if index + 1 != diagnostics.len() {
-            lines.push(String::new());
-        }
     }
 }
 

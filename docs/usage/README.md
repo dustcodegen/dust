@@ -16,7 +16,7 @@ evidence are grouped separately in [Developing Dust](../development/README.md).
 | :--- | :--- |
 | `dust build` | Writes normal generated Dart outputs. |
 | `dust check` | Checks normal generated outputs without writing. |
-| `dust watch` | Runs an initial build, then rebuilds after source changes. |
+| `dust watch` | Runs an initial build, then rebuilds after source changes. Reports diagnostics as each build finishes. |
 | `dust clean` | Removes Dust-owned generated outputs and cache state. |
 | `dust doctor` | Reports workspace and plugin readiness. |
 | `dust route table` | Prints the app route table without writing files. |

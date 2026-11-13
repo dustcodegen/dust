@@ -11,6 +11,8 @@ mod build_outputs;
 
 #[path = "driver_tests/http_client_outputs.rs"]
 mod http_client_outputs;
+#[path = "driver_tests/server_client_collisions.rs"]
+mod server_client_collisions;
 #[path = "driver_tests/server_client_outputs.rs"]
 mod server_client_outputs;
 #[path = "driver_tests/server_client_payloads.rs"]

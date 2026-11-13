@@ -11,6 +11,9 @@ Page<R> generatedPage<R>({
   bool fullscreenDialog = false,
   bool maintainState = true,
 }) {
+  final content = key is _RoutePageKey
+      ? _RoutePageContent(pageKey: key, child: child)
+      : child;
   if (transition != null) {
     return _GeneratedTransitionPage<R>(
       key: key,
@@ -19,7 +22,7 @@ Page<R> generatedPage<R>({
       fullscreenDialog: fullscreenDialog,
       maintainState: maintainState,
       transition: transition,
-      child: child,
+      child: content,
     );
   }
 
@@ -29,8 +32,60 @@ Page<R> generatedPage<R>({
     onPopInvoked: (didPop, result) => onPopInvoked?.call(didPop, result),
     fullscreenDialog: fullscreenDialog,
     maintainState: maintainState,
-    child: child,
+    child: content,
   );
+}
+
+enum _RoutePageReadiness { initial, waiting, ready }
+
+final class _RoutePageKey extends UniqueKey {
+  final ValueNotifier<_RoutePageReadiness> readiness =
+      ValueNotifier(_RoutePageReadiness.ready);
+
+  void waitForCheck() {
+    if (readiness.value == _RoutePageReadiness.ready) {
+      readiness.value = _RoutePageReadiness.waiting;
+    }
+  }
+}
+
+final class _PendingRoutePage extends MaterialPage<Object?> {
+  const _PendingRoutePage({required super.key})
+      : super(child: const SizedBox.shrink());
+}
+
+final class _RoutePageContent extends StatefulWidget {
+  const _RoutePageContent({required this.pageKey, required this.child});
+
+  final _RoutePageKey pageKey;
+  final Widget child;
+
+  @override
+  State<_RoutePageContent> createState() => _RoutePageContentState();
+}
+
+final class _RoutePageContentState extends State<_RoutePageContent> {
+  bool _hasShownContent = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: widget.pageKey.readiness,
+      builder: (context, readiness, child) {
+        final ready = readiness == _RoutePageReadiness.ready;
+        _hasShownContent = _hasShownContent || ready;
+        // Keep existing state, but defer mounting content dropped by Navigator.
+        return HeroMode(
+          enabled: ready,
+          child: Visibility(
+            visible: ready,
+            maintainState: true,
+            child: _hasShownContent ? widget.child : const SizedBox.shrink(),
+          ),
+        );
+      },
+    );
+  }
 }
 
 final class _GeneratedTransitionPage<R> extends Page<R> {
@@ -58,13 +113,13 @@ final class _GeneratedTransitionPage<R> extends Page<R> {
 final class _GeneratedTransitionRoute<R> extends PageRoute<R> {
   _GeneratedTransitionRoute({
     required _GeneratedTransitionPage<R> page,
-  })  : _page = page,
-        super(
-          settings: page,
-          fullscreenDialog: page.fullscreenDialog,
-        );
+  }) : super(settings: page);
 
-  final _GeneratedTransitionPage<R> _page;
+  _GeneratedTransitionPage<R> get _page =>
+      settings as _GeneratedTransitionPage<R>;
+
+  @override
+  bool get fullscreenDialog => _page.fullscreenDialog;
 
   @override
   bool get maintainState => _page.maintainState;

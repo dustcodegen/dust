@@ -6,6 +6,8 @@ mod batch;
 mod process;
 /// Registry, hashing, and cache input helpers.
 mod support;
+/// Reuses complete, content-validated successful build snapshots.
+mod unchanged;
 /// Worker-count and work-distribution helpers.
 mod work;
 
@@ -25,8 +27,10 @@ pub(crate) use apply::{ApplyOutcomeConfig, apply_indexed_outcomes, flush_cache_i
 pub(crate) use batch::{BatchConfig, prepare_and_process_batch};
 pub(crate) use support::{
     CodegenToolHash, RegistrySelection, codegen_tool_hash_for_selection, hash_text,
-    read_workspace_config_hash, registry_for_selection, registry_for_selection_with_server_clients,
+    parser_identity, read_workspace_config_hash, registry_for_selection,
+    registry_for_selection_with_server_clients, update_hash_bytes,
 };
+pub(crate) use work::{available_worker_count, round_robin_groups};
 
 /// Runs one writing build across the discovered workspace.
 pub fn run_build(request: BuildRequest) -> CommandResult {
@@ -60,6 +64,11 @@ fn run_build_inner(
         }
     };
 
+    if let Some(mut cached) = unchanged::try_build(&request, progress) {
+        cached.elapsed_ms = started.elapsed().as_millis();
+        return cached;
+    }
+
     let CachedDriverContext {
         workspace,
         registry,
@@ -69,10 +78,12 @@ fn run_build_inner(
         package_config_hash,
         mut cache,
         mut cache_report,
+        cache_warning,
     } = match CachedDriverContext::load(
         &request.cwd,
         RegistrySelection::for_build(request.db),
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -81,47 +92,81 @@ fn run_build_inner(
             return result;
         }
     };
-    let batch = prepare_and_process_batch(
-        BatchConfig {
-            analysis_libraries: &workspace.libraries,
-            namespaces: &namespaces,
-            cache_root: &workspace.cache_root,
-            package_root: &workspace.package_root,
-            package_name: &workspace.package_name,
-            is_flutter_package: workspace.is_flutter_package,
-            package_config_hash,
-            tool_hash,
-            cache: &cache,
-            catalog: &catalog,
-            registry: &registry,
-            write_output: true,
-            fail_fast: request.fail_fast,
-            jobs: request.jobs,
-            phase: ProgressPhase::Build,
-            progress,
-        },
-        &workspace.libraries,
-        &mut cache_report,
-    );
+    let parser_annotations = registry.all_supported_annotations();
+    std::thread::scope(|scope| {
+        let parser_write = namespaces
+            .parser_facts_changed
+            .then(|| {
+                std::thread::Builder::new()
+                    .stack_size(8 * 1024 * 1024)
+                    .spawn_scoped(scope, || {
+                        crate::namespace_sources::parser_cache::save(
+                            &namespaces,
+                            &workspace.cache_root,
+                            &parser_annotations,
+                        )
+                    })
+                    .ok()
+            })
+            .flatten();
+        result.diagnostics.extend(cache_warning);
+        let mut batch = prepare_and_process_batch(
+            BatchConfig {
+                analysis_libraries: &workspace.libraries,
+                namespaces: &namespaces,
+                cache_root: &workspace.cache_root,
+                package_root: &workspace.package_root,
+                package_name: &workspace.package_name,
+                is_flutter_package: workspace.is_flutter_package,
+                package_config_hash,
+                tool_hash,
+                cache: &cache,
+                catalog: &catalog,
+                registry: &registry,
+                write_output: true,
+                fail_fast: request.fail_fast,
+                jobs: request.jobs,
+                phase: ProgressPhase::Build,
+                progress,
+            },
+            &workspace.libraries,
+            &mut cache_report,
+        );
 
-    result.diagnostic_files.extend(batch.diagnostic_files);
-    apply_indexed_outcomes(
-        batch.outcomes,
-        ApplyOutcomeConfig {
-            cache_root: &workspace.cache_root,
-            package_config_hash,
-            workspace_analysis_hash: batch.workspace_analysis_hash,
-            fail_fast: request.fail_fast,
-        },
-        &mut cache,
-        &mut result,
-        None,
-    );
-    if let Some(artifact) = i18n_bootstrap {
-        result.build_artifacts.push(artifact);
-    }
-    flush_cache_into_result(&mut cache, &mut result);
-    result.cache = Some(cache_report);
+        let output_snapshots = process::collect_output_snapshots(&mut batch.outcomes);
+        result.diagnostic_files.extend(batch.diagnostic_files);
+        apply_indexed_outcomes(
+            batch.outcomes,
+            ApplyOutcomeConfig {
+                cache_root: &workspace.cache_root,
+                package_config_hash,
+                workspace_analysis_hash: batch.workspace_analysis_hash,
+                fail_fast: request.fail_fast,
+            },
+            &mut cache,
+            &mut result,
+            None,
+        );
+        if let Some(artifact) = i18n_bootstrap {
+            result.build_artifacts.push(artifact);
+        }
+        flush_cache_into_result(&mut cache, &mut result);
+        result.cache = Some(cache_report);
+        unchanged::save(
+            &request,
+            &workspace,
+            &namespaces,
+            &cache,
+            &result,
+            &output_snapshots,
+        );
+        if let Some(handle) = parser_write {
+            // Disposable parser facts never change output success; all write time is counted.
+            let _ = handle
+                .join()
+                .expect("parser snapshot writer must not panic");
+        }
+    });
     result.elapsed_ms = started.elapsed().as_millis();
     result
 }

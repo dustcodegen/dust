@@ -14,10 +14,12 @@ pub(crate) struct FeatureOccurrence {
 /// Token kinds keep strings inert while still visiting their interpolation code.
 pub(crate) fn record_syntax_occurrence(
     node: Node<'_>,
+    kind: &str,
+    parent_kind: Option<&str>,
     source: &SourceText,
     occurrences: &mut Vec<FeatureOccurrence>,
 ) {
-    let feature = match node.kind() {
+    let feature = match kind {
         "record_type" | "record_literal" => Some(DartLanguageFeature::Records),
         "pattern_variable_declaration"
         | "pattern_assignment"
@@ -30,22 +32,16 @@ pub(crate) fn record_syntax_occurrence(
         | "cast_pattern"
         | "null_check_pattern"
         | "null_assert_pattern" => Some(DartLanguageFeature::Patterns),
-        "case"
-            if matches!(
-                node.parent().map(|parent| parent.kind()),
-                Some("if_statement" | "if_element")
-            ) =>
-        {
+        "case" if matches!(parent_kind, Some("if_statement" | "if_element")) => {
             Some(DartLanguageFeature::Patterns)
         }
         "base" | "interface" | "sealed" | "final" | "mixin" => {
-            let parent = node.parent().map(|parent| parent.kind());
-            (matches!(parent, Some("class_definition" | "class_declaration"))
-                || node.kind() == "base" && parent == Some("mixin_declaration"))
+            (matches!(parent_kind, Some("class_definition" | "class_declaration"))
+                || kind == "base" && parent_kind == Some("mixin_declaration"))
             .then_some(DartLanguageFeature::ClassModifiers)
         }
         "?" if matches!(
-            node.parent().map(|parent| parent.kind()),
+            parent_kind,
             Some("list_literal" | "set_or_map_literal" | "pair" | "if_element" | "for_element")
         ) =>
         {

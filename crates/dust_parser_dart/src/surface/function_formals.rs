@@ -6,7 +6,7 @@ use super::{ParameterKind, ParsedAnnotation, ParsedLexicalName, ParsedTypeParamS
 use crate::ParsedTypeSurface;
 
 /// A callback declared as `Return name<T>(parameters)` rather than `Function`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedFunctionFormalTypeSurface {
     /// The callback's original name and identifier span.
     pub name: ParsedLexicalName,
@@ -23,7 +23,7 @@ pub struct ParsedFunctionFormalTypeSurface {
 }
 
 /// One parameter inside a declaring callback signature.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParsedFunctionFormalParameterSurface {
     /// The original parameter name and identifier span.
     pub name: ParsedLexicalName,

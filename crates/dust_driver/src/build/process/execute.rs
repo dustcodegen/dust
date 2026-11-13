@@ -12,7 +12,7 @@ use crate::lower::lower_library_with_bindings;
 
 use super::{
     BuildOutcome, LoweringConfig, PendingLibrary, PreprocessedLibrary, ProcessingConfig,
-    SuccessfulBuildOutcome, emit_or_write_library,
+    emit_or_write_library, outcome::finish_success,
 };
 
 /// Processes one pending library and reports progress when it finishes.
@@ -181,7 +181,13 @@ pub(crate) fn process_library_from_source(
         || output.diagnostics.iter().any(Diagnostic::has_labels);
     let diagnostic_file =
         diagnostic_file_if_needed(file_id, library, source, needs_diagnostic_file);
-    finish_success(library, diagnostics, diagnostic_file, output)
+    finish_success(
+        library,
+        diagnostics,
+        diagnostic_file,
+        output,
+        processing.write_output,
+    )
 }
 
 /// Builds source context only for diagnostics that need labeled rendering.
@@ -248,43 +254,6 @@ fn emit_library_output(
         previous_output_paths,
         processing,
         plan,
-    )
-}
-
-/// Combines emitter results with diagnostics into a successful build outcome.
-fn finish_success(
-    library: &SourceLibrary,
-    mut diagnostics: Vec<Diagnostic>,
-    diagnostic_file: Option<crate::result::DiagnosticFile>,
-    output: WriteResult,
-) -> BuildOutcome {
-    let WriteResult {
-        source: _,
-        output_hash,
-        symbols: _,
-        diagnostics: output_diagnostics,
-        changed,
-        written,
-        output_path: _,
-        suppress_primary_output,
-        auxiliary_outputs,
-    } = output;
-    diagnostics.extend(output_diagnostics);
-
-    BuildOutcome::succeeded(
-        library,
-        SuccessfulBuildOutcome {
-            diagnostics,
-            diagnostic_file,
-            expected_output_hash: output_hash,
-            auxiliary_output_paths: auxiliary_outputs
-                .into_iter()
-                .map(|output| output.output_path)
-                .collect(),
-            suppress_primary_output,
-            changed,
-            written,
-        },
     )
 }
 

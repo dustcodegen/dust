@@ -19,7 +19,8 @@ dust_text = { path = "../dust_text", version = "0.3.1" }
 either = "1.15"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "postgres", "migrate"] }
+# Preserve Rust 1.89 while fixing bundled SQLite RUSTSEC-2026-0459.
+sqlx = { git = "https://github.com/dustcodegen/sqlx", rev = "fda3043135e291e4d6c1447c081986de101c4cfb", default-features = false, features = ["runtime-tokio", "sqlite", "postgres", "migrate"] }
 tokio = { version = "1.0", features = ["rt", "macros"] }
 
 [dev-dependencies]

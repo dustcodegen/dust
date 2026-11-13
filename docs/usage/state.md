@@ -3,73 +3,79 @@
 Dust generates typed Flutter ViewModel scopes, selectors, listeners, and async
 state helpers from `@ViewModel`.
 
-## Add the Packages
+## Add the Package
 
 Install the Dust CLI from the [root guide](../../README.md#installation), then
-add the Flutter runtime and Dart derives used by the examples:
+add the Flutter runtime.
 
 ```bash
-flutter pub add dust_flutter dust_dart
+flutter pub add dust_flutter
 ```
 
 ## Quick Start
 
-Define an immutable state and a ViewModel that extends its generated base:
+In `lib/counter_view_model.dart`, define a ViewModel with an immutable counter
+value and an initial state of zero.
 
 ```dart
-import 'package:dust_dart/derive.dart';
 import 'package:dust_flutter/state.dart';
 
 part 'counter_view_model.g.dart';
 
-@Derive([Eq(), CopyWith()])
-class CounterState with _$CounterState {
-  const CounterState({this.count = 0});
-
-  final int count;
-}
-
-@ViewModel(state: CounterState)
+@ViewModel(state: int, initial: 0)
 class CounterViewModel extends $CounterViewModel {
   CounterViewModel(super.args);
 
-  void increment() => emit(state.copyWith(count: state.count + 1));
+  void increment() => emit(state + 1);
 }
 ```
 
-Generate the typed Flutter surface:
+Generate and verify the typed Flutter APIs from the project root.
 
 ```bash
 dust build
+dust check
 ```
 
-Provide the ViewModel above the widgets that use it:
+In `lib/main.dart`, mount the generated scope above the counter page.
 
 ```dart
-CounterViewModelScope(
-  args: (_) => const ViewModelArgs(),
-  create: (_, args) => CounterViewModel(args),
-  child: const CounterPage(),
-)
-```
+import 'package:dust_flutter/state.dart';
+import 'package:flutter/material.dart';
 
-Read state during `build` and call commands without subscribing:
+import 'counter_view_model.dart';
 
-```dart
+void main() {
+  runApp(
+    CounterViewModelScope(
+      args: (_) => const ViewModelArgs(),
+      create: (_, args) => CounterViewModel(args),
+      child: const MaterialApp(home: CounterPage()),
+    ),
+  );
+}
+
 class CounterPage extends StatelessWidget {
   const CounterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final count = context.watchCounterViewModel().value.count;
+    final count = context.watchCounterViewModel().value;
 
-    return TextButton(
-      onPressed: context.readCounterViewModel().increment,
-      child: Text('Count: $count'),
+    return Scaffold(
+      body: Center(
+        child: TextButton(
+          onPressed: () => context.readCounterViewModel().increment(),
+          child: Text('Count: $count'),
+        ),
+      ),
     );
   }
 }
 ```
+
+Run `flutter run` and tap the count to verify that the generated subscription
+rebuilds the label.
 
 > [!IMPORTANT]
 > Use `watchXViewModel().value` only where UI should rebuild. Use
@@ -107,10 +113,11 @@ class AppViewModel extends $AppViewModel {
 ```
 
 > [!TIP]
-> Prefer `Eq()` on sync state classes. Dust compares state with `==` to skip
-> unchanged updates, inherited-widget notifications, and selector rebuilds. If a
-> local sync state class has neither `Eq()` nor a manual `operator ==`, Dust
-> warns because identity equality can rebuild widgets for unchanged field values.
+> To use `Eq()` on sync state classes, run `flutter pub add dust_dart` and
+> import `package:dust_dart/derive.dart`. Dust compares state with `==` to skip
+> unchanged updates. If a local sync state class has neither `Eq()` nor a manual
+> `operator ==`, Dust warns because identity equality can rebuild widgets for
+> unchanged field values.
 
 ## Scope Lifecycle
 
@@ -122,9 +129,9 @@ Override `onInit()` for one-time synchronous or asynchronous setup:
 Future<void> onInit() => loadProfile();
 ```
 
-`init()` makes one attempt. If `onInit()` fails, parent rebuilds do not retry it
-implicitly. Call `retryInit()` from app code when a retry should happen because
-of a user action or another intentional recovery path.
+`init()` makes one attempt. If `onInit()` fails, parent rebuilds do not retry
+it implicitly. To retry from a button, use the generated read method in the
+callback and await `retryInit()`.
 
 Use `identity` when a dependency change must replace the owned ViewModel:
 
@@ -296,11 +303,11 @@ During refresh, the builder continues to use the `data` callback with the
 preserved value. Read `AsyncState<T>` directly when the UI must distinguish
 `AsyncInitial`, `AsyncLoading`, `AsyncData`, and `AsyncFailure`.
 
-`AsyncState<T>` compares by value, so the state type's own `==` decides whether
-a load counts as a change. Reloading data that compares equal to what is already
-visible does not rebuild listeners. A ViewModel that mutates a value in place
-and re-emits the same instance produces no rebuild, here as in synchronous mode;
-emit a new value instead.
+`AsyncState<T>` compares matching variants and type arguments by value. A
+refresh can notify listeners when it enters loading and when it returns to
+data, even when the payload is unchanged. For a widget that only needs the
+visible value, select that value to skip rebuilds when it compares equal. Emit
+a new immutable value when the underlying data changes.
 
 ## Stale Async Actions
 
@@ -368,5 +375,6 @@ data.
 - [Shopping app ViewModels](../../examples/shopping_app/lib/core/view_models/app_view_model.dart)
 - [Shopping app scope composition](../../examples/shopping_app/lib/main.dart)
 - [Safe async action helper](../../examples/shopping_app/lib/features/products/view_models/products_view_model.dart)
-- [Selector and listener tests](../../examples/shopping_app/test/state_selector_test.dart)
+- [Selector tests](../../examples/shopping_app/test/state_selector_test.dart)
+- [Scope retry and listener tests](../../examples/shopping_app/test/state_scope_lifecycle_selector_test.dart)
 - [Scope lifecycle tests](../../examples/shopping_app/test/state_scope_realworld_lifecycle_test.dart)

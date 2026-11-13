@@ -245,20 +245,27 @@ async fn postgres_reports_sql_the_server_rejects() {
     );
 }
 
-#[tokio::test]
-async fn postgres_needs_a_url_and_says_so() {
-    // The one dialect with no in-memory default. Reached through the real
-    // entry point, so the message a developer sees is the one asserted.
-    let error = connect_for_validation::<PgConnection>(DbDriver::Postgres, None)
-        .await
-        .err();
+#[test]
+fn postgres_needs_a_url_and_says_so() {
+    let dir = migrations_dir(&[]);
+    let request = DescribeRequest {
+        dialect: DbDriver::Postgres.dialect(),
+        migrations: ".",
+        schema_hash: "test",
+        queries: &[],
+        row_columns: &HashMap::new(),
+        typed_columns: &HashMap::new(),
+    };
 
-    // With a URL set this connects; without one it explains itself. Both
-    // are correct, and only the second is worth asserting on.
-    if postgres_url().is_none() {
-        let error = error.expect("no URL and no fallback cannot connect");
-        assert!(error.contains("`postgres`/`postgresql`"), "{error}");
-    }
+    let error = run_sqlx_validation(
+        dir.path(),
+        &request,
+        MetadataOutput::ReadOnly,
+        None,
+        &mut Vec::new(),
+    )
+    .expect_err("no URL and no fallback cannot connect");
+    assert!(error.contains("`postgres`/`postgresql`"), "{error}");
 }
 
 #[tokio::test]

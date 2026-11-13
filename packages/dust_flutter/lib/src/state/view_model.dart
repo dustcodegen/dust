@@ -182,7 +182,10 @@ abstract class ViewModelBase<TState, TArgs extends ViewModelArgs>
 
   Future<void> _startInit() {
     _didAttemptInit = true;
-    return _initFuture ??= _runInit();
+    final pending = Completer<void>();
+    _initFuture = pending.future;
+    pending.complete(_runInit());
+    return pending.future;
   }
 
   Future<void> _runInit() async {

@@ -87,6 +87,46 @@ fn cold_alias_and_prefixed_producers_match_direct_outputs_and_warm_checks() {
 }
 
 #[test]
+fn external_producer_aliases_finish_all_import_requests_before_output_verification() {
+    for part in [false, true] {
+        let workspace = make_workspace();
+        let root = workspace.path();
+        let route = root.join("lib/route.dart");
+        write_file(&route, ROUTER);
+        assert_eq!(build(root).diagnostics, []);
+        let expected = outputs(root);
+        for name in ["routes", "paths", "metadata", "navigation", "runtime"] {
+            fs::remove_file(root.join(format!("lib/route/{name}.g.dart"))).unwrap();
+        }
+        let runtime = root.join("deps/dust_flutter/lib");
+        write_file(
+            &runtime.join("route.dart"),
+            "export 'src/router/route_annotations.dart' show AppRoute; export 'aliases.dart';",
+        );
+        write_file(
+            &runtime.join("aliases.dart"),
+            if part {
+                "import 'next.dart' as n; part 'alias_part.dart';"
+            } else {
+                "import 'next.dart' as n; typedef RouterAnnotation = n.Next;"
+            },
+        );
+        write_file(
+            &runtime.join("alias_part.dart"),
+            "part of 'aliases.dart'; typedef RouterAnnotation = n.Next;",
+        );
+        write_file(
+            &runtime.join("next.dart"),
+            "import 'src/router/route_annotations.dart' as annotations; typedef Next = annotations.AppRouter;",
+        );
+        write_file(&route, &ROUTER.replace("@AppRouter", "@RouterAnnotation"));
+        assert_eq!(build(root).diagnostics, []);
+        assert_eq!(outputs(root), expected);
+        assert_eq!(check(root).diagnostics, []);
+    }
+}
+
+#[test]
 fn unmarked_output_collisions_preserve_existing_files_and_successful_cache() {
     let workspace = make_workspace();
     let root = workspace.path();

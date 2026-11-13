@@ -65,6 +65,34 @@ fn explains_syntax_errors_without_claiming_the_dart_source_is_invalid() {
 }
 
 #[test]
+fn preserves_preorder_for_missing_nodes_and_other_diagnostics() {
+    let source = "// @dart=3.13\nclass Broken { final String name }\nfinal status = .ready;\nvoid broken() { final value = ; }";
+    let result = parse(404, source);
+    let summaries = result
+        .diagnostics
+        .iter()
+        .map(|diagnostic| {
+            let label = &diagnostic.labels[0];
+            assert_eq!(label.file_id, dust_text::FileId::new(404));
+            (
+                diagnostic.message.as_str(),
+                label.range.start().to_usize()..label.range.end().to_usize(),
+                diagnostic.notes.len(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        summaries,
+        [
+            ("tree-sitter reported a Dart syntax error", 46..46, 2),
+            ("Dust does not support dot shorthands yet", 64..70, 2),
+            ("tree-sitter reported a Dart syntax error", 100..101, 0),
+        ]
+    );
+    assert_eq!(result.namespace_diagnostics, result.diagnostics);
+}
+
+#[test]
 fn does_not_add_unsupported_syntax_guidance_to_supported_source() {
     let result = parse(
         314,

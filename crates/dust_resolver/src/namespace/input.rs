@@ -7,6 +7,7 @@ pub(super) fn unit(
     uri: &str,
     file_id: FileId,
     parsed: &ParsedDartFileSurface,
+    appended_directive: Option<&ParsedDirective>,
     resolve: &mut impl FnMut(&str, &str) -> Result<String, String>,
 ) -> Unit {
     let mut unit = Unit {
@@ -73,7 +74,7 @@ pub(super) fn unit(
         };
         declare(&item.name, item.span, kind);
     }
-    for directive in &parsed.directives {
+    for directive in parsed.directives.iter().chain(appended_directive) {
         match directive {
             ParsedDirective::Library { name, .. } => unit.library_name = name.clone(),
             ParsedDirective::Import {

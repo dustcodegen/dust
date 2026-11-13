@@ -26,10 +26,12 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
         package_config_hash,
         mut cache,
         mut cache_report,
+        cache_warning,
     } = match CachedDriverContext::load(
         &request.cwd,
         RegistrySelection::for_check(request.db),
         request.sdk_source_root.as_deref(),
+        request.jobs,
     ) {
         Ok(context) => context,
         Err(diagnostic) => {
@@ -39,6 +41,7 @@ pub fn run_check(request: CheckRequest) -> CommandResult {
         }
     };
 
+    result.diagnostics.extend(cache_warning);
     let batch = prepare_and_process_batch(
         BatchConfig {
             analysis_libraries: &workspace.libraries,

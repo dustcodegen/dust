@@ -1,39 +1,36 @@
-use dust_parser_dart::{
-    ParsedDartFileSurface, ParsedDirective, ParsedNamespaceDirective, ParsedUriLiteral,
-};
+use dust_parser_dart::{ParsedDirective, ParsedNamespaceDirective, ParsedUriLiteral};
 use dust_text::TextRange;
 
-/// Inject core into graph facts only; handwritten parser facts stay unchanged.
-pub(in crate::namespace_sources) fn namespace_surface(
-    parsed: &ParsedDartFileSurface,
+/// Supplies the implicit core import without changing handwritten parser facts.
+pub(in crate::namespace_sources) fn implicit_core(
+    directives: &[ParsedDirective],
     uri: &str,
-) -> ParsedDartFileSurface {
-    let mut parsed = parsed.clone();
-    if uri != "dart:core"
-        && !parsed.directives.iter().any(|directive| {
+) -> Option<ParsedDirective> {
+    if uri == "dart:core"
+        || directives.iter().any(|directive| {
             matches!(directive, ParsedDirective::PartOf { .. })
                 || matches!(directive, ParsedDirective::Import { namespace: Some(namespace), .. }
                 if namespace.default_uri.value().as_deref() == Some("dart:core"))
         })
     {
-        parsed.directives.push(ParsedDirective::Import {
-            namespace: Some(ParsedNamespaceDirective {
-                default_uri: ParsedUriLiteral {
-                    source: "'dart:core'".into(),
-                    span: TextRange::empty(0_u32),
-                },
-                conditional_uris: Vec::new(),
-                combinators: Vec::new(),
-            }),
-            uri: "dart:core".into(),
-            prefix: None,
-            show: Vec::new(),
-            hide: Vec::new(),
-            is_deferred: false,
-            span: TextRange::empty(0_u32),
-        });
+        return None;
     }
-    parsed
+    Some(ParsedDirective::Import {
+        namespace: Some(ParsedNamespaceDirective {
+            default_uri: ParsedUriLiteral {
+                source: "'dart:core'".into(),
+                span: TextRange::empty(0_u32),
+            },
+            conditional_uris: Vec::new(),
+            combinators: Vec::new(),
+        }),
+        uri: "dart:core".into(),
+        prefix: None,
+        show: Vec::new(),
+        hide: Vec::new(),
+        is_deferred: false,
+        span: TextRange::empty(0_u32),
+    })
 }
 
 /// Retains every written URI alternative without choosing a host platform.

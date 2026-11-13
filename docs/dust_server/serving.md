@@ -20,9 +20,11 @@ if (!await server.close(drain: const Duration(seconds: 15))) {
 }
 ```
 
-`close` stops accepting, then waits for requests already accepted. It returns
-`false` when the deadline passed with work still in flight, leaving the decision
-to wait longer or exit to the caller.
+`close` releases the listening socket, then waits for requests, background
+tasks, and layer disposal within the first call's drain budget. Later calls
+share its result.
+Layer disposal starts when accepted work finishes or the deadline passes.
+A result of `false` means cleanup was still in progress when the budget expired.
 
 Requests still queued in a client have not been accepted, and shutdown owes them
 nothing; they see a refused connection.
@@ -111,9 +113,8 @@ that example are worth copying rather than rediscovering:
 * **Keep the drain budget under the platform's grace period.** Kubernetes sends
   `SIGKILL` 30 seconds after `SIGTERM` by default, so a 60-second drain is a
   30-second drain followed by a hard kill.
-* **Check what `close` returns.** `false` means the deadline passed with work
-  still running — requests were abandoned. It is the only signal you get, and it
-  is the one most code throws away.
+* **Check what `close` returns.** `false` means requests, background tasks, or
+  layer disposal were still pending when the deadline passed.
 
 Draining waits; it does not cancel. Dart has no cancellation, so a request still
 running when the budget expires keeps running until the process dies underneath

@@ -9,5 +9,8 @@ repository.workspace = true
 homepage.workspace = true
 description = "Source text and span utilities for Dust."
 
+[dependencies]
+serde.workspace = true
+
 [lib]
 path = "src/lib.rs"

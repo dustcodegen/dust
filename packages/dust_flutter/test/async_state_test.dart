@@ -146,6 +146,28 @@ void main() {
     expect(viewModel.data, 2);
   });
 
+  test('overlapping refreshes preserve data through the latest failure',
+      () async {
+    final viewModel = TestAsyncViewModel();
+    addTearDown(viewModel.dispose);
+    final load = viewModel.load();
+    viewModel.loads.single.complete(7);
+    await load;
+
+    final first = viewModel.refresh();
+    final latest = viewModel.refresh();
+    expect(viewModel.state.previousData, 7);
+
+    final failure = StateError('latest refresh failed');
+    viewModel.loads.last.completeError(failure);
+    await latest;
+    viewModel.loads[1].complete(9);
+    await first;
+
+    expect(viewModel.state.error, same(failure));
+    expect(viewModel.visibleData, 7);
+  });
+
   test('stale load error is ignored', () async {
     final viewModel = TestAsyncViewModel();
 
@@ -163,6 +185,21 @@ void main() {
 
     expect(viewModel.state, isA<AsyncData<int>>());
     expect(viewModel.data, 2);
+  });
+
+  test('disposed async view model ignores pending and new loads', () async {
+    final viewModel = TestAsyncViewModel();
+    final load = viewModel.load();
+
+    viewModel
+      ..dispose()
+      ..invalidateSelf();
+    viewModel.loads.single.complete(7);
+    await load;
+    await viewModel.refresh();
+
+    expect(viewModel.loads, hasLength(1));
+    expect(viewModel.state, isA<AsyncLoading<int>>());
   });
 
   test('invalidateSelf after data starts a fresh load', () async {

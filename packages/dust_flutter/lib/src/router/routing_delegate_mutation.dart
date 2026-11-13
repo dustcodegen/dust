@@ -4,22 +4,28 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
     on GeneratedRouterDelegate<T> {
   _RouteEntry<T> _commitRoute(
     T route,
-    NavigationMode mode, [
-    RouteStack<T>? restored,
-  ]) {
+    NavigationMode mode, {
+    required String? targetBranch,
+    required RouteStack<T> checkedRoutes,
+    required bool resumesBranch,
+    required bool reuseCachedBranch,
+    required bool refreshing,
+  }) {
     final previous = _history.routes();
-    final targetBranch = config.routeBranch(route);
     final previousBranch = _history.activeBranch;
     final switchedBranch = _history.activateBranch(targetBranch);
     if (switchedBranch) {
       _log('branch ${previousBranch ?? '-'} => ${targetBranch ?? '-'}');
+      if (!reuseCachedBranch) {
+        _completeEntries(_history.entries);
+        _history.entries.clear();
+      }
     }
     late final _RouteEntry<T> committed;
     switch (mode) {
       case NavigationMode.go:
-        if (switchedBranch &&
-            targetBranch != null &&
-            _history.activeRootMatches(route, config.routeLocation)) {
+        if (resumesBranch) {
+          _history.entries[0] = _history.entries.first.withRoute(route);
           committed = _history.entries.last;
           break;
         }
@@ -29,13 +35,20 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
         committed = _RouteEntry(route, tracksPop: true);
         _history.push(committed);
       case NavigationMode.replace:
-        final replacement = _history.replaceTop(route, config.routeLocation);
+        final replacement = _history.replaceTop(
+          route,
+          config.routeLocation,
+          reusePrevious: refreshing && !switchedBranch,
+        );
         committed = replacement.committed;
         replacement.replaced?.complete(null);
       case NavigationMode.restore:
-        final routes = restored!;
-        _completeEntries(_history.replaceWithRoutes(routes));
+        _completeEntries(_history.replaceWithRoutes(checkedRoutes));
         committed = _history.entries.last;
+    }
+    // Cached entries can have a pending check from an earlier, superseded pop.
+    for (final entry in resumesBranch ? _history.entries : [committed]) {
+      entry.key.readiness.value = _RoutePageReadiness.ready;
     }
     _finishStackCommit(previous);
     return committed;
@@ -54,9 +67,14 @@ extension _GeneratedRouterDelegateMutation<T extends Object>
     final removed = _history.entries.removeLast();
     removed.complete(result);
     _log('pop ${_debugRoute(removed.route)}');
+    _finishStackRemoval(previous, exposesTop: true);
+    return true;
+  }
+
+  void _finishStackRemoval(RouteStack<T> previous, {required bool exposesTop}) {
+    if (exposesTop) _history.entries.lastOrNull?.key.waitForCheck();
     _finishStackCommit(previous);
     _revalidateExposedTop();
-    return true;
   }
 
   void _revalidateExposedTop() {

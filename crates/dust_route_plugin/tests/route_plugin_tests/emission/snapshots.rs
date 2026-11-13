@@ -215,12 +215,12 @@ fn emits_common_app_route_use_cases() {
 }
 
 #[test]
-fn emits_escaped_branch_literals() {
+fn emits_escaped_route_literals() {
     let library = library_with_classes(vec![
-        router_class("(initial: '/dashboard', notFound: '/404')"),
+        router_class(r#"(initial: r"/today's/$deals", notFound: '/404')"#),
         route_page_class(
             "DashboardPage",
-            r#"('/dashboard', name: 'dashboard', branch: r"team's-$main")"#,
+            r#"(r"/today's/$deals", name: 'dashboard', branch: r"team's-$main")"#,
             Vec::new(),
         ),
         route_page_class("NotFoundPage", "('/404', name: 'notFound')", Vec::new()),
@@ -229,7 +229,7 @@ fn emits_escaped_branch_literals() {
     let contribution = generate_route_output(&library);
     let output = route_outputs_snapshot(&contribution);
 
-    assert_route_snapshot("escaped_branch_literals.dart.snapshot", &output);
+    assert_route_snapshot("escaped_route_literals.dart.snapshot", &output);
 }
 
 #[test]

@@ -7,6 +7,7 @@ pub(super) fn type_scope(
     parent: usize,
     source: &SourceText,
     scopes: &mut Vec<ParsedLexicalScope>,
+    namespace_only: bool,
 ) {
     let header = crate::classes::class_header(node);
     let body = node
@@ -48,7 +49,7 @@ pub(super) fn type_scope(
         super::callbacks::extract(primary, index, source, scopes);
     }
     if let Some(body) = body {
-        members(body, index, source, scopes);
+        members(body, index, source, scopes, namespace_only);
     }
 }
 

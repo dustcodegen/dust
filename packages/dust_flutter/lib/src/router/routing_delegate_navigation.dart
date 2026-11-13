@@ -4,10 +4,12 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
     on GeneratedRouterDelegate<T> {
   Future<_RouteEntry<T>?> _applyRoute(
     T requested,
-    NavigationMode mode, [
+    NavigationMode mode, {
     int guardRedirects = 0,
     List<String>? guardRedirectChain,
-  ]) async {
+    bool reuseCachedBranch = true,
+    bool refreshing = false,
+  }) async {
     if (_disposed) return null;
     final epoch = ++_navigationEpoch;
     var candidate = requested;
@@ -27,16 +29,8 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
     var redirects = 0;
     final redirectChain = <String>[_debugRoute(candidate)];
     for (; redirects < maxRedirects; redirects += 1) {
-      final redirected = config.router.redirect(candidate);
-      if (redirected == null ||
-          config.routeLocation(redirected) == config.routeLocation(candidate)) {
-        break;
-      }
-      _log(
-        'redirecting ${_debugRoute(candidate)} => '
-        '${_debugRoute(redirected)}',
-      );
-      _logRouteDetails('redirect target', redirected);
+      final redirected = _routerRedirect(candidate);
+      if (redirected == null) break;
       candidate = redirected;
       redirectChain.add(_debugRoute(candidate));
     }
@@ -50,48 +44,77 @@ extension _GeneratedRouterDelegateNavigation<T extends Object>
     }
     if (epoch != _navigationEpoch) return null;
 
-    if (mode == NavigationMode.restore) {
-      final restored = config.restoreStack?.call(candidate);
-      final routes =
-          restored == null || restored.isEmpty ? <T>[candidate] : restored;
-      for (final route in routes) {
-        final guardFuture = _runGuards(route);
-        final redirected = guardFuture == null ? null : await guardFuture;
+    final targetBranch = config.routeBranch(candidate);
+    final retained = reuseCachedBranch
+        ? _history.cachedRoutesToKeep(
+            candidate,
+            targetBranch,
+            mode,
+            config.routeLocation,
+          )
+        : null;
+    final restored = mode == NavigationMode.restore
+        ? config.restoreStack?.call(candidate)
+        : null;
+    final checkedRoutes = restored == null || restored.isEmpty
+        ? <T>[candidate, ...?retained]
+        : restored;
+    for (final (index, route) in checkedRoutes.indexed) {
+      final isCached = retained != null && index > 0;
+      if (isCached) {
+        final redirected = _routerRedirect(route);
         if (epoch != _navigationEpoch) return null;
         if (redirected != null) {
-          _log(
-            'guard redirect ${_debugRoute(route)} => '
-            '${_debugRoute(redirected)}',
-          );
-          _logRouteDetails('guard target', redirected);
           return _applyRoute(
             redirected,
             mode,
-            guardRedirects + 1,
-            [...guardChain, _debugRoute(redirected)],
+            guardRedirects: guardRedirects,
+            guardRedirectChain: guardChain,
+            reuseCachedBranch: false,
+            refreshing: refreshing,
           );
         }
       }
-      return _commitRoute(candidate, mode, routes);
+      final guardFuture = _runGuards(route);
+      final redirected = guardFuture == null ? null : await guardFuture;
+      if (epoch != _navigationEpoch) return null;
+      if (redirected != null) {
+        _log(
+          'guard redirect ${_debugRoute(route)} => '
+          '${_debugRoute(redirected)}',
+        );
+        _logRouteDetails('guard target', redirected);
+        return _applyRoute(
+          redirected,
+          mode,
+          guardRedirects: guardRedirects + 1,
+          guardRedirectChain: [...guardChain, _debugRoute(redirected)],
+          // Follow a cached route's redirect without reopening cached pages.
+          reuseCachedBranch: reuseCachedBranch && !isCached,
+          refreshing: refreshing,
+        );
+      }
     }
+    return _commitRoute(
+      candidate,
+      mode,
+      targetBranch: targetBranch,
+      checkedRoutes: checkedRoutes,
+      resumesBranch: retained != null,
+      reuseCachedBranch: reuseCachedBranch,
+      refreshing: refreshing,
+    );
+  }
 
-    final guardFuture = _runGuards(candidate);
-    final redirected = guardFuture == null ? null : await guardFuture;
-    if (epoch != _navigationEpoch) return null;
-    if (redirected != null) {
-      _log(
-        'guard redirect ${_debugRoute(candidate)} => '
-        '${_debugRoute(redirected)}',
-      );
-      _logRouteDetails('guard target', redirected);
-      return _applyRoute(
-        redirected,
-        mode,
-        guardRedirects + 1,
-        [...guardChain, _debugRoute(redirected)],
-      );
+  T? _routerRedirect(T route) {
+    final redirected = config.router.redirect(route);
+    if (redirected == null ||
+        config.routeLocation(redirected) == config.routeLocation(route)) {
+      return null;
     }
-    return _commitRoute(candidate, mode);
+    _log('redirecting ${_debugRoute(route)} => ${_debugRoute(redirected)}');
+    _logRouteDetails('redirect target', redirected);
+    return redirected;
   }
 
   Future<T?>? _runGuards(T route) {

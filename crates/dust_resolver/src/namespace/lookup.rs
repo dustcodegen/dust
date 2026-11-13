@@ -2,18 +2,23 @@ use dust_parser_dart::ParsedCombinatorKind;
 
 use super::*;
 
+/// Catalog-independent memoization of repeated library namespace queries.
+mod cache;
+pub(super) use cache::LookupCache;
 /// Owner namespaces and part declarations share one library identity.
 mod parts;
+/// Neutral namespace alternatives preserve ownership, errors and branch identity.
+#[cfg(test)]
+mod tests;
 
 impl NamespaceGraph {
-    /// Look up a name through a root or part's owning library namespace.
-    pub(super) fn lookup(
+    /// Computes one owning-library query without retaining catalog or lexical decisions.
+    fn compute_lookup(
         &self,
         uri: &str,
         prefix: Option<&str>,
         name: &str,
     ) -> Result<Worlds, NamespaceBinding> {
-        let uri = self.owning_uri(uri)?;
         let unit = &self.units[uri];
         let mut local = self.local_world(uri, name);
         if !local.problems.is_empty() {
@@ -75,59 +80,74 @@ impl NamespaceGraph {
                     ));
                 }
             }
-            worlds = combine(&worlds, &alternatives.into_iter().collect());
+            worlds = combine(worlds, &alternatives.into_iter().collect());
         }
         Ok(worlds)
     }
 
-    /// Each relevant name gets a finite, cycle-aware fixed-point computation.
+    /// One name initializes once while unrelated names resolve independently.
     fn export_worlds(&self, name: &str) -> Arc<ExportWorlds> {
-        if let Some(cached) = self
-            .exports
-            .lock()
-            .expect("namespace cache is not poisoned")
-            .get(name)
-        {
-            return Arc::clone(cached);
-        }
-        let mut current: ExportWorlds = self
+        let slot = {
+            let mut memo = self
+                .exports
+                .lock()
+                .expect("namespace cache is not poisoned");
+            if let Some(slot) = memo.get(name) {
+                Arc::clone(slot)
+            } else {
+                let slot = Arc::new(OnceLock::new());
+                memo.insert(name.to_owned(), Arc::clone(&slot));
+                slot
+            }
+        };
+        Arc::clone(slot.get_or_init(|| Arc::new(self.compute_export_worlds(name))))
+    }
+
+    /// Computes the existing finite, cycle-aware fixed point outside the cache lock.
+    fn compute_export_worlds(&self, name: &str) -> ExportWorlds {
+        // Only edge targets are ever queried through the export cache.
+        let required = self
             .units
-            .iter()
-            .filter(|(_, unit)| unit.part_of.is_none())
-            .map(|(uri, _)| {
-                (
-                    uri.clone(),
-                    BTreeSet::from([if name.starts_with('_') {
-                        World::default()
-                    } else {
-                        self.local_world(uri, name)
-                    }]),
-                )
+            .values()
+            .flat_map(|unit| unit.imports.iter().chain(&unit.exports))
+            .flat_map(|edge| &edge.targets)
+            .filter_map(|target| target.as_ref().ok())
+            .collect::<BTreeSet<_>>();
+        let locals = required
+            .into_iter()
+            .filter_map(|uri| {
+                let unit = self.units.get(uri).filter(|unit| unit.part_of.is_none())?;
+                let local = if name.starts_with('_') {
+                    World::default()
+                } else {
+                    self.local_world(uri, name)
+                };
+                (local != World::default()
+                    || (!name.starts_with('_')
+                        && unit.exports.iter().any(|edge| visible(edge, name))))
+                .then(|| (uri.clone(), local))
             })
+            .collect::<BTreeMap<_, _>>();
+        let mut current: ExportWorlds = locals
+            .iter()
+            .map(|(uri, local)| (uri.clone(), BTreeSet::from([local.clone()])))
             .collect();
         let mut seen = BTreeSet::new();
         let mut failed = ExportWorlds::new();
         loop {
-            let next: ExportWorlds = self
-                .units
+            let next: ExportWorlds = locals
                 .iter()
-                .filter(|(_, unit)| unit.part_of.is_none())
-                .map(|(uri, unit)| {
+                .map(|(uri, local)| {
                     if let Some(worlds) = failed.get(uri) {
                         return (uri.clone(), worlds.clone());
                     }
-                    let local = if name.starts_with('_') {
-                        World::default()
-                    } else {
-                        self.local_world(uri, name)
-                    };
                     let local_shadows = !local.declarations.is_empty();
-                    let mut worlds = BTreeSet::from([local]);
+                    let mut worlds = BTreeSet::from([local.clone()]);
                     if !name.starts_with('_') && !local_shadows {
-                        for edge in &unit.exports {
+                        for edge in &self.units[uri].exports {
                             if visible(edge, name) {
                                 worlds = combine(
-                                    &worlds,
+                                    worlds,
                                     &self.edge_worlds(edge, &current).into_iter().collect(),
                                 );
                             }
@@ -149,7 +169,7 @@ impl NamespaceGraph {
                                 "conditional namespace alternatives did not stabilize in `{uri}`"
                             ),
                         );
-                        let mut world = self.local_world(uri, name);
+                        let mut world = locals[uri].clone();
                         world.problems.insert(problem);
                         failed.insert(uri.clone(), BTreeSet::from([world]));
                     }
@@ -160,12 +180,7 @@ impl NamespaceGraph {
             }
             current = next;
         }
-        let result = Arc::new(current);
-        let mut memo = self
-            .exports
-            .lock()
-            .expect("namespace cache is not poisoned");
-        Arc::clone(memo.entry(name.to_owned()).or_insert(result))
+        current
     }
 
     /// Preserve alternatives; never union mutually exclusive declarations together.
@@ -177,6 +192,14 @@ impl NamespaceGraph {
                     .get(uri)
                     .map(|worlds| worlds.iter().cloned().collect())
                     .unwrap_or_else(|| {
+                        // Omitted leaves stay neutral for every fixed-point round.
+                        if self
+                            .units
+                            .get(uri)
+                            .is_some_and(|unit| unit.part_of.is_none())
+                        {
+                            return vec![World::default()];
+                        }
                         let message = if self
                             .units
                             .get(uri)
@@ -215,7 +238,13 @@ fn visible(edge: &Edge, name: &str) -> bool {
 }
 
 /// Independent imports/exports coexist; conditional alternatives remain separate.
-fn combine(left: &Worlds, right: &Worlds) -> Worlds {
+fn combine(left: Worlds, right: &Worlds) -> Worlds {
+    if right.len() == 1 && right.first() == Some(&World::default()) {
+        return left;
+    }
+    if left.len() == 1 && left.first() == Some(&World::default()) {
+        return right.clone();
+    }
     left.iter()
         .flat_map(|a| {
             right.iter().map(move |b| {

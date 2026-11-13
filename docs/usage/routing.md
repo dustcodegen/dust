@@ -29,19 +29,28 @@ export 'route/routes.g.dart';
 final class ShopRouter extends $ShopRouter {}
 ```
 
-Import that entrypoint from each route page:
+Create `lib/pages.dart` and import the router entrypoint.
 
 ```dart
 import 'package:flutter/material.dart';
 
-import 'package:my_app/route.dart';
+import 'route.dart';
 
 @AppRoute('/', name: 'home', guards: [])
 final class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold();
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: TextButton(
+        onPressed: () async {
+          await context.navigator.product(id: 42, tab: 'reviews').push();
+        },
+        child: const Text('Open product'),
+      ),
+    ),
+  );
 }
 
 @AppRoute('/products/:id', name: 'product', guards: [])
@@ -66,18 +75,29 @@ final class NotFoundPage extends StatelessWidget {
 }
 ```
 
-Generate the router and pass its config to Flutter:
+Generate and verify the router from the project root.
 
 ```bash
 dust build
+dust check
 ```
 
+In `lib/main.dart`, initialize the Flutter binding before reading the router
+config so Dust can read the platform's initial route.
+
 ```dart
+import 'package:flutter/material.dart';
+
+import 'route.dart';
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   final router = ShopRouter();
   runApp(MaterialApp.router(routerConfig: router.config));
 }
 ```
+
+Run `flutter run` and tap **Open product** to verify the generated navigation.
 
 > [!IMPORTANT]
 > Keep `route.dart` as the single app-facing routing entrypoint. It imports and
@@ -97,7 +117,7 @@ context.navigator.pop();
 
 | Method | Stack behavior |
 | :--- | :--- |
-| `go()` | Replaces the whole stack with the target route. |
+| `go()` | Sets a new stack root. Selecting a cached branch root can resume its saved stack. |
 | `push()` | Adds the route and completes when it is popped or removed. |
 | `replace()` | Replaces the current top route. |
 | `pop()` | Pops the top route when possible. |

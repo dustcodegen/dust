@@ -23,8 +23,8 @@ pub(super) struct MetadataEntryContext {
 pub(super) struct GeneratedGroupContext {
     /// Indentation used by the generated Dart source.
     pub(super) indent: String,
-    /// Path segment represented by this group.
-    pub(super) path: String,
+    /// Dart string literal for the path segment represented by this group.
+    pub(super) path_literal: String,
     /// Rendered child metadata nodes.
     pub(super) children: String,
 }
