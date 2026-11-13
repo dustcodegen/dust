@@ -22,7 +22,7 @@ fi
 
 for target in "${TARGETS[@]}"; do
   echo "==> Flutter pub get: $target"
-  (cd "$target" && flutter pub get)
+  (cd "$target" && python3 "$ROOT_DIR/scripts/flutter_pub_get.py")
 done
 
 if [[ "${1:-}" == "--examples" ]]; then
@@ -44,5 +44,5 @@ fi
 
 for target in "${TARGETS[@]}"; do
   echo "==> Flutter test: $target"
-  (cd "$target" && flutter test)
+  (cd "$target" && flutter test --no-pub)
 done

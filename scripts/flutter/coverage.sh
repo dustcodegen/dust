@@ -20,7 +20,8 @@ echo "==> Flutter coverage: $TARGET (floor ${FLOOR}%)"
 
 (
   cd "$TARGET"
-  flutter test --coverage
+  python3 "$ROOT_DIR/scripts/flutter_pub_get.py"
+  flutter test --no-pub --coverage
 )
 
 python3 scripts/check_lcov_floor.py "$TARGET/coverage/lcov.info" "$FLOOR"

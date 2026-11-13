@@ -12,8 +12,9 @@ its consumer Pub resolution failed and is not counted as a passing target
 Flutter 3.29 supplies `meta 1.16.0`
 ([manifest](https://github.com/flutter/flutter/blob/3.29.0/packages/flutter/pubspec.yaml)).
 No production constraint or SDK pin is
-overridden to hide that boundary. SQLite has a separate stable Dart 3.10.0
-floor: use its [independent consumer/native gate](db-sdk-validation.md) too.
+overridden to hide that boundary. SQLite has separate minimums of stable Dart
+3.10.0 and Flutter 3.47.0: use its
+[independent consumer/native gate](db-sdk-validation.md) too.
 Do not lower SQLite's constraints to make it run on the core floor.
 
 ## Run
@@ -30,7 +31,8 @@ python3 scripts/sdk_compat.py \
   --latest-flutter-env dust_latest
 ```
 
-`CARGO_TARGET_DIR` can reuse an existing local build cache. The runner builds
+`CARGO_TARGET_DIR` can reuse a cache owned by this checkout; concurrent worktrees
+must use separate target directories. The runner builds
 the Rust CLI from this checkout; it does not use an installed release binary.
 On Windows, supply `dart.exe` paths. This command is not Windows execution
 evidence until it actually passes there.
@@ -220,10 +222,11 @@ executable-line coverage on their exercised files. The valid named concise
 `new` sample passed Dart analysis but Dust build/check rejected it with the
 specific unsupported-feature diagnostic and no generated output, as required.
 
-The shared SQLite staging helper also passed its existing Dart 3.10.0 and
-latest consumer analysis/tests/JIT/relocated-AOT gates; latest Shopping analysis
-and 80 tests passed. These are source-consumer/host results, not device or
-platform certification.
+That historical run also checked the shared SQLite staging helper on Dart
+3.10.0 and its then-current SDKs; Shopping analysis and 80 tests passed.
+The current binding and Flutter minimum have separate
+[SDK/native evidence](db-sdk-validation.md). These are source-consumer/host
+results, not device or platform certification.
 
 ## Ordinary local gates
 

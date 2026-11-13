@@ -15,7 +15,7 @@ or query builder.
 
 ## Installation
 
-This package requires stable Dart 3.10 or newer. Flutter users need 3.38.1 or
+This package requires stable Dart 3.10 or newer. Flutter users need 3.47.0 or
 newer. See the [compatibility guide](../../docs/usage/compatibility.md) for SDK
 and Dust package version requirements.
 

@@ -22,7 +22,7 @@ fi
 
 for target in "${TARGETS[@]}"; do
   echo "==> Flutter pub get: $target"
-  (cd "$target" && flutter pub get >/dev/null)
+  (cd "$target" && python3 "$ROOT_DIR/scripts/flutter_pub_get.py" >/dev/null)
 done
 
 if [[ "${1:-}" == "--examples" ]]; then

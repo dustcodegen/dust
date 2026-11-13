@@ -28,10 +28,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **SQLite runtime**: require `sqlite3 >=3.7.1` for patched bundled SQLite
+  (CVE-2026-119375) while retaining standalone Dart 3.10 support. Flutter SQLite
+  consumers now require Flutter 3.47.0 or newer; the core Flutter minimum is
+  unchanged.
 - **Namespace lookup**: allow dot shorthand in ordinary dependency constructor
   defaults while retaining generation errors and language-version checks.
 - **SDK validation**: retain native Flutter configuration in isolated consumers
-  and document primary fixture fields for current analyzers.
+  and document primary fixture fields for current analyzers. Preserve repository
+  analysis policies during Flutter dependency bootstrap.
 - **Linux validation**: pin native fault-test SQLite 3.54.1 packages in a signed
   Debian snapshot.
 - **Build dependencies**: update rustix to 1.1.6 for RUSTSEC-2026-0486.

@@ -16,12 +16,13 @@ class LinuxRunnerTests(unittest.TestCase):
     """Never let workspace simplification alter production source/constraints."""
 
     def test_identity_comes_from_all_four_actual_dart_connection_pairs(self) -> None:
-        line = "native SQLite: 3.53.4 / source\n"
+        line = "native SQLite: 3.54.0 / source\n"
         self.assertEqual(runtime_identity(line * 4), {
-            "sqliteVersion": "3.53.4", "sqliteSourceId": "source",
+            "sqliteVersion": "3.54.0", "sqliteSourceId": "source",
         })
         for output in ("", line * 3, line * 4 + line, line * 3 + line.replace("source", "other"),
-                       line.replace("3.53.4", "3.51.2") * 4):
+                       line.replace("3.54.0", "3.53.4") * 4,
+                       line.replace("3.54.0", "3.54.0-beta") * 4):
             with self.subTest(output=output), self.assertRaises(ValueError):
                 runtime_identity(output)
 
@@ -36,10 +37,11 @@ class LinuxRunnerTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     system_library(output)
 
-    def test_requires_a_known_wal_reset_fixed_release_not_an_older_minor(self) -> None:
-        for version in ("3.44.6", "3.44.7", "3.50.7", "3.51.3", "3.53.4", "3.54.0"):
+    def test_requires_the_current_native_security_fix_not_only_wal_reset_backports(self) -> None:
+        for version in ("3.54.0", "3.54.1", "3.55.0", "4.0.0"):
             require_fixed_sqlite(version)
-        for version in ("3.44.5", "3.45.0", "3.50.6", "3.51.2", "", "vendor-patched"):
+        for version in ("3.44.6", "3.44.7", "3.50.7", "3.51.3", "3.53.4",
+                        "", "vendor-patched", "3.54", "3.54.0-beta", "3.54.0\n"):
             with self.subTest(version=version), self.assertRaises(ValueError):
                 require_fixed_sqlite(version)
 
@@ -52,7 +54,7 @@ class LinuxRunnerTests(unittest.TestCase):
             self.assertEqual(pubspec["workspace"], [
                 "packages/dust_dart", "packages/dust_db_sqlite3",
             ])
-            self.assertEqual(pubspec["dependency_overrides"], {"sqlite3": "3.5.2"})
+            self.assertEqual(pubspec["dependency_overrides"], {"sqlite3": "3.7.1"})
             self.assertEqual(pubspec["hooks"]["user_defines"]["sqlite3"], {
                 "source": "system", "name": str(library),
             })
@@ -104,12 +106,17 @@ class LinuxRunnerTests(unittest.TestCase):
                 }})
 
     def test_all_four_runtime_mode_pairs_must_match_the_selected_engine(self) -> None:
-        proof = {"sqliteVersion": "3.53.4", "sqliteSourceId": "source"}
-        line = "native SQLite: 3.53.4 / source\n"
+        proof = {"sqliteVersion": "3.54.0", "sqliteSourceId": "source"}
+        line = "native SQLite: 3.54.0 / source\n"
         validate_runtime_engine(line * 4, proof)
         for output in ("", line * 3, line * 5, line * 3 + line.replace("source", "other")):
             with self.subTest(output=output), self.assertRaises(ValueError):
                 validate_runtime_engine(output, proof)
+        for version in ("3.53.4", "3.44.6", "3.50.7", "3.54.0-beta"):
+            affected = {**proof, "sqliteVersion": version}
+            output = line.replace("3.54.0", version) * 4
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                validate_runtime_engine(output, affected)
 
 
 if __name__ == "__main__":

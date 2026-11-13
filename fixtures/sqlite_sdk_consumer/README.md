@@ -1,8 +1,12 @@
 # Independent SQLite consumer
 
 This non-publishable fixture deliberately stays outside Dust's Pub workspace.
-Its overrides use the actual source runtime packages and pin the already-tested
-sqlite3 3.5.2 binding.
+Its overrides use the actual source runtime packages and pin sqlite3 3.7.1,
+which bundles SQLite 3.54.0. Recorded results from the earlier 3.5.2 binding are
+historical. The [SDK/native-bundle guide](../../docs/usage/db-sdk-validation.md)
+records the 2026-11-12 host results for the patched bundle; current-bundle
+Android/iOS validation remains unverified. Standalone Dart 3.10.0 is supported;
+Flutter SQLite consumers require Flutter 3.47.0 or newer.
 
 From this directory, with the project SDK:
 
