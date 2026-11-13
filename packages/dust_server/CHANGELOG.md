@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Unreleased typed `@WS` route generation for planned 0.4.0, with canonical
+  socket types, directional Serde checks, pre-upgrade extractors and generated
+  WS-only or mixed HTTP/WS clients. Existing `ws` and `WebSocketSession` APIs
+  remain available. Requires matching local CLI/runtime builds.
+
 ### Fixed
 
 - Share one graceful shutdown across concurrent calls and include disposal in

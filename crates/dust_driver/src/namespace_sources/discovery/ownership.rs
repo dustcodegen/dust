@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
 /// Validate independent selected libraries, then merge by deterministic source path.
 pub(super) fn collect_errors(
@@ -11,19 +12,21 @@ pub(super) fn collect_errors(
         return BTreeMap::new();
     }
     let workers = crate::build::available_worker_count(libraries.len(), None);
-    let groups = crate::build::round_robin_groups(libraries, workers);
+    let next = AtomicUsize::new(0);
     std::thread::scope(|scope| {
-        let handles = groups
-            .into_iter()
-            .map(|group| {
+        let handles = (0..workers)
+            .map(|_| {
+                let next = &next;
                 scope.spawn(move || {
-                    group
-                        .into_iter()
-                        .filter_map(|library| {
+                    let mut errors = Vec::new();
+                    while let Some(library) = libraries.get(next.fetch_add(1, Relaxed)) {
+                        if let Some(diagnostics) =
                             library_errors(sources, library, catalog, primary_suffix)
-                                .map(|errors| (library.source_path.clone(), errors))
-                        })
-                        .collect::<Vec<_>>()
+                        {
+                            errors.push((library.source_path.clone(), diagnostics));
+                        }
+                    }
+                    errors
                 })
             })
             .collect::<Vec<_>>();
@@ -33,6 +36,10 @@ pub(super) fn collect_errors(
             .collect()
     })
 }
+
+/// Dynamic worker assignment preserves selection and serial ownership diagnostics.
+#[cfg(test)]
+mod tests;
 
 /// Keep metadata order and part guidance exactly as in serial validation.
 fn library_errors(
@@ -48,7 +55,7 @@ fn library_errors(
     let bindings = dust_resolver::BindingContext::new(catalog, sources.scope(&library.source_path));
     let mut diagnostics = Vec::new();
     for annotation in metadata::annotations(&unit.parsed) {
-        let _ = bindings.annotation_ir(unit.file_id, annotation, &mut diagnostics);
+        bindings.validate_annotation_ownership(unit.file_id, annotation, &mut diagnostics);
     }
     let part_note = unresolved_part_note(sources, library, unit, primary_suffix);
     let errors = diagnostics

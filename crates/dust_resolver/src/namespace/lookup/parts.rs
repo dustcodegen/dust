@@ -124,9 +124,18 @@ fn matches_owner(header: &PartOwner, uri: &str, unit: &Unit) -> bool {
 
 /// Rebase only identity, never original file/byte coordinates.
 fn add_declarations(world: &mut World, owner: &str, unit: &Unit, name: &str) {
-    for declaration in unit.declarations.keys().filter(|decl| decl.name == name) {
+    // A unit's declaration keys share its URI, so their names are ordered.
+    for declaration in unit
+        .declarations
+        .keys()
+        .take_while(|declaration| declaration.name.as_str() <= name)
+        .filter(|declaration| declaration.name == name)
+    {
         let mut declaration = declaration.clone();
         declaration.uri = owner.to_owned();
         world.declarations.insert(declaration);
     }
 }
+
+#[cfg(test)]
+mod tests;

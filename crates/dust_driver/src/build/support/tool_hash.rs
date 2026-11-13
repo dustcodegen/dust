@@ -87,6 +87,7 @@ mod tests {
 
     #[test]
     fn generated_fingerprint_manifest_covers_sources_and_templates() {
+        assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("Cargo.lock\0"));
         assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("crates/dust_driver/src/lower.rs"));
         assert!(CODEGEN_TOOL_FINGERPRINT_INPUT.contains("crates/dust_plugin_derive/src/emit.rs"));
         assert!(
@@ -140,32 +141,34 @@ mod tests {
     }
 
     #[test]
-    fn native_only_grammar_change_invalidates_all_registry_hashes() {
-        let path = "vendor/tree-sitter-dart/src/scanner.c";
-        let entry = CODEGEN_TOOL_FINGERPRINT_INPUT
-            .lines()
-            .find(|entry| entry.split('\0').next() == Some(path))
-            .expect("active native grammar must be fingerprinted");
-        let mut fields = entry.split('\0');
-        assert_eq!(fields.next(), Some(path));
-        let size = fields.next().unwrap();
-        let digest = fields.next().unwrap();
-        let changed_digest = format!("{:016x}", u64::from_str_radix(digest, 16).unwrap() ^ 1);
-        let changed_entry = format!("{path}\0{size}\0{changed_digest}");
-        let changed_manifest = CODEGEN_TOOL_FINGERPRINT_INPUT.replace(entry, &changed_entry);
-        for selection in [
-            RegistrySelection::All,
-            RegistrySelection::for_build(crate::request::DbRequestOptions {
-                only_db: true,
-                offline: false,
-            }),
-        ] {
-            let original = codegen_tool_hash_for_selection_with_input(
-                selection,
-                CODEGEN_TOOL_FINGERPRINT_INPUT,
-            );
-            let changed = codegen_tool_hash_for_selection_with_input(selection, &changed_manifest);
-            assert_ne!(original.value(), changed.value());
+    fn native_grammar_and_dependency_changes_invalidate_all_registry_hashes() {
+        for path in ["vendor/tree-sitter-dart/src/scanner.c", "Cargo.lock"] {
+            let entry = CODEGEN_TOOL_FINGERPRINT_INPUT
+                .lines()
+                .find(|entry| entry.split('\0').next() == Some(path))
+                .expect("native grammar and dependency lock must be fingerprinted");
+            let mut fields = entry.split('\0');
+            assert_eq!(fields.next(), Some(path));
+            let size = fields.next().unwrap();
+            let digest = fields.next().unwrap();
+            let changed_digest = format!("{:016x}", u64::from_str_radix(digest, 16).unwrap() ^ 1);
+            let changed_entry = format!("{path}\0{size}\0{changed_digest}");
+            let changed_manifest = CODEGEN_TOOL_FINGERPRINT_INPUT.replace(entry, &changed_entry);
+            for selection in [
+                RegistrySelection::All,
+                RegistrySelection::for_build(crate::request::DbRequestOptions {
+                    only_db: true,
+                    offline: false,
+                }),
+            ] {
+                let original = codegen_tool_hash_for_selection_with_input(
+                    selection,
+                    CODEGEN_TOOL_FINGERPRINT_INPUT,
+                );
+                let changed =
+                    codegen_tool_hash_for_selection_with_input(selection, &changed_manifest);
+                assert_ne!(original.value(), changed.value());
+            }
         }
     }
 }

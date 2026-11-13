@@ -11,7 +11,7 @@ pub(super) fn lower_unresolved_field(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> FieldIr {
     for annotation in &field.annotations {
-        let _ = bindings.annotation_ir(file_id, annotation, diagnostics);
+        bindings.validate_annotation_ownership(file_id, annotation, diagnostics);
     }
     let ty = lower_parameter_type_ir(
         file_id,

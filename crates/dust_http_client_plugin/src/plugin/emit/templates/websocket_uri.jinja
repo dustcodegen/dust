@@ -1,0 +1,37 @@
+Uri _webSocketUri(
+  String baseUrl,
+  String path,
+  Map<String, dynamic> parameters,
+) {
+  final base = Uri.parse(baseUrl);
+  final route = Uri.parse(path);
+  if (base.hasFragment || route.hasFragment) {
+    throw ArgumentError('WebSocket URIs cannot contain fragments');
+  }
+  final uri = route.hasScheme
+      ? route
+      : RequestOptions(
+          baseUrl: baseUrl.split('?').first,
+          path: path.split('?').first,
+        ).uri;
+  final scheme = switch (uri.scheme) {
+    'http' || 'ws' => 'ws',
+    'https' || 'wss' => 'wss',
+    _ => throw ArgumentError('Unsupported WebSocket URI scheme'),
+  };
+  if (!uri.hasAuthority || uri.host.isEmpty) {
+    throw ArgumentError('WebSocket URIs require an absolute host');
+  }
+  final query = <String, dynamic>{
+    if (!route.hasScheme) ...base.queryParametersAll,
+    ...route.queryParametersAll,
+  };
+  for (final entry in parameters.entries) {
+    final value = entry.value;
+    if (value == null) continue;
+    query[entry.key] = value is Iterable
+        ? value.where((item) => item != null).map((item) => item.toString()).toList()
+        : value.toString();
+  }
+  return uri.replace(scheme: scheme, queryParameters: query);
+}

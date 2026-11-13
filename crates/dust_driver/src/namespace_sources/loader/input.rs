@@ -75,6 +75,16 @@ impl SourceInput {
         owner: Option<String>,
         potential: &BTreeSet<PathBuf>,
     ) -> Result<Self, String> {
+        Self::read_with_snapshot(source, owner, potential, None)
+    }
+
+    /// Shares discovery storage only after a complete successful live read agrees.
+    pub(super) fn read_with_snapshot(
+        source: &Source,
+        owner: Option<String>,
+        potential: &BTreeSet<PathBuf>,
+        snapshot: Option<&Arc<str>>,
+    ) -> Result<Self, String> {
         let mut generated_library = false;
         let text = if owner.is_some() {
             String::new()
@@ -102,8 +112,16 @@ impl SourceInput {
                 text
             }
         };
+        let text = match snapshot {
+            Some(snapshot)
+                if owner.is_none() && !generated_library && snapshot.as_ref() == text.as_str() =>
+            {
+                Arc::clone(snapshot)
+            }
+            _ => text.into(),
+        };
         Ok(Self {
-            text: text.into(),
+            text,
             owner,
             generated_library,
         })

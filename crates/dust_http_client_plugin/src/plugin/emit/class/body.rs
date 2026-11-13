@@ -110,7 +110,14 @@ pub(super) fn render_endpoint_setup(endpoint: &EndpointSpec<'_>) -> String {
             false,
         ));
     }
-    for param in &endpoint.params {
+    setup.push(render_binding_setup(&endpoint.params));
+    join_chunks(setup)
+}
+
+/// Renders wire map bindings shared by HTTP and WebSocket requests.
+pub(super) fn render_binding_setup(params: &[EndpointParam<'_>]) -> String {
+    let mut setup = Vec::new();
+    for param in params {
         match param {
             EndpointParam::Query { param, key } => setup.push(render_map_entry(
                 "_queryParameters",

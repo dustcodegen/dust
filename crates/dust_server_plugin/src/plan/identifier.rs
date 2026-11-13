@@ -1,5 +1,5 @@
 /// Returns whether a value can be emitted as a non-reserved Dart identifier.
-pub(super) fn is_emittable_identifier(value: &str) -> bool {
+pub(crate) fn is_emittable_identifier(value: &str) -> bool {
     let mut chars = value.chars();
     let Some(first) = chars.next() else {
         return false;

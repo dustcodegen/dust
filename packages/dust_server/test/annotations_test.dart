@@ -74,6 +74,50 @@ void main() {
     });
   });
 
+  group('WS', () {
+    test('defaults typed upgrade options and uses GET', () {
+      const route = WS('/chat');
+
+      expect(route.path, '/chat');
+      expect(route.method, 'GET');
+      expect(route.status, isNull);
+      expect(route.protocols, isNull);
+      expect(route.allowedOrigins, isNull);
+      expect(route.summary, isNull);
+      expect(route.description, isNull);
+      expect(route.tags, isEmpty);
+      expect(route.middleware, isEmpty);
+      expect(route.operationId, isNull);
+      expect(route.deprecated, isFalse);
+      expect(route.hidden, isFalse);
+    });
+
+    test('retains protocol, origin, and inherited route metadata', () {
+      const route = WS(
+        '/chat',
+        protocols: ['chat.v1'],
+        allowedOrigins: ['https://chat.example'],
+        summary: 'Join chat',
+        description: 'Exchanges typed messages after authentication.',
+        tags: ['chat'],
+        middleware: [RequestId()],
+        operationId: 'joinChat',
+        deprecated: true,
+        hidden: true,
+      );
+
+      expect(route.protocols, ['chat.v1']);
+      expect(route.allowedOrigins, ['https://chat.example']);
+      expect(route.summary, 'Join chat');
+      expect(route.description, startsWith('Exchanges typed messages'));
+      expect(route.tags, ['chat']);
+      expect(route.middleware.single, isA<RequestId>());
+      expect(route.operationId, 'joinChat');
+      expect(route.deprecated, isTrue);
+      expect(route.hidden, isTrue);
+    });
+  });
+
   group('Routes', () {
     test('defaults its optional arguments', () {
       const routes = Routes('/api');

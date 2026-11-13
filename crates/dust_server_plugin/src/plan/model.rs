@@ -1,3 +1,4 @@
+use super::websocket::WebSocketPlan;
 use dust_ir::{
     AnnotationIr, AnnotationValueIr, ClassIr, ConfigApplicationIr, FunctionIr, MethodIr,
     MethodParamIr, SpanIr, TypeIr,
@@ -12,6 +13,7 @@ pub(super) const VERBS: &[(&str, &str)] = &[
     ("dust_server::DELETE", "DELETE"),
     ("dust_server::HEAD", "HEAD"),
     ("dust_server::OPTIONS", "OPTIONS"),
+    ("dust_server::WS", "GET"),
 ];
 
 /// Complete generated-server plan for one source library.
@@ -78,6 +80,8 @@ pub(crate) struct HandlerPlan<'a> {
     pub(crate) middleware: Vec<AnnotationValueIr>,
     /// Format-neutral route documentation facts.
     pub(crate) metadata: RouteMetadataPlan,
+    /// Typed upgrade settings, absent for ordinary HTTP handlers.
+    pub(crate) websocket: Option<WebSocketPlan<'a>>,
 }
 
 /// Documentation facts emitted with one route.
@@ -165,6 +169,8 @@ pub(crate) enum Extraction {
     Request,
     /// Immutable request-head facts.
     RequestParts,
+    /// Typed socket constructed only after a successful upgrade.
+    WebSocket,
 }
 
 /// Query-model fields that need preparation before SerDe decoding.

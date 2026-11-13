@@ -21,6 +21,17 @@ impl NamespaceGraph {
                 }
                 let declaration = world.declarations.first()?;
                 let unit = self.unit_by_file_id(declaration.file_id)?;
+                // Rebased parts and opaque/partial facts keep the lexical fallback.
+                if matches!(
+                    unit.declarations.get(declaration),
+                    Some(
+                        DeclarationKind::Concrete
+                            | DeclarationKind::Alias { .. }
+                            | DeclarationKind::Foreign
+                    )
+                ) {
+                    return None;
+                }
                 let value = unit
                     .lexical_scopes
                     .iter()

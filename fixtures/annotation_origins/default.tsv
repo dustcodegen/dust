@@ -58,3 +58,4 @@ dust_server::RawBody	package:dust_server/src/annotations/parameters.dart	RawBody
 dust_server::RawQuery	package:dust_server/src/annotations/parameters.dart	RawQuery
 dust_server::Routes	package:dust_server/src/annotations/routes.dart	Routes
 dust_server::State	package:dust_server/src/annotations/parameters.dart	State
+dust_server::WS	package:dust_server/src/annotations/websocket.dart	WS

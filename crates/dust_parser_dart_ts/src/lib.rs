@@ -16,6 +16,8 @@ mod directives;
 mod enums;
 /// Static i18n source scanning.
 mod i18n;
+/// Bounded native tree reuse without retaining extracted source facts.
+mod incremental;
 /// Dart language-version diagnostics.
 mod language_gates;
 /// Lexical scope and initializer identities for metadata binding.
@@ -102,7 +104,7 @@ impl TreeSitterDartBackend {
         }
         PARSER.with(|parser_cell| {
             let mut parser = parser_cell.borrow_mut();
-            let tree = parser.parse(source.as_str(), None);
+            let tree = incremental::parse(&mut parser, source.as_str());
             extract_parse_result_with_projection(
                 tree,
                 source,
@@ -126,7 +128,11 @@ impl ParseBackend for TreeSitterDartBackend {
         }
         PARSER.with(|parser_cell| {
             let mut parser = parser_cell.borrow_mut();
-            extract_parse_result(parser.parse(source.as_str(), None), source, options)
+            extract_parse_result(
+                incremental::parse(&mut parser, source.as_str()),
+                source,
+                options,
+            )
         })
     }
 }

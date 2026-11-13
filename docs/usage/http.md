@@ -2,6 +2,12 @@
 
 Dust generates typed Dio clients from annotated Dart interfaces.
 
+Server `@WS` routes can also generate typed WebSocket methods in the same
+standalone client as HTTP routes. This is unreleased source for planned 0.4.0,
+requiring a matching locally built CLI and runtime packages; published 0.3.1
+does not include it. See [typed WebSocket routes and clients](../dust_server/websockets.md#generated-typed-routes-and-clients).
+`@HttpClient` interfaces retain the HTTP verb contract described on this page.
+
 ## Add the Package
 
 Install the Dust CLI from the [root guide](../../README.md#installation), then

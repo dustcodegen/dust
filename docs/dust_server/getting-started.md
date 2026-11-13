@@ -145,6 +145,16 @@ final items = ItemsRoutesClient(
 final item = await items.read(42, details: true);
 ```
 
+For typed WebSocket methods, also declare `dust_dart` in the client package.
+Import `package:dust_dart/ws.dart` wherever handwritten code names the typed
+connection or connector.
+
+Typed `@WS` routes participate in the same client groups, tag filtering and
+output barrels, including groups containing only WS routes. This is unreleased
+source for planned 0.4.0 and needs matching local CLI/runtime builds. The
+[WebSocket guide](websockets.md#generated-typed-routes-and-clients) covers message
+directions, explicit handshake headers and connection ownership.
+
 Path, query, header, JSON body, form and multipart inputs become client method
 parameters. `@State`, `@Peer`, `Request`, `RequestParts`, raw request inputs and
 custom extractors remain server-only and are omitted. Dust rejects private or

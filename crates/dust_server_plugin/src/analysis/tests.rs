@@ -47,6 +47,7 @@ fn names_every_extraction_binding() {
         Extraction::Peer,
         Extraction::Request,
         Extraction::RequestParts,
+        Extraction::WebSocket,
     ];
     let names = values
         .iter()
@@ -72,6 +73,7 @@ fn names_every_extraction_binding() {
             "peer",
             "request",
             "request-parts",
+            "websocket",
         ]
     );
 }

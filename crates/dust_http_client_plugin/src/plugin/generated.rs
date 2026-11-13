@@ -11,6 +11,10 @@ use super::{
 };
 use crate::plugin::{build::classify_return_type, emit::render_isolate_helpers};
 
+/// Additive typed WebSocket standalone-client inputs and rendering.
+mod ws;
+pub use ws::{GeneratedWsEndpoint, generate_client_library_with_ws};
+
 #[cfg(test)]
 mod tests;
 

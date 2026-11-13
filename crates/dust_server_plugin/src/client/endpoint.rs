@@ -12,6 +12,10 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
+/// Typed WebSocket conversion that bypasses HTTP return classification.
+mod websocket;
+pub(super) use websocket::build_ws_endpoint;
+
 /// Builds one standalone HTTP endpoint from matching fact and typed-plan views.
 pub(super) fn build_endpoint(
     fact: &ServerRouteFact,

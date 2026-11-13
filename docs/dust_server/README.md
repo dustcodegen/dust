@@ -13,7 +13,7 @@ server-rendered HTML, static files, and serving across isolates.
 | [Extraction](extraction.md) | turning a request into handler arguments, and the failures that produces |
 | [Authentication](authentication.md) | credential extractors, schemes, challenges, composing |
 | [Responses](responses.md) | rejections, status codes, encoders, error reporting |
-| [WebSockets](websockets.md) | upgrades on the same router, sessions, close codes |
+| [WebSockets](websockets.md) | runnable typed server/client walkthrough, upgrades, sessions, close codes |
 | [Rendering](rendering.md) | templates, server-rendered HTML, static files, single-page apps |
 | [Web applications](web-apps.md) | HTML mode: client-side routes, cache policy, cross-origin isolation |
 | [Serving](serving.md) | running, draining, TLS, and isolate clustering |
@@ -62,6 +62,7 @@ Examples:
 | Where | Shows |
 | :--- | :--- |
 | [`examples/server_codegen`](../../examples/server_codegen/README.md) | annotated handlers, generated routing, and matching runtime examples |
+| [Typed WebSocket walkthrough](websockets.md#run-the-generated-example) | shared messages, authenticated upgrades, generated Dart client, and Flutter UI |
 | [`packages/dust_server/example`](../../packages/dust_server/example/README.md) | handwritten runtime examples, one question per file |
 
 Both tracks are driven over real loopback sockets by their test suites, so an

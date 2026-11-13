@@ -120,7 +120,7 @@ fn render_set_stream_type_helper() -> &'static str {
 }
 
 /// Renders the helper that combines Dio and annotation base URLs.
-fn render_combine_base_urls_helper() -> &'static str {
+pub(crate) fn render_combine_base_urls_helper() -> &'static str {
     r#"String _combineBaseUrls(String dioBaseUrl, String? baseUrl) {
   if (baseUrl == null || baseUrl.trim().isEmpty) {
     return dioBaseUrl;

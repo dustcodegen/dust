@@ -7,5 +7,6 @@ mod plugin;
 
 pub use plugin::{
     GeneratedClient, GeneratedEndpoint, GeneratedHttpVerb, GeneratedParam, GeneratedRequestMode,
-    HttpClientPlugin, generate_client_library, register_plugin,
+    GeneratedWsEndpoint, HttpClientPlugin, generate_client_library,
+    generate_client_library_with_ws, register_plugin,
 };

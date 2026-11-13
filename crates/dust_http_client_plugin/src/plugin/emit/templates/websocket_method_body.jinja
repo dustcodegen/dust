@@ -1,0 +1,15 @@
+    final _queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+{{ setup }}    final _uri = _webSocketUri(
+      _combineBaseUrls(_dio.options.baseUrl, _baseUrl),
+      {{ path }},
+      _queryParameters,
+    );
+    return {{ runtime_prefix }}.connectWebSocket<{{ send_type }}, {{ receive_type }}>(
+      _uri,
+      serializer: {{ serializer }},
+      deserializer: {{ deserializer }},
+      connector: _webSocketConnector,
+      protocols: {{ protocols }},
+      headers: _headers,
+    );

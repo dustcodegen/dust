@@ -93,7 +93,7 @@ pub(crate) fn resolve_method_param(
 
     if let Some(formal) = &param.function_formal {
         for annotation in formal.annotations() {
-            let _ = context.annotation_ir(file_id, annotation, diagnostics);
+            context.validate_annotation_ownership(file_id, annotation, diagnostics);
         }
     }
 

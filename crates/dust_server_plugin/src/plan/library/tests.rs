@@ -83,6 +83,7 @@ fn rejects_duplicate_routes_per_group() {
     let handlers = vec![
         HandlerPlan {
             callable: Callable::Function(&function),
+            websocket: None,
             method: "GET",
             path: "/".to_owned(),
             status: 200,
@@ -99,6 +100,7 @@ fn rejects_duplicate_routes_per_group() {
         },
         HandlerPlan {
             callable: Callable::Function(&function),
+            websocket: None,
             method: "GET",
             path: "/".to_owned(),
             status: 200,
@@ -125,6 +127,7 @@ fn rejects_route_factory_colliding_with_named_extension() {
     let function = function();
     let handlers = vec![HandlerPlan {
         callable: Callable::Function(&function),
+        websocket: None,
         method: "GET",
         path: "/".to_owned(),
         status: 200,

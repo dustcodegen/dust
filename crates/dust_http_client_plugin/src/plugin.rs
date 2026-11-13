@@ -33,7 +33,7 @@ use self::validate::{JsonCapabilityContext, collect_workspace_analysis_ir, valid
 
 pub use generated::{
     GeneratedClient, GeneratedEndpoint, GeneratedHttpVerb, GeneratedParam, GeneratedRequestMode,
-    generate_client_library,
+    GeneratedWsEndpoint, generate_client_library, generate_client_library_with_ws,
 };
 
 /// Dust plugin for generating Dio-backed HTTP clients.

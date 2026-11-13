@@ -20,7 +20,7 @@ macro_rules! origins {
     };
 }
 
-/// Exact runtime declarations; only the first four groups contain annotations.
+/// Exact runtime declarations; only the first five groups contain annotations.
 const GROUPS: &[(&str, &[AnnotationOrigin])] = &[
     (
         "controller.dart",
@@ -39,6 +39,10 @@ const GROUPS: &[(&str, &[AnnotationOrigin])] = &[
         origins!("dust_server", "package:dust_server/src/annotations/parameters.dart";
             Extract, Path, Query, Queries, RawQuery, Header, HeaderMap, Body,
             Field, Part, RawBody, State, Peer, FormUrlEncoded, MultiPart),
+    ),
+    (
+        "websocket.dart",
+        origins!("dust_server", "package:dust_server/src/annotations/websocket.dart"; WS),
     ),
     (
         "verb.dart",
@@ -115,7 +119,7 @@ fn owners(reverse: bool) -> SymbolCatalog {
     let mut catalog = SymbolCatalog::new();
     for server_first in [reverse, !reverse] {
         if server_first {
-            for (_, origins) in &GROUPS[..4] {
+            for (_, origins) in &GROUPS[..5] {
                 for origin in *origins {
                     catalog.register_config(origin.declaration, origin.symbol);
                     catalog.register_annotation_origin(*origin).unwrap();
@@ -142,7 +146,7 @@ fn all_server_annotations_bind_through_the_real_barrel_in_both_orders() {
     );
     for reverse in [false, true] {
         let catalog = owners(reverse);
-        for (_, names) in &GROUPS[..4] {
+        for (_, names) in &GROUPS[..5] {
             for origin in *names {
                 let name = origin.declaration;
                 assert_eq!(
@@ -174,7 +178,7 @@ fn unprefixed_client_server_collisions_fail_in_both_orders() {
     );
     for reverse in [false, true] {
         let catalog = owners(reverse);
-        for (_, names) in &GROUPS[..4] {
+        for (_, names) in &GROUPS[..5] {
             for origin in *names {
                 let name = origin.declaration;
                 if catalog

@@ -2,7 +2,9 @@ use dust_diagnostics::Diagnostic;
 use dust_ir::DartFileIr;
 use std::path::Path;
 
-use crate::{AnnotationOrigin, PluginContribution, SymbolPlan, WorkspaceAnalysisBuilder};
+use crate::{
+    AnnotationOrigin, PluginContribution, SymbolPlan, TypeOriginRequest, WorkspaceAnalysisBuilder,
+};
 
 /// Context available while generating plugin output.
 #[derive(Debug, Clone, Copy)]
@@ -56,6 +58,11 @@ pub trait DustPlugin: Send + Sync {
 
     /// Returns generated helper symbol names this plugin wants reserved.
     fn requested_symbols(&self, _file: &DartFileIr) -> Vec<String> {
+        Vec::new()
+    }
+
+    /// Requests canonical declaration ownership for selected written type references.
+    fn type_origin_requests(&self, _file: &DartFileIr) -> Vec<TypeOriginRequest> {
         Vec::new()
     }
 

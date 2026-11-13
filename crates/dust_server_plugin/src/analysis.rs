@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ServerClientDestination,
     client::collect_output_claims,
-    plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server},
+    plan::{Extraction, ExtractionWrapper, HandlerPlan, ServerPlan, plan_server_with_type_origins},
+    plugin::{CONNECTION_LIBRARY, CONNECTION_NAME, type_origin_request},
 };
 
 /// Cross-library Serde query-model facts and plan hydration.
@@ -18,6 +19,9 @@ pub(crate) use payload_models::{
     PayloadCapabilityIndex, collect_payload_model_workspace_analysis_ir, hydrate_payload_models,
     response_serde_types,
 };
+/// Typed WebSocket route facts kept separate from HTTP consumers.
+mod ws;
+pub(crate) use ws::{ServerWsFact, ws_facts};
 
 #[cfg(test)]
 mod tests;
@@ -83,7 +87,16 @@ pub(crate) fn collect_server_workspace_analysis_ir(
 ) {
     collect_query_model_workspace_analysis_ir(file, analysis);
     collect_payload_model_workspace_analysis_ir(file, analysis);
-    let Ok(Some(plan)) = plan_server(file) else {
+    let Ok(Some(plan)) = plan_server_with_type_origins(file, &|param| {
+        type_origin_request(param).is_some_and(|request| {
+            analysis.has_type_origin(
+                &file.source_path,
+                &request,
+                CONNECTION_LIBRARY,
+                CONNECTION_NAME,
+            )
+        })
+    }) else {
         return;
     };
     collect_plan(file, &plan, analysis);
@@ -116,7 +129,22 @@ fn add_fact(
     handler: &HandlerPlan<'_>,
     analysis: &mut WorkspaceAnalysisBuilder,
 ) {
-    let fact = ServerRouteFact {
+    let fact = route_fact(file, controller, prefix, handler);
+    if let Some(websocket) = &handler.websocket {
+        ws::add_fact(fact, websocket, analysis);
+    } else if let Ok(value) = serde_json::to_string(&fact) {
+        analysis.add_string_set_value(SERVER_ROUTES_ANALYSIS_KEY, value);
+    }
+}
+
+/// Builds the unchanged HTTP-shaped route identity shared by both transports.
+fn route_fact(
+    file: &DartFileIr,
+    controller: Option<String>,
+    prefix: &str,
+    handler: &HandlerPlan<'_>,
+) -> ServerRouteFact {
+    ServerRouteFact {
         source_path: file.source_path.clone(),
         controller,
         prefix: prefix.to_owned(),
@@ -132,9 +160,6 @@ fn add_fact(
         hidden: handler.metadata.hidden,
         params: handler.params.iter().map(param_fact).collect(),
         return_type: render_type(handler.callable.return_type()),
-    };
-    if let Ok(value) = serde_json::to_string(&fact) {
-        analysis.add_string_set_value(SERVER_ROUTES_ANALYSIS_KEY, value);
     }
 }
 
@@ -199,6 +224,7 @@ fn binding(extraction: &Extraction) -> (&'static str, Option<String>) {
         Extraction::Peer => ("peer", None),
         Extraction::Request => ("request", None),
         Extraction::RequestParts => ("request-parts", None),
+        Extraction::WebSocket => ("websocket", None),
     }
 }
 

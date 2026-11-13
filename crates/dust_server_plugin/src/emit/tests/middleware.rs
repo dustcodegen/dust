@@ -19,6 +19,7 @@ fn emits_group_and_route_middleware_in_declared_order() {
     };
     let handler = HandlerPlan {
         callable: Callable::Function(&function),
+        websocket: None,
         method: "GET",
         path: "/health".to_owned(),
         status: 200,

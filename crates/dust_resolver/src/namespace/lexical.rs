@@ -38,19 +38,17 @@ impl NamespaceGraph {
             scope.visibility.start() <= span.range.start()
                 && scope.visibility.end() >= span.range.end()
         });
-        let mut seen = BTreeSet::new();
+        // A valid parent chain visits at most every retained scope once.
+        let mut remaining = unit.lexical_scopes.len();
         while let Some(index) = scope {
-            let Some(current) = unit
-                .lexical_scopes
-                .get(index)
-                .filter(|_| seen.insert(index))
-            else {
+            let Some(current) = unit.lexical_scopes.get(index).filter(|_| remaining > 0) else {
                 return rejected(
                     NamespaceFailureKind::MissingInput,
                     "invalid lexical scope parent chain",
                     Vec::new(),
                 );
             };
+            remaining -= 1;
             if (current.kind != ParsedLexicalScopeKind::Library || !active.is_empty())
                 && let Some(declaration) = current
                     .declarations

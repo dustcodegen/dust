@@ -10,11 +10,11 @@ use crate::{
 
 mod modes;
 
-fn span() -> SpanIr {
+pub(super) fn span() -> SpanIr {
     SpanIr::new(FileId::new(1), TextRange::new(0_u32, 1_u32))
 }
 
-fn param(name: &str, ty: TypeIr) -> MethodParamIr {
+pub(super) fn param(name: &str, ty: TypeIr) -> MethodParamIr {
     MethodParamIr {
         name: name.to_owned(),
         ty,
@@ -28,7 +28,7 @@ fn param(name: &str, ty: TypeIr) -> MethodParamIr {
     }
 }
 
-fn param_fact(name: &str, binding: &str) -> ServerParamFact {
+pub(super) fn param_fact(name: &str, binding: &str) -> ServerParamFact {
     serde_json::from_value(json!({
         "name": name,
         "type_source": "String",
@@ -39,7 +39,7 @@ fn param_fact(name: &str, binding: &str) -> ServerParamFact {
     .unwrap()
 }
 
-fn route_fact(params: Vec<ServerParamFact>) -> ServerRouteFact {
+pub(super) fn route_fact(params: Vec<ServerParamFact>) -> ServerRouteFact {
     serde_json::from_value(json!({
         "source_path": "lib/api.dart",
         "controller": "Api",
@@ -60,7 +60,7 @@ fn route_fact(params: Vec<ServerParamFact>) -> ServerRouteFact {
     .unwrap()
 }
 
-fn metadata() -> RouteMetadataPlan {
+pub(super) fn metadata() -> RouteMetadataPlan {
     RouteMetadataPlan {
         operation_id: "read".to_owned(),
         summary: None,
@@ -236,6 +236,7 @@ fn verbs_paths_and_endpoint_failures_cover_normalized_boundaries() {
     };
     let handler = HandlerPlan {
         callable: Callable::Method(&method),
+        websocket: None,
         method: "GET",
         path: "/read".to_owned(),
         status: 200,

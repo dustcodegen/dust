@@ -1,9 +1,14 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     sync::Arc,
 };
 
 use serde::{Deserialize, Serialize};
+
+/// Canonical type identity storage, matching and deterministic hashing.
+mod type_origins;
+
+use type_origins::{TypeOriginFact, hash_type_origins};
 
 /// Workspace analysis key for package-level feature flags.
 pub const PACKAGE_FEATURES_ANALYSIS_KEY: &str = "dust_workspace.package_features.v1";
@@ -16,12 +21,15 @@ pub const PACKAGE_FEATURE_FLUTTER: &str = "flutter";
 pub struct LibraryAnalysisSnapshot {
     /// Per-key sorted string sets.
     string_sets: BTreeMap<String, Vec<String>>,
+    /// Canonical type references, absent in legacy and string-only snapshots.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    type_origins: Vec<TypeOriginFact>,
 }
 
 impl LibraryAnalysisSnapshot {
     /// Returns `true` when this snapshot contains no recorded analysis values.
     pub fn is_empty(&self) -> bool {
-        self.string_sets.is_empty()
+        self.string_sets.is_empty() && self.type_origins.is_empty()
     }
 
     /// Returns the string-set values recorded for one analysis key.
@@ -40,6 +48,8 @@ impl LibraryAnalysisSnapshot {
 pub struct WorkspaceAnalysis {
     /// Immutable per-key workspace string sets.
     string_sets: BTreeMap<String, Arc<Vec<String>>>,
+    /// Sorted canonical declaration candidates for selected type references.
+    type_origins: BTreeSet<TypeOriginFact>,
 }
 
 impl WorkspaceAnalysis {
@@ -57,7 +67,8 @@ impl WorkspaceAnalysis {
     /// Computes a deterministic FNV-1a hash of the entire workspace analysis.
     ///
     /// The hash is stable across builds because `BTreeMap` iterates in sorted
-    /// key order and each value `Vec` is pre-sorted during `build()`.
+    /// key order, each value `Vec` is pre-sorted during `build()`, and type-origin
+    /// facts are stored in sorted order. String-only analysis keeps its old hash.
     pub fn content_hash(&self) -> u64 {
         let mut hash = 1469598103934665603_u64;
         for (key, values) in &self.string_sets {
@@ -76,6 +87,7 @@ impl WorkspaceAnalysis {
                 hash = hash.wrapping_mul(1099511628211);
             }
         }
+        hash_type_origins(&mut hash, &self.type_origins);
         hash
     }
 }
@@ -85,6 +97,8 @@ impl WorkspaceAnalysis {
 pub struct WorkspaceAnalysisBuilder {
     /// Mutable per-key workspace string sets.
     string_sets: HashMap<String, HashSet<String>>,
+    /// Sorted canonical declaration candidates for selected type references.
+    type_origins: BTreeSet<TypeOriginFact>,
 }
 
 impl WorkspaceAnalysisBuilder {
@@ -102,6 +116,8 @@ impl WorkspaceAnalysisBuilder {
             let bucket = self.string_sets.entry(key.clone()).or_default();
             bucket.extend(values.iter().cloned());
         }
+        self.type_origins
+            .extend(snapshot.type_origins.iter().cloned());
     }
 
     /// Merges another builder into this one.
@@ -109,6 +125,7 @@ impl WorkspaceAnalysisBuilder {
         for (key, values) in other.string_sets {
             self.string_sets.entry(key).or_default().extend(values);
         }
+        self.type_origins.extend(other.type_origins);
     }
 
     /// Freezes this builder into one cached per-library snapshot.
@@ -122,7 +139,10 @@ impl WorkspaceAnalysisBuilder {
                 (key.clone(), values)
             })
             .collect();
-        LibraryAnalysisSnapshot { string_sets }
+        LibraryAnalysisSnapshot {
+            string_sets,
+            type_origins: self.type_origins.iter().cloned().collect(),
+        }
     }
 
     /// Freezes this builder into one immutable workspace-wide analysis set.
@@ -136,7 +156,10 @@ impl WorkspaceAnalysisBuilder {
                 (key, Arc::new(values))
             })
             .collect();
-        WorkspaceAnalysis { string_sets }
+        WorkspaceAnalysis {
+            string_sets,
+            type_origins: self.type_origins,
+        }
     }
 }
 

@@ -14,6 +14,8 @@ mod literals;
 mod names;
 /// Serde rename rules.
 mod rename;
+/// Public generated Serde codec constructor references.
+mod serde_codec;
 /// Dart source parsing re-exports.
 mod source;
 /// Template rendering helpers.
@@ -34,6 +36,7 @@ pub use generics::{
 };
 pub use literals::{dart_string_literal, escape_dart_string};
 pub use names::{NameAllocator, library_declaration_names, library_reference_names};
+pub use serde_codec::{SerdeCodecDirection, render_serde_codec_constructor};
 
 pub use source::{
     balanced_parenthesized, normalized_args, parse_bool_literal, parse_named_arguments,

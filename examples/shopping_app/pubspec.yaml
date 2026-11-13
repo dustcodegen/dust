@@ -20,6 +20,8 @@ dependencies:
   shared_preferences: ^2.3.4
   dust_dart:
     path: ../../packages/dust_dart
+  server_client_app:
+    path: ../../fixtures/server_client_app
   dust_flutter:
     path: ../../packages/dust_flutter
   dust_db_sqlite3:

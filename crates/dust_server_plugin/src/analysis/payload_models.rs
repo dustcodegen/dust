@@ -10,6 +10,8 @@ pub(crate) use facts::collect_payload_model_workspace_analysis_ir;
 use facts::{PayloadModelFact, model_facts};
 /// One-pass lookup of local and imported payload contracts.
 mod index;
+/// Directional object-model capabilities required by typed sockets.
+mod ws;
 #[cfg(test)]
 use dust_plugin_api::WorkspaceAnalysis;
 pub(crate) use index::PayloadCapabilityIndex;
@@ -34,6 +36,16 @@ pub(crate) fn hydrate_payload_models(
         .flat_map(|value| value.handlers.iter_mut())
         .chain(plan.functions.iter_mut())
     {
+        if let Some(websocket) = &handler.websocket {
+            diagnostics.extend(ws::validate_messages(
+                file,
+                websocket,
+                handler.callable.span(),
+                models,
+                require_client,
+            ));
+            continue;
+        }
         for param in &mut handler.params {
             if !matches!(param.extraction, Extraction::Body(BodyFormat::Json)) {
                 continue;

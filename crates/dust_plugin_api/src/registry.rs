@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{DustPlugin, PluginContext, SymbolPlan, WorkspaceAnalysisBuilder};
+use crate::{DustPlugin, PluginContext, SymbolPlan, TypeOriginRequest, WorkspaceAnalysisBuilder};
 use dust_diagnostics::Diagnostic;
 use dust_ir::{DartFileIr, SymbolId};
 
@@ -194,6 +194,15 @@ impl PluginRegistry {
             }
         }
         plan
+    }
+
+    /// Collects requested type ownership proofs from executing plugins in registration order.
+    pub fn type_origin_requests(&self, file: &DartFileIr) -> Vec<TypeOriginRequest> {
+        self.plugins
+            .iter()
+            .filter(|plugin| plugin.executes)
+            .flat_map(|plugin| plugin.plugin.type_origin_requests(file))
+            .collect()
     }
 
     /// Collects canonical IR workspace facts from all registered plugins.

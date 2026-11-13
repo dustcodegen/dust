@@ -4,6 +4,10 @@ use dust_diagnostics::Diagnostic;
 use dust_http_client_plugin::GeneratedEndpoint;
 use dust_ir::{DartFileIr, ImportIr, TypeIr};
 
+/// Socket import selection and generated namespace collision checks.
+mod websocket;
+pub(super) use websocket::{required_imports_with_ws, runtime_prefix};
+
 #[cfg(test)]
 mod tests;
 

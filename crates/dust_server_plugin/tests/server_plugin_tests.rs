@@ -17,6 +17,9 @@ mod metadata;
 mod middleware;
 #[path = "server_plugin_tests/registration.rs"]
 mod registration;
+/// Canonical identity requests and final generation contracts.
+#[path = "server_plugin_tests/ws_identity.rs"]
+mod ws_identity;
 
 fn empty_library() -> DartFileIr {
     DartFileIr::empty(

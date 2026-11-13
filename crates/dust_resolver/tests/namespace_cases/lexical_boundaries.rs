@@ -134,10 +134,12 @@ fn conditional_constant_values_require_target_independent_ownership() {
 #[test]
 fn malformed_scope_parents_or_missing_use_units_fail_clearly() {
     let source = "class Api { @GET void call() {} }";
-    for parent in [1, usize::MAX] {
+    for parents in [vec![(1, 1)], vec![(1, usize::MAX)], vec![(1, 0), (0, 1)]] {
         let mut graph = graph();
         let mut parsed = parse(3, source);
-        parsed.lexical_scopes[1].parent = Some(parent);
+        for (scope, parent) in parents {
+            parsed.lexical_scopes[scope].parent = Some(parent);
+        }
         graph
             .insert_library(APP, FileId::new(3), &parsed, |_, uri| Ok(uri.to_owned()))
             .unwrap();

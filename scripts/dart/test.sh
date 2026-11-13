@@ -14,6 +14,7 @@ TARGETS+=("fixtures/sqlite_sdk_consumer")
 # Workspace discovery lists packages only, so include executable proof fixtures.
 TARGETS+=(
   "fixtures/server_codegen_app"
+  "fixtures/server_client_server"
   "fixtures/server_client_app"
   "fixtures/server_admin_client_app"
 )

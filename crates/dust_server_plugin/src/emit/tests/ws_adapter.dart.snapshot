@@ -1,0 +1,30 @@
+Future<Response> _$handleChat(Request request) async {
+  final Result<String, Rejection> _dustResult0 =
+      await const PathExtractable<String>('room').extract(request);
+  if (_dustResult0 case Err(:final error)) return error.intoResponse();
+  final _dustValue0 = (_dustResult0 as Ok<String, Rejection>).value;
+
+  final Result<String, Rejection> _dustResult2 =
+      await const HeaderExtractable<String>('authorization').extract(request);
+  if (_dustResult2 case Err(:final error)) return error.intoResponse();
+  final _dustValue2 = (_dustResult2 as Ok<String, Rejection>).value;
+
+  return ws(
+    (_dustSession) async {
+      final _dustValue1 =
+          socket.WebSocketConnection<models.Notice<int>, Command>.fromChannel(
+            _dustSession.channel,
+            serializer: models.$NoticeSerializer<int>(),
+            deserializer: $CommandDeserializer(),
+            negotiatedProtocol: _dustSession.protocol,
+          );
+      await chat(
+        _dustValue0,
+        socket: _dustValue1,
+        token: _dustValue2,
+      );
+    },
+    protocols: const ['chat.v1'],
+    allowedOrigins: const ['https://chat.example'],
+  ).handlers['GET']!(request);
+}

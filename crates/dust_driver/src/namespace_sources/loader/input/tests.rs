@@ -86,18 +86,48 @@ fn preloaded_roots_retain_discovery_bytes_for_exact_live_validation() {
     assert!(preloaded.owner.is_none());
     assert!(!preloaded.generated_library);
     assert!(preloaded == SourceInput::read(&source, None, &BTreeSet::new()).unwrap());
+    let potential = BTreeSet::new();
+    let unchanged =
+        SourceInput::read_with_snapshot(&source, None, &potential, Some(&text)).unwrap();
+    assert!(Arc::ptr_eq(&unchanged.text, &text));
+    assert!(unchanged == preloaded);
 
     for current in ["class Modified {}", dust_plugin_api::GENERATED_HEADER] {
         fs::write(&source.path, current).unwrap();
-        let live = SourceInput::read(&source, None, &BTreeSet::new()).unwrap();
+        let live = SourceInput::read_with_snapshot(&source, None, &potential, Some(&text)).unwrap();
         assert!(preloaded != live);
+        assert!(!Arc::ptr_eq(&live.text, &text));
+        assert!(live == SourceInput::read(&source, None, &potential).unwrap());
+        let parsed = live.parse(&source, FileId::new(2), &policy);
+        if live.generated_library {
+            assert!(parsed.library.classes.is_empty());
+        } else {
+            assert_eq!(live.text.as_ref(), current);
+            assert_eq!(parsed.library.classes[0].name, "Modified");
+        }
         assert_eq!(
             policy.preloaded_input(&source).unwrap().text.as_ref(),
             "class Original {}"
         );
     }
+    fs::write(&source.path, [0xff]).unwrap();
+    assert_eq!(
+        SourceInput::read_with_snapshot(&source, None, &potential, Some(&text)).err(),
+        SourceInput::read(&source, None, &potential).err()
+    );
     fs::remove_file(&source.path).unwrap();
-    assert!(SourceInput::read(&source, None, &BTreeSet::new()).is_err());
+    let missing = SourceInput::read_with_snapshot(&source, None, &potential, Some(&text));
+    assert!(missing.is_err());
+    assert_eq!(
+        missing.err(),
+        SourceInput::read(&source, None, &potential).err()
+    );
+    let potential = BTreeSet::from([source.path.clone()]);
+    let generated =
+        SourceInput::read_with_snapshot(&source, None, &potential, Some(&text)).unwrap();
+    assert!(generated.generated_library);
+    assert!(generated.text.is_empty());
+    assert!(generated == SourceInput::read(&source, None, &potential).unwrap());
     source.path = root.path().join("dependency.dart");
     assert!(policy.preloaded_input(&source).is_none());
 }
