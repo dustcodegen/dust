@@ -27,8 +27,11 @@ void main() {
     final evidence = File('${directory.path}/expected.json');
     Map<String, dynamic>? prior;
     if (phase == 'write') {
-      expect(directory.existsSync(), isFalse,
-          reason: 'Never reuse probe data.');
+      expect(
+        directory.existsSync(),
+        isFalse,
+        reason: 'Never reuse probe data.',
+      );
       await directory.create();
     } else {
       expect(FileSystemEntity.isLinkSync(directory.path), isFalse);
@@ -69,27 +72,31 @@ void main() {
     final db = await openProbe(path);
     late String history;
     try {
-      report['engine'] = (await db.unsafe.fetch(
-        'SELECT sqlite_version() AS version, sqlite_source_id() AS source',
-        [],
-      ))
-          .unwrap()
-          .map((row) => {
-                'version': row.read<String>('version'),
-                'sourceId': row.read<String>('source'),
-              })
-          .single;
+      report['engine'] =
+          (await db.unsafe.fetch(
+                'SELECT sqlite_version() AS version, sqlite_source_id() AS source',
+                [],
+              ))
+              .unwrap()
+              .map(
+                (row) => {
+                  'version': row.read<String>('version'),
+                  'sourceId': row.read<String>('source'),
+                },
+              )
+              .single;
       history = await probeHistory(db);
       if (phase == 'write') {
         await seedProbe(db, run);
         await evidence.writeAsString(
-            jsonEncode({
-              'owner': 'dust-sqlite-lifecycle-v1',
-              'run': run,
-              'pid': pid,
-              'history': history,
-            }),
-            flush: true);
+          jsonEncode({
+            'owner': 'dust-sqlite-lifecycle-v1',
+            'run': run,
+            'pid': pid,
+            'history': history,
+          }),
+          flush: true,
+        );
         lifecycle.phase = 'await_background';
         await lifecycle.paused.future.timeout(const Duration(seconds: 60));
         await lifecycle.resumed.future.timeout(const Duration(seconds: 60));

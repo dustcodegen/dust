@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../models/auth_state.dart';
@@ -63,8 +63,10 @@ class RegisterActions extends StatelessWidget {
                   context.navigator.login().go();
                 }
               },
-              child:
-                  const TranslatedText('shop_sign_in', defaultText: 'Sign In'),
+              child: const TranslatedText(
+                'shop_sign_in',
+                defaultText: 'Sign In',
+              ),
             ),
           ],
         ),

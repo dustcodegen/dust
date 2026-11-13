@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../example/stale_actions.dart';
@@ -46,9 +46,11 @@ void main() {
     expect(find.text('Nothing starts with "x".'), findsOneWidget);
   });
 
-  test('the sample search finds names by prefix, even for an empty query',
-      () async {
-    expect(await slowerForShorterQueries('co'), ['Cocoa', 'Coffee', 'Cola']);
-    expect(await slowerForShorterQueries(''), hasLength(4));
-  });
+  test(
+    'the sample search finds names by prefix, even for an empty query',
+    () async {
+      expect(await slowerForShorterQueries('co'), ['Cocoa', 'Coffee', 'Cola']);
+      expect(await slowerForShorterQueries(''), hasLength(4));
+    },
+  );
 }

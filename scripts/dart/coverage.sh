@@ -24,7 +24,8 @@ echo "==> Dart coverage: $TARGET (floor ${FLOOR}%)"
 (
   cd "$TARGET"
   rm -rf .coverage
-  dart test --coverage=.coverage
+  # shortcut: serialize the pinned runner, retry parallel loading when Flutter admits test 1.33.
+  dart test --coverage=.coverage --concurrency=1
   # `--check-ignore` honours `// coverage:ignore-*` comments. Without it the
   # headers generated code already carries were counted like any other line,
   # and a guard that cannot be reached had no way to say so.

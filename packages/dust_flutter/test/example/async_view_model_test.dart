@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dust_dart/fp.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../example/async_view_model.dart';
@@ -45,8 +45,9 @@ void main() {
     expect(find.text('Coffee'), findsOneWidget);
   });
 
-  testWidgets('an offline failure keeps its type and can be retried',
-      (tester) async {
+  testWidgets('an offline failure keeps its type and can be retried', (
+    tester,
+  ) async {
     await pumpPage(tester);
     repository.answer(const Err(CatalogOffline()));
     await tester.pump();

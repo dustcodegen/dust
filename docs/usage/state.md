@@ -9,7 +9,7 @@ Install the Dust CLI from the [root guide](../../README.md#installation), then
 add the Flutter runtime.
 
 ```bash
-flutter pub add dust_flutter
+flutter pub add dust_flutter material_ui
 ```
 
 ## Quick Start
@@ -41,7 +41,7 @@ In `lib/main.dart`, mount the generated scope above the counter page.
 
 ```dart
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'counter_view_model.dart';
 

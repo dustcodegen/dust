@@ -16,6 +16,9 @@ Coverage:
 bash scripts/dart/coverage.sh packages/dust_server 100
 ```
 
+The coverage command loads suites sequentially to bound the pinned runner's VM
+service sessions.
+
 The local pre-commit gate requires **100%** line coverage and names uncovered
 lines. GitHub Actions are reserved for release workflows, so ordinary pull
 requests do not prove that this local command ran.
@@ -24,8 +27,8 @@ The raw commands, if you want the lcov report itself:
 
 ```bash
 cd packages/dust_server
-dart test --coverage=.coverage
-dart run coverage:format_coverage --lcov --in=.coverage --out=.coverage/lcov.info --report-on=lib
+dart test --coverage=.coverage --concurrency=1
+dart run coverage:format_coverage --lcov --check-ignore --in=.coverage --out=.coverage/lcov.info --report-on=lib
 ```
 
 ## How this package is tested

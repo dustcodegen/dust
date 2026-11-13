@@ -155,7 +155,7 @@ fn render_metadata_file(spec: &RouterSpec, route_imports: &str) -> String {
     metadata::render_route_metadata(&mut body, spec);
     render_metadata_helpers(&mut body, spec);
     generated_file(
-        "import 'package:flutter/material.dart';\nimport 'package:flutter/cupertino.dart';\nimport 'package:dust_flutter/route.dart';\n\nimport 'paths.g.dart';\n",
+        "import 'package:cupertino_ui/cupertino_ui.dart';\nimport 'package:dust_flutter/route.dart';\nimport 'package:material_ui/material_ui.dart';\n\nimport 'paths.g.dart';\n",
         route_imports,
         &body,
     )
@@ -199,7 +199,7 @@ fn render_runtime_file(spec: &RouterSpec, route_imports: &str) -> String {
     render_shell_consistency_helpers(&mut body, spec);
     render_page_builder(&mut body, spec);
     generated_file(
-        "import 'package:flutter/material.dart';\nimport 'package:flutter/cupertino.dart';\nimport 'package:dust_flutter/route.dart';\n\nimport 'paths.g.dart';\nimport 'metadata.g.dart';\n",
+        "import 'package:cupertino_ui/cupertino_ui.dart';\nimport 'package:dust_flutter/route.dart';\nimport 'package:material_ui/material_ui.dart';\n\nimport 'paths.g.dart';\nimport 'metadata.g.dart';\n",
         route_imports,
         &body,
     )

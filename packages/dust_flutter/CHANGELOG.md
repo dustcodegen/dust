@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Require Flutter 3.44 / Dart 3.12 and use standalone `material_ui` widgets for
+  routing. Migrate application Material/Cupertino imports and localization
+  delegates together; route, state and Navigator 2.0 APIs remain unchanged.
+
 ### Fixed
 
 - Reuse the previous page when a router refresh redirects to its location.

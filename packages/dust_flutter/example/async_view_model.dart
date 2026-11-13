@@ -1,6 +1,6 @@
 import 'package:dust_dart/fp.dart';
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Loading data that can fail, and keeping the failure's own type.
 ///
@@ -137,13 +137,13 @@ class _CatalogPageState extends State<CatalogPage> {
           AsyncLoading() => const Center(child: CircularProgressIndicator()),
           AsyncData(:final data) => _Products(data),
           AsyncFailure(:final error) => _Failure(
-              message: switch (error) {
-                CatalogOffline() => 'You are offline.',
-                CatalogForbidden() => 'You cannot see this catalog.',
-                _ => 'Something went wrong.',
-              },
-              onRetry: error is CatalogOffline ? viewModel.retry : null,
-            ),
+            message: switch (error) {
+              CatalogOffline() => 'You are offline.',
+              CatalogForbidden() => 'You cannot see this catalog.',
+              _ => 'Something went wrong.',
+            },
+            onRetry: error is CatalogOffline ? viewModel.retry : null,
+          ),
         },
       ),
     );
@@ -164,7 +164,7 @@ class _Products extends StatelessWidget {
         Expanded(
           child: ListView(
             children: [
-              for (final name in products) ListTile(title: Text(name))
+              for (final name in products) ListTile(title: Text(name)),
             ],
           ),
         ),

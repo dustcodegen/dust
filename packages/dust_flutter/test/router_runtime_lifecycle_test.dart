@@ -85,34 +85,38 @@ void main() {
     await expectLater(detailResult, completion(isNull));
   });
 
-  test('unawaited navigation exceptions are routed to the router hook',
-      () async {
-    final router = ExceptionRecordingRouter();
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(router: router),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'unawaited navigation exceptions are routed to the router hook',
+    () async {
+      final router = ExceptionRecordingRouter();
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(router: router),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    delegate.go(const TestRoute('/one'));
-    await Future<void>.delayed(Duration.zero);
+      delegate.go(const TestRoute('/one'));
+      await Future<void>.delayed(Duration.zero);
 
-    expect(router.errors.single, isA<StateError>());
-    expect(router.stackTraces.single, isA<StackTrace>());
-  });
+      expect(router.errors.single, isA<StateError>());
+      expect(router.stackTraces.single, isA<StackTrace>());
+    },
+  );
 
-  test('disposing the delegate completes pending push futures with null',
-      () async {
-    final delegate = GeneratedRouterDelegate<TestRoute>(runtimeConfig());
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'disposing the delegate completes pending push futures with null',
+    () async {
+      final delegate = GeneratedRouterDelegate<TestRoute>(runtimeConfig());
+      await delegate.debugWaitForScheduledRefresh();
 
-    final result = delegate.push<void>(const TestRoute('/detail'));
-    delegate.dispose();
+      final result = delegate.push<void>(const TestRoute('/detail'));
+      delegate.dispose();
 
-    await expectLater(
-      result.timeout(const Duration(seconds: 1)),
-      completion(isNull),
-    );
-  });
+      await expectLater(
+        result.timeout(const Duration(seconds: 1)),
+        completion(isNull),
+      );
+    },
+  );
 
   test('async guard completion after disposal cannot commit a route', () async {
     final guardResult = Completer<TestRoute?>();

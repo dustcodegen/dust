@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Local verification**: serialize Dart coverage suite loading to bound VM
+  service sessions on the test runner pinned by Flutter.
+- **Flutter design libraries**: migrate runtime, generated routing and i18n
+  delegates to standalone Material/Cupertino packages. The Flutter runtime now
+  requires Flutter 3.44 / Dart 3.12; Dart-only runtime floors remain unchanged.
 - **Build performance**: index namespace source lookups, reuse ownership checks
   for the same source and producer, discard rejected placeholders in one scan,
   share annotation discovery across workspace roots, and build diagnostic line
@@ -21,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unchanged builds only after checking all recorded input and output contents.
   Reuse source-exact parser facts across codegen cache misses while rerunning
   analysis and emission.
+  Prepare larger discovered dependencies first while keeping canonical loading
+  order, reuse namespace ownership lookups, and use hash maps for output claims.
 - **Dart parsing**: share structured syntax candidates between diagnostics and
   language-feature detection while preserving language-version checks.
 - **Build fingerprints**: hash each reachable source once per snapshot and
@@ -28,10 +35,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Dependency parsing**: project valid Dart 3.13 constructor defaults without
+  changing diagnostics, and limit generic-argument lookup to the containing
+  type range. Select file language versions through normalized package-root
+  ancestor lookups while preserving SDK fallback and platform prefix behavior.
 - **SQLite runtime**: require `sqlite3 >=3.7.1` for patched bundled SQLite
   (CVE-2026-119375) while retaining standalone Dart 3.10 support. Flutter SQLite
-  consumers now require Flutter 3.47.0 or newer; the core Flutter minimum is
-  unchanged.
+  consumers now require Flutter 3.47.0 or newer.
 - **Namespace lookup**: allow dot shorthand in ordinary dependency constructor
   defaults while retaining generation errors and language-version checks.
 - **SDK validation**: retain native Flutter configuration in isolated consumers

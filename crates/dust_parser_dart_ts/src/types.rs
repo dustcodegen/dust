@@ -174,14 +174,12 @@ fn find_type_arguments_after<'tree>(
         }
 
         let mut cursor = node.walk();
-        if let Some(args) = node.children(&mut cursor).find(|child| {
+        // Higher ancestors cannot add a direct child inside this contained type range.
+        return node.children(&mut cursor).find(|child| {
             child.kind() == "type_arguments"
                 && child.start_byte() >= type_node.end_byte()
                 && child.end_byte() <= type_end_byte
-        }) {
-            return Some(args);
-        }
-        container = node.parent();
+        });
     }
     None
 }
@@ -296,3 +294,6 @@ fn is_builtin(source: &str) -> bool {
         "String" | "int" | "bool" | "double" | "num" | "Object"
     )
 }
+
+#[cfg(test)]
+mod tests;

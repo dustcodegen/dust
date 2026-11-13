@@ -2,7 +2,7 @@ import 'package:dust_benchmark_project/app/benchmark_app.dart';
 import 'package:dust_benchmark_project/route.dart';
 import 'package:dust_benchmark_project/state/benchmark_state.dart';
 import 'package:dust_benchmark_project/state/benchmark_view_model.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -56,7 +56,9 @@ void main() {
 
     expect(benchmarkRouteGuards(const NotFoundRoute(), router), isEmpty);
     expect(
-        benchmarkRouteGuards(const ModelDetailRoute(id: 42), router), isEmpty);
+      benchmarkRouteGuards(const ModelDetailRoute(id: 42), router),
+      isEmpty,
+    );
   });
 
   testWidgets('benchmark app renders generated route and state APIs', (

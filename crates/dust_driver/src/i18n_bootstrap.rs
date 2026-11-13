@@ -131,19 +131,15 @@ fn render_i18n_bootstrap(config: &I18nConfig) -> String {
 import 'dart:async' show unawaited;
 
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show GlobalMaterialLocalizations;
 
 const List<String> appI18nLocales = <String>[{locales}];
 const List<Locale> appI18nSupportedLocales = <Locale>[
 {supported_locales}
 ];
 const List<LocalizationsDelegate<dynamic>> appI18nLocalizationsDelegates =
-    <LocalizationsDelegate<dynamic>>[
-  GlobalMaterialLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-];
+    GlobalMaterialLocalizations.delegates;
 const String appI18nFallbackLocale = {fallback};
 const String appI18nAssetPattern = defaultI18nAssetPattern;
 

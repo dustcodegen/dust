@@ -21,8 +21,7 @@ void main() {
 
       await app.connection.seedProductCache();
       expect(
-        (app.pool as Sqlite3Executor)
-            .database
+        (app.pool as Sqlite3Executor).database
             .select('SELECT 1')
             .single
             .columnAt(0),
@@ -70,8 +69,7 @@ void main() {
     final columns = (await app.unsafe.fetch(
       'PRAGMA table_info(product_cache)',
       const [],
-    ))
-        .unwrapOrElse((error) => fail('$error'));
+    )).unwrapOrElse((error) => fail('$error'));
     expect(
       columns.map((row) => row.read<String>('name')),
       contains('last_synced_at'),
@@ -80,8 +78,7 @@ void main() {
     final migrations = (await app.unsafe.fetch(
       'SELECT name FROM __dust_schema_migrations ORDER BY name',
       const [],
-    ))
-        .unwrapOrElse((error) => fail('$error'));
+    )).unwrapOrElse((error) => fail('$error'));
     expect(migrations.map((row) => row.read<String>('name')), <String>[
       '0001_shopping_cache.sql',
       '0002_product_cache_sync_metadata.up.sql',

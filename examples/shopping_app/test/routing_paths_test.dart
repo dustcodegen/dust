@@ -10,8 +10,11 @@ void main() {
     final parsedOrder = parseShoppingRoute(Uri.parse(order.location));
     expect(
       parsedOrder,
-      isA<OrderDetailRoute>()
-          .having((route) => route.orderId, 'orderId', orderId),
+      isA<OrderDetailRoute>().having(
+        (route) => route.orderId,
+        'orderId',
+        orderId,
+      ),
     );
 
     const redirectPath = '/orders/ORDER 1/2?tab=tracking';
@@ -72,20 +75,23 @@ void main() {
     expect(shoppingRouteLocation(confirmation), confirmation.location);
   });
 
-  test('invalid typed path values become not-found routes with source path',
-      () {
-    final route =
-        parseShoppingRoute(Uri.parse('/product/not-an-int?from=deep-link'));
+  test(
+    'invalid typed path values become not-found routes with source path',
+    () {
+      final route = parseShoppingRoute(
+        Uri.parse('/product/not-an-int?from=deep-link'),
+      );
 
-    expect(
-      route,
-      isA<NotFoundRoute>().having(
-        (route) => route.path,
-        'path',
-        '/product/not-an-int?from=deep-link',
-      ),
-    );
-  });
+      expect(
+        route,
+        isA<NotFoundRoute>().having(
+          (route) => route.path,
+          'path',
+          '/product/not-an-int?from=deep-link',
+        ),
+      );
+    },
+  );
 
   test('deep app routes restore the expected parent stack', () {
     final orderStack = restoreShoppingRouteStack(

@@ -91,7 +91,7 @@ fn a_late_generated_owner_discards_prepared_facts_without_waiting() {
         pending: BTreeMap::from([(source.uri.clone(), PendingParse::Waiting(response))]),
         imports: HashSet::new(),
         known: HashSet::new(),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::new(),
         cached_roots: HashSet::new(),
         cursor: None,

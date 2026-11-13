@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Kept for the original shopping app animation examples.
 /// Dust routing uses Flutter PageTransitionsBuilder in route annotations.

@@ -99,17 +99,18 @@ void main() {
 }
 
 List<({String directive, String file, String uri})>
-    _generatedBarrelReferences() {
+_generatedBarrelReferences() {
   final root = Directory.current;
-  final files = ['lib', 'test']
-      .map((path) => Directory('${root.path}/$path'))
-      .where((directory) => directory.existsSync())
-      .expand((directory) => directory.listSync(recursive: true))
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .where((file) => !_isGenerated(file))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      ['lib', 'test']
+          .map((path) => Directory('${root.path}/$path'))
+          .where((directory) => directory.existsSync())
+          .expand((directory) => directory.listSync(recursive: true))
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))
+          .where((file) => !_isGenerated(file))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   final references = <({String directive, String file, String uri})>[];
   final directive = RegExp(r"^\s*(import|export)\s+'([^']+)';");

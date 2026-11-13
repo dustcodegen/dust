@@ -1,5 +1,5 @@
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -25,27 +25,31 @@ void main() {
       );
     });
 
-    test('preserves repeated unknown query values beside repeated route values',
-        () {
-      final route = Object();
-      final uri = Uri.parse(
-        '/filters?tag=sale&tag=new&utm=mail&utm=app#results',
-      );
+    test(
+      'preserves repeated unknown query values beside repeated route values',
+      () {
+        final route = Object();
+        final uri = Uri.parse(
+          '/filters?tag=sale&tag=new&utm=mail&utm=app#results',
+        );
 
-      final preserved = withGeneratedRouteUriExtras(route, uri, const {'tag'});
+        final preserved = withGeneratedRouteUriExtras(route, uri, const {
+          'tag',
+        });
 
-      expect(identical(preserved, route), isTrue);
-      expect(
-        generatedRoutePath(
-          ['filters'],
-          queryParameters: {
-            'tag': ['sale', 'new'],
-          },
-          uriExtras: generatedRouteUriExtrasOf(route),
-        ),
-        '/filters?tag=sale&tag=new&utm=mail&utm=app#results',
-      );
-    });
+        expect(identical(preserved, route), isTrue);
+        expect(
+          generatedRoutePath(
+            ['filters'],
+            queryParameters: {
+              'tag': ['sale', 'new'],
+            },
+            uriExtras: generatedRouteUriExtrasOf(route),
+          ),
+          '/filters?tag=sale&tag=new&utm=mail&utm=app#results',
+        );
+      },
+    );
 
     test('does not store route extras when URI has no unknown values', () {
       final route = Object();
@@ -59,20 +63,26 @@ void main() {
       expect(generatedRouteUriExtrasOf(route), isNull);
     });
 
-    test('build generated paths with encoded segments and fragment-only extras',
-        () {
-      final route = Object();
-      withGeneratedRouteUriExtras(route, Uri.parse('/#top'), const <String>{});
+    test(
+      'build generated paths with encoded segments and fragment-only extras',
+      () {
+        final route = Object();
+        withGeneratedRouteUriExtras(
+          route,
+          Uri.parse('/#top'),
+          const <String>{},
+        );
 
-      expect(
-        generatedRoutePath(
-          ['orders', 'ORDER 1/2'],
-          uriExtras: generatedRouteUriExtrasOf(route),
-        ),
-        '/orders/ORDER%201%2F2#top',
-      );
-      expect(generatedRoutePath(const []), '/');
-    });
+        expect(
+          generatedRoutePath(
+            ['orders', 'ORDER 1/2'],
+            uriExtras: generatedRouteUriExtrasOf(route),
+          ),
+          '/orders/ORDER%201%2F2#top',
+        );
+        expect(generatedRoutePath(const []), '/');
+      },
+    );
 
     test('parse generated route bool URL values', () {
       expect(generatedRouteParseBool('true'), isTrue);

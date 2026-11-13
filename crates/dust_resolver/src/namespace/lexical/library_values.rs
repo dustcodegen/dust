@@ -31,7 +31,8 @@ impl NamespaceGraph {
             })
             .collect::<Vec<_>>();
         if values.iter().all(Option::is_none) {
-            return None;
+            let mut active = BTreeSet::from([(uri.to_owned(), name.to_owned())]);
+            return Some(self.bind_worlds(name, short, &worlds, catalog, &mut active));
         }
         let bindings = worlds
             .iter()
@@ -51,3 +52,6 @@ impl NamespaceGraph {
         })
     }
 }
+
+#[cfg(test)]
+mod tests;

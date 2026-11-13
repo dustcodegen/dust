@@ -3,72 +3,7 @@ import 'dart:async';
 import 'package:dust_flutter/state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-final class TestArgs extends ViewModelArgs {
-  const TestArgs({super.observer});
-}
-
-final class CounterViewModel extends ViewModelBase<int, TestArgs> {
-  CounterViewModel({StateObserver? observer})
-      : super(TestArgs(observer: observer), initialState: 0);
-
-  static const Object testAction = Object();
-
-  void setCount(int next) {
-    emit(next);
-  }
-
-  void emitTestEffect(Object effect) {
-    emitEffect(effect);
-  }
-
-  ViewModelActionToken beginTestAction() {
-    return beginAction(testAction);
-  }
-
-  bool isCurrentTestAction(ViewModelActionToken token) {
-    return isCurrentAction(token);
-  }
-
-  Future<bool> runTestAction(
-    Future<int> Function() run, {
-    void Function(Object error, StackTrace stackTrace)? onError,
-  }) {
-    return runAction<int>(
-      testAction,
-      onStart: () => emit(-1),
-      run: run,
-      onSuccess: emit,
-      onError: onError,
-    );
-  }
-}
-
-final class InitViewModel extends ViewModelBase<int, TestArgs> {
-  InitViewModel() : super(const TestArgs(), initialState: 0);
-
-  final initCompleters = <Completer<void>>[];
-  var initCalls = 0;
-
-  @override
-  Future<void> onInit() {
-    initCalls += 1;
-    final completer = Completer<void>();
-    initCompleters.add(completer);
-    return completer.future;
-  }
-}
-
-final class RecordingStateObserver implements StateObserver {
-  final effects = <Object>[];
-
-  @override
-  void onChanged(Object viewModel, Object? previous, Object? next) {}
-
-  @override
-  void onEffect(Object viewModel, Object effect) {
-    effects.add(effect);
-  }
-}
+import 'support/view_model_test_support.dart';
 
 void main() {
   test('invalidateSelf resets sync state to initial state', () {
@@ -79,20 +14,22 @@ void main() {
     expect(viewModel.state, 0);
   });
 
-  test('invalidateSelf keeps old action tokens stale after action restarts',
-      () {
-    final viewModel = CounterViewModel();
-    final oldToken = viewModel.beginTestAction();
+  test(
+    'invalidateSelf keeps old action tokens stale after action restarts',
+    () {
+      final viewModel = CounterViewModel();
+      final oldToken = viewModel.beginTestAction();
 
-    viewModel
-      ..setCount(3)
-      ..invalidateSelf();
+      viewModel
+        ..setCount(3)
+        ..invalidateSelf();
 
-    final newToken = viewModel.beginTestAction();
+      final newToken = viewModel.beginTestAction();
 
-    expect(viewModel.isCurrentTestAction(oldToken), isFalse);
-    expect(viewModel.isCurrentTestAction(newToken), isTrue);
-  });
+      expect(viewModel.isCurrentTestAction(oldToken), isFalse);
+      expect(viewModel.isCurrentTestAction(newToken), isTrue);
+    },
+  );
 
   test('runAction ignores stale success result', () async {
     final viewModel = CounterViewModel();
@@ -156,27 +93,31 @@ void main() {
     await expectLater(unhandled, throwsA(same(error)));
   });
 
-  test('disposed view model drops pending and new actions and effects',
-      () async {
-    final observer = RecordingStateObserver();
-    final viewModel = CounterViewModel(observer: observer);
-    final pending = Completer<int>();
-    final action = viewModel.runTestAction(() => pending.future);
+  test(
+    'disposed view model drops pending and new actions and effects',
+    () async {
+      final observer = RecordingStateObserver();
+      final viewModel = CounterViewModel(observer: observer);
+      final pending = Completer<int>();
+      final action = viewModel.runTestAction(() => pending.future);
 
-    viewModel
-      ..dispose()
-      ..emitTestEffect('ignored')
-      ..invalidateSelf();
-    pending.complete(4);
+      viewModel
+        ..dispose()
+        ..emitTestEffect('ignored')
+        ..invalidateSelf();
+      pending.complete(4);
 
-    expect(await action, isFalse);
-    expect(
-      await viewModel.runTestAction(() async => fail('started after disposal')),
-      isFalse,
-    );
-    expect(viewModel.state, -1);
-    expect(observer.effects, isEmpty);
-  });
+      expect(await action, isFalse);
+      expect(
+        await viewModel.runTestAction(
+          () async => fail('started after disposal'),
+        ),
+        isFalse,
+      );
+      expect(viewModel.state, -1);
+      expect(observer.effects, isEmpty);
+    },
+  );
 
   test('init runs onInit once for concurrent calls', () async {
     final viewModel = InitViewModel();
@@ -265,20 +206,22 @@ void main() {
     expect(effects, isEmpty);
   });
 
-  test('effects are dropped when subscription cancels before delivery',
-      () async {
-    final viewModel = CounterViewModel();
-    final effects = <Object>[];
-    final subscription = viewModel.effects.listen(effects.add);
+  test(
+    'effects are dropped when subscription cancels before delivery',
+    () async {
+      final viewModel = CounterViewModel();
+      final effects = <Object>[];
+      final subscription = viewModel.effects.listen(effects.add);
 
-    addTearDown(viewModel.dispose);
+      addTearDown(viewModel.dispose);
 
-    viewModel.emitTestEffect('toast');
-    await subscription.cancel();
-    await pumpEventQueue();
+      viewModel.emitTestEffect('toast');
+      await subscription.cancel();
+      await pumpEventQueue();
 
-    expect(effects, isEmpty);
-  });
+      expect(effects, isEmpty);
+    },
+  );
 
   test('emitEffect unwraps deprecated StateEffect wrapper', () async {
     final observer = RecordingStateObserver();

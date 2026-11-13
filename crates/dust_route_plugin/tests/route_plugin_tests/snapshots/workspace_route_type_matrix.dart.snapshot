@@ -4,9 +4,9 @@
 //
 // ignore_for_file: unused_import, unnecessary_import
 
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:dust_flutter/route.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'paths.g.dart';
 import '../route.dart';
@@ -270,9 +270,9 @@ export 'runtime.g.dart';
 //
 // ignore_for_file: unused_import, unnecessary_import
 
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:dust_flutter/route.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'paths.g.dart';
 import 'metadata.g.dart';

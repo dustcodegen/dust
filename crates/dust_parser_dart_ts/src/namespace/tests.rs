@@ -6,7 +6,7 @@ use dust_text::{FileId, SourceText};
 
 use crate::TreeSitterDartBackend;
 
-fn parse(
+pub(super) fn parse(
     text: &str,
     version: DartLanguageVersion,
     annotations: &[&str],
@@ -175,7 +175,7 @@ fn parameter_language_diagnostics_keep_complete_extraction_and_original_order() 
                 projected.namespace_diagnostics, full.namespace_diagnostics,
                 "{version}: {source}"
             );
-            if version == DartLanguageVersion::DART_3_13 || source.contains('_') {
+            if !full.diagnostics.is_empty() {
                 assert_eq!(projected, full, "{version}: {source}");
             }
         }

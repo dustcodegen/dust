@@ -156,8 +156,10 @@ String? _namespaceFromAssetPath(
     final prefix = parts.first;
     final suffix = parts.last;
     if (!asset.startsWith(prefix) || !asset.endsWith(suffix)) continue;
-    final namespace =
-        asset.substring(prefix.length, asset.length - suffix.length);
+    final namespace = asset.substring(
+      prefix.length,
+      asset.length - suffix.length,
+    );
     if (namespace.isNotEmpty) return namespace;
   }
   return null;

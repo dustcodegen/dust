@@ -6,14 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import tempfile
 import urllib.request
 from pathlib import Path
 
-from sqlite_sdk_consumer import ROOT, compatible_lints, validate_sdk_pair
+from sqlite_sdk_consumer import ROOT, validate_sdk_pair
 from sdk_codegen_fixtures import generated_files, generated_hashes, stage_example, require_deterministic_generation
 from sdk_generic_types import check_generic_types
 from sdk_generic_analysis import check_generic_analysis
@@ -27,54 +26,9 @@ from sdk_static_strings import check_static_strings
 from sdk_lexical_scopes import check_lexical_scopes
 from sdk_callback_formals import check_callback_formals
 from sdk_server_codegen import check_server_codegen, require_server_determinism
-from sdk_process import run_command
+from sdk_process import run_command, sdk_environment
+from sdk_versions import core_floor, core_lints, latest_flutter_version, require_version, stable_dart_version
 from sdk_source_identity import FrozenSourceIdentity, invalidate_proof, verify_frozen
-
-
-def stable_dart_version(output: str) -> str:
-    """Reject prerelease or unrecognized SDK output rather than claiming a floor pass."""
-    match = re.match(r"Dart SDK version: (\d+\.\d+\.\d+) \(stable\)", output)
-    if not match:
-        raise ValueError(f"Expected stable Dart, got: {output}")
-    return match[1]
-
-
-def latest_flutter_version(value: object) -> str:
-    """Read only Puro's refreshed stable listing, never the beta section."""
-    if not isinstance(value, dict) or value.get("success") is not True:
-        raise ValueError("Unable to refresh Flutter releases")
-    messages = value.get("messages")
-    if not isinstance(messages, list):
-        raise ValueError("Refreshed Flutter listing has no messages")
-    for message in messages:
-        if isinstance(message, dict) and isinstance(message.get("message"), str):
-            match = re.match(r"Latest stable releases:\nFlutter (\d+\.\d+\.\d+)\s", message["message"])
-            if match:
-                return match[1]
-    raise ValueError("Refreshed Flutter listing has no stable release")
-
-
-def core_floor(root: Path = ROOT) -> str:
-    """Use the declared runtime floor, not a nearby installed SDK."""
-    manifest = (root / "packages/dust_dart/pubspec.yaml").read_text(encoding="utf-8")
-    match = re.search(r'sdk:\s*["\']?>=(\d+\.\d+\.\d+)\s+<4\.0\.0', manifest)
-    if not match:
-        raise ValueError("Unrecognized core SDK constraint; review the minimum SDK gate")
-    return match[1]
-
-
-def require_version(actual: str, expected: str) -> None:
-    """A nearby SDK is not a passing minimum or latest execution target."""
-    if actual != expected:
-        raise ValueError(f"Expected SDK {expected}, got {actual}; supply the matching SDK")
-
-
-def core_lints(version: str) -> str:
-    """Vary dev lint tooling only, keeping enabled analysis rules intact."""
-    actual = stable_dart_version(version)
-    if tuple(map(int, actual.split("."))) < (3, 6, 0):
-        raise ValueError("Core Dust consumers require Dart >=3.6.0")
-    return "7.0.0" if tuple(map(int, actual.split("."))) < (3, 10, 0) else compatible_lints(version)
 
 
 def run_matrix(args: argparse.Namespace, output: Path) -> None:
@@ -114,7 +68,7 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
         version = stable_dart_version(version_text)
         require_version(version, core_floor() if role == "minimum" else latest_dart["version"])
         app, required = stage_example(output / role / "dart", "examples/product_showcase", core_lints(version_text))
-        env = {**os.environ, "PATH": str(dart.parent) + os.pathsep + os.environ.get("PATH", "")}
+        env = sdk_environment(dart)
         run([str(dart), "pub", "get"], app, env=env)
         run([str(dart), "pub", "deps", "--json"], app, env=env)
         run([str(dust), "build", "--clean", "--root", str(app)], env=env)
@@ -153,14 +107,14 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
 
         flutter = ["puro", "--no-update-check", "-e", getattr(args, f"{role}_flutter_env"), "flutter"]
         metadata = json.loads(run([*flutter, "--version", "--machine"]).stdout)
-        # Flutter 3.27 pins meta 1.15, below Dust's existing meta ^1.16 constraint.
-        require_version(metadata["frameworkVersion"], "3.29.0" if role == "minimum" else latest_flutter)
+        # Standalone Material/Cupertino production packages require Flutter 3.44.
+        require_version(metadata["frameworkVersion"], "3.44.0" if role == "minimum" else latest_flutter)
         flutter_dart = Path(metadata["flutterRoot"]) / "bin/cache/dart-sdk/bin" / ("dart.exe" if os.name == "nt" else "dart")
         flutter_dart_text = run([str(flutter_dart), "--version"]).stdout.strip()
         validate_sdk_pair(flutter_dart_text, metadata)
         if role == "minimum":
-            require_version(stable_dart_version(flutter_dart_text), "3.7.0")
-        env = {**os.environ, "PATH": str(flutter_dart.parent) + os.pathsep + os.environ.get("PATH", "")}
+            require_version(stable_dart_version(flutter_dart_text), "3.12.0")
+        env = sdk_environment(flutter_dart, Path(metadata["flutterRoot"]))
         app, required = stage_example(output / role / "flutter", "examples/benchmark_project", core_lints(flutter_dart_text))
         run([*flutter, "pub", "get"], app, env=env)
         shutil.copy2(ROOT / "examples/benchmark_project/analysis_options.yaml", app / "analysis_options.yaml")
@@ -189,7 +143,8 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
     require_server_determinism(rows)
     primary = {
         "dart": check_primary(run, dust, args.latest_dart.resolve(), output),
-        "flutter": check_primary(run, dust, flutter_dart, output, flutter=flutter),
+        "flutter": check_primary(run, dust, flutter_dart, output, flutter=flutter,
+                                 flutter_root=Path(metadata["flutterRoot"])),
     }
     negatives = check_unsupported(run, dust, args.latest_dart.resolve(), output)
     validation = {target: json.loads((output / f"primary-{target}-validation/results.json").read_text())
@@ -217,13 +172,16 @@ def run_matrix(args: argparse.Namespace, output: Path) -> None:
 
 
 def check_primary(run, dust: Path, dart: Path, output: Path,
-                  *, flutter: list[str] | None = None) -> dict[str, str]:
+                  *, flutter: list[str] | None = None,
+                  flutter_root: Path | None = None) -> dict[str, str]:
     """Generate and execute primary constructors independently of traditional fixtures."""
+    if flutter is not None and flutter_root is None:
+        raise ValueError("Flutter primary consumers require their matching SDK root")
     relative = "fixtures/primary_flutter_consumer" if flutter else "fixtures/primary_sdk_consumer"
     app, required = stage_example(output / ("primary-flutter" if flutter else "primary"), relative, "10.3.0")
     sources = sorted(path.relative_to(app).as_posix() for folder in ("lib", "test")
                      for path in (app / folder).rglob("*.dart"))
-    env = {**os.environ, "PATH": str(dart.parent) + os.pathsep + os.environ.get("PATH", "")}
+    env = sdk_environment(dart, flutter_root)
     sdk = flutter or [str(dart)]
     no_pub = ["--no-pub"] if flutter else []
     env.pop("DUST_DATABASE_URL", None)

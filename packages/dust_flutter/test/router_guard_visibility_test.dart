@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/router_runtime_support.dart';
@@ -103,13 +103,13 @@ void main() {
         maintainStateForRoute: (route) => route.location != _private.location,
         buildChild: (context, route) => switch (route.location) {
           '/private' => _MountProbe(
-              label: '/private',
-              onMount: () => privateMounts += 1,
-            ),
+            label: '/private',
+            onMount: () => privateMounts += 1,
+          ),
           '/detail' => TextButton(
-              onPressed: () => Navigator.of(context).pop('native result'),
-              child: const Text('close detail'),
-            ),
+            onPressed: () => Navigator.of(context).pop('native result'),
+            child: const Text('close detail'),
+          ),
           _ => Text(route.location),
         },
       ),
@@ -181,19 +181,19 @@ void main() {
         resolveGuards: guard.forRoute,
         buildChild: (context, route) => switch (route.location) {
           '/private' => const Center(
-              child: Hero(tag: 'shared', child: Text('private hero')),
-            ),
+            child: Hero(tag: 'shared', child: Text('private hero')),
+          ),
           '/detail' => Center(
-              child: Column(
-                children: [
-                  const Hero(tag: 'shared', child: Text('public hero')),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('close detail'),
-                  ),
-                ],
-              ),
+            child: Column(
+              children: [
+                const Hero(tag: 'shared', child: Text('public hero')),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('close detail'),
+                ),
+              ],
             ),
+          ),
           _ => Text(route.location),
         },
       ),

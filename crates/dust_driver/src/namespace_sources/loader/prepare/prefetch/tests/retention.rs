@@ -26,7 +26,7 @@ fn canonical_results_are_evicted_before_speculative_descendants() {
         pending,
         imports: HashSet::new(),
         known: HashSet::new(),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::from([expensive.uri.clone()]),
         cached_roots: HashSet::new(),
         cursor: None,
@@ -70,7 +70,6 @@ fn ready_speculation_can_exceed_the_worker_window_within_total_retention() {
         known: queue.keys().cloned().collect(),
         speculative: (0..7)
             .map(|index| source(&format!("child{index}")))
-            .map(|source| (source.uri.clone(), source))
             .collect(),
         speculative_jobs: HashSet::new(),
         cached_roots: HashSet::new(),
@@ -130,7 +129,7 @@ fn scanning_a_future_cached_result_keeps_its_speculative_eviction_priority() {
         ]),
         imports: HashSet::new(),
         known: queue.keys().cloned().collect(),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::from([future.uri.clone()]),
         cached_roots: HashSet::new(),
         cursor: None,
@@ -191,7 +190,7 @@ fn waiting_for_the_current_head_does_not_demote_the_next_future() {
         )]),
         imports: HashSet::new(),
         known: HashSet::from([future.uri.clone()]),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::from([future.uri.clone()]),
         cached_roots: HashSet::new(),
         cursor: Some(future.uri.clone()),

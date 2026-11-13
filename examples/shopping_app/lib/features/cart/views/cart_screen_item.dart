@@ -52,8 +52,8 @@ class _CartItemCard extends StatelessWidget {
                       'price': item.product.priceLabel,
                     },
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -68,9 +68,9 @@ class _CartItemCard extends StatelessWidget {
                       ),
                       onPressed: () =>
                           context.readCartViewModel().updateQuantity(
-                                item.product.id,
-                                item.quantity - 1,
-                              ),
+                            item.product.id,
+                            item.quantity - 1,
+                          ),
                     ),
                     Text('${item.quantity}'),
                     IconButton(
@@ -79,9 +79,9 @@ class _CartItemCard extends StatelessWidget {
                       ),
                       onPressed: () =>
                           context.readCartViewModel().updateQuantity(
-                                item.product.id,
-                                item.quantity + 1,
-                              ),
+                            item.product.id,
+                            item.quantity + 1,
+                          ),
                     ),
                   ],
                 ),
@@ -113,9 +113,9 @@ class _CartItemCard extends StatelessWidget {
                       isDangerous: true,
                     );
                     if ((confirmed ?? false) && context.mounted) {
-                      context
-                          .readCartViewModel()
-                          .removeFromCart(item.product.id);
+                      context.readCartViewModel().removeFromCart(
+                        item.product.id,
+                      );
                     }
                   },
                 ),

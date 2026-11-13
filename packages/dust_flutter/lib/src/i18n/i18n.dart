@@ -141,7 +141,8 @@ class I18nController extends ChangeNotifier {
     String? fallback,
     Map<String, Object?> args = const {},
   }) {
-    final template = _overrides[key] ??
+    final template =
+        _overrides[key] ??
         _lookup(_locale, key) ??
         (_locale == config.fallbackLocale
             ? null
@@ -159,8 +160,12 @@ class I18nController extends ChangeNotifier {
 
   void _setBundle(I18nBundle bundle) {
     _checkLocale(bundle.locale);
-    _bundles.putIfAbsent(bundle.locale, () => <String, Map<String, String>>{})[
-        bundle.namespace] = Map<String, String>.unmodifiable(bundle.messages);
+    _bundles.putIfAbsent(
+      bundle.locale,
+      () => <String, Map<String, String>>{},
+    )[bundle.namespace] = Map<String, String>.unmodifiable(
+      bundle.messages,
+    );
   }
 
   String? _lookup(String locale, String key) {

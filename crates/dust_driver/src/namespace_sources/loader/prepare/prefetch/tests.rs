@@ -6,6 +6,8 @@ use super::*;
 mod priority;
 /// Retention prioritizes speculative descendants without growing either bound.
 mod retention;
+/// File-length hints only reorder preparations, never canonical consumption.
+mod weighted;
 
 fn source(name: &str) -> Source {
     Source {
@@ -61,7 +63,7 @@ fn a_ready_parent_prepares_its_child_before_the_delayed_head_and_stays_bounded()
         pending,
         imports: HashSet::from([parent.uri.clone()]),
         known,
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::new(),
         cached_roots: HashSet::new(),
         cursor: Some(source("z").uri),
@@ -131,7 +133,7 @@ fn speculation_follows_only_eligible_edges_and_keeps_its_frontier_bounded() {
         pending: BTreeMap::from([(parent.uri.clone(), PendingParse::Waiting(response))]),
         imports: HashSet::new(),
         known: HashSet::from([parent.uri.clone(), source("loaded").uri]),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::new(),
         cached_roots: HashSet::new(),
         cursor: None,
@@ -191,7 +193,7 @@ fn a_direct_head_reply_prepares_an_already_queued_future_before_intervening_root
         ]),
         imports: HashSet::from([head.uri.clone()]),
         known: HashSet::from([head.uri.clone(), near.uri.clone()]),
-        speculative: BTreeMap::new(),
+        speculative: Default::default(),
         speculative_jobs: HashSet::new(),
         cached_roots: HashSet::new(),
         cursor: Some(near.uri.clone()),

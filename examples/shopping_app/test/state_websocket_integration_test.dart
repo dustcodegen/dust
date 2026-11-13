@@ -10,37 +10,39 @@ import 'package:shopping_app/features/support/models/chat_message.dart';
 import 'package:shopping_app/features/support/models/chat_socket.dart';
 
 void main() {
-  test('ViewModel uses WebSocket factory and closes socket on dispose',
-      () async {
-    final server = await _ChatWebSocketServer.start();
-    addTearDown(server.close);
-    final viewModel = ExternalIntegrationViewModel(
-      ExternalIntegrationViewModelArgs(
-        productsClient: const _UnusedProductsClient(),
-        platformClient: const _UnusedPlatformClient(),
-        chatSocketFactory: WebSocketExternalChatSocketFactory(server.uri),
-      ),
-    );
-    addTearDown(viewModel.dispose);
+  test(
+    'ViewModel uses WebSocket factory and closes socket on dispose',
+    () async {
+      final server = await _ChatWebSocketServer.start();
+      addTearDown(server.close);
+      final viewModel = ExternalIntegrationViewModel(
+        ExternalIntegrationViewModelArgs(
+          productsClient: const _UnusedProductsClient(),
+          platformClient: const _UnusedPlatformClient(),
+          chatSocketFactory: WebSocketExternalChatSocketFactory(server.uri),
+        ),
+      );
+      addTearDown(viewModel.dispose);
 
-    final responseObserved = Completer<void>();
-    viewModel.addListener(() {
-      if (viewModel.state.socketReply == 'websocket:coupon' &&
-          !responseObserved.isCompleted) {
-        responseObserved.complete();
-      }
-    });
+      final responseObserved = Completer<void>();
+      viewModel.addListener(() {
+        if (viewModel.state.socketReply == 'websocket:coupon' &&
+            !responseObserved.isCompleted) {
+          responseObserved.complete();
+        }
+      });
 
-    await viewModel.sendChat('coupon');
-    await server.waitForRequest();
-    await server.waitForResponse();
-    await responseObserved.future.timeout(const Duration(seconds: 5));
+      await viewModel.sendChat('coupon');
+      await server.waitForRequest();
+      await server.waitForResponse();
+      await responseObserved.future.timeout(const Duration(seconds: 5));
 
-    expect(viewModel.state.socketReply, 'websocket:coupon');
+      expect(viewModel.state.socketReply, 'websocket:coupon');
 
-    viewModel.dispose();
-    await server.waitForClose();
-  });
+      viewModel.dispose();
+      await server.waitForClose();
+    },
+  );
 
   test('concurrent sends share one WebSocket open', () async {
     final factory = _DeferredChatSocketFactory();
@@ -163,8 +165,8 @@ final class _ChatWebSocketServer {
   final Completer<void> _socketClosed;
 
   Uri get uri => Uri.parse(
-        'ws://${_server.address.address}:${_server.port}/support',
-      );
+    'ws://${_server.address.address}:${_server.port}/support',
+  );
 
   static Future<_ChatWebSocketServer> start() async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

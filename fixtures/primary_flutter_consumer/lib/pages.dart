@@ -1,4 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    as cupertino
+    show CupertinoPageTransitionsBuilder;
+import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart'
+    as transitions
+    show FadeUpwardsPageTransitionsBuilder;
 
 import 'route.dart';
 
@@ -13,7 +19,11 @@ class const HomePage({super.key}) extends StatelessWidget {
 }
 
 /// Route with declaring path/query fields and a non-declaring super parameter.
-@AppRoute('/counter/:id', name: 'counter')
+@AppRoute(
+  '/counter/:id',
+  name: 'counter',
+  transition: transitions.FadeUpwardsPageTransitionsBuilder(),
+)
 class const CounterPage({
   /// Path identifier.
   required final int id,
@@ -30,7 +40,11 @@ class const CounterPage({
 }
 
 /// Fallback for unmatched routes.
-@AppRoute('/404', name: 'notFound')
+@AppRoute(
+  '/404',
+  name: 'notFound',
+  transition: cupertino.CupertinoPageTransitionsBuilder(),
+)
 class const MissingPage({super.key}) extends StatelessWidget {
   /// Creates the fallback page.
   this;

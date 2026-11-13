@@ -176,12 +176,11 @@ final class ReportsPage extends StatelessWidget {
 Widget renderProducts(AsyncState<List<String>> state) {
   return switch (state) {
     AsyncInitial<List<String>>() ||
-    AsyncLoading<List<String>>() =>
-      const Text('Loading'),
+    AsyncLoading<List<String>>() => const Text('Loading'),
     AsyncData<List<String>>(:final data) => Text('Loaded ${data.length}'),
     AsyncFailure<List<String>>(:final error, :final previousData) => Text(
-        'Error: $error. Previous count: ${previousData?.length ?? 0}',
-      ),
+      'Error: $error. Previous count: ${previousData?.length ?? 0}',
+    ),
   };
 }
 

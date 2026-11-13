@@ -65,7 +65,8 @@ fn collects_route_imports_and_params_from_canonical_ir() {
     library.package_root = "/workspace/shop".to_owned();
     library.source_path = "/workspace/shop/lib/features/product/routes.dart".to_owned();
     library.import_directives = vec![
-        import("package:flutter/material.dart"),
+        import("package:material_ui/material_ui.dart"),
+        import("package:cupertino_ui/cupertino_ui.dart"),
         import("package:dust_flutter/route.dart"),
         import("dart:async"),
         import("package:shop/models/product.dart"),
@@ -118,6 +119,20 @@ fn collects_route_imports_and_params_from_canonical_ir() {
                     "prefix": null,
                     "show": [],
                     "uri": "dart:async"
+                },
+                {
+                    "hide": [],
+                    "is_deferred": false,
+                    "prefix": null,
+                    "show": [],
+                    "uri": "package:cupertino_ui/cupertino_ui.dart"
+                },
+                {
+                    "hide": [],
+                    "is_deferred": false,
+                    "prefix": null,
+                    "show": [],
+                    "uri": "package:material_ui/material_ui.dart"
                 },
                 {
                     "hide": ["DebugGuard"],

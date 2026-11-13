@@ -1,5 +1,5 @@
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_app/core/view_models/app_view_model.dart';
 

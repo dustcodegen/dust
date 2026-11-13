@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 
@@ -78,8 +78,10 @@ class _CartScreenState extends State<CartScreen> {
                       'shop_clear_all',
                       defaultText: 'Clear All',
                     ),
-                    cancelText:
-                        context.tr('shop_cancel', defaultText: 'Cancel'),
+                    cancelText: context.tr(
+                      'shop_cancel',
+                      defaultText: 'Cancel',
+                    ),
                     isDangerous: true,
                   );
                   if ((confirmed ?? false) && context.mounted) {
@@ -154,8 +156,9 @@ class _CartScreenState extends State<CartScreen> {
                                     'shop_product_price',
                                     defaultText: r'${price}',
                                     args: {
-                                      'price':
-                                          state.totalPrice.toStringAsFixed(2),
+                                      'price': state.totalPrice.toStringAsFixed(
+                                        2,
+                                      ),
                                     },
                                     style: Theme.of(context)
                                         .textTheme

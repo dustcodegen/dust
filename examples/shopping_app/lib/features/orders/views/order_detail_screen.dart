@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../models/order.dart';
@@ -65,22 +65,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           const SizedBox(height: 12),
           switch (trackingState.status) {
-            OrderTrackingStatus.initial ||
-            OrderTrackingStatus.loading =>
+            OrderTrackingStatus.initial || OrderTrackingStatus.loading =>
               const Center(child: CircularProgressIndicator()),
             OrderTrackingStatus.error => Text(
-                trackingState.errorMessage ??
-                    context.tr(
-                      'shop_tracking_failed',
-                      defaultText: 'Failed to load tracking.',
-                    ),
-                style: const TextStyle(color: Colors.red),
-              ),
+              trackingState.errorMessage ??
+                  context.tr(
+                    'shop_tracking_failed',
+                    defaultText: 'Failed to load tracking.',
+                  ),
+              style: const TextStyle(color: Colors.red),
+            ),
             OrderTrackingStatus.success => Column(
-                children: trackingState.events
-                    .map((event) => _TrackingTile(event: event))
-                    .toList(),
-              ),
+              children: trackingState.events
+                  .map((event) => _TrackingTile(event: event))
+                  .toList(),
+            ),
           },
         ],
       ),

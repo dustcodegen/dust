@@ -80,10 +80,10 @@ final class WebSocketShoppingChatSocket implements ShoppingChatSocket {
 
   @override
   Stream<ChatResponse> get responses => socket.map((data) {
-        return ChatResponse.fromJson(
-          Map<String, Object?>.from(jsonDecode(data as String) as Map),
-        );
-      });
+    return ChatResponse.fromJson(
+      Map<String, Object?>.from(jsonDecode(data as String) as Map),
+    );
+  });
 
   @override
   void send(ChatRequest request) {

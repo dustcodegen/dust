@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_app/features/integrations/services/external_integration_clients.dart';
@@ -44,9 +44,9 @@ void main() {
     );
 
     await tester.pump();
-    await _contextFrom(tester)
-        .readExternalIntegrationViewModel()
-        .loadPlatformMessage();
+    await _contextFrom(
+      tester,
+    ).readExternalIntegrationViewModel().loadPlatformMessage();
     await tester.pump();
 
     expect(find.text('Channel ready'), findsOneWidget);

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shopping_app/core/data/shopping_repository.dart';
 import 'package:shopping_app/features/products/models/products_state.dart';
 import 'package:shopping_app/features/products/view_models/products_view_model.dart';
@@ -60,8 +60,8 @@ class TestIdentityScope extends InheritedWidget {
   final String value;
 
   static String of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<TestIdentityScope>();
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<TestIdentityScope>();
     if (scope == null) throw StateError('No TestIdentityScope found.');
     return scope.value;
   }

@@ -84,9 +84,7 @@ fn configured_workspace_census_bounds_retention_without_growing_active_work() {
         |ahead| {
             let ahead = ahead.expect("test parser workers start");
             assert_eq!(ahead.cached_roots.len(), roots.len());
-            ahead
-                .speculative
-                .insert(roots[0].uri.clone(), roots[0].clone());
+            ahead.speculative.insert(&roots[0]);
             ahead.cursor = Some("z-cursor".into());
             ahead.fill(&cached_queue, &BTreeMap::new());
             assert!(ahead.pending.is_empty());

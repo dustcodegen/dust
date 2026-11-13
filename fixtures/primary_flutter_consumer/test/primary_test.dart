@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:primary_flutter_consumer/counter.dart';
 import 'package:primary_flutter_consumer/generic_value.dart';
@@ -40,6 +40,31 @@ void main() {
     );
     expect(find.byKey(key), findsOneWidget);
     expect(find.text('7:details'), findsOneWidget);
+  });
+
+  testWidgets('generated router runs a prefixed standalone transition', (
+    tester,
+  ) async {
+    final router = PrimaryRouter();
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router.config));
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+
+    final delegate =
+        router.config.routerDelegate as GeneratedRouterDelegate<PrimaryRoute>;
+    delegate.go(const CounterRoute(id: 7));
+    await tester.pumpAndSettle();
+    expect(find.text('7:overview'), findsOneWidget);
+
+    delegate.go(const NotFoundRoute());
+    await tester.pumpAndSettle();
+    expect(find.text('Not found'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    delegate.dispose();
+    (router.config.routeInformationProvider!
+            as PlatformRouteInformationProvider)
+        .dispose();
   });
 
   testWidgets('generated scope watches a primary ViewModel state change', (

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_app/core/services/storage_service.dart';
@@ -134,8 +134,11 @@ void main() {
         .routerConfig!
         .routeInformationProvider!;
 
-    final productResult =
-        tester.element(products).navigator.productDetail(productId: 42).push();
+    final productResult = tester
+        .element(products)
+        .navigator
+        .productDetail(productId: 42)
+        .push();
     await tester.pumpAndSettle();
     expect(tester.widget<ProductDetailScreen>(detail).productId, 42);
     expect(provider.value.uri.path, '/product/42');
@@ -165,8 +168,10 @@ void main() {
   test('generated routes include new shopping showcase destinations', () {
     expect(parseShoppingRoute(Uri.parse('/wishlist')), isA<WishlistRoute>());
     expect(parseShoppingRoute(Uri.parse('/demo-carts')), isA<DemoCartsRoute>());
-    expect(parseShoppingRoute(Uri.parse('/support/chat')),
-        isA<SupportChatRoute>());
+    expect(
+      parseShoppingRoute(Uri.parse('/support/chat')),
+      isA<SupportChatRoute>(),
+    );
     expect(
       parseShoppingRoute(Uri.parse('/orders/ORDER-1')),
       isA<OrderDetailRoute>(),

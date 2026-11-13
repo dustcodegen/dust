@@ -59,7 +59,6 @@ final class _Page extends Page<void> {
 
   @override
   Route<void> createRoute(BuildContext context) => PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const SizedBox(),
-      );
+    pageBuilder: (context, animation, secondaryAnimation) => const SizedBox(),
+  );
 }

@@ -24,7 +24,8 @@ Future<void> main() async {
       if (requestError != null) throw StateError('$requestError');
       if (response != null) {
         throw StateError(
-            'Test ended before $expected: ${response!.formattedFailureDetails}');
+          'Test ended before $expected: ${response!.formattedFailureDetails}',
+        );
       }
       final status = await driver.serviceClient
           .callServiceExtension(
@@ -38,8 +39,7 @@ Future<void> main() async {
     throw StateError('Probe did not reach $expected.');
   }
 
-  Future<int> workers() async => (await driver.serviceClient.getVM())
-      .isolates!
+  Future<int> workers() async => (await driver.serviceClient.getVM()).isolates!
       .where((isolate) => isolate.name == 'Dust SQLite')
       .length;
 
@@ -48,14 +48,20 @@ Future<void> main() async {
     final executable = Platform.environment['DUST_SQLITE_ADB'] ?? 'adb';
     if (serial == null || serial.isEmpty) {
       throw StateError(
-          'Set DUST_SQLITE_ANDROID_SERIAL to the intended device.');
+        'Set DUST_SQLITE_ANDROID_SERIAL to the intended device.',
+      );
     }
-    final process =
-        await Process.start(executable, ['-s', serial, ...arguments]);
-    final output =
-        process.stdout.transform(const SystemEncoding().decoder).join();
-    final errors =
-        process.stderr.transform(const SystemEncoding().decoder).join();
+    final process = await Process.start(executable, [
+      '-s',
+      serial,
+      ...arguments,
+    ]);
+    final output = process.stdout
+        .transform(const SystemEncoding().decoder)
+        .join();
+    final errors = process.stderr
+        .transform(const SystemEncoding().decoder)
+        .join();
     try {
       final code = await process.exitCode.timeout(const Duration(seconds: 20));
       if (code != 0) {
@@ -77,14 +83,16 @@ Future<void> main() async {
       workersDuringPause = await workers();
       if (workersDuringPause != 1) {
         throw StateError(
-            'Expected one live SQLite worker: $workersDuringPause');
+          'Expected one live SQLite worker: $workersDuringPause',
+        );
       }
       if (Platform.environment.containsKey('DUST_SQLITE_ANDROID_SERIAL')) {
         if (ready['platform'] != 'android' ||
             await adb(['shell', 'pidof', 'com.example.shopping_app']) !=
                 '${ready['pid']}') {
           throw StateError(
-              'Refusing lifecycle commands on a mismatched device/process.');
+            'Refusing lifecycle commands on a mismatched device/process.',
+          );
         }
         await adb(['shell', 'input', 'keyevent', 'KEYCODE_HOME']);
         await waitForPhase('paused');
@@ -98,7 +106,8 @@ Future<void> main() async {
         ]);
       } else {
         stdout.writeln(
-            'Background the probe, then return to it within 60 seconds.');
+          'Background the probe, then return to it within 60 seconds.',
+        );
       }
     } else if (phase != 'verify') {
       throw StateError('Set DUST_SQLITE_PROBE_PHASE=write or verify.');
@@ -117,8 +126,8 @@ Future<void> main() async {
     }
     final drain = Stopwatch()..start();
     var remainingWorkers = await workers();
-    while (
-        remainingWorkers != 0 && drain.elapsed < const Duration(seconds: 5)) {
+    while (remainingWorkers != 0 &&
+        drain.elapsed < const Duration(seconds: 5)) {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       remainingWorkers = await workers();
     }

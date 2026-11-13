@@ -35,13 +35,16 @@ void main() {
       'maxUs': 100,
     });
   });
-  test('invalid storage configuration fails before accessing the platform',
-      () async {
-    await expectLater(probeDirectory('../app', 'write'), throwsArgumentError);
-    await expectLater(probeDirectory('local', 'delete'), throwsArgumentError);
-  });
-  testWidgets('probe animation builds frames and disposes its ticker',
-      (tester) async {
+  test(
+    'invalid storage configuration fails before accessing the platform',
+    () async {
+      await expectLater(probeDirectory('../app', 'write'), throwsArgumentError);
+      await expectLater(probeDirectory('local', 'delete'), throwsArgumentError);
+    },
+  );
+  testWidgets('probe animation builds frames and disposes its ticker', (
+    tester,
+  ) async {
     var frames = 0;
     await tester.pumpWidget(ProbeUi(onFrame: () => frames++));
     final first = frames;

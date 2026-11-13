@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_app/core/data/shopping_repository.dart';
 import 'package:shopping_app/core/view_models/app_view_model.dart';
@@ -67,23 +67,23 @@ void main() {
         home: ViewModelScopes(
           scopes: [
             (child) => BnbViewModelScope(
-                  args: (_) => const BnbViewModelArgs(),
-                  create: (_, args) {
-                    final viewModel = LifecycleBnbViewModel(args);
-                    bnbViewModels.add(viewModel);
-                    return viewModel;
-                  },
-                  child: child,
-                ),
+              args: (_) => const BnbViewModelArgs(),
+              create: (_, args) {
+                final viewModel = LifecycleBnbViewModel(args);
+                bnbViewModels.add(viewModel);
+                return viewModel;
+              },
+              child: child,
+            ),
             (child) => HomeViewModelScope(
-                  args: (_) => HomeViewModelArgs(repository: repository),
-                  create: (_, args) {
-                    final viewModel = LifecycleHomeViewModel(args);
-                    homeViewModels.add(viewModel);
-                    return viewModel;
-                  },
-                  child: child,
-                ),
+              args: (_) => HomeViewModelArgs(repository: repository),
+              create: (_, args) {
+                final viewModel = LifecycleHomeViewModel(args);
+                homeViewModels.add(viewModel);
+                return viewModel;
+              },
+              child: child,
+            ),
           ],
           child: Column(
             children: [

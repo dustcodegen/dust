@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../route.dart';
 import '../state/benchmark_state.dart';
@@ -47,8 +47,8 @@ class BenchmarkHomePage extends StatelessWidget {
         const SizedBox(height: 16),
         FilledButton(
           onPressed: () => context.readBenchmarkViewModel().recordBuild(
-                BenchmarkMode.invalidated,
-              ),
+            BenchmarkMode.invalidated,
+          ),
           child: const Text('Record invalidated build'),
         ),
       ],

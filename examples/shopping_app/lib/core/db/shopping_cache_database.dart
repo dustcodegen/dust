@@ -23,8 +23,7 @@ abstract class ShoppingCacheDatabase implements DatabaseClient {
   static Future<ShoppingCacheDatabase> openBackground(
     String path, {
     SqliteConnectOptions? options,
-  }) =>
-      _$ShoppingCacheDatabase.openBackground(path, options: options);
+  }) => _$ShoppingCacheDatabase.openBackground(path, options: options);
 
   /// Open database connection.
   @override

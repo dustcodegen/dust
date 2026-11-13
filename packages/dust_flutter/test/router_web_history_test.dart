@@ -1,5 +1,5 @@
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -31,11 +31,14 @@ void main() {
     await delegate.debugWaitForScheduledRefresh();
 
     await delegate.setNewRoutePath(const _Route('/search?query=bag&page=1'));
-    await delegate
-        .setNewRoutePath(const _Route('/search?query=bag&page=2#grid'));
+    await delegate.setNewRoutePath(
+      const _Route('/search?query=bag&page=2#grid'),
+    );
 
-    expect(delegate.currentConfiguration.location,
-        '/search?query=bag&page=2#grid');
+    expect(
+      delegate.currentConfiguration.location,
+      '/search?query=bag&page=2#grid',
+    );
     expect(delegate.stack.map((route) => route.location), [
       '/',
       '/search?query=bag&page=2#grid',
@@ -85,19 +88,17 @@ RouteStack<_Route> _restoreStack(_Route route) {
   return switch (route.location) {
     '/product/7' => [const _Route('/'), route],
     '/orders/ORDER-1' => [
-        const _Route('/'),
-        const _Route('/orders'),
-        route,
-      ],
-    '/search?query=bag&page=1' || '/search?query=bag&page=2#grid' => [
-        const _Route('/'),
-        route
-      ],
+      const _Route('/'),
+      const _Route('/orders'),
+      route,
+    ],
+    '/search?query=bag&page=1' ||
+    '/search?query=bag&page=2#grid' => [const _Route('/'), route],
     '/app/settings' => [
-        const _Route('/'),
-        const _Route('/app'),
-        route,
-      ],
+      const _Route('/'),
+      const _Route('/app'),
+      route,
+    ],
     _ => [route],
   };
 }
@@ -136,9 +137,9 @@ RouterRuntimeConfig<_Route> _runtimeConfig({
       '/' => const RouteDebugInfo(name: 'home'),
       '/app' => const RouteDebugInfo(name: 'app', shell: 'AppShell'),
       '/app/settings' => const RouteDebugInfo(
-          name: 'settings',
-          shell: 'AppShell',
-        ),
+        name: 'settings',
+        shell: 'AppShell',
+      ),
       _ => const RouteDebugInfo(),
     },
   );
@@ -162,7 +163,9 @@ final class _RecordingRouter extends RouterBase<_Route> {
 
   @override
   void didChangeRouteStack(
-      RouteStack<_Route> previous, RouteStack<_Route> next) {
+    RouteStack<_Route> previous,
+    RouteStack<_Route> next,
+  ) {
     stackChanges.add('${_locations(previous)} => ${_locations(next)}');
   }
 

@@ -127,7 +127,7 @@ dust watch
 Flutter apps can add `dust_flutter` too:
 
 ```bash
-flutter pub add dust_flutter
+flutter pub add dust_flutter material_ui cupertino_ui
 ```
 
 See the [Flutter package guide](packages/dust_flutter/README.md) for routing,

@@ -4,16 +4,11 @@ Run `scripts/sdk_compat.py` to check fresh Dust generation on explicit minimum
 and latest-stable Dart/Flutter installations. This is a local test gate, not a
 release or an assurance that every new Dart language feature is supported.
 
-The core runtime packages declare Dart >=3.6.0. Test standalone Dart 3.6.0
-separately from the minimum Flutter target, 3.29.0 / Dart 3.7.0. Flutter 3.27
-pins `meta 1.15.0`, incompatible with Dust's existing `meta ^1.16.0` constraint;
-its consumer Pub resolution failed and is not counted as a passing target
-([Flutter 3.27 manifest](https://github.com/flutter/flutter/blob/3.27.4/packages/flutter/pubspec.yaml)).
-Flutter 3.29 supplies `meta 1.16.0`
-([manifest](https://github.com/flutter/flutter/blob/3.29.0/packages/flutter/pubspec.yaml)).
-No production constraint or SDK pin is
-overridden to hide that boundary. SQLite has separate minimums of stable Dart
-3.10.0 and Flutter 3.47.0: use its
+The Dart runtime packages retain Dart >=3.6.0. Test standalone Dart 3.6.0
+separately from the Flutter runtime minimum, Flutter 3.44.0 / Dart 3.12.0.
+The production `material_ui` and `cupertino_ui` 1.0 packages declare that floor;
+the runner resolves compatible 1.x versions without overriding SDK pins.
+SQLite has separate minimums of stable Dart 3.10.0 and Flutter 3.47.0: use its
 [independent consumer/native gate](db-sdk-validation.md) too.
 Do not lower SQLite's constraints to make it run on the core floor.
 
@@ -26,7 +21,7 @@ Supply exact binary paths and Puro environment names:
 ```sh
 python3 scripts/sdk_compat.py \
   --minimum-dart /path/to/flutter-3.27.0/bin/cache/dart-sdk/bin/dart \
-  --minimum-flutter-env dust_flutter_3290 \
+  --minimum-flutter-env dust_flutter_3440 \
   --latest-dart /path/to/latest-dart/bin/dart \
   --latest-flutter-env dust_latest
 ```
@@ -184,10 +179,8 @@ to the original; Flutter's automatic options migration is not used to relax them
 
 The benchmark explicitly declares `test: ^1.25.15` as a development dependency
 because generated HTTP tests import it. Workspace resolution previously masked
-that missing direct dependency. The range permits Flutter 3.29.0's pinned
-`test_api 0.7.4`; `test >=1.26.0` would conflict with that SDK pin. Newer SDKs
-can resolve newer compatible test releases. No production dependency is added
-or upgraded, and SDK pins are not overridden.
+that missing direct dependency. The existing range lets each SDK resolve its
+compatible test release. SDK pins are not overridden.
 
 Each run retains an owned temporary evidence directory with numbered logs,
 refreshed release metadata, independently resolved locks and `proof.json`.
@@ -198,6 +191,33 @@ and generated output hashes. A failed run retains diagnostics, not a pass proof.
 Keep the source commit clean when collecting final review evidence.
 
 ## Recorded local execution
+
+### Material/Cupertino migration (2026-11-12)
+
+On macOS arm64, the complete 422-command matrix passed against the migration
+source snapshot based on `9702e1e3`, before adding this evidence note.
+Its frozen source SHA-256 was
+`88c8d1241b90cdad1fd07e16f59e841aecb7baf5370e9a3937eb0da71f1a629a`.
+
+| Target | SDK | Fresh generation / analysis / consumer tests |
+| --- | --- | --- |
+| Minimum Dart | 3.6.0 | Passed |
+| Minimum Flutter | 3.44.0 / Dart 3.12.0 | Passed |
+| Latest stable Dart | 3.14.0 | Passed |
+| Latest stable Flutter | 3.50.0 / Dart 3.14.0 | Passed |
+
+Traditional generated hashes matched across SDK ends: 30 Dart files and 76
+Flutter files. Both latest-SDK primary consumers recreated all seven required
+files and passed formatting, fatal-info analysis and runtime tests, including
+the Flutter route/state widget cases. The complete generic, lexical, callback,
+coverage and expected-compilation-failure probes passed; named concise `new`
+remained an explicitly rejected Dust feature. Existing online skips were not
+changed. This matrix does not establish performance or device compatibility.
+
+### Earlier framework imports (2026-10-20)
+
+The following record predates the standalone Material/Cupertino migration and
+does not certify the new Flutter 3.44 floor or current latest SDK.
 
 On macOS arm64, 2026-10-20, refreshed stable metadata selected standalone Dart
 3.13.6 and Flutter 3.47.7 / Dart 3.13.5. At clean source commit `515d241b`, all
@@ -235,7 +255,9 @@ and negative-probe regression tests. Those tests do not require SDK downloads,
 Puro or network. The full SDK matrix is an explicit local command, so a machine
 without an old SDK does not silently claim minimum compatibility.
 
-No Actions workflow is added or dispatched. Keep only the existing manual Rust
-release workflow enabled. No package/CLI version bump or publication is implied.
+No Actions workflow is added or dispatched. Retain only the release workflows
+in `.github/workflows/release.yml` and `.github/workflows/rust-release.yml`;
+ordinary push/PR checks remain local. No package/CLI version bump or publication
+is implied.
 Physical-device, Windows and storage-readiness gates in SQLite epic #19 remain
 separate; simulator or consumer results do not complete them.

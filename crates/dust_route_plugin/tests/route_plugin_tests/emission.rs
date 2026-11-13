@@ -13,6 +13,9 @@ mod guard_diagnostics;
 #[path = "emission/parser_decode_matrix.rs"]
 mod parser_decode_matrix;
 
+#[path = "emission/modern_imports.rs"]
+mod modern_imports;
+
 #[path = "emission/snapshots.rs"]
 mod snapshots;
 

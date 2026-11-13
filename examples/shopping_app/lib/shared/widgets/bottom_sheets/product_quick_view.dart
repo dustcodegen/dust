@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../features/products/models/product.dart';
 
@@ -135,9 +135,7 @@ class _ProductQuickViewContentState extends State<_ProductQuickViewContent>
                               'shop_review_count',
                               defaultText: '({count} reviews)',
                               args: {'count': widget.product.rating.count},
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: Colors.grey),
                             ),
                           ],
@@ -147,9 +145,7 @@ class _ProductQuickViewContentState extends State<_ProductQuickViewContent>
                           'shop_product_price',
                           defaultText: r'${price}',
                           args: {'price': widget.product.priceLabel},
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
+                          style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.deepPurple,

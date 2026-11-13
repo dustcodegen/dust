@@ -133,6 +133,11 @@ fn normal_parameter_spans(library: &ParsedDartFileSurface) -> Vec<TextRange> {
 }
 
 /// Finds an invalid declaring modifier at the start of a normal parameter span.
+pub(crate) fn has_invalid_declaring_modifier(source: &SourceText, span: TextRange) -> bool {
+    invalid_declaring_modifier(source, span).is_some()
+}
+
+/// Retains the same prefix handling for diagnostics and extraction preflight.
 fn invalid_declaring_modifier(
     source: &SourceText,
     span: TextRange,

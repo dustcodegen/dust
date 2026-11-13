@@ -21,16 +21,16 @@ final class ProbeLifecycle extends WidgetsBindingObserver {
 
   /// Exposes test-only status, never a native handle or database operation.
   void registerStatus() => registerExtension(
-        'ext.dust.sqliteProbe',
-        (method, parameters) async => ServiceExtensionResponse.result(
-          jsonEncode({
-            'phase': phase,
-            'pid': pid,
-            'platform': Platform.operatingSystem,
-            'states': states,
-          }),
-        ),
-      );
+    'ext.dust.sqliteProbe',
+    (method, parameters) async => ServiceExtensionResponse.result(
+      jsonEncode({
+        'phase': phase,
+        'pid': pid,
+        'platform': Platform.operatingSystem,
+        'states': states,
+      }),
+    ),
+  );
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {

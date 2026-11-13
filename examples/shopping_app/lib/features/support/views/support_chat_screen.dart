@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../models/chat_message.dart';
@@ -81,8 +81,9 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed:
-                        state.status == ChatStatus.sending ? null : _send,
+                    onPressed: state.status == ChatStatus.sending
+                        ? null
+                        : _send,
                     icon: state.status == ChatStatus.sending
                         ? const SizedBox(
                             width: 18,

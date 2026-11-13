@@ -172,8 +172,10 @@ class _AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.favorite),
-            title:
-                const TranslatedText('shop_wishlist', defaultText: 'Wishlist'),
+            title: const TranslatedText(
+              'shop_wishlist',
+              defaultText: 'Wishlist',
+            ),
             onTap: () {
               Navigator.pop(context);
               context.navigator.wishlist().push();

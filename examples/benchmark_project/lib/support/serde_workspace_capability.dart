@@ -48,42 +48,42 @@ final class BenchmarkWorkspaceProfile {
 
   /// To JSON benchmark workspace kind.
   Map<String, Object?> toJson() => {
-        'id': id,
-        'kind': kind.name,
-      };
+    'id': id,
+    'kind': kind.name,
+  };
 }
 
 /// Benchmark workspace profile page codec model for the benchmark example.
 final class BenchmarkWorkspaceProfilePageCodec
     implements
-        SerDeCodec<BenchmarkPage<BenchmarkWorkspaceProfile>,
-            Map<String, Object?>> {
+        SerDeCodec<
+          BenchmarkPage<BenchmarkWorkspaceProfile>,
+          Map<String, Object?>
+        > {
   /// Creates a [BenchmarkWorkspaceProfilePageCodec].
   const BenchmarkWorkspaceProfilePageCodec();
 
   @override
   Map<String, Object?> serialize(
     BenchmarkPage<BenchmarkWorkspaceProfile> value,
-  ) =>
-      {
-        'items': value.items.map((item) => item.toJson()).toList(),
-        'total': value.total,
-      };
+  ) => {
+    'items': value.items.map((item) => item.toJson()).toList(),
+    'total': value.total,
+  };
 
   /// Benchmark workspace profile page codec.
   @override
   BenchmarkPage<BenchmarkWorkspaceProfile> deserialize(
     Map<String, Object?> value,
-  ) =>
-      BenchmarkPage(
-        items: JsonHelper.decodeList(
-          value['items'],
-          'items',
-          (item, key) =>
-              BenchmarkWorkspaceProfile.fromJson(JsonHelper.asMap(item, key)),
-        ),
-        total: JsonHelper.as<int>(value['total'], 'total', 'int'),
-      );
+  ) => BenchmarkPage(
+    items: JsonHelper.decodeList(
+      value['items'],
+      'items',
+      (item, key) =>
+          BenchmarkWorkspaceProfile.fromJson(JsonHelper.asMap(item, key)),
+    ),
+    total: JsonHelper.as<int>(value['total'], 'total', 'int'),
+  );
 }
 
 /// Benchmark workspace profile page codec.

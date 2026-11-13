@@ -167,7 +167,12 @@ final class AsyncFailure<T> extends AsyncState<T> {
 
   @override
   int get hashCode => Object.hash(
-      AsyncFailure<T>, error, stackTrace, previousData, hasPreviousData);
+    AsyncFailure<T>,
+    error,
+    stackTrace,
+    previousData,
+    hasPreviousData,
+  );
 
   @override
   String toString() => hasPreviousData

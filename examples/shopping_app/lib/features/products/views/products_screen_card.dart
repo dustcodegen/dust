@@ -10,8 +10,8 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSaved = context.watchWishlistViewModel().value.containsProduct(
-          product.id,
-        );
+      product.id,
+    );
 
     return AnimatedCard(
       onTap: () =>
@@ -29,8 +29,10 @@ class _ProductCard extends StatelessWidget {
                 defaultText: '{name} added to cart',
                 args: {'name': product.title},
               ),
-              actionLabel:
-                  context.tr('shop_view_cart', defaultText: 'View Cart'),
+              actionLabel: context.tr(
+                'shop_view_cart',
+                defaultText: 'View Cart',
+              ),
               onAction: () => context.navigator.cart().push(),
             );
           },
@@ -108,9 +110,7 @@ class _ProductCard extends StatelessWidget {
                           args: {'price': product.priceLabel},
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
