@@ -114,16 +114,18 @@ void main() {
             '/orders/ORDER%201?tab=receipt',
           )
           .having(
-        (route) => route.sections,
-        'sections',
-        ['orders', 'returns'],
-      ).having((route) => route.orderIds, 'orderIds', [10, 20]).having(
-        (route) => route.location,
-        'location',
-        '/staff?access=admin&from=2026-08-10T09%3A30%3A00.000Z'
-            '&returnTo=%2Forders%2FORDER%25201%3Ftab%3Dreceipt'
-            '&sections=orders&sections=returns&orderIds=10&orderIds=20',
-      ),
+            (route) => route.sections,
+            'sections',
+            ['orders', 'returns'],
+          )
+          .having((route) => route.orderIds, 'orderIds', [10, 20])
+          .having(
+            (route) => route.location,
+            'location',
+            '/staff?access=admin&from=2026-08-10T09%3A30%3A00.000Z'
+                '&returnTo=%2Forders%2FORDER%25201%3Ftab%3Dreceipt'
+                '&sections=orders&sections=returns&orderIds=10&orderIds=20',
+          ),
     );
   });
 
@@ -154,52 +156,54 @@ void main() {
     );
   });
 
-  test('generated parser applies app route-information override first',
-      () async {
-    final state = Object();
-    final router = _ShoppingRouteInformationRouter();
-    final parser = GeneratedRouteInformationParser<ShoppingRoute>(
-      router: router,
-      parseRoute: parseShoppingRoute,
-      routeLocation: shoppingRouteLocation,
-    );
+  test(
+    'generated parser applies app route-information override first',
+    () async {
+      final state = Object();
+      final router = _ShoppingRouteInformationRouter();
+      final parser = GeneratedRouteInformationParser<ShoppingRoute>(
+        router: router,
+        parseRoute: parseShoppingRoute,
+        routeLocation: shoppingRouteLocation,
+      );
 
-    final prefixedRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse(
-          'https://shop.example/app/product/7?campaign=spring#reviews',
-        ),
-        state: state,
-      ),
-    );
-    final unsafeHostRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse('https://evil.test/app/product/7'),
-        state: state,
-      ),
-    );
-
-    expect(
-      prefixedRoute,
-      isA<ProductDetailRoute>()
-          .having((route) => route.productId, 'productId', 7)
-          .having(
-            (route) => route.location,
-            'location',
-            '/product/7?campaign=spring#reviews',
+      final prefixedRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse(
+            'https://shop.example/app/product/7?campaign=spring#reviews',
           ),
-    );
-    expect(
-      unsafeHostRoute,
-      isA<NotFoundRoute>().having(
-        (route) => route.path,
-        'path',
-        'https://evil.test/app/product/7',
-      ),
-    );
-    expect(router.seenStates.length, 2);
-    expect(router.seenStates.every((seen) => identical(seen, state)), isTrue);
-  });
+          state: state,
+        ),
+      );
+      final unsafeHostRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse('https://evil.test/app/product/7'),
+          state: state,
+        ),
+      );
+
+      expect(
+        prefixedRoute,
+        isA<ProductDetailRoute>()
+            .having((route) => route.productId, 'productId', 7)
+            .having(
+              (route) => route.location,
+              'location',
+              '/product/7?campaign=spring#reviews',
+            ),
+      );
+      expect(
+        unsafeHostRoute,
+        isA<NotFoundRoute>().having(
+          (route) => route.path,
+          'path',
+          'https://evil.test/app/product/7',
+        ),
+      );
+      expect(router.seenStates.length, 2);
+      expect(router.seenStates.every((seen) => identical(seen, state)), isTrue);
+    },
+  );
 }
 
 final class _ShoppingRouteInformationRouter extends RouterBase<ShoppingRoute> {

@@ -14,16 +14,35 @@ by the workspace source.
 
 ## Runtime SDK Floors
 
-`dust_dart`, `dust_flutter`, `dust_db_postgres`, and `dust_server` support Dart
-3.6 or newer. Core `dust_flutter` consumers retain the Flutter 3.29.0 minimum.
-`dust_db_sqlite3` supports standalone stable Dart 3.10.0 or newer; Flutter apps
-using SQLite require **Flutter 3.47.0 or newer** with `sqlite3 ^3.7.1`.
+`dust_dart`, `dust_db_postgres`, and `dust_server` support Dart 3.6 or newer.
+`dust_flutter` requires Flutter 3.44 / Dart 3.12 or newer for the standalone
+Material and Cupertino libraries. `dust_db_sqlite3` supports standalone stable
+Dart 3.10.0 or newer; Flutter apps using SQLite require **Flutter 3.47.0 or newer**
+with `sqlite3 ^3.7.1`.
 
 The SQLite Flutter minimum also accounts for native-asset dependency resolution;
 meeting the standalone Dart language floor alone is insufficient. See the
 [independent SDK/native consumer gate](db-sdk-validation.md) for exact versions,
 isolated lint-tool resolution and packaging checks. The SQLite runtime remains
 a Dart package and does not depend on the Flutter SDK.
+
+## Material and Cupertino migration
+
+The unreleased Flutter runtime and generated routing libraries use
+`material_ui: ^1.0.0` and `cupertino_ui: ^1.0.0`. Add both to routing apps and
+replace the corresponding `package:flutter/material.dart` and
+`package:flutter/cupertino.dart` imports with the standalone package imports.
+Application fields, typed routes, state scopes and Navigator 2.0 APIs stay the same.
+
+`CupertinoPageTransitionsBuilder` now comes from `cupertino_ui`; import that
+package when using this transition, even in a Material application.
+
+Material and Cupertino types now come from different libraries. Migrate themes,
+pages, transitions and widget callers together; a legacy `ThemeData` is not a
+standalone `ThemeData`. Use `GlobalMaterialLocalizations.delegates` from
+`material_ui` for the matching Material, Cupertino and widget delegates.
+See Flutter's [official migration guide](https://docs.flutter.dev/release/breaking-changes/material-ui-and-cupertino-ui)
+for third-party compatibility bridge limits.
 
 ## SDK versions versus source syntax
 
@@ -41,8 +60,8 @@ enable otherwise unsupported code generation.
 
 Dust 0.3.0 supports class-header primary constructors for Dart language version
 3.13 and newer across the documented Dart and Flutter feature surface.
-Fresh Dart 3.13.6 and Flutter 3.47.7 consumers build, analyze and test alongside
-traditional Dart 3.6.0 and Flutter 3.29.0 consumers. See the
+The SDK gate covers traditional Dart 3.6.0 and Flutter 3.44.0 consumers separately
+from latest-SDK primary-constructor consumers. See the
 [usage and limits](primary-constructors.md). Constructor calls in application
 code do not need to change, and traditional declarations remain supported.
 

@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../../../shared/widgets/snackbars/app_snackbar.dart';
@@ -108,8 +108,10 @@ class _WishlistTile extends StatelessWidget {
           spacing: 4,
           children: [
             IconButton(
-              tooltip:
-                  context.tr('shop_add_to_cart', defaultText: 'Add to Cart'),
+              tooltip: context.tr(
+                'shop_add_to_cart',
+                defaultText: 'Add to Cart',
+              ),
               icon: const Icon(Icons.add_shopping_cart),
               onPressed: () {
                 context.readCartViewModel().addToCart(product);

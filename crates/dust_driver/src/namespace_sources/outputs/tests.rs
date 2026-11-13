@@ -225,5 +225,57 @@ fn claims_from_the_same_source_still_require_their_own_producer() {
     );
 }
 
+#[test]
+fn multiple_collisions_report_the_first_unit_identity() {
+    let registry = crate::build::registry_for_selection(crate::build::RegistrySelection::All);
+    let catalog = crate::catalog::build_symbol_catalog(&registry).unwrap();
+    let origin_uri = "package:dust_flutter/src/router/route_annotations.dart";
+    let origin = unit(1, origin_uri, "class AppRouter { const AppRouter(); }");
+    let root_uri = "file:///root.dart";
+    let mut root = unit(
+        2,
+        root_uri,
+        &format!("import '{origin_uri}'; @AppRouter() class Router {{}}"),
+    );
+    root.targets
+        .insert(origin_uri.into(), Ok(origin.source.clone()));
+    let mut first = unit(3, "file:///a-output.dart", "class First {}");
+    let mut last = unit(4, "file:///z-output.dart", "class Last {}");
+    first.source.path = first.source.path.with_file_name("z-output.g.dart");
+    last.source.path = last.source.path.with_file_name("a-output.g.dart");
+    let first_path = first.source.path.clone();
+    let claims = [&first, &last]
+        .into_iter()
+        .map(|output| {
+            (
+                output.source.path.clone(),
+                Claim {
+                    source: root_uri.into(),
+                    producer: SymbolId::new("dust_flutter::AppRouter"),
+                },
+            )
+        })
+        .collect();
+    let mut units = [origin, root, first, last]
+        .into_iter()
+        .map(|unit| (unit.source.uri.clone(), Ok(unit)))
+        .collect::<BTreeMap<_, _>>();
+    let core = unit(5, "dart:core", "");
+    for unit in units.values_mut().filter_map(|unit| unit.as_mut().ok()) {
+        unit.targets
+            .insert(core.source.uri.clone(), Ok(core.source.clone()));
+    }
+    units.insert(core.source.uri.clone(), Ok(core));
+
+    assert_eq!(
+        verify(&mut units, &claims, &catalog).err().unwrap().message,
+        format!(
+            "generated library output `{}` collides with an unmarked existing source",
+            first_path.display()
+        )
+    );
+    assert!(units.values().all(Result::is_ok));
+}
+
 mod readiness;
 mod requests;

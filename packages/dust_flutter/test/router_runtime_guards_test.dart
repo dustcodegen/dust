@@ -55,136 +55,148 @@ void main() {
     );
   });
 
-  test('deep-link restoration guards restored ancestors in stack order',
-      () async {
-    final calls = <String>[];
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        restoreStack: (route) => route.location == '/child'
-            ? [
-                const TestRoute('/safe'),
-                const TestRoute('/parent'),
-                route,
-              ]
-            : [route],
-        resolveGuards: (route) => switch (route.location) {
-          '/parent' || '/child' => [RecordingGuard(route.location, calls)],
-          _ => const [],
-        },
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'deep-link restoration guards restored ancestors in stack order',
+    () async {
+      final calls = <String>[];
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          restoreStack: (route) => route.location == '/child'
+              ? [
+                  const TestRoute('/safe'),
+                  const TestRoute('/parent'),
+                  route,
+                ]
+              : [route],
+          resolveGuards: (route) => switch (route.location) {
+            '/parent' || '/child' => [RecordingGuard(route.location, calls)],
+            _ => const [],
+          },
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    await delegate.setNewRoutePath(const TestRoute('/child'));
+      await delegate.setNewRoutePath(const TestRoute('/child'));
 
-    expect(calls, ['/parent', '/child']);
-    expect(delegate.stack.map((route) => route.location), [
-      '/safe',
-      '/parent',
-      '/child',
-    ]);
-  });
+      expect(calls, ['/parent', '/child']);
+      expect(delegate.stack.map((route) => route.location), [
+        '/safe',
+        '/parent',
+        '/child',
+      ]);
+    },
+  );
 
-  test('direct navigation does not re-run guards for restored ancestors',
-      () async {
-    final calls = <String>[];
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        restoreStack: (route) => [
-          const TestRoute('/safe'),
-          const TestRoute('/parent'),
-          route,
-        ],
-        resolveGuards: (route) => switch (route.location) {
-          '/parent' || '/child' => [RecordingGuard(route.location, calls)],
-          _ => const [],
-        },
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'direct navigation does not re-run guards for restored ancestors',
+    () async {
+      final calls = <String>[];
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          restoreStack: (route) => [
+            const TestRoute('/safe'),
+            const TestRoute('/parent'),
+            route,
+          ],
+          resolveGuards: (route) => switch (route.location) {
+            '/parent' || '/child' => [RecordingGuard(route.location, calls)],
+            _ => const [],
+          },
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    final result = delegate.push<void>(const TestRoute('/child'));
-    await Future<void>.delayed(Duration.zero);
-    expect(calls, ['/child']);
-    await delegate.popRoute();
-    await expectLater(result, completion(isNull));
-  });
+      final result = delegate.push<void>(const TestRoute('/child'));
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, ['/child']);
+      await delegate.popRoute();
+      await expectLater(result, completion(isNull));
+    },
+  );
 
-  test('ancestor guard redirect prevents unauthorized child restoration',
-      () async {
-    final calls = <String>[];
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        restoreStack: (route) => route.location == '/child'
-            ? [
-                const TestRoute('/safe'),
-                const TestRoute('/parent'),
-                route,
-              ]
-            : [route],
-        resolveGuards: (route) => switch (route.location) {
-          '/parent' => [
+  test(
+    'ancestor guard redirect prevents unauthorized child restoration',
+    () async {
+      final calls = <String>[];
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          restoreStack: (route) => route.location == '/child'
+              ? [
+                  const TestRoute('/safe'),
+                  const TestRoute('/parent'),
+                  route,
+                ]
+              : [route],
+          resolveGuards: (route) => switch (route.location) {
+            '/parent' => [
               RedirectRecordingGuard(
                 route.location,
                 calls,
                 const TestRoute('/login'),
               ),
             ],
-          '/child' => [RecordingGuard(route.location, calls)],
-          _ => const [],
-        },
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+            '/child' => [RecordingGuard(route.location, calls)],
+            _ => const [],
+          },
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    await delegate.setNewRoutePath(const TestRoute('/child'));
+      await delegate.setNewRoutePath(const TestRoute('/child'));
 
-    expect(calls, ['/parent']);
-    expect(delegate.stack.map((route) => route.location), ['/login']);
-  });
+      expect(calls, ['/parent']);
+      expect(delegate.stack.map((route) => route.location), ['/login']);
+    },
+  );
 
-  test('a newer location supersedes deep-link restoration blocked by a guard',
-      () async {
-    final guardResult = Completer<TestRoute?>();
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        restoreStack: (route) => route.location == '/child'
-            ? [const TestRoute('/parent'), route]
-            : [route],
-        resolveGuards: (route) => route.location == '/parent'
-            ? [BlockingGuard(guardResult.future)]
-            : const [],
-      ),
-    );
-    addTearDown(delegate.dispose);
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'a newer location supersedes deep-link restoration blocked by a guard',
+    () async {
+      final guardResult = Completer<TestRoute?>();
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          restoreStack: (route) => route.location == '/child'
+              ? [const TestRoute('/parent'), route]
+              : [route],
+          resolveGuards: (route) => route.location == '/parent'
+              ? [BlockingGuard(guardResult.future)]
+              : const [],
+        ),
+      );
+      addTearDown(delegate.dispose);
+      await delegate.debugWaitForScheduledRefresh();
 
-    final pendingRestore = delegate.setNewRoutePath(const TestRoute('/child'));
-    await delegate.setNewRoutePath(const TestRoute('/detail'));
-    guardResult.complete(const TestRoute('/login'));
-    await pendingRestore;
+      final pendingRestore = delegate.setNewRoutePath(
+        const TestRoute('/child'),
+      );
+      await delegate.setNewRoutePath(const TestRoute('/detail'));
+      guardResult.complete(const TestRoute('/login'));
+      await pendingRestore;
 
-    expect(delegate.stack.map((route) => route.location), ['/detail']);
-  });
+      expect(delegate.stack.map((route) => route.location), ['/detail']);
+    },
+  );
 
-  test('route stack observer records final guard redirect stack once',
-      () async {
-    final router = RecordingRouter();
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        router: router,
-        resolveGuards: (route) => route.location == '/guard-private'
-            ? [const LoginGuard()]
-            : const [],
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'route stack observer records final guard redirect stack once',
+    () async {
+      final router = RecordingRouter();
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          router: router,
+          resolveGuards: (route) => route.location == '/guard-private'
+              ? [const LoginGuard()]
+              : const [],
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    await delegate.setNewRoutePath(const TestRoute('/guard-private'));
+      await delegate.setNewRoutePath(const TestRoute('/guard-private'));
 
-    expect(delegate.stack.map((route) => route.location), ['/login']);
-    expect(router.stackChanges, ['[/safe] => [/login]']);
-  });
+      expect(delegate.stack.map((route) => route.location), ['/login']);
+      expect(router.stackChanges, ['[/safe] => [/login]']);
+    },
+  );
 
   test('direct push follows a guard redirect before committing', () async {
     final delegate = GeneratedRouterDelegate<TestRoute>(
@@ -204,27 +216,29 @@ void main() {
     await expectLater(result, completion(isNull));
   });
 
-  test('navigation fails closed when a guard implements neither interface',
-      () async {
-    final delegate = GeneratedRouterDelegate<TestRoute>(
-      runtimeConfig(
-        resolveGuards: (route) => route.location == '/guard-private'
-            ? [const UnrecognizedGuard()]
-            : const [],
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
-
-    await expectLater(
-      delegate.setNewRoutePath(const TestRoute('/guard-private')),
-      throwsA(
-        isA<StateError>().having(
-          (error) => error.message,
-          'message',
-          contains('implements neither RouteGuard'),
+  test(
+    'navigation fails closed when a guard implements neither interface',
+    () async {
+      final delegate = GeneratedRouterDelegate<TestRoute>(
+        runtimeConfig(
+          resolveGuards: (route) => route.location == '/guard-private'
+              ? [const UnrecognizedGuard()]
+              : const [],
         ),
-      ),
-    );
-    expect(delegate.stack.map((route) => route.location), ['/safe']);
-  });
+      );
+      await delegate.debugWaitForScheduledRefresh();
+
+      await expectLater(
+        delegate.setNewRoutePath(const TestRoute('/guard-private')),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('implements neither RouteGuard'),
+          ),
+        ),
+      );
+      expect(delegate.stack.map((route) => route.location), ['/safe']);
+    },
+  );
 }

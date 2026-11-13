@@ -8,9 +8,11 @@ void main() {
 
   test('shopping router redirects through real auth state safely', () async {
     final router = await shoppingRouter();
-    final deepLink = parseShoppingRoute(
-      Uri.parse('/orders/ORDER%201%2F2?campaign=spring#receipt'),
-    ) as OrderDetailRoute;
+    final deepLink =
+        parseShoppingRoute(
+              Uri.parse('/orders/ORDER%201%2F2?campaign=spring#receipt'),
+            )
+            as OrderDetailRoute;
 
     expect(
       router.redirect(const CheckoutRoute()),
@@ -68,8 +70,11 @@ void main() {
 
     expect(routes.stack, [
       isA<ProductsRoute>(),
-      isA<LoginRoute>()
-          .having((route) => route.redirectPath, 'redirectPath', location),
+      isA<LoginRoute>().having(
+        (route) => route.redirectPath,
+        'redirectPath',
+        location,
+      ),
     ]);
 
     await router.auth.login('dust', 'password');
@@ -80,8 +85,11 @@ void main() {
 
     await routes.open(location);
 
-    expect(
-        routes.stack, [isA<ProductsRoute>(), isA<OrdersRoute>(), destination]);
+    expect(routes.stack, [
+      isA<ProductsRoute>(),
+      isA<OrdersRoute>(),
+      destination,
+    ]);
   });
 
   test('shopping router waits while auth state is unresolved', () async {
@@ -94,75 +102,78 @@ void main() {
     expect(router.redirect(const CheckoutRoute()), isNull);
   });
 
-  test('router redirect and guards compose through runtime navigation',
-      () async {
-    final router = await shoppingRouter();
-    final delegate =
-        router.config.routerDelegate as GeneratedRouterDelegate<ShoppingRoute>;
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'router redirect and guards compose through runtime navigation',
+    () async {
+      final router = await shoppingRouter();
+      final delegate =
+          router.config.routerDelegate
+              as GeneratedRouterDelegate<ShoppingRoute>;
+      await delegate.debugWaitForScheduledRefresh();
 
-    await delegate.setNewRoutePath(const AdminRoute());
-    expect(
-      delegate.currentConfiguration,
-      isA<LoginRoute>().having(
-        (route) => route.redirectPath,
-        'redirectPath',
-        '/admin',
-      ),
-    );
-    expect(
-      delegate.stack,
-      [isA<ProductsRoute>(), isA<LoginRoute>()],
-    );
+      await delegate.setNewRoutePath(const AdminRoute());
+      expect(
+        delegate.currentConfiguration,
+        isA<LoginRoute>().having(
+          (route) => route.redirectPath,
+          'redirectPath',
+          '/admin',
+        ),
+      );
+      expect(
+        delegate.stack,
+        [isA<ProductsRoute>(), isA<LoginRoute>()],
+      );
 
-    authenticate(router, 'dust');
-    await delegate.debugWaitForScheduledRefresh();
-    expect(delegate.currentConfiguration, isA<ProductsRoute>());
+      authenticate(router, 'dust');
+      await delegate.debugWaitForScheduledRefresh();
+      expect(delegate.currentConfiguration, isA<ProductsRoute>());
 
-    await delegate.setNewRoutePath(const StaffRoute());
-    expect(delegate.currentConfiguration, isA<ProductsRoute>());
-    expect(delegate.stack, [isA<ProductsRoute>()]);
+      await delegate.setNewRoutePath(const StaffRoute());
+      expect(delegate.currentConfiguration, isA<ProductsRoute>());
+      expect(delegate.stack, [isA<ProductsRoute>()]);
 
-    authenticate(router, 'manager');
-    await delegate.debugWaitForScheduledRefresh();
-    await delegate.setNewRoutePath(const StaffRoute());
-    expect(delegate.currentConfiguration, isA<StaffRoute>());
-    expect(
-      delegate.stack,
-      [isA<ProductsRoute>(), isA<StaffRoute>()],
-    );
+      authenticate(router, 'manager');
+      await delegate.debugWaitForScheduledRefresh();
+      await delegate.setNewRoutePath(const StaffRoute());
+      expect(delegate.currentConfiguration, isA<StaffRoute>());
+      expect(
+        delegate.stack,
+        [isA<ProductsRoute>(), isA<StaffRoute>()],
+      );
 
-    await delegate.setNewRoutePath(const AdminRoute());
-    expect(delegate.currentConfiguration, isA<ProductsRoute>());
+      await delegate.setNewRoutePath(const AdminRoute());
+      expect(delegate.currentConfiguration, isA<ProductsRoute>());
 
-    authenticate(router, 'admin');
-    await delegate.debugWaitForScheduledRefresh();
-    await delegate.setNewRoutePath(const AdminRoute());
-    expect(delegate.currentConfiguration, isA<AdminRoute>());
-    expect(
-      delegate.stack,
-      [isA<ProductsRoute>(), isA<AdminRoute>()],
-    );
+      authenticate(router, 'admin');
+      await delegate.debugWaitForScheduledRefresh();
+      await delegate.setNewRoutePath(const AdminRoute());
+      expect(delegate.currentConfiguration, isA<AdminRoute>());
+      expect(
+        delegate.stack,
+        [isA<ProductsRoute>(), isA<AdminRoute>()],
+      );
 
-    expireSession(router);
-    await delegate.debugWaitForScheduledRefresh();
-    expect(
-      delegate.currentConfiguration,
-      isA<LoginRoute>().having(
-        (route) => route.redirectPath,
-        'redirectPath',
-        '/admin',
-      ),
-    );
-    expect(
-      delegate.stack,
-      [isA<ProductsRoute>(), isA<LoginRoute>()],
-    );
+      expireSession(router);
+      await delegate.debugWaitForScheduledRefresh();
+      expect(
+        delegate.currentConfiguration,
+        isA<LoginRoute>().having(
+          (route) => route.redirectPath,
+          'redirectPath',
+          '/admin',
+        ),
+      );
+      expect(
+        delegate.stack,
+        [isA<ProductsRoute>(), isA<LoginRoute>()],
+      );
 
-    authenticate(router, 'dust');
-    await delegate.debugWaitForScheduledRefresh();
-    expect(delegate.currentConfiguration, isA<ProductsRoute>());
-  });
+      authenticate(router, 'dust');
+      await delegate.debugWaitForScheduledRefresh();
+      expect(delegate.currentConfiguration, isA<ProductsRoute>());
+    },
+  );
 
   test('router revalidates protected routes exposed by pop', () async {
     final router = await shoppingRouter();

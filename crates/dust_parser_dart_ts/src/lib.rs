@@ -177,8 +177,17 @@ fn extract_parse_result_with_projection(
 
     let root = tree.root_node();
     let effective_language_version = options.effective_language_version_for_source(source.as_str());
+    let mut occurrences = Vec::new();
+    let mut views = extract_diagnostics(
+        &tree,
+        source,
+        &mut occurrences,
+        Some(effective_language_version),
+    );
     let namespace_only = full_surface_annotations.is_some_and(|annotations| {
-        namespace::can_project(root, source, effective_language_version, annotations)
+        (effective_language_version < dust_parser_dart::DartLanguageVersion::DART_3_13
+            || views.diagnostics.is_empty())
+            && namespace::can_project(root, source, effective_language_version, annotations)
     });
     let declarations = if declarations::has_extractable_top_level_declarations(root) {
         extract_top_level_declarations(root, source)
@@ -211,13 +220,6 @@ fn extract_parse_result_with_projection(
             extract_query_calls(root, source)
         },
     };
-    let mut occurrences = Vec::new();
-    let mut views = extract_diagnostics(
-        &tree,
-        source,
-        &mut occurrences,
-        Some(effective_language_version),
-    );
     let language_diagnostics = extract_language_version_diagnostics(
         root,
         &library,

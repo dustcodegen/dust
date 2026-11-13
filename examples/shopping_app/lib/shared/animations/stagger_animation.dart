@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Staggered list item model for the shopping app example.
 class StaggeredListItem extends StatefulWidget {

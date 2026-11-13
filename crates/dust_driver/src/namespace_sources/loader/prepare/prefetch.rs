@@ -108,9 +108,7 @@ impl ParseAhead<'_> {
                 if self.speculative.len() >= self.limit {
                     return;
                 }
-                self.speculative
-                    .entry(source.uri.clone())
-                    .or_insert_with(|| source.clone());
+                self.speculative.insert(source);
             }
         }
     }
@@ -176,18 +174,18 @@ impl ParseAhead<'_> {
         while self.speculative_jobs.len() < speculative_limit
             && self.active.load(Relaxed) < self.active_limit
         {
-            let Some((uri, source)) = self.speculative.pop_first() else {
+            let Some((bytes, source)) = self.speculative.pop_first() else {
                 break;
             };
-            if self.known.contains(&uri)
-                || generated.contains_key(&uri)
-                || self.cached_roots.contains(&uri)
-                || Some(uri.as_str()) == protected
+            if self.known.contains(&source.uri)
+                || generated.contains_key(&source.uri)
+                || self.cached_roots.contains(&source.uri)
+                || Some(source.uri.as_str()) == protected
             {
                 continue;
             }
             if self.pending.len() >= limit && !self.discard_farthest(protected) {
-                self.speculative.insert(uri, source);
+                self.speculative.restore((bytes, source));
                 break;
             }
             if !self.submit(&source, true) {

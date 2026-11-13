@@ -75,7 +75,7 @@ python3 -m unittest discover -s scripts -p test_sqlite_sdk_consumer.py -v
 
 The package's declared floor remains **stable Dart >=3.10.0**, unchanged.
 The minimum Flutter version for SQLite consumers is **3.47.0**. This is separate
-from the core `dust_flutter` minimum of 3.29.0. The SQLite runtime stays Dart-only;
+from the core `dust_flutter` minimum of 3.44.0. The SQLite runtime stays Dart-only;
 Flutter constraints belong to Flutter applications such as the shopping example.
 
 The older matrix below used Flutter 3.38.1 with stable Dart 3.10.0. Flutter
@@ -102,6 +102,12 @@ exact Flutter 3.47.0 minimum and the separately measured 3.47.9 patch.
 | Stable Dart 3.14.0 | Passed | Not a Flutter SDK |
 | Flutter 3.47.0 / Dart 3.13.0 | Passed | Passed |
 | Flutter 3.47.9 / Dart 3.13.7 | Passed | Passed |
+
+After the Material/Cupertino migration, the exact Flutter 3.47.0 / Dart 3.13.0
+row passed again with freshly staged sources: seven standalone tests, strict
+formatting/analysis, JIT and relocated AOT identity checks, plus shopping
+analysis and all 85 tests. This retains SQLite's effective Flutter floor while
+the core Flutter runtime moves to its separate 3.44 minimum.
 
 The Flutter 3.38.1 attempt failed Pub dependency resolution; its shopping suite
 did not execute. The standalone Dart 3.10.0 pass does not establish Flutter

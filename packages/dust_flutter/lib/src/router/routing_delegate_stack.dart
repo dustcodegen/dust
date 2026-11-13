@@ -107,8 +107,9 @@ final class _RouteStackStore<T extends Object> {
         ..[predecessorIndex] = committed;
       return (committed: committed, replaced: previous);
     }
-    final committed =
-        sameLocation ? previous.withRoute(route) : _RouteEntry(route);
+    final committed = sameLocation
+        ? previous.withRoute(route)
+        : _RouteEntry(route);
     _activeEntries[_activeEntries.length - 1] = committed;
     return (committed: committed, replaced: sameLocation ? null : previous);
   }
@@ -161,11 +162,11 @@ final class _RouteStackStore<T extends Object> {
 
 final class _RouteEntry<T extends Object> {
   _RouteEntry(T route, {bool tracksPop = false})
-      : this._(
-          route,
-          _RoutePageKey(),
-          tracksPop ? Completer<Object?>() : null,
-        );
+    : this._(
+        route,
+        _RoutePageKey(),
+        tracksPop ? Completer<Object?>() : null,
+      );
 
   _RouteEntry._(this.route, this.key, this._popped);
 

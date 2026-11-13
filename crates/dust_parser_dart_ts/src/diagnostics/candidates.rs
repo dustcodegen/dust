@@ -107,17 +107,19 @@ pub(super) fn collect<'tree>(
 ) -> Option<Vec<Node<'tree>>> {
     let query = query(version)?;
     let mut cursor = QueryCursor::new();
-    let mut captures = cursor.captures(query, tree.root_node(), source.as_str().as_bytes());
+    let mut matches = cursor.matches(query, tree.root_node(), source.as_str().as_bytes());
     let mut nodes = Vec::new();
     let mut seen = BTreeSet::new();
-    while let Some((matched, index)) = captures.next() {
-        let node = matched.captures[*index].node;
-        if seen.insert(node.id()) {
-            let depth = std::iter::successors(node.parent(), |parent| parent.parent()).count();
-            nodes.push((node, depth));
+    while let Some(matched) = matches.next() {
+        for capture in matched.captures {
+            let node = capture.node;
+            if seen.insert(node.id()) {
+                let depth = std::iter::successors(node.parent(), |parent| parent.parent()).count();
+                nodes.push((node, depth));
+            }
         }
     }
-    drop(captures);
+    drop(matches);
     if cursor.did_exceed_match_limit() {
         return None;
     }

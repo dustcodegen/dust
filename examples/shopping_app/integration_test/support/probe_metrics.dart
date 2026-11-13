@@ -31,19 +31,17 @@ final class ProbeMetrics {
 
   /// Includes raw samples so summary values can be independently checked.
   Map<String, Object?> report() => {
-        'rssBeforeBytes': rssBefore,
-        'rssAfterBytes': ProcessInfo.currentRss,
-        'maxRssBytes': ProcessInfo.maxRss,
-        'uiFrames': uiFrames,
-        'build':
-            summarizeMicros(frames.map((f) => f.buildDuration.inMicroseconds)),
-        'raster':
-            summarizeMicros(frames.map((f) => f.rasterDuration.inMicroseconds)),
-        'buildSamplesUs': [
-          for (final f in frames) f.buildDuration.inMicroseconds
-        ],
-        'rasterSamplesUs': [
-          for (final f in frames) f.rasterDuration.inMicroseconds
-        ],
-      };
+    'rssBeforeBytes': rssBefore,
+    'rssAfterBytes': ProcessInfo.currentRss,
+    'maxRssBytes': ProcessInfo.maxRss,
+    'uiFrames': uiFrames,
+    'build': summarizeMicros(frames.map((f) => f.buildDuration.inMicroseconds)),
+    'raster': summarizeMicros(
+      frames.map((f) => f.rasterDuration.inMicroseconds),
+    ),
+    'buildSamplesUs': [for (final f in frames) f.buildDuration.inMicroseconds],
+    'rasterSamplesUs': [
+      for (final f in frames) f.rasterDuration.inMicroseconds,
+    ],
+  };
 }

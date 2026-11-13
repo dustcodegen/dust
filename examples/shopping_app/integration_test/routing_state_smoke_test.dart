@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shopping_app/core/view_models/app_view_model.dart';
@@ -46,10 +46,10 @@ void main() {
             ),
             routeInformationParser:
                 GeneratedRouteInformationParser<ShoppingRoute>(
-              router: router,
-              parseRoute: parseShoppingRoute,
-              routeLocation: shoppingRouteLocation,
-            ),
+                  router: router,
+                  parseRoute: parseShoppingRoute,
+                  routeLocation: shoppingRouteLocation,
+                ),
             routerDelegate: delegate,
             backButtonDispatcher: RootBackButtonDispatcher(),
           ),

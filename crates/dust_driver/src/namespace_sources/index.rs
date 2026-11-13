@@ -1,8 +1,7 @@
 use std::{
-    cmp::Reverse,
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     sync::Mutex,
 };
 
@@ -30,8 +29,8 @@ pub(super) struct Source {
 pub(super) struct SourceIndex {
     /// Resolved package entries keyed by their configured names.
     packages: BTreeMap<String, packages::Package>,
-    /// Package roots ordered deepest first for file language-version selection.
-    file_roots: Vec<(PathBuf, Option<DartLanguageVersion>)>,
+    /// Normalized package roots for nearest-ancestor language-version selection.
+    file_roots: HashMap<PathBuf, Option<DartLanguageVersion>>,
     /// Active SDK libraries and their target-independent source alternatives.
     sdk: SdkSources,
     /// Exact package and SDK metadata reads for dependency fingerprints.
@@ -68,13 +67,10 @@ impl SourceIndex {
         let sdk = SdkSources::load(cwd, sdk_root, flutter_package.map(PathBuf::as_path))?;
         let mut inputs = sdk.inputs.clone();
         inputs.insert(config.to_path_buf(), contents);
-        let mut file_roots = packages
+        let file_roots = packages
             .values()
-            .rev()
             .map(|package| (package.root.clone(), package.language_version))
-            .collect::<Vec<_>>();
-        // A stable sort retains the last package-name preference for equal depths.
-        file_roots.sort_by_key(|(root, _)| Reverse(root.components().count()));
+            .collect();
         Ok(Self {
             packages,
             file_roots,
@@ -87,11 +83,20 @@ impl SourceIndex {
     /// File entrypoints retain file identity, even when a package URI maps there.
     pub(super) fn file(&self, path: &Path) -> Result<Source, String> {
         let path = normalize_path(path);
-        let language_version = self
-            .file_roots
-            .iter()
-            .find(|(root, _)| path.starts_with(root))
-            .and_then(|(_, language_version)| *language_version)
+        let prefix = path
+            .components()
+            .next()
+            .and_then(|component| match component {
+                Component::Prefix(prefix) => Some(Path::new(prefix.as_os_str())),
+                _ => None,
+            });
+        let language_version = path
+            .ancestors()
+            .chain(prefix)
+            .chain(std::iter::once(Path::new("")))
+            .find_map(|root| self.file_roots.get(root))
+            .copied()
+            .flatten()
             .unwrap_or(self.sdk.language_version);
         Ok(Source {
             uri: uri::file_uri(&path)?,

@@ -13,10 +13,9 @@ import 'shopping_repository.dart';
 final class CachedShoppingRepository implements ShoppingRepository {
   /// Creates a [CachedShoppingRepository].
   CachedShoppingRepository({
-    required ShoppingRepository remote,
-    required ShoppingCacheDatabase database,
-  })  : _remote = remote,
-        _database = database;
+    required this._remote,
+    required this._database,
+  });
 
   final ShoppingRepository _remote;
   final ShoppingCacheDatabase _database;

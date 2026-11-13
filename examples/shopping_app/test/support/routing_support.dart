@@ -35,8 +35,10 @@ final class ShoppingRouteProbe {
   ) async {
     final delegate =
         config.routerDelegate as GeneratedRouterDelegate<ShoppingRoute>;
-    final probe =
-        ShoppingRouteProbe._(config.routeInformationParser!, delegate);
+    final probe = ShoppingRouteProbe._(
+      config.routeInformationParser!,
+      delegate,
+    );
     addTearDown(delegate.dispose);
     await probe.waitForRefresh();
     return probe;

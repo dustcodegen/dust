@@ -16,11 +16,15 @@ in [`dust_dart`](https://pub.dev/packages/dust_dart).
 Most Flutter apps use both Dust packages:
 
 ```bash
-flutter pub add dust_flutter dust_dart
+flutter pub add dust_flutter dust_dart material_ui cupertino_ui
 ```
 
 `dust_flutter` provides Flutter annotations and runtime types. `dust_dart`
 provides the model derives used in the example below.
+
+Requires Flutter 3.44 / Dart 3.12 or newer. Import Material widgets from
+`package:material_ui/material_ui.dart` and Cupertino widgets from
+`package:cupertino_ui/cupertino_ui.dart`; routing uses the same design libraries.
 
 Install the Dust CLI by following the
 [main installation guide](https://github.com/dustcodegen/dust#installation).
@@ -34,7 +38,7 @@ Define immutable state and a ViewModel that extends its generated base:
 ```dart
 import 'package:dust_dart/derive.dart';
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'counter_view_model.g.dart';
 

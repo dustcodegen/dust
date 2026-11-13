@@ -90,48 +90,52 @@ void main() {
     expect(shoppingRouteGuards(const ProductsRoute(), router), isEmpty);
   });
 
-  test('generated guard resolver is typed so untyped guards cannot compile',
-      () async {
-    final router = await shoppingRouter();
+  test(
+    'generated guard resolver is typed so untyped guards cannot compile',
+    () async {
+      final router = await shoppingRouter();
 
-    final adminGuards = shoppingRouteGuards(const AdminRoute(), router);
-    final staffGuards = shoppingRouteGuards(const StaffRoute(), router);
+      final adminGuards = shoppingRouteGuards(const AdminRoute(), router);
+      final staffGuards = shoppingRouteGuards(const StaffRoute(), router);
 
-    expect(adminGuards, isA<List<RouteGuardBase<ShoppingRoute>>>());
-    expect(staffGuards, isA<List<RouteGuardBase<ShoppingRoute>>>());
-    expect(adminGuards.single, isA<RouteGuard<ShoppingRoute>>());
-    expect(staffGuards.single, isA<RouteGuard<ShoppingRoute>>());
-  });
+      expect(adminGuards, isA<List<RouteGuardBase<ShoppingRoute>>>());
+      expect(staffGuards, isA<List<RouteGuardBase<ShoppingRoute>>>());
+      expect(adminGuards.single, isA<RouteGuard<ShoppingRoute>>());
+      expect(staffGuards.single, isA<RouteGuard<ShoppingRoute>>());
+    },
+  );
 
-  test('admin deep links require admin access through the real router',
-      () async {
-    final router = await shoppingRouter();
-    expireSession(router);
-    final routes = await ShoppingRouteProbe.start(router.config);
+  test(
+    'admin deep links require admin access through the real router',
+    () async {
+      final router = await shoppingRouter();
+      expireSession(router);
+      final routes = await ShoppingRouteProbe.start(router.config);
 
-    await routes.open('/admin');
+      await routes.open('/admin');
 
-    expect(
-      routes.currentRoute,
-      isA<LoginRoute>().having(
-        (route) => route.redirectPath,
-        'redirectPath',
-        '/admin',
-      ),
-    );
-    expect(routes.stack, [isA<ProductsRoute>(), isA<LoginRoute>()]);
+      expect(
+        routes.currentRoute,
+        isA<LoginRoute>().having(
+          (route) => route.redirectPath,
+          'redirectPath',
+          '/admin',
+        ),
+      );
+      expect(routes.stack, [isA<ProductsRoute>(), isA<LoginRoute>()]);
 
-    await router.auth.login('dust', 'password');
-    await routes.waitForRefresh();
-    expect(router.auth.state.isAuthenticated, isTrue);
-    expect(routes.stack, [isA<ProductsRoute>()]);
+      await router.auth.login('dust', 'password');
+      await routes.waitForRefresh();
+      expect(router.auth.state.isAuthenticated, isTrue);
+      expect(routes.stack, [isA<ProductsRoute>()]);
 
-    await routes.open('/admin');
-    expect(routes.stack, [isA<ProductsRoute>()]);
+      await routes.open('/admin');
+      expect(routes.stack, [isA<ProductsRoute>()]);
 
-    authenticate(router, 'admin');
-    await routes.waitForRefresh();
-    await routes.open('/admin');
-    expect(routes.stack, [isA<ProductsRoute>(), isA<AdminRoute>()]);
-  });
+      authenticate(router, 'admin');
+      await routes.waitForRefresh();
+      await routes.open('/admin');
+      expect(routes.stack, [isA<ProductsRoute>(), isA<AdminRoute>()]);
+    },
+  );
 }

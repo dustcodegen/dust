@@ -33,6 +33,18 @@ impl NamespaceGraph {
             Ok(worlds) => worlds,
             Err(binding) => return binding,
         };
+        self.bind_worlds(name, short, &worlds, catalog, active)
+    }
+
+    /// Reuse namespace facts already loaded while checking library constants.
+    pub(super) fn bind_worlds(
+        &self,
+        name: &str,
+        short: &str,
+        worlds: &Worlds,
+        catalog: &SymbolCatalog,
+        active: &mut BTreeSet<(String, String)>,
+    ) -> NamespaceBinding {
         let bindings = worlds
             .iter()
             .map(|world| self.bind_world(world, short, catalog, active))

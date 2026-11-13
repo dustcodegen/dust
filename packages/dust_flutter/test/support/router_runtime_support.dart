@@ -1,5 +1,5 @@
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 RouterRuntimeConfig<TestRoute> runtimeConfig({
@@ -20,11 +20,12 @@ RouterRuntimeConfig<TestRoute> runtimeConfig({
     parseRoute: (uri) => TestRoute(uri.toString()),
     routeLocation: routeLocation ?? (route) => route.location,
     requiresAuth: requiresAuth ?? (_) => false,
-    routeBranch: routeBranch ??
+    routeBranch:
+        routeBranch ??
         (route) => switch (route.location) {
-              '/branch' => 'mainTabs',
-              _ => null,
-            },
+          '/branch' => 'mainTabs',
+          _ => null,
+        },
     resolveGuards: resolveGuards ?? (_) => const [],
     restoreStack: restoreStack,
     buildPage: (route, key, onPopInvoked) => generatedPage<Object?>(
@@ -62,10 +63,10 @@ RouterRuntimeConfig<TestRoute> runtimeConfig({
       '/safe' => const RouteDebugInfo(name: 'safe'),
       '/private' => const RouteDebugInfo(name: 'private'),
       '/branch' => const RouteDebugInfo(
-          name: 'branch',
-          shell: 'DebugShell',
-          branch: 'mainTabs',
-        ),
+        name: 'branch',
+        shell: 'DebugShell',
+        branch: 'mainTabs',
+      ),
       '/guard-private' => const RouteDebugInfo(name: 'guardPrivate'),
       '/login' => const RouteDebugInfo(name: 'login'),
       _ => const RouteDebugInfo(),

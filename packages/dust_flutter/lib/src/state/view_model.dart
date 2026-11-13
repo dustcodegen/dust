@@ -25,8 +25,8 @@ abstract class ViewModelBase<TState, TArgs extends ViewModelArgs>
     extends ValueNotifier<TState> {
   /// Creates a view model with typed [args] and [initialState].
   ViewModelBase(this.args, {required TState initialState})
-      : _initialState = initialState,
-        super(initialState);
+    : _initialState = initialState,
+      super(initialState);
 
   /// Typed dependencies for this view model.
   final TArgs args;

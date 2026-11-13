@@ -170,10 +170,7 @@ fn normalize_import_uri_from_paths(
 ) -> Option<String> {
     if matches!(
         uri,
-        "package:flutter/material.dart"
-            | "package:flutter/cupertino.dart"
-            | "package:dust_flutter/route.dart"
-            | "package:dust_flutter/dust_flutter.dart"
+        "package:dust_flutter/route.dart" | "package:dust_flutter/dust_flutter.dart"
     ) {
         return None;
     }

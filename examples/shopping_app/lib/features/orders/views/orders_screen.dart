@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 
@@ -81,8 +81,8 @@ class _OrderCard extends StatelessWidget {
                     defaultText: 'Order #{id}',
                     args: {'id': order.id.substring(order.id.length - 6)},
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   _StatusChip(status: order.status),
                 ],
@@ -111,8 +111,8 @@ class _OrderCard extends StatelessWidget {
                     defaultText: r'${price}',
                     args: {'price': order.totalAmount.toStringAsFixed(2)},
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -138,25 +138,25 @@ class _StatusChip extends StatelessWidget {
     final (color, labelKey, defaultLabel) = switch (status) {
       OrderStatus.pending => (Colors.orange, 'shop_status_pending', 'Pending'),
       OrderStatus.processing => (
-          Colors.blue,
-          'shop_status_processing',
-          'Processing',
-        ),
+        Colors.blue,
+        'shop_status_processing',
+        'Processing',
+      ),
       OrderStatus.shipped => (
-          Colors.purple,
-          'shop_status_shipped',
-          'Shipped',
-        ),
+        Colors.purple,
+        'shop_status_shipped',
+        'Shipped',
+      ),
       OrderStatus.delivered => (
-          Colors.green,
-          'shop_status_delivered',
-          'Delivered',
-        ),
+        Colors.green,
+        'shop_status_delivered',
+        'Delivered',
+      ),
       OrderStatus.cancelled => (
-          Colors.red,
-          'shop_status_cancelled',
-          'Cancelled',
-        ),
+        Colors.red,
+        'shop_status_cancelled',
+        'Cancelled',
+      ),
     };
 
     return Container(

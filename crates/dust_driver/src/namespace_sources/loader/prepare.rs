@@ -18,6 +18,8 @@ use super::{ParsePolicy, ResolvedTargets, Source, SourceIndex, SourceInput, reso
 mod facts;
 /// Completed facts may prepare descendants without changing canonical discovery.
 mod prefetch;
+/// Bounded descendant priority hints, independent of canonical loading order.
+mod speculative;
 /// Scoped workers prepare immutable parser and directive facts.
 mod worker;
 
@@ -74,7 +76,7 @@ pub(super) struct ParseAhead<'a> {
     /// Cached roots are skipped by canonical dispatch as well as speculation.
     cached_roots: HashSet<String>,
     /// Bounded descendant identities awaiting speculative worker slots.
-    speculative: BTreeMap<String, Source>,
+    speculative: speculative::Queue,
     /// Retained speculative requests cannot fill the canonical result window.
     speculative_jobs: HashSet<String>,
     /// Last visited URI in the current refill range.
@@ -137,7 +139,7 @@ impl ParseAhead<'_> {
                 imports,
                 known: loaded,
                 cached_roots: cached,
-                speculative: BTreeMap::new(),
+                speculative: Default::default(),
                 speculative_jobs: HashSet::new(),
                 cursor: None,
                 active: &active,

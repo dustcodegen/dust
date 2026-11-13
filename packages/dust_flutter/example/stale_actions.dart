@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dust_flutter/state.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Search-as-you-type without a slow answer overwriting a newer one.
 ///
@@ -47,8 +47,11 @@ Future<List<String>> slowerForShorterQueries(String query) async {
 @immutable
 final class SearchState {
   /// Creates a state.
-  const SearchState(
-      {this.query = '', this.results = const [], this.busy = false});
+  const SearchState({
+    this.query = '',
+    this.results = const [],
+    this.busy = false,
+  });
 
   /// The query the results belong to.
   final String query;
@@ -157,7 +160,7 @@ class _SearchPageState extends State<SearchPage> {
             Expanded(
               child: ListView(
                 children: [
-                  for (final name in state.results) ListTile(title: Text(name))
+                  for (final name in state.results) ListTile(title: Text(name)),
                 ],
               ),
             ),

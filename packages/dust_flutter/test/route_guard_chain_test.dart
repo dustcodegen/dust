@@ -72,8 +72,7 @@ void main() {
     expect(calls, ['sync-1', 'sync-2']);
   });
 
-  test(
-      'throws instead of skipping a guard that implements neither '
+  test('throws instead of skipping a guard that implements neither '
       'guard interface', () async {
     final chain = RouteGuardChain<_Route>([const _UntypedGuard()]);
 
@@ -101,20 +100,22 @@ void main() {
     );
   });
 
-  test('does not run later guards after an unrecognized guard throws',
-      () async {
-    final calls = <String>[];
-    final chain = RouteGuardChain<_Route>([
-      const _UntypedGuard(),
-      _SyncGuard('sync-after', calls),
-    ]);
+  test(
+    'does not run later guards after an unrecognized guard throws',
+    () async {
+      final calls = <String>[];
+      final chain = RouteGuardChain<_Route>([
+        const _UntypedGuard(),
+        _SyncGuard('sync-after', calls),
+      ]);
 
-    await expectLater(
-      chain.canActivate(const _Route('requested')),
-      throwsA(isA<StateError>()),
-    );
-    expect(calls, isEmpty);
-  });
+      await expectLater(
+        chain.canActivate(const _Route('requested')),
+        throwsA(isA<StateError>()),
+      );
+      expect(calls, isEmpty);
+    },
+  );
 }
 
 final class _Route {

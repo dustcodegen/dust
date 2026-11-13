@@ -31,8 +31,9 @@ extension _GeneratedRouterDelegateDiagnostics<T extends Object>
       '${routes.map((route) => '           => ${route.path}').join('\n')}',
     );
 
-    final namedRoutes =
-        routes.where((route) => route.name != null).toList(growable: false);
+    final namedRoutes = routes
+        .where((route) => route.name != null)
+        .toList(growable: false);
     if (namedRoutes.isEmpty) return;
 
     _log(

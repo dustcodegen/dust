@@ -7,7 +7,8 @@ void validateProbeConfig(String run, String phase) {
   if (!RegExp(r'^[a-zA-Z0-9_-]{1,64}$').hasMatch(run) ||
       !const ['write', 'verify'].contains(phase)) {
     throw ArgumentError(
-        'Provide a unique probe run ID and write/verify phase.');
+      'Provide a unique probe run ID and write/verify phase.',
+    );
   }
 }
 

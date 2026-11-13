@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     path::PathBuf,
 };
 
@@ -42,19 +42,18 @@ pub(super) fn verify_ready(
     catalog: &SymbolCatalog,
     imports_ready: impl Fn(&BTreeSet<String>) -> bool,
 ) -> Result<Verification, Diagnostic> {
-    let mut eligible: BTreeSet<_> = claims.keys().collect();
+    let mut eligible: HashMap<_, _> = claims.iter().collect();
     let graph = loop {
         let mut graph = graph::build(units)?;
         let mut ownership = HashMap::new();
-        let rejected: BTreeSet<_> = eligible
+        let rejected: HashSet<_> = eligible
             .iter()
-            .copied()
-            .filter(|path| {
-                let claim = &claims[*path];
-                !ownership
+            .filter_map(|(&path, claim)| {
+                (!ownership
                     .entry(&claim.source)
                     .or_insert_with(|| owners(&claim.source, units, &graph, catalog))
-                    .contains(&claim.producer)
+                    .contains(&claim.producer))
+                .then_some(path)
             })
             .collect();
         if !imports_ready(&graph.required_lexical_imports()) {
@@ -86,8 +85,8 @@ pub(super) fn verify_ready(
             if !graph.required_lexical_imports().is_empty() {
                 graph.clear_required_lexical_imports();
                 let sources = eligible
-                    .iter()
-                    .map(|path| claims[*path].source.as_str())
+                    .values()
+                    .map(|claim| claim.source.as_str())
                     .collect::<BTreeSet<_>>();
                 for source in sources {
                     let _ = owners(source, units, &graph, catalog);
@@ -97,7 +96,7 @@ pub(super) fn verify_ready(
         }
     };
     for unit in units.values().filter_map(|unit| unit.as_ref().ok()) {
-        if eligible.contains(&unit.source.path) && !unit.generated_library {
+        if eligible.contains_key(&unit.source.path) && !unit.generated_library {
             return Err(Diagnostic::error(format!(
                 "generated library output `{}` collides with an unmarked existing source",
                 unit.source.path.display()

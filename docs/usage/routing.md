@@ -10,8 +10,11 @@ Install the Dust CLI from the [root guide](../../README.md#installation), then
 add the Flutter runtime:
 
 ```bash
-flutter pub add dust_flutter
+flutter pub add dust_flutter material_ui cupertino_ui
 ```
+
+Requires Flutter 3.44 / Dart 3.12 or newer. Use the standalone Material and
+Cupertino packages consistently; see the [migration notes](compatibility.md#material-and-cupertino-migration).
 
 ## Quick Start
 
@@ -32,7 +35,7 @@ final class ShopRouter extends $ShopRouter {}
 Create `lib/pages.dart` and import the router entrypoint.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'route.dart';
 
@@ -86,7 +89,7 @@ In `lib/main.dart`, initialize the Flutter binding before reading the router
 config so Dust can read the platform's initial route.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'route.dart';
 

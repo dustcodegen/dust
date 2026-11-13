@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/i18n/shop_i18n_keys.dart';
 
@@ -66,12 +66,12 @@ enum SortOption {
 
   /// Translation key.
   String get translationKey => switch (this) {
-        SortOption.none => 'shop_sort_none',
-        SortOption.priceAsc => 'shop_sort_price_low_full',
-        SortOption.priceDesc => 'shop_sort_price_high_full',
-        SortOption.rating => 'shop_sort_rating',
-        SortOption.name => 'shop_sort_name',
-      };
+    SortOption.none => 'shop_sort_none',
+    SortOption.priceAsc => 'shop_sort_price_low_full',
+    SortOption.priceDesc => 'shop_sort_price_high_full',
+    SortOption.rating => 'shop_sort_rating',
+    SortOption.name => 'shop_sort_name',
+  };
 }
 
 /// Filter bottom sheet.

@@ -1,5 +1,5 @@
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/router_runtime_support.dart';
@@ -44,14 +44,16 @@ void main() {
       await delegate.setNewRoutePath(const TestRoute('/private'));
       await delegate.setNewRoutePath(const TestRoute('/guard-private'));
 
-      const fullPathsLog = 'AppRouter: Full paths for routes:\n'
+      const fullPathsLog =
+          'AppRouter: Full paths for routes:\n'
           '           => /safe\n'
           '           => /private\n'
           '           => /branch\n'
           '           => /guard-private\n'
           '           => /login\n'
           '           => /nested/:id';
-      const namedPathsLog = 'AppRouter: known full paths for route names:\n'
+      const namedPathsLog =
+          'AppRouter: known full paths for route names:\n'
           '           safe => /safe\n'
           '           private => /private\n'
           '           branch => /branch\n'

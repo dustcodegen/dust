@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../../../shared/widgets/snackbars/app_snackbar.dart';
@@ -66,31 +66,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         body: Center(
           child: switch (productsState.status) {
             ProductsStatus.initial ||
-            ProductsStatus.loading =>
-              const CircularProgressIndicator(),
+            ProductsStatus.loading => const CircularProgressIndicator(),
             _ => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.search_off, size: 72, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.tr(
-                      'shop_product_not_found',
-                      defaultText: 'Product #{id} was not found.',
-                      args: {'id': widget.productId},
-                    ),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.search_off, size: 72, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  context.tr(
+                    'shop_product_not_found',
+                    defaultText: 'Product #{id} was not found.',
+                    args: {'id': widget.productId},
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () => context.navigator.products().go(),
-                    icon: const Icon(Icons.storefront),
-                    label: const TranslatedText(
-                      'shop_back_to_shop',
-                      defaultText: 'Back to shop',
-                    ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => context.navigator.products().go(),
+                  icon: const Icon(Icons.storefront),
+                  label: const TranslatedText(
+                    'shop_back_to_shop',
+                    defaultText: 'Back to shop',
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           },
         ),
       );
@@ -151,8 +150,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       'shop_description',
                       defaultText: 'Description',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(selectedProduct.description),

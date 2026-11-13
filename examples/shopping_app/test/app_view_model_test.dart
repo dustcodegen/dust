@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dust_flutter/state.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_app/core/data/shopping_repository.dart';
 import 'package:shopping_app/core/view_models/app_view_model.dart';
@@ -11,7 +11,7 @@ import 'support/fake_shopping_repository.dart';
 
 final class ControlledHomeViewModel extends HomeViewModel {
   ControlledHomeViewModel()
-      : super(HomeViewModelArgs(repository: FakeShoppingRepository()));
+    : super(HomeViewModelArgs(repository: FakeShoppingRepository()));
 
   final loads = <Completer<HomePageData>>[];
 
@@ -142,23 +142,23 @@ void main() {
         home: ViewModelScopes(
           scopes: [
             (child) => BnbViewModelScope(
-                  args: (_) => const BnbViewModelArgs(),
-                  create: (context, args) {
-                    final viewModel = BnbViewModel(args);
-                    bnbViewModels.add(viewModel);
-                    return viewModel;
-                  },
-                  child: child,
-                ),
+              args: (_) => const BnbViewModelArgs(),
+              create: (context, args) {
+                final viewModel = BnbViewModel(args);
+                bnbViewModels.add(viewModel);
+                return viewModel;
+              },
+              child: child,
+            ),
             (child) => HomeViewModelScope(
-                  args: (_) => HomeViewModelArgs(repository: repository),
-                  create: (context, args) {
-                    final viewModel = HomeViewModel(args);
-                    homeViewModels.add(viewModel);
-                    return viewModel;
-                  },
-                  child: child,
-                ),
+              args: (_) => HomeViewModelArgs(repository: repository),
+              create: (context, args) {
+                final viewModel = HomeViewModel(args);
+                homeViewModels.add(viewModel);
+                return viewModel;
+              },
+              child: child,
+            ),
           ],
           child: const _BnbShellFixture(),
         ),

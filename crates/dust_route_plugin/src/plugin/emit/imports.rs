@@ -51,6 +51,17 @@ pub(super) fn render_route_imports(
             ));
         }
         for import in &route.imports {
+            // These files already import the full unprefixed design libraries.
+            if matches!(kind, RouteImportKind::Metadata | RouteImportKind::Runtime)
+                && import.prefix.is_none()
+                && matches!(
+                    import.uri.as_str(),
+                    "package:material_ui/material_ui.dart"
+                        | "package:cupertino_ui/cupertino_ui.dart"
+                )
+            {
+                continue;
+            }
             if Some(import.uri.as_str()) == current_import.as_deref()
                 || is_internal_route_import(&import.uri)
                 || !route_import_is_referenced(import, &references)

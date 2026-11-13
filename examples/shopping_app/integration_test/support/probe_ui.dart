@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A continuously animated UI, independent of native database work.
 final class ProbeUi extends StatefulWidget {
@@ -27,19 +27,19 @@ final class _ProbeUiState extends State<ProbeUi>
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        home: Scaffold(
-          body: AnimatedBuilder(
-            animation: _pulse,
-            builder: (context, child) {
-              widget.onFrame();
-              return Center(
-                child: Text(
-                  'dust SQLite probe ${_pulse.value.toStringAsFixed(2)}',
-                  key: const ValueKey('sqlite-probe'),
-                ),
-              );
-            },
-          ),
-        ),
-      );
+    home: Scaffold(
+      body: AnimatedBuilder(
+        animation: _pulse,
+        builder: (context, child) {
+          widget.onFrame();
+          return Center(
+            child: Text(
+              'dust SQLite probe ${_pulse.value.toStringAsFixed(2)}',
+              key: const ValueKey('sqlite-probe'),
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }

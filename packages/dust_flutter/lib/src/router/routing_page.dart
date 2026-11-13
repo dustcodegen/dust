@@ -39,8 +39,9 @@ Page<R> generatedPage<R>({
 enum _RoutePageReadiness { initial, waiting, ready }
 
 final class _RoutePageKey extends UniqueKey {
-  final ValueNotifier<_RoutePageReadiness> readiness =
-      ValueNotifier(_RoutePageReadiness.ready);
+  final ValueNotifier<_RoutePageReadiness> readiness = ValueNotifier(
+    _RoutePageReadiness.ready,
+  );
 
   void waitForCheck() {
     if (readiness.value == _RoutePageReadiness.ready) {
@@ -51,7 +52,7 @@ final class _RoutePageKey extends UniqueKey {
 
 final class _PendingRoutePage extends MaterialPage<Object?> {
   const _PendingRoutePage({required super.key})
-      : super(child: const SizedBox.shrink());
+    : super(child: const SizedBox.shrink());
 }
 
 final class _RoutePageContent extends StatefulWidget {

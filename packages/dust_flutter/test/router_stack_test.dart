@@ -1,5 +1,5 @@
 import 'package:dust_flutter/route.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -36,22 +36,27 @@ void main() {
     expect(delegate.debugPageKeys.single, same(initialKey));
   });
 
-  test('replace with a new location completes the replaced push future',
-      () async {
-    final delegate = GeneratedRouterDelegate<_TestRoute>(
-      _runtimeConfig(),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+  test(
+    'replace with a new location completes the replaced push future',
+    () async {
+      final delegate = GeneratedRouterDelegate<_TestRoute>(
+        _runtimeConfig(),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    final result = delegate.push<void>(const _TestRoute('/detail'));
-    await Future<void>.delayed(Duration.zero);
+      final result = delegate.push<void>(const _TestRoute('/detail'));
+      await Future<void>.delayed(Duration.zero);
 
-    delegate.replace(const _TestRoute('/other'));
-    await delegate.debugWaitForScheduledRefresh();
+      delegate.replace(const _TestRoute('/other'));
+      await delegate.debugWaitForScheduledRefresh();
 
-    expect(delegate.stack.map((route) => route.location), ['/safe', '/other']);
-    await expectLater(result, completion(isNull));
-  });
+      expect(delegate.stack.map((route) => route.location), [
+        '/safe',
+        '/other',
+      ]);
+      await expectLater(result, completion(isNull));
+    },
+  );
 
   test('go completes all pending push futures with null', () async {
     final delegate = GeneratedRouterDelegate<_TestRoute>(
@@ -149,45 +154,47 @@ void main() {
     expect(delegate.stack.map((route) => route.location), ['/safe']);
   });
 
-  test('deep-link restoration activates branch without losing hidden stacks',
-      () async {
-    final delegate = GeneratedRouterDelegate<_TestRoute>(
-      _runtimeConfig(
-        routeBranch: _testBranch,
-        restoreStack: (route) => switch (route.location) {
-          '/home/detail' => [
+  test(
+    'deep-link restoration activates branch without losing hidden stacks',
+    () async {
+      final delegate = GeneratedRouterDelegate<_TestRoute>(
+        _runtimeConfig(
+          routeBranch: _testBranch,
+          restoreStack: (route) => switch (route.location) {
+            '/home/detail' => [
               const _TestRoute('/home'),
               route,
             ],
-          '/orders/detail' => [
+            '/orders/detail' => [
               const _TestRoute('/orders'),
               route,
             ],
-          _ => [route],
-        },
-      ),
-    );
-    await delegate.debugWaitForScheduledRefresh();
+            _ => [route],
+          },
+        ),
+      );
+      await delegate.debugWaitForScheduledRefresh();
 
-    await delegate.setNewRoutePath(const _TestRoute('/home/detail'));
-    expect(delegate.stack.map((route) => route.location), [
-      '/home',
-      '/home/detail',
-    ]);
+      await delegate.setNewRoutePath(const _TestRoute('/home/detail'));
+      expect(delegate.stack.map((route) => route.location), [
+        '/home',
+        '/home/detail',
+      ]);
 
-    await delegate.setNewRoutePath(const _TestRoute('/orders/detail'));
-    expect(delegate.stack.map((route) => route.location), [
-      '/orders',
-      '/orders/detail',
-    ]);
+      await delegate.setNewRoutePath(const _TestRoute('/orders/detail'));
+      expect(delegate.stack.map((route) => route.location), [
+        '/orders',
+        '/orders/detail',
+      ]);
 
-    delegate.go(const _TestRoute('/home'));
-    await Future<void>.delayed(Duration.zero);
-    expect(delegate.stack.map((route) => route.location), [
-      '/home',
-      '/home/detail',
-    ]);
-  });
+      delegate.go(const _TestRoute('/home'));
+      await Future<void>.delayed(Duration.zero);
+      expect(delegate.stack.map((route) => route.location), [
+        '/home',
+        '/home/detail',
+      ]);
+    },
+  );
 
   test('browser back and forward can swap active branch stacks', () async {
     final delegate = GeneratedRouterDelegate<_TestRoute>(
@@ -221,10 +228,10 @@ void main() {
 }
 
 String? _testBranch(_TestRoute route) => switch (route.location) {
-      '/home' || '/home/detail' => 'mainTabs',
-      '/orders' || '/orders/detail' => 'ordersTabs',
-      _ => null,
-    };
+  '/home' || '/home/detail' => 'mainTabs',
+  '/orders' || '/orders/detail' => 'ordersTabs',
+  _ => null,
+};
 
 RouterRuntimeConfig<_TestRoute> _runtimeConfig({
   RouterBase<_TestRoute>? router,

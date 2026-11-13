@@ -13,36 +13,35 @@ import 'probe_wait.dart';
 Future<ShoppingCacheDatabase> openProbe(
   String path, {
   Duration busyTimeout = const Duration(seconds: 3),
-}) =>
-    ShoppingCacheDatabase.openBackground(
-      path,
-      options: SqliteConnectOptions(
-        journalMode: SqliteJournalMode.wal,
-        synchronous: SqliteSynchronousMode.full,
-        busyTimeout: busyTimeout,
-      ),
-    );
+}) => ShoppingCacheDatabase.openBackground(
+  path,
+  options: SqliteConnectOptions(
+    journalMode: SqliteJournalMode.wal,
+    synchronous: SqliteSynchronousMode.full,
+    busyTimeout: busyTimeout,
+  ),
+);
 
 /// Exact history, including timestamps and checksums, survives reopen/relaunch.
 Future<String> probeHistory(ShoppingCacheDatabase db) async => jsonEncode(
-      (await db.unsafe.fetch(
+  (await db.unsafe.fetch(
         'SELECT name, applied_at, checksum, checksum_source FROM __dust_schema_migrations ORDER BY name',
         [],
       ))
-          .unwrap()
-          .map(
-            (row) => [
-              for (final key in [
-                'name',
-                'applied_at',
-                'checksum',
-                'checksum_source'
-              ])
-                row.read<String>(key),
-            ],
-          )
-          .toList(),
-    );
+      .unwrap()
+      .map(
+        (row) => [
+          for (final key in [
+            'name',
+            'applied_at',
+            'checksum',
+            'checksum_source',
+          ])
+            row.read<String>(key),
+        ],
+      )
+      .toList(),
+);
 
 /// Checks generated timeout/retry before the instrumented native wait probe.
 Future<Map<String, Object?>> probeLockedOpening(
@@ -103,39 +102,37 @@ Future<void> seedProbe(ShoppingCacheDatabase db, String run) async {
       (await queryExecute(
         'INSERT INTO wishlist_cache (product_id, title, saved_at) VALUES (?, ?, ?)',
         [id, '$run-$id', '2026-10-15T00:00:00Z'],
-      ).execute(tx))
-          .unwrap();
+      ).execute(tx)).unwrap();
     }
     return const Ok(unit);
-  }))
-      .unwrap();
+  })).unwrap();
 }
 
 /// Validates committed rows and proves row mapping runs on the caller isolate.
 Future<void> verifyProbe(ShoppingCacheDatabase db, String run) async {
   final caller = Isolate.current;
-  final rows = (await queryAs<(int, String)>(
-    'SELECT product_id, title FROM wishlist_cache ORDER BY product_id LIMIT 32',
-    [],
-  ).fetchAllWith(db.connection, (row) {
-    expect(Isolate.current, caller);
-    return (row.read<int>('product_id'), row.read<String>('title'));
-  }))
-      .unwrap();
+  final rows =
+      (await queryAs<(int, String)>(
+            'SELECT product_id, title FROM wishlist_cache ORDER BY product_id LIMIT 32',
+            [],
+          ).fetchAllWith(db.connection, (row) {
+            expect(Isolate.current, caller);
+            return (row.read<int>('product_id'), row.read<String>('title'));
+          }))
+          .unwrap();
   expect(rows, [for (var id = 1; id <= 32; id++) (id, '$run-$id')]);
   expect(
     (await queryScalar<int>(
       'SELECT COUNT(*) FROM wishlist_cache',
       [],
-    ).fetchOne(db.connection))
-        .unwrap(),
+    ).fetchOne(db.connection)).unwrap(),
     128,
   );
   expect(
-    (await db.unsafe.fetch('PRAGMA integrity_check', []))
-        .unwrap()
-        .single
-        .read<String>('integrity_check'),
+    (await db.unsafe.fetch(
+      'PRAGMA integrity_check',
+      [],
+    )).unwrap().single.read<String>('integrity_check'),
     'ok',
   );
 }

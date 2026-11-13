@@ -53,7 +53,7 @@ fn pruned_values_bodies_and_trivia_do_not_require_complete_facts() {
 }
 
 #[test]
-fn private_named_parameter_gates_and_future_validation_keep_complete_facts() {
+fn private_named_parameter_gates_keep_complete_facts_only_when_required() {
     for text in [
         "void function({int? _value}) {}",
         "class C { C({@Other() int? _value}); }",
@@ -68,7 +68,7 @@ fn private_named_parameter_gates_and_future_validation_keep_complete_facts() {
             "{text}"
         );
         assert!(
-            !project(text, DartLanguageVersion::DART_3_13, &["Marker"]),
+            project(text, DartLanguageVersion::DART_3_13, &["Marker"]),
             "{text}"
         );
     }

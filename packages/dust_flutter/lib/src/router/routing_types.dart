@@ -10,15 +10,16 @@ typedef RouteStack<T extends Object> = List<T>;
 typedef RouteParser<T extends Object> = T Function(Uri uri);
 
 /// Builds a Flutter page for one typed route object and stack entry key.
-typedef RoutePageBuilder<T extends Object> = Page<dynamic> Function(
-  T route,
-  LocalKey key,
-  PopInvokedWithResultCallback<Object?> onPopInvoked,
-);
+typedef RoutePageBuilder<T extends Object> =
+    Page<dynamic> Function(
+      T route,
+      LocalKey key,
+      PopInvokedWithResultCallback<Object?> onPopInvoked,
+    );
 
 /// Resolves route-level guards for one typed route object.
-typedef RouteGuardResolver<T extends Object> = List<RouteGuardBase<T>> Function(
-    T route);
+typedef RouteGuardResolver<T extends Object> =
+    List<RouteGuardBase<T>> Function(T route);
 
 /// Converts a typed route object back into a URL location.
 typedef RouteLocation<T extends Object> = String Function(T route);
@@ -30,9 +31,10 @@ typedef RouteRequiresAuth<T extends Object> = bool Function(T route);
 typedef RouteBranch<T extends Object> = String? Function(T route);
 
 /// Returns debug metadata for a typed route.
-typedef RouteDebugInfoResolver<T extends Object> = RouteDebugInfo Function(
-  T route,
-);
+typedef RouteDebugInfoResolver<T extends Object> =
+    RouteDebugInfo Function(
+      T route,
+    );
 
 /// Restores the Navigator page stack for a browser/deep-link route.
 typedef RouteStackRestorer<T extends Object> = RouteStack<T> Function(T route);

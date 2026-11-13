@@ -10,8 +10,9 @@ To contribute to Dust, you'll need both the Rust and Dart toolchains installed o
 
 ### Prerequisites
 - **Rust:** Latest stable version (via [rustup](https://rustup.rs/))
-- **Dart:** SDK 3.0 or later (via [dart.dev](https://dart.dev/get-dart))
-- **Flutter:** (Optional) For running mobile examples
+- **Dart:** SDK 3.6 or later for Dart-only runtimes (via [dart.dev](https://dart.dev/get-dart)).
+- **Flutter:** 3.44 or later with Dart 3.12 for `dust_flutter`; 3.47 or later
+  for the SQLite shopping example and complete repository checks.
 - **SQLite:** System SQLite library for `dust_db_sqlite3` tests.
 
 ### Initial Setup

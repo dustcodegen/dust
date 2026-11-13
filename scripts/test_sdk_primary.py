@@ -184,6 +184,7 @@ class PrimarySdkTests(unittest.TestCase):
 
                 def run(command, cwd=ROOT, env=None):
                     calls.append(command)
+                    self.assertEqual(env["FLUTTER_ROOT"], str(Path("/flutter-sdk")))
                     if "build" in command:
                         (app / "lib/counter.g.dart").write_text("fresh state")
                         (app / "lib/generic_value.g.dart").write_text("fresh generic model")
@@ -195,7 +196,8 @@ class PrimarySdkTests(unittest.TestCase):
 
                 if not complete:
                     with self.assertRaises(ValueError):
-                        check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
+                        check_primary(run, Path("dust"), Path("dart"), output,
+                                      flutter=flutter, flutter_root=Path("/flutter-sdk"))
                     self.assertFalse(any("analyze" in call or "test" in call for call in calls))
                     continue
                 with patch("sdk_compat.check_generic_validation") as validation, \
@@ -203,7 +205,8 @@ class PrimarySdkTests(unittest.TestCase):
                         patch("sdk_compat.check_generic_inheritance") as inheritance, \
                         patch("sdk_compat.check_generic_sealed") as sealed, \
                         patch("sdk_compat.check_callback_formals") as callbacks:
-                    generated = check_primary(run, Path("dust"), Path("dart"), output, flutter=flutter)
+                    generated = check_primary(run, Path("dust"), Path("dart"), output,
+                                              flutter=flutter, flutter_root=Path("/flutter-sdk"))
                 validation.assert_called_once()
                 serde.assert_called_once()
                 inheritance.assert_called_once()
@@ -218,6 +221,10 @@ class PrimarySdkTests(unittest.TestCase):
                 self.assertFalse(any("db" in call or "--offline" in call for call in calls))
                 self.assertEqual((app / "analysis_options.yaml").read_bytes(),
                                  (ROOT / "fixtures/primary_flutter_consumer/analysis_options.yaml").read_bytes())
+
+    def test_flutter_primary_requires_its_explicit_sdk_root(self):
+        with self.assertRaisesRegex(ValueError, "matching SDK root"):
+            check_primary(None, Path("dust"), Path("dart"), Path("unused"), flutter=["flutter"])
 
 
 if __name__ == "__main__":

@@ -2,11 +2,13 @@
 
 use dust_parser_dart::DartLanguageVersion;
 use dust_text::SourceText;
+use std::sync::OnceLock;
 use tree_sitter::{Node, TreeCursor};
 
 use crate::{
     annotations::annotation_name,
     classes::parameter_name_node,
+    language_gates::has_invalid_declaring_modifier,
     syntax::{direct_child, text_range},
 };
 
@@ -17,29 +19,44 @@ pub(crate) fn can_project(
     version: DartLanguageVersion,
     full_surface_annotations: &[&str],
 ) -> bool {
-    let private_parameters = version < DartLanguageVersion::DART_3_12;
+    let legacy_defaults = version >= DartLanguageVersion::DART_3_13 && !has_dot_shorthand_nodes();
     !root.has_error()
-        && version < DartLanguageVersion::DART_3_13
         && !needs_full_surface(
             &mut root.walk(),
             source,
-            private_parameters,
+            version,
             full_surface_annotations,
+            legacy_defaults,
         )
+}
+
+/// Grammars without dot nodes cannot use native diagnostics to retain their defaults.
+fn has_dot_shorthand_nodes() -> bool {
+    static SUPPORTED: OnceLock<bool> = OnceLock::new();
+    *SUPPORTED.get_or_init(|| {
+        let language: tree_sitter::Language = tree_sitter_dart::LANGUAGE.into();
+        language.id_for_node_kind("dot_shorthand", true) != 0
+    })
 }
 
 /// Inspect structured names at every site, including nested callback parameters.
 fn needs_full_surface(
     cursor: &mut TreeCursor<'_>,
     source: &SourceText,
-    check_private_parameters: bool,
+    version: DartLanguageVersion,
     annotations: &[&str],
+    legacy_defaults: bool,
 ) -> bool {
     let node = cursor.node();
     if is_supported_annotation(node, source, annotations) {
         return true;
     }
-    if check_private_parameters && is_private_named_parameter(node, source) {
+    if version < DartLanguageVersion::DART_3_12 && is_private_named_parameter(node, source) {
+        return true;
+    }
+    if version >= DartLanguageVersion::DART_3_13
+        && requires_parameter_facts(node, source, legacy_defaults)
+    {
         return true;
     }
     // Metadata and declaring parameter names cannot occur in implementation
@@ -50,7 +67,7 @@ fn needs_full_surface(
     if cursor.goto_first_child() {
         loop {
             if cursor.node().is_named()
-                && needs_full_surface(cursor, source, check_private_parameters, annotations)
+                && needs_full_surface(cursor, source, version, annotations, legacy_defaults)
             {
                 return true;
             }
@@ -61,6 +78,42 @@ fn needs_full_surface(
         cursor.goto_parent();
     }
     false
+}
+
+/// Primary constructors and invalid modifiers need complete language-validation facts.
+fn requires_parameter_facts(node: Node<'_>, source: &SourceText, legacy_defaults: bool) -> bool {
+    match node.kind() {
+        "primary_constructor" => true,
+        "formal_parameter" | "default_formal_parameter" => {
+            has_invalid_declaring_modifier(source, text_range(node))
+                || legacy_defaults
+                    && node.kind() == "default_formal_parameter"
+                    && is_constructor_parameter_group(node.parent())
+        }
+        "optional_formal_parameters" if legacy_defaults => {
+            is_constructor_parameter_group(Some(node))
+                && (direct_child(node, "=").is_some() || direct_child(node, ":").is_some())
+        }
+        _ => false,
+    }
+}
+
+/// A callback's optional group belongs to its own signature, not an outer constructor.
+fn is_constructor_parameter_group(group: Option<Node<'_>>) -> bool {
+    group
+        .filter(|group| group.kind() == "optional_formal_parameters")
+        .and_then(|group| group.parent())
+        .filter(|list| list.kind() == "formal_parameter_list")
+        .and_then(|list| list.parent())
+        .is_some_and(|signature| {
+            matches!(
+                signature.kind(),
+                "constructor_signature"
+                    | "constant_constructor_signature"
+                    | "factory_constructor_signature"
+                    | "redirecting_factory_constructor_signature"
+            )
+        })
 }
 
 /// Unqualified annotation names need no owned strings or argument extraction.
@@ -119,3 +172,6 @@ mod tests;
 
 #[cfg(test)]
 mod preflight_tests;
+
+#[cfg(test)]
+mod modern_tests;

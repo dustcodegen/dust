@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 import '../models/auth_state.dart';
@@ -51,13 +51,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final request = _request();
 
     context.readAuthViewModel().register(
-          email: request.email,
-          username: request.username,
-          password: request.password,
-          firstName: request.firstName,
-          lastName: request.lastName,
-          phone: request.phone,
-        );
+      email: request.email,
+      username: request.username,
+      password: request.password,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+    );
   }
 
   RegisterRequest _request() {

@@ -1,5 +1,5 @@
 import 'package:dust_flutter/i18n.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../route.dart';
 
@@ -32,8 +32,8 @@ class OrderConfirmationScreen extends StatelessWidget {
                 'shop_order_placed',
                 defaultText: 'Order Placed!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               TranslatedText(
@@ -60,8 +60,8 @@ class OrderConfirmationScreen extends StatelessWidget {
                     Text(
                       '#${orderId.substring(orderId.length - 6)}',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),

@@ -155,6 +155,9 @@ fn benchmark_project_release_build_benchmark() {
     let cold_max = max_ms("DUST_PERF_COLD_MAX_MS", 2_000);
     let warm_max = max_ms("DUST_PERF_WARM_MAX_MS", 800);
     let invalidated_max = max_ms("DUST_PERF_INVALIDATED_MAX_MS", 1_400);
+    println!(
+        "5000-file benchmark: cold={cold_ms}ms warm={warm_ms}ms invalidated={invalidated_ms}ms"
+    );
 
     assert!(
         cold_scanned >= 5_000,

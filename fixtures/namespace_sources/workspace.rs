@@ -75,14 +75,17 @@ const BARRELS: &[(&str, &str)] = &[
         "dust_db_postgres/dust_db_postgres.dart",
         "export 'package:dust_dart/db.dart';",
     ),
-    ("flutter/material.dart", "export 'widgets.dart';"),
+    (
+        "material_ui/material_ui.dart",
+        "export 'package:flutter/widgets.dart';",
+    ),
+    (
+        "cupertino_ui/cupertino_ui.dart",
+        "export 'package:flutter/widgets.dart';",
+    ),
     (
         "flutter/widgets.dart",
         "class Widget {} class BuildContext {} const immutable=Object();",
-    ),
-    (
-        "flutter_localizations/flutter_localizations.dart",
-        "library flutter_localizations;",
     ),
     ("collection/collection.dart", "library collection;"),
     (

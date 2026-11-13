@@ -57,72 +57,76 @@ void main() {
     expect(appRoute.fragment, 'receipt');
   });
 
-  test('runs router route-information override before generated parsing',
-      () async {
-    final router = _PrefixRouter();
-    final state = Object();
-    final parser = GeneratedRouteInformationParser<_Route>(
-      router: router,
-      parseRoute: (uri) => _Route(_appLocation(uri)),
-      routeLocation: (route) => route.location,
-    );
+  test(
+    'runs router route-information override before generated parsing',
+    () async {
+      final router = _PrefixRouter();
+      final state = Object();
+      final parser = GeneratedRouteInformationParser<_Route>(
+        router: router,
+        parseRoute: (uri) => _Route(_appLocation(uri)),
+        routeLocation: (route) => route.location,
+      );
 
-    final prefixedRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse(
-          'https://shop.example/app/projects/42?tab=activity#comments',
+      final prefixedRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse(
+            'https://shop.example/app/projects/42?tab=activity#comments',
+          ),
+          state: state,
         ),
-        state: state,
-      ),
-    );
-    final unsafeHostRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse('https://evil.test/app/projects/42'),
-        state: state,
-      ),
-    );
-
-    expect(prefixedRoute.location, '/projects/42?tab=activity#comments');
-    expect(
-      unsafeHostRoute.location,
-      '/404?path=https%3A%2F%2Fevil.test%2Fapp%2Fprojects%2F42',
-    );
-    expect(router.seenStates.length, 2);
-    expect(router.seenStates.every((seen) => identical(seen, state)), isTrue);
-  });
-
-  test('normalizes web and mobile deep links into the same app route',
-      () async {
-    final parser = GeneratedRouteInformationParser<_Route>(
-      router: _ShoppingLinkRouter(),
-      parseRoute: (uri) => _Route(_appLocation(uri)),
-      routeLocation: (route) => route.location,
-    );
-
-    final webRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse(
-          'https://shop.example/app/products/42?tab=reviews#details',
+      );
+      final unsafeHostRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse('https://evil.test/app/projects/42'),
+          state: state,
         ),
-      ),
-    );
-    final universalLinkRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse(
-          'https://shop.example/products/42?tab=reviews#details',
-        ),
-      ),
-    );
-    final appLinkRoute = await parser.parseRouteInformation(
-      RouteInformation(
-        uri: Uri.parse('shopping:///products/42?tab=reviews#details'),
-      ),
-    );
+      );
 
-    expect(webRoute.location, '/products/42?tab=reviews#details');
-    expect(universalLinkRoute.location, '/products/42?tab=reviews#details');
-    expect(appLinkRoute.location, '/products/42?tab=reviews#details');
-  });
+      expect(prefixedRoute.location, '/projects/42?tab=activity#comments');
+      expect(
+        unsafeHostRoute.location,
+        '/404?path=https%3A%2F%2Fevil.test%2Fapp%2Fprojects%2F42',
+      );
+      expect(router.seenStates.length, 2);
+      expect(router.seenStates.every((seen) => identical(seen, state)), isTrue);
+    },
+  );
+
+  test(
+    'normalizes web and mobile deep links into the same app route',
+    () async {
+      final parser = GeneratedRouteInformationParser<_Route>(
+        router: _ShoppingLinkRouter(),
+        parseRoute: (uri) => _Route(_appLocation(uri)),
+        routeLocation: (route) => route.location,
+      );
+
+      final webRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse(
+            'https://shop.example/app/products/42?tab=reviews#details',
+          ),
+        ),
+      );
+      final universalLinkRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse(
+            'https://shop.example/products/42?tab=reviews#details',
+          ),
+        ),
+      );
+      final appLinkRoute = await parser.parseRouteInformation(
+        RouteInformation(
+          uri: Uri.parse('shopping:///products/42?tab=reviews#details'),
+        ),
+      );
+
+      expect(webRoute.location, '/products/42?tab=reviews#details');
+      expect(universalLinkRoute.location, '/products/42?tab=reviews#details');
+      expect(appLinkRoute.location, '/products/42?tab=reviews#details');
+    },
+  );
 
   test('restores typed route information from generated locations', () {
     final parser = GeneratedRouteInformationParser<_Route>(

@@ -54,9 +54,9 @@ class _ProductHeader extends StatelessWidget {
           defaultText: r'${price}',
           args: {'price': product.priceLabel},
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-              ),
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
         ),
       ],
     );
@@ -80,22 +80,21 @@ class _ReviewsSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         switch (state.status) {
-          ProductDetailStatus.initial ||
-          ProductDetailStatus.loading =>
+          ProductDetailStatus.initial || ProductDetailStatus.loading =>
             const Center(child: CircularProgressIndicator()),
           ProductDetailStatus.error => Text(
-              state.errorMessage ??
-                  context.tr(
-                    'shop_reviews_failed',
-                    defaultText: 'Failed to load reviews.',
-                  ),
-              style: const TextStyle(color: Colors.red),
-            ),
+            state.errorMessage ??
+                context.tr(
+                  'shop_reviews_failed',
+                  defaultText: 'Failed to load reviews.',
+                ),
+            style: const TextStyle(color: Colors.red),
+          ),
           ProductDetailStatus.success => Column(
-              children: state.reviews
-                  .map((review) => _ReviewTile(review: review))
-                  .toList(),
-            ),
+            children: state.reviews
+                .map((review) => _ReviewTile(review: review))
+                .toList(),
+          ),
         },
       ],
     );
@@ -136,9 +135,9 @@ class _ReviewTile extends StatelessWidget {
                   'shop_verified_purchase',
                   defaultText: 'Verified purchase',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
           ],
