@@ -350,8 +350,10 @@ extension FutureResultChain<T, E> on Future<Result<T, E>> {
 
 ## Row mapping is the generated part
 
-`@Derive([FromRow()])` on the row class is the whole declaration. A query names
-its row type and nothing else — no decoder argument, no registry.
+`@Derive([FromRow()])` and a generated `part` on the row class provide its
+mapping. Ordinary typed queries then name only the row type. See the
+[usage guide](../usage/db.md#row-mapping) for constructor requirements and
+primary-constructor examples.
 
 ### Why the obvious approaches fail
 
@@ -373,30 +375,42 @@ That leaves three options:
    derivable from `T`, which is the work a generator exists to do.
 3. **Generated extensions.** Below.
 
-Option 2 is what ships, because it is what JSON already does.
-`Serialize` can generate an instance interface — `mixin _$Order implements
-Serializable` — since the value exists before `serialize()` is called.
+Generated extensions handle ordinary typed queries. An explicit decoder remains
+available for custom row mapping and generic plumbing, using the same witness
+pattern as JSON. `Serialize` can generate an instance interface —
+`mixin _$Order implements Serializable` — since the value exists before
+`serialize()` is called.
 `Deserialize` cannot, for the same reason `FromRow` cannot: it constructs.
 Serde's answer there is a **const witness object**, `$OrderDeserializer
 implements Deserializer<Order, Map<String, Object?>>`, and the row side now
-mirrors it exactly:
+mirrors it. The runtime contract and generated witness look like this:
 
 ```dart
 abstract interface class RowDeserializer<T> {
   T deserialize(Row row);
 }
 
-final class $OrderFromRow implements RowDeserializer<Order> {
-  const $OrderFromRow();
+// Generated in the row library's part.
+final class $OrderRowDeserializer implements RowDeserializer<Order> {
+  const $OrderRowDeserializer();
   @override
-  Order deserialize(Row row) => OrderFromRow.fromRow(row);
+  Order deserialize(Row row) => _$OrderFromRow(row);
 }
 ```
 
-The witness is public API, and the `With` terminals take one for a row type Dust
-does not own. Nothing has to pass one for a row type it does: option 3 ships
-alongside it, below. `dust db build` reports a missing mapping first, and can
-only do so because row classes resolve package-wide.
+The witness is public API. `With` terminals accept a `RowMapper<T>` function;
+pass a handwritten function or a witness's `.asMapper` view:
+
+```dart
+final result = await queryAs<Order>(sql, parameters).fetchAllWith(
+  executor,
+  const $OrderRowDeserializer().asMapper,
+);
+```
+
+Generated DAO methods pass the witness's `deserialize` method directly. Normal
+row queries use the generated extensions below. DB validation can report a
+missing mapping because row classes resolve package-wide.
 
 ### Terminals come from generated extensions
 
@@ -404,26 +418,31 @@ only do so because row classes resolve package-wide.
 `parameters`, and the three `…With` primitives, but no bare terminals. (The name
 stays `QueryAs` rather than the `Query<T>` first sketched here, because `Query`
 is already the DAO method annotation.) The terminals are generated per row type,
-into the row class's own part file, beside the decoder:
+into the row class's own part file, beside the decoder. This generated excerpt
+assumes `Order` has named `int` fields `id`, `accountId`, and `quantity`, and
+`String` fields `item` and `placedAt`. The `accountId` and `placedAt` fields use
+`@Sqlx(rename: 'account_id')` and `@Sqlx(rename: 'placed_at')`, respectively:
 
 ```dart
-// order_model.g.dart
-Order _$OrderFromRow(Row row) => Order(
-      id: row.readInt('id'),
-      accountId: row.readInt('account_id'),
-      item: row.readString('item'),
-      quantity: row.readInt('quantity'),
-      placedAt: row.readString('placed_at'),
-    );
+// order.g.dart
+Order _$OrderFromRow(Row row) {
+  return Order(
+    id: row.read<int>('id'),
+    accountId: row.read<int>('account_id'),
+    item: row.read<String>('item'),
+    quantity: row.read<int>('quantity'),
+    placedAt: row.read<String>('placed_at'),
+  );
+}
 
 extension $OrderQuery on QueryAs<Order> {
-  Future<Order> fetchOne(DatabaseExecutor db) =>
+  Future<Result<Order, SqlxError>> fetchOne(Executor db) =>
       fetchOneWith(db, _$OrderFromRow);
 
-  Future<Order?> fetchOptional(DatabaseExecutor db) =>
+  Future<Result<Order?, SqlxError>> fetchOptional(Executor db) =>
       fetchOptionalWith(db, _$OrderFromRow);
 
-  Future<List<Order>> fetchAll(DatabaseExecutor db) =>
+  Future<Result<List<Order>, SqlxError>> fetchAll(Executor db) =>
       fetchAllWith(db, _$OrderFromRow);
 }
 ```
@@ -436,7 +455,7 @@ deriving both `FromRow` and `Deserialize` gains two unrelated top-level
 functions.
 
 Dart resolves extension members from the **static type** of the receiver, so
-`queryAs<Order>(...).fetchAll(pool)` picks `OrderQuery.fetchAll` at compile
+`queryAs<Order>(...).fetchAll(pool)` picks `$OrderQuery.fetchAll` at compile
 time. No lookup, no global state, no argument. As close as Dart gets to what
 Rust's trait resolution does for SQLx.
 
@@ -454,8 +473,8 @@ Three properties follow:
 - **`RowMapperRegistry` is deleted**, along with the generated
   `registerRowMapper` initializers.
 
-`RowMapper<T>` survives as the typedef `T Function(Row)` on the five executor
-primitives — the driver seam, which takes a function.
+`RowMapper<T>` survives as the typedef `T Function(Row)` on the three typed
+row-fetch primitives — the driver seam, which takes a function.
 
 Scalar and statement terminals need no generation: `QueryScalar<T>` and
 `QueryExecute` decode without a row class, so they ship as real methods.
@@ -465,7 +484,7 @@ Scalar and statement terminals need no generation: `QueryScalar<T>` and
 Static resolution is not generic:
 
 ```dart
-Future<Result<List<T>, SqlxError>> loadAll<T>(Query<T> q, Executor executor) =>
+Future<Result<List<T>, SqlxError>> loadAll<T>(QueryAs<T> q, Executor executor) =>
     q.fetchAll(executor); // does not compile
 ```
 

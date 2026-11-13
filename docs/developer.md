@@ -30,6 +30,7 @@ Feature generation lives in:
 - `dust_plugin_derive`
 - `dust_plugin_serde`
 - `dust_http_client_plugin`
+- `dust_server_plugin`
 - `dust_route_plugin`
 - `dust_state_plugin`
 - `dust_db_plugin`
@@ -43,6 +44,19 @@ Feature generation lives in:
 | `dust_db_sqlite3` | Native SQLite `Executor` implementation for generated Database code. |
 | `dust_db_postgres` | PostgreSQL `Executor` and pool implementation for generated Database code. |
 | `dust_server` | Dart HTTP server runtime consumed by generated server wiring. |
+
+## SQL validation dependency
+
+Build-time SQL validation uses the SQLx revision pinned in
+[`dust_db_plugin/Cargo.toml`](../crates/dust_db_plugin/Cargo.toml).
+The [SQLx 0.8.6 fork](https://github.com/dustcodegen/sqlx/commit/fda3043135e291e4d6c1447c081986de101c4cfb)
+changes only the `libsqlite3-sys` requirement to 0.39.1, which bundles patched
+SQLite 3.54.1 for RUSTSEC-2026-0459 and retains Dust's Rust 1.89 floor.
+SQLx 0.9.0 requires Rust 1.94 and its released SQLite driver caps
+`libsqlite3-sys` below 0.38, so upgrading to that release cannot supply this fix.
+Return to an upstream release when it provides patched SQLite bindings within
+the declared Rust floor; review any floor increase as a compatibility change.
+The exact commit pin keeps the tested patch reproducible until that upgrade.
 
 ## Build Pipeline
 

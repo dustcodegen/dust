@@ -73,6 +73,11 @@ the Dart ecosystem mirror. `Deserialize()` generates the private
 a class must expose a forwarding `fromJson` factory as shown above. The two
 traits can be used independently.
 
+[Primary constructors](primary-constructors.md#named-fields-and-defaults) can use
+the same traits and forwarding factory. Constructor defaults and JSON defaults
+are separate: annotate a field with `@SerDe(defaultValue: ...)` when a missing
+JSON key should use a default.
+
 ### Decode JSON Text as a Result
 
 Use `decodeJsonResult` or `decodeJsonObjectResult` when JSON text is an expected
@@ -366,6 +371,34 @@ final DateTime createdAt;
 > field at a codec for another Dart type, `dart analyze` reports the mismatch
 > in the generated file. If the incoming JSON has the wrong shape for the codec,
 > Dust wraps the failure with the field key.
+
+### Decode Custom Codecs as a Result
+
+`JsonHelper.decodeWithCodecResult` is available in current source after 0.3.1
+and remains **unreleased**. With the `serde.dart` import and `unixEpochCodec`
+above, handle a decoded JSON value without throwing for expected failures:
+
+```dart
+switch (JsonHelper.decodeWithCodecResult<DateTime, int>(
+  unixEpochCodec,
+  0,
+  'createdAt',
+)) {
+  case Ok(:final value):
+    print(value.toIso8601String());
+  case Err(:final error):
+    print(error.message);
+}
+```
+
+The result is `Result<DateTime, JsonCodecDecodeError>`. A null value or a value
+that is not an `int` returns `JsonDecodeTypeError`; an exception thrown by the
+codec returns `JsonCodecDecodeFailure`, retaining its original `cause`. Both
+errors retain the supplied field path. This helper accepts an already decoded
+value; use `decodeJsonResult` first when the input is JSON text.
+
+`JsonHelper.decodeWithCodec` remains the throwing adapter, and generated
+`fromJson` factories keep their existing throwing contract.
 
 ## Examples
 

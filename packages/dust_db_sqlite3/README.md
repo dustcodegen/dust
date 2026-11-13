@@ -372,7 +372,10 @@ errors also expose structured context for logging:
   code: `uniqueViolation` (including a duplicate primary key),
   `foreignKeyViolation`, `notNullViolation`, or `checkViolation`
 
-Generated DAOs pass `TypeFromRow.fromRow` mappers directly.
+Generated DAOs pass `const $TypeRowDeserializer().deserialize` directly.
+Typed row queries use the generated `fetchOne`, `fetchOptional`, and `fetchAll`
+extensions. See [row mapping](../../docs/usage/db.md#row-mapping) for model and
+constructor setup.
 
 ## Raw SQLite Access
 

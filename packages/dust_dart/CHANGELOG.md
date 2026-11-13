@@ -24,6 +24,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.3.1] - 2026-11-02
 
+### Added
+
+- `decodeJsonResult` and `decodeJsonObjectResult` for handling JSON syntax and
+  root-shape failures as typed `Result` values without changing existing
+  throwing entry points.
+
 ## [0.3.0] - 2026-10-26
 
 ### Changed

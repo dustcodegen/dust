@@ -37,18 +37,27 @@ still needs a focused review, tests, and the complete local gate.
 ## `dust_dart`
 
 The functional core already uses sealed `Option` and `Result` types, exhaustive
-patterns, and focused combinator extensions. The remaining exception and
-nullable paths are concentrated in JSON conversion, database row boundaries,
-and optional error metadata.
+patterns, and focused combinator extensions. Remaining work includes generated
+decoding, database row boundaries, and optional error metadata.
+
+### Completed migrations
+
+- In 0.3.1, `JsonHelper.asMap` uses typed map-key patterns while preserving its
+  key-labelled `ArgumentError` contract.
+- In 0.3.1, `decodeJsonResult` and `decodeJsonObjectResult` expose typed syntax
+  and root-shape failures; the existing throwing database helper adapts those
+  results for compatibility.
+- On current source after 0.3.1 (unreleased),
+  `JsonHelper.decodeWithCodecResult` returns typed input and codec failures.
+  `decodeWithCodec` remains its throwing compatibility adapter. See
+  [custom codec results](../usage/serde.md#decode-custom-codecs-as-a-result).
 
 ### Planned migrations
 
 | Priority | Area | Plan | Compatibility proof |
 | :--- | :--- | :--- | :--- |
-| 1 | `JsonHelper.asMap` | Replace exception-driven map-shape detection with a typed map pattern while preserving the same key-labelled `ArgumentError`. | Existing JSON helper tests plus wrong-key and nested-map cases. |
-| 1 | JSON decoding | Introduce a typed JSON decode error and result-returning helpers. Keep `fromJson`, `JsonHelper` throwing methods, and `decodeJsonObject` as compatibility adapters over the typed path. | Exact SerDe snapshots, malformed scalar/list/map/codec tests, and analyzer-clean generated fixtures. |
 | 2 | Row absence | Add `Option`-returning row readers alongside `readNullable`, then migrate Dust-generated row mapping and Dust-owned examples before considering removal of nullable aliases in a major release. | Both database drivers, generated row snapshots, SDK-consumer fixtures, and nullable-column examples. |
-| 2 | Custom codecs | Add a result-returning codec path so an expected decode failure does not need to throw. Keep exception translation around existing `Deserializer` implementations until callers migrate. | Codec success, typed failure, thrown user-code failure, and nested JSON-path tests. |
+| 2 | Generated decoding | Adopt the result-returning JSON and codec helpers in generated decoding while retaining existing throwing entry points. | Exact SerDe snapshots, codec success and failure, nested JSON paths, and analyzer-clean generated fixtures. |
 
 ### Deliberate boundaries
 
@@ -65,15 +74,12 @@ and optional error metadata.
 
 ### Implementation order
 
-1. Add typed JSON errors and result-returning helpers without changing generated
-   output.
-2. Move existing throwing JSON entry points onto those helpers and verify exact
-   exception compatibility.
-3. Add `Option` row readers to the shared interface and both driver adapters.
-4. Update the database emitter, snapshots, fixtures, and examples to use the
+1. Add `Option` row readers to the shared interface and both driver adapters.
+2. Update the database emitter, snapshots, fixtures, and examples to use the
    typed readers.
-5. Add the result-returning custom codec path, then migrate generated decoding.
-6. Review old adapters only during an explicitly approved major-release change.
+3. Migrate generated decoding onto the existing result-returning JSON and codec
+   paths while preserving throwing compatibility entry points.
+4. Review old adapters only during an explicitly approved major-release change.
 
 ## `dust_flutter`
 

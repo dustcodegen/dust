@@ -80,8 +80,10 @@ final sameValue = product ==
 ## Class Requirements
 
 > [!IMPORTANT]
-> Every derived class needs a `part 'filename.g.dart';` directive and the
-> generated `_$ClassName` mixin shown in the Quick Start.
+> The instance derives in this guide (`ToString`, `Eq`, and `CopyWith`) need a
+> `part 'filename.g.dart';` directive and the generated `_$ClassName` mixin shown
+> in the Quick Start. A row-only `FromRow` class needs the part but no mixin;
+> see [row mapping](db.md#row-mapping).
 
 - A class using `CopyWith()` must be concrete and have a constructor that
   accepts every field.
@@ -98,6 +100,10 @@ copyWith; replacing a model field preserves the inherited helper behavior.
 
 Fields are usually `final` for data-class usage, but Dust does not require
 immutability.
+
+Traditional and [primary constructors](primary-constructors.md) use the same
+derive traits and member calls. The primary-constructor guide includes
+positional fields, named parameters, defaults and named constructors.
 
 ## Value Equality
 

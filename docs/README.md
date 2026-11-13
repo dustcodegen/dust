@@ -12,7 +12,7 @@ for the package you are adding to your application.
 | Package | User documentation |
 | :--- | :--- |
 | Dust CLI | [Commands, workflows, and compatibility](./usage/README.md) |
-| `dust_dart` | [Derive](./usage/derive.md), [JSON](./usage/serde.md), [validation](./usage/validation.md), [HTTP](./usage/http.md), and [Database](./usage/db.md) |
+| `dust_dart` | [Derive](./usage/derive.md), [primary constructors](./usage/primary-constructors.md), [JSON](./usage/serde.md), [validation](./usage/validation.md), [HTTP](./usage/http.md), and [Database](./usage/db.md) |
 | `dust_flutter` | [State](./usage/state.md), [routing](./usage/routing.md), and [internationalization](./usage/i18n.md) |
 | `dust_db_sqlite3` | [SQLite runtime](../packages/dust_db_sqlite3/README.md) |
 | `dust_db_postgres` | [PostgreSQL runtime](../packages/dust_db_postgres/README.md) |

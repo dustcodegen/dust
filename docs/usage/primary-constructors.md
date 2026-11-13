@@ -1,28 +1,153 @@
 # Primary constructors
 
-Dust 0.3.0 supports class-header primary constructors under
-[#76](https://github.com/dustcodegen/dust/issues/76). Runtime SDK floors remain
-unchanged, and traditional declarations remain fully supported.
+Dust supports class-header primary constructors from 0.3.0 onward. Traditional
+constructors remain supported; choose either form for the documented derives.
 
-Dart primary constructors require language version 3.13 or newer. The class
-header declares the constructor; `final` or `var` parameters induce fields:
+## Set the language version
+
+Primary constructors require a Dart 3.13 or newer SDK and a package language
+version of at least 3.13. Set the lower SDK bound in your application's
+`pubspec.yaml`:
+
+```yaml
+environment:
+  sdk: ">=3.13.0 <4.0.0"
+```
+
+This enables the syntax in your application; it does not raise Dust's runtime
+package SDK floors. Add `dust_dart` and the CLI using the
+[installation guide](../../README.md#installation).
+
+## Positional fields
+
+The class header declares the constructor. `final` and `var` parameters declare
+fields; ordinary parameters without either keyword do not.
+
+In `user.dart`:
 
 ```dart
 import 'package:dust_dart/derive.dart';
 
 part 'user.g.dart';
 
-@Derive([ToString()])
+@Derive([Eq(), CopyWith()])
 class const User(final String name) with _$User;
-
-final user = User('Ada');
 ```
 
-No `this;` body is needed for this form. Add a `this` part only when needed for
-initializers, a constructor body, metadata or constructor documentation. Some
-strict documentation lints require documenting a public constructor separately;
-that is not a Dust requirement. Ordinary header parameters without `final` or
-`var` do not create fields. See [Dart's primary-constructor guide](https://dart.dev/language/primary-constructors).
+The equivalent traditional declaration uses the same derives and generated API:
+
+```dart
+@Derive([Eq(), CopyWith()])
+class TraditionalUser with _$TraditionalUser {
+  const TraditionalUser(this.name);
+
+  final String name;
+}
+```
+
+Generate and check from the application package root:
+
+```bash
+dust build
+dust check
+```
+
+Constructor calls and generated member calls keep their usual form:
+
+```dart
+final renamed = const User('Ada').copyWith(name: 'Grace');
+assert(renamed == const User('Grace'));
+```
+
+No `this;` body is needed for this form. Add a `this` part when you need
+initializers, a constructor body, constructor metadata or documentation. Some
+strict documentation lints require a public constructor to have its own docs;
+that is not a Dust requirement. See
+[Dart's primary-constructor guide](https://dart.dev/language/primary-constructors).
+
+## Named fields and defaults
+
+Use braces for named parameters. In `account.dart`:
+
+```dart
+import 'package:dust_dart/serde.dart';
+
+part 'account.g.dart';
+
+@Derive([Eq(), CopyWith(), Serialize(), Deserialize()])
+class const Account({
+  required final String name,
+  final String? note,
+  @SerDe(defaultValue: 0) final int visits = 0,
+}) with _$Account {
+  factory Account.fromJson(Map<String, Object?> json) => _$AccountFromJson(json);
+}
+```
+
+A constructor default applies to Dart calls. `@SerDe(defaultValue: 0)` separately
+defines the value used for an absent JSON key; the constructor default alone
+would not make that key optional during decoding.
+
+```dart
+const account = Account(name: 'Ada');
+final saved = account.copyWith(note: 'saved', visits: 2);
+final cleared = saved.copyWith(note: null);
+final decoded = Account.fromJson({'name': 'Ada'});
+assert(decoded == account);
+assert(cleared.note == null);
+```
+
+The [JSON guide](serde.md) documents rename rules, wire defaults and codecs;
+the [data-class guide](derive.md) documents equality and copy behavior.
+
+## Named constructors
+
+Put the constructor name after the class name. The generated copy uses that
+constructor and retains omitted values:
+
+```dart
+@Derive([CopyWith()])
+class Counter.named(var int value, [final String label = 'counter'])
+    with _$Counter;
+```
+
+Call it by its declared name:
+
+```dart
+final updated = Counter.named(1).copyWith(value: 2);
+assert(updated.value == 2 && updated.label == 'counter');
+```
+
+This is a class-header constructor. Named concise `new` declarations are a
+separate unsupported feature, as described below.
+
+## Row models
+
+Primary constructors work with `FromRow()` too. In `account_row.dart`:
+
+```dart
+import 'package:dust_dart/db.dart';
+
+part 'account_row.g.dart';
+
+@Derive([FromRow()])
+class const AccountRow(final String name, final String? note);
+```
+
+`FromRow()` generates a conversion function, a public row deserializer and typed
+query terminals, so this row-only class needs no generated mixin. Keep the row
+model in its normal-derive library and import it from the database/DAO library.
+After configuring the database and migrations, generate and verify both modes:
+
+```bash
+dust build
+dust db build
+dust check
+dust check --db
+```
+
+The [Database row-mapping guide](db.md#row-mapping) explains constructor
+requirements, SQL column names, defaults and the generated query API.
 
 ## Executable checks
 
@@ -56,18 +181,8 @@ SQL, bind shapes and required row columns, not every possible SQL type or
 runtime value; the [online/offline limits](db-query-parity.md#what-rust-sqlx-checks)
 still apply.
 
-Imported primary row classes use the shared parsed workspace facts during DAO
-validation and emission, not a source-line guess at the class header. Keep the
-row model in its normal-derive library and import it from the DAO library:
-
-```dart
-import 'package:dust_dart/db.dart';
-
-part 'account_row.g.dart';
-
-@Derive([FromRow()])
-class const AccountRow(final String name, final String? note);
-```
+Imported primary row classes use shared parsed workspace facts during DAO
+validation and emission, not a source-line guess at the class header.
 
 These executable checks define the supported source boundary. They cover typed
 declaring parameters, generic and inherited fields, constructor defaults,
