@@ -60,7 +60,7 @@ original options before no-Pub analysis/tests. No source warnings are suppressed
 The runner ignores only Dart 3.10's exact leading `Running build hooks...`
 stdout progress when parsing JIT JSON; unexpected output still fails. Raw logs
 are retained. CLI assertions are ordinary runtime checks, so AOT cannot silently
-disable them. Nine Python regression tests cover staging and proof validation:
+disable them. Python regression tests cover staging and proof validation:
 
 ```sh
 python3 -m unittest discover -s scripts -p test_sqlite_sdk_consumer.py -v

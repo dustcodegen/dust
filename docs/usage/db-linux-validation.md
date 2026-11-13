@@ -18,10 +18,14 @@ bash scripts/test_sqlite_linux.sh
 
 The wrapper builds the official Dart 3.12.1 Linux arm64 image by digest and
 installs test tooling. Only the disposable fault-test engine uses Debian's
-signed newer repository: `libsqlite3-0` and development headers are pinned to
-`3.53.4-2`. If those exact packages are unavailable, the build fails; it does
-not silently substitute a different native engine. Installed tool versions,
-image identity and source commit are retained with the results.
+[signed 2026-11-11 snapshot](https://snapshot.debian.org/archive/debian/20261111T000000Z/):
+`libsqlite3-0` and development headers are pinned to `3.54.1-2`.
+GPG signature verification remains enabled through Debian's archive keyring.
+`Check-Valid-Until: no` allows this immutable snapshot after its metadata expires;
+it does not disable signature verification. If those exact packages are
+unavailable, the build fails; it does not silently substitute a different native
+engine. Installed tool versions, image identity and source commit are retained
+with the results.
 
 The repository is mounted read-only. The runner copies unchanged package
 manifests/source into owned staging, retaining workspace markers. Only that
@@ -59,7 +63,22 @@ container then runs the relocated consumer bundle **offline**, with no source,
 Pub cache or staging from the first container. Its native/data/migration proof
 must match; only independently created database timestamps may differ.
 
-## Recorded local evidence
+## Pre-upgrade functional evidence (2026-11-12)
+
+With the unchanged sqlite3 3.5.2 binding and Dart 3.12.1 on Linux/aarch64,
+the signed-snapshot harness passed seven consumer tests, strict analysis and
+formatting, JIT and relocated AOT. It also passed 882 runtime test executions:
+375 portable tests on bundled SQLite 3.53.4, then 507 tests on the separate
+full-API system SQLite 3.54.1 (375 portable + 132 native VFS I/O).
+Unfiltered executable runtime coverage was **965/965 (100%)**.
+
+The relocated consumer passed again in a fresh, network-disabled container
+without source, Pub cache or staging from the first container. Native, data and
+migration facts matched. The native VFS fault matrix exercised the system
+engine only. This functional run does not validate a patched SQLite 3.54.x
+bundle; its bundled engine remained SQLite 3.53.4.
+
+## Historical local evidence (2026-10-15)
 
 On 2026-10-15, Dart 3.12.1 on local Linux/aarch64 passed the independent
 consumer's seven tests/JIT/relocated AOT, 375 bundled-engine portable tests,

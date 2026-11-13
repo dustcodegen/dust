@@ -40,7 +40,10 @@ mixin class _PrimaryMarker();
 
 /// A primary model can apply a mixin class with a trivial primary constructor.
 @Derive([ToString()])
-class const TaggedRecord(final String tag) with _PrimaryMarker, _$TaggedRecord {
+class const TaggedRecord(
+  /// Tag attached to this record.
+  final String tag,
+) with _PrimaryMarker, _$TaggedRecord {
   /// Creates a tagged record.
   this;
 }

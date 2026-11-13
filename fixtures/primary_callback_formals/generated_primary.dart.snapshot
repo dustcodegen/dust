@@ -5,11 +5,17 @@ part 'callback_probe.g.dart';
 /// A callback-bearing model using declaring primary parameters.
 @Derive([CopyWith(), ToString()])
 class const CallbackProbe(
+  /// Tests a string.
   final bool predicate(String value),
+  /// Returns a nullable result without making the callback nullable.
   final bool? maybe(String value),
+  /// An independently nullable callback.
   final bool nullable(String value)?,
+  /// Preserves generic callback binders and bounds.
   final T echo<T extends Object>(T value),
+  /// Invokes a nested callback with an optional argument.
   final bool nested(bool next(String value), [int? count]),
+  /// Keeps named invocation requiredness.
   final bool named({required String value, int? count}),
 ) with _$CallbackProbe {
   /// Creates a model retaining each callback's invocation type.

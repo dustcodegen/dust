@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Only the disposable fault-test engine comes from the signed newer repository.
 COPY sqlite_linux.sources /etc/apt/sources.list.d/dust-sqlite.sources
+# Exact SQLite versions select the snapshot; other dependencies prefer trixie.
 RUN apt-get update && apt-get install -y --no-install-recommends -t trixie \
-    libsqlite3-0=3.53.4-2 libsqlite3-dev=3.53.4-2
+    libsqlite3-0=3.54.1-2 libsqlite3-dev=3.54.1-2
 
 ENTRYPOINT ["python3", "/source/scripts/sqlite_linux_runner.py"]

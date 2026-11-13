@@ -1,5 +1,7 @@
 Types: deb
-URIs: https://deb.debian.org/debian
+URIs: https://snapshot.debian.org/archive/debian/20261111T000000Z/
 Suites: unstable
 Components: main
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+# The immutable snapshot retains signature checks after its release date expires.
+Check-Valid-Until: no

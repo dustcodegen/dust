@@ -87,6 +87,16 @@ class ConsumerTests(unittest.TestCase):
                         (consumer / "migrations/0001_shopping_cache.sql").read_bytes(),
                         (ROOT / relative / "migrations/0001_shopping_cache.sql").read_bytes(),
                     )
+                    for native in (
+                        "android/app/src/main/AndroidManifest.xml", "ios/Runner/Info.plist",
+                        "ios/Podfile", "ios/Runner.xcodeproj/project.pbxproj",
+                        "macos/Podfile", "macos/Runner.xcodeproj/project.pbxproj",
+                    ):
+                        self.assertEqual((consumer / native).read_bytes(),
+                                         (ROOT / relative / native).read_bytes())
+                else:
+                    for platform in ("android", "ios", "macos"):
+                        self.assertFalse((consumer / platform).exists())
 
     def test_accepts_complete_proof(self) -> None:
         self.assertEqual(validate_proof(proof()), proof())

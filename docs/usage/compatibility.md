@@ -147,8 +147,9 @@ independent prerelease line.
 ## Maintainer Rule
 
 When a publishable package changes runtime source, public API, dependency
-constraints, runtime behavior, or generated-code compatibility, bump that
-package's `pubspec.yaml` version and update its `CHANGELOG.md` in the same PR.
+constraints, runtime behavior, or generated-code compatibility, record it under
+that package's `[Unreleased]` changelog section. The CLI and all publishable
+packages move together in an explicitly approved release-preparation change.
 If generated code needs the new package API, update
 `compatibility/dust-cli-packages.json` too.
 
