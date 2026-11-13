@@ -31,6 +31,16 @@ def stage_consumer(
             ignore = (shutil.ignore_patterns("generated_models")
                       if relative == "examples/benchmark_project" and name == "lib" else None)
             shutil.copytree(source / name, target / name, ignore=ignore)
+    # Routing contracts read host configuration; native build caches stay outside staging.
+    for name in (
+        "android/app/src/main/AndroidManifest.xml", "ios/Runner/Info.plist",
+        "ios/Podfile", "ios/Runner.xcodeproj/project.pbxproj",
+        "macos/Podfile", "macos/Runner.xcodeproj/project.pbxproj",
+    ):
+        if (source / name).is_file():
+            destination = target / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source / name, destination)
     for name in ("pubspec.yaml", "analysis_options.yaml"):
         shutil.copy2(source / name, target / name)
     if packages is None:
