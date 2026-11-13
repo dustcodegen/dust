@@ -77,7 +77,7 @@ fn namespace_projection_cannot_hide_invalid_interfaces_or_root_generation_errors
         ),
         (
             "3.13",
-            "class C { C([Kind value = .ready]); }",
+            "class C({final Kind value = .ready});",
             "does not support dot shorthands",
         ),
         (

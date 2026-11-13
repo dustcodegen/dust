@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Namespace lookup**: allow dot shorthand in ordinary dependency constructor
+  defaults while retaining generation errors and language-version checks.
 - **Build dependencies**: update rustix to 1.1.6 for RUSTSEC-2026-0486.
 - **SQLite validation**: use patched bundled SQLite 3.54.1 through a pinned
   SQLx 0.8.6 fork, addressing RUSTSEC-2026-0459 without raising the Rust floor.

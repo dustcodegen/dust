@@ -44,7 +44,7 @@ fn initializers_do_not_hide_headers_defaults_metadata_or_static_fields() {
         "class C { @Marker(.ready) Kind value = Kind.ready; }",
         "class C { final callback = ([Kind value = .ready]) => value; }",
         "class C { final callback = () { @Marker(.ready) final value = Kind.ready; return value; }; }",
-        "class C { C([Kind value = .ready]); }",
+        "class C({final Kind value = .ready});",
         "class C { C() : value = .ready; final Kind value; }",
         "class C { C() { Kind value = .ready; } }",
         "class C { new(); }",

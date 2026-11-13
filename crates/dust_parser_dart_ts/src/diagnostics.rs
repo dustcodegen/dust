@@ -10,7 +10,7 @@ use crate::syntax::{direct_named_child, node_text, text_range};
 mod candidates;
 /// Concise constructor classification shared by both traversals.
 mod constructors;
-/// Dependency method/function defaults, not constructor or metadata defaults.
+/// Declared callable defaults, separate from metadata and nested parameter values.
 mod defaults;
 
 /// Effective-version filtering preserves both complete diagnostic views.
