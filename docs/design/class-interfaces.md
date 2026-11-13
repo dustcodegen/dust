@@ -10,10 +10,10 @@ dependency by requiring `@Extract(Type)` to name the extractor explicitly.
 
 ## Problem
 
-`ClassIr` records `superclass_name: Option<String>` and `is_interface`, but
-nothing about `implements` (`crates/dust_ir/src/class.rs`). The word does not
-appear anywhere in `dust_parser_dart` or `dust_parser_dart_ts`, so the
-information is lost at parse time, not at lowering.
+`ClassIr` records a superclass, written mixins, and `is_interface`, but nothing
+about `implements` (`crates/dust_ir/src/class.rs`). The parser distinguishes an
+`implements` clause from `extends` and `with`, but discards the named
+interfaces instead of carrying them into the parsed surface.
 
 Plugins that need to know "does this class implement interface X" therefore
 guess from method shape. Serde detects `toJson` that way
@@ -42,54 +42,35 @@ costs:
 ```rust
 pub struct ParsedClassSurface {
     // ...
-    pub superclass_name: Option<String>,
-    /// Interfaces named in an `implements` clause, in source order.
-    pub interfaces: Vec<ParsedTypeRef>,
-    /// Mixins named in a `with` clause, in source order.
-    pub mixins: Vec<ParsedTypeRef>,
+    /// Written interfaces in source order.
+    pub interfaces: Vec<ParsedTypeSurface>,
 }
 ```
 
-`mixins` rides along because it is the same grammar neighborhood and the same
-one-line extraction, and because `with _$TodoController` is how every generated
-mixin is applied. A plugin that wants to verify its own mixin was applied
-currently cannot.
-
-`ParsedTypeRef` carries the written name plus type arguments as text, which is
-what distinguishes `Extractable<AuthUser>` from `Extractable<Todo>`:
-
-```rust
-pub struct ParsedTypeRef {
-    pub name: String,
-    pub type_arguments: Vec<String>,
-    pub span: TextRange,
-}
-```
-
-`TypeIr` already exists for lowered types; whether `interfaces` should carry
-`TypeIr` instead of a new struct is the one open question worth settling before
-implementation, and it depends on whether `TypeIr` can be built without
-resolution.
+`ParsedTypeSurface` already carries the written type shape and span for class
+mixins and superclasses, so no second parser type is needed. The remaining
+design choice is whether lowered interfaces should reuse `TypeIr` or have a
+small `InterfaceApplicationIr`, matching the existing dedicated superclass and
+mixin representations.
 
 ## Where the change lands
 
 | Crate | Change |
 | :--- | :--- |
-| `crates/dust_parser_dart` | add the fields to `ParsedClassSurface` (`src/surface.rs`) |
+| `crates/dust_parser_dart` | add `interfaces` to `ParsedClassSurface` (`src/surface.rs`) |
 | `crates/dust_parser_dart_ts` | extract them in `src/classes/class_decl.rs`, beside the existing `superclass` field read |
-| `crates/dust_ir` | add `interfaces` and `mixins` to `ClassIr` (`src/class.rs`) |
-| `crates/dust_driver` | copy them through `lower.rs`, near the existing `superclass_name` hand-off |
+| `crates/dust_ir` | add `interfaces` to `ClassIr` (`src/class.rs`) |
+| `crates/dust_driver` | lower them beside the existing superclass and mixin hand-off |
 | `crates/dust_plugin_serde` | replace structural `toJson` detection, keeping it as a fallback |
 
-The tree-sitter side is the only part with real unknowns: `class_declaration`
-exposes `superclass` as a named field today, and in tree-sitter-dart the
-`implements` clause is a child of that same `superclass` node rather than a
-sibling. Confirming the node kinds against the vendored grammar is the first
-task, not an assumption to build on.
+The tree-sitter side still needs one focused proof: existing fixtures show that
+`implements` is not mistaken for a superclass or mixin, but do not extract its
+types. Confirm the exact child kinds against the vendored grammar before adding
+the field.
 
 ## Detection policy
 
-Adding the clause does not mean structural detection goes away. The rule:
+Adding the clause would preserve structural detection. Proposed policy:
 
 1. A declared interface is authoritative. `implements IntoResponse` means the
    class is a response type; a wrong method shape is now a Dust diagnostic
@@ -108,7 +89,6 @@ Adding the clause does not mean structural detection goes away. The rule:
 | serde `toJson` | structural, false positives accepted | declared, with a diagnostic |
 | server `IntoResponse`, `Validatable` | structural | declared |
 | server `Extractable` | irrelevant, the extractor type is named at the call site | bare-type extractor parameters become possible |
-| generated mixins | unverifiable | Dust can check `with _$Foo` was applied and diagnose when it was not |
 
 The server plugin's possible bare-type extractor form is the largest of these.
 It needs one more thing beyond this change: a `dust_server.extractables.v1`
@@ -122,13 +102,12 @@ server plugin, not here.
 
 | Phase | Scope | Exit criteria |
 | :--- | :--- | :--- |
-| 0 | Confirm the tree-sitter node kinds for `implements` and `with` against the vendored grammar; add parser fixtures covering `implements A`, `implements A<T>, B`, `with M implements A`, and `extends S with M implements A`. | Fixtures assert the extracted names. |
-| 1 | `ParsedClassSurface` fields, tree-sitter extraction, `ClassIr` fields, lowering hand-off. | A class's interfaces survive to IR, asserted in `dust_driver` lowering tests. |
+| 0 | Confirm the tree-sitter node kinds for `implements`; add parser fixtures covering `implements A`, `implements A<T>, B`, `with M implements A`, and `extends S with M implements A`. | Fixtures assert the extracted names. |
+| 1 | `ParsedClassSurface.interfaces`, tree-sitter extraction, `ClassIr.interfaces`, and the lowering hand-off. | A class's interfaces survive to IR, asserted in `dust_driver` lowering tests. |
 | 2 | Serde adopts the declared clause with structural fallback and a mismatch diagnostic. | Existing serde fixtures unchanged; new fixture for the mismatch diagnostic. |
-| 3 | Mixin verification: diagnose a `@Derive`d class missing its generated `with _$Name`. | Fixture for the missing-mixin diagnostic. |
 
-Phases 2 and 3 are independent of each other and either can be dropped without
-stranding Phase 1.
+Phase 1 remains useful as a structured language fact even if no plugin adopts
+it immediately.
 
 ## Risks
 

@@ -168,11 +168,14 @@ independent prerelease line.
 ## Maintainer Rule
 
 When a publishable package changes runtime source, public API, dependency
-constraints, runtime behavior, or generated-code compatibility, record it under
-that package's `[Unreleased]` changelog section. The CLI and all publishable
-packages move together in an explicitly approved release-preparation change.
+constraints, runtime behavior, or generated-code compatibility, record the change
+under `[Unreleased]` in that package's `CHANGELOG.md`. Keep package versions
+unchanged until an explicitly approved release-preparation change moves the CLI
+and every publishable package together.
+
 If generated code needs the new package API, update
-`compatibility/dust-cli-packages.json` too.
+`compatibility/dust-cli-packages.json` and this guide too. See the
+[contribution rules](../../CONTRIBUTING.md#package-version-rule).
 
 ## Local SDK regression gate
 

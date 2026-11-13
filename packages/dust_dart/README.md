@@ -153,6 +153,7 @@ Result<List<int>, String> parseAll(List<String> texts) =>
 ## Documentation
 
 - [Data classes](https://github.com/dustcodegen/dust/blob/main/docs/usage/derive.md)
+- [Primary constructors (Dart 3.13+)](https://github.com/dustcodegen/dust/blob/main/docs/usage/primary-constructors.md)
 - [JSON serialization](https://github.com/dustcodegen/dust/blob/main/docs/usage/serde.md)
 - [Validation](https://github.com/dustcodegen/dust/blob/main/docs/usage/validation.md)
 - [HTTP clients](https://github.com/dustcodegen/dust/blob/main/docs/usage/http.md)

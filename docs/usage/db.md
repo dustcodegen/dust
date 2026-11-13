@@ -139,6 +139,8 @@ Generate row mappers, then validate SQL and generate the database code:
 ```bash
 dust build
 dust db build
+dust check
+dust check --db
 ```
 
 Open the database and pass its connection to a DAO:
@@ -397,9 +399,54 @@ ordering, limits, and offsets are passed to SQLite and SQLx as written.
 
 ## Row Mapping
 
-`@Derive([FromRow()])` generates three things, following the same naming the
-other derives use — a private conversion function, a public witness, and the
-query terminals:
+### Declare the row and its constructor
+
+A row model supplies its own constructor. For example, in `account_row.dart`:
+
+```dart
+import 'package:dust_dart/db.dart';
+
+part 'account_row.g.dart';
+
+@Derive([FromRow()])
+final class AccountRow {
+  const AccountRow(this.name, this.note);
+
+  final String name;
+  final String? note;
+}
+```
+
+On Dart 3.13+, the equivalent [primary constructor](primary-constructors.md)
+replaces that class declaration with:
+
+```dart
+@Derive([FromRow()])
+class const AccountRow(final String name, final String? note);
+```
+
+Both forms need the `part` directive. `FromRow()` alone adds no instance members
+and does not require `with _$AccountRow`. Import this row library into the
+separate database/DAO library; use `dust build` for the row derive, then
+`dust db build` for checked queries, as in the Quick Start.
+
+The constructor must be able to initialize the row fields. Dust chooses the
+first constructor for which each row field has a matching Dart parameter or a
+field default. Keep required inputs tied to mapped fields; additional required
+parameters used only for handwritten preprocessing are outside this mapping
+contract. Column renames change the SQL column lookup, not Dart constructor
+parameter names.
+
+Select the mapped columns even when their Dart types are nullable. Nullability
+permits SQL `NULL`, not a missing result column. A constructor parameter default
+or `@Sqlx(defaultValue: ...)` can supply a fallback for a selected null value;
+`@Sqlx(skip: true)` needs a default for an ignored field.
+
+### Generated API
+
+`@Derive([FromRow()])` generates a private conversion function, a public row
+deserializer (the witness), and typed query terminals. The following shows their
+API shape with implementation bodies omitted:
 
 ```dart
 Order _$OrderFromRow(Row row) { ... }
@@ -422,6 +469,19 @@ be an instance method because the value already exists, while reading a row
 
 Generated DAO methods decode through the witness, so generated database code
 depends on neither side-effect registration nor import order.
+
+The generated witness also works where an API needs an explicit mapper function:
+
+```dart
+const decoder = $AccountRowRowDeserializer();
+final account = await queryAs<AccountRow>(
+  'SELECT name, note FROM accounts',
+  [],
+).fetchOneWith(database.connection, decoder.asMapper);
+```
+
+For ordinary queries of a generated row type, prefer the generated `fetchOne`,
+`fetchOptional` and `fetchAll` terminals below; they supply the mapper for you.
 
 `@Sqlx` supports these mapping options:
 

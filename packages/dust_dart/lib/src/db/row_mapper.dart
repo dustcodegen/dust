@@ -10,7 +10,7 @@ typedef RowMapper<T> = T Function(Row row);
 /// reading a row *constructs* one, so there is no instance to declare it on.
 /// The generated witness object carries the capability instead, which is what
 /// lets the analyzer see that a type has no row mapping — passing a type with
-/// no `@Derive([FromRow()])` names a `$TFromRow` that does not exist.
+/// no `@Derive([FromRow()])` names a `$TRowDeserializer` that does not exist.
 abstract interface class RowDeserializer<T> {
   /// Converts [row] into a Dart value.
   T deserialize(Row row);
@@ -25,7 +25,7 @@ extension RowDeserializerMapper<T> on RowDeserializer<T> {
 /// A [RowDeserializer] built from a plain [RowMapper] function.
 ///
 /// The escape hatch for a row type Dust did not generate. Everything Dust does
-/// generate has its own `$TypeFromRow`, which is the one the analyzer can check.
+/// generate has its own `$TypeRowDeserializer`, which the analyzer can check.
 final class RowMapperDeserializer<T> implements RowDeserializer<T> {
   /// Wraps [mapper] as a row deserializer.
   const RowMapperDeserializer(this.mapper);

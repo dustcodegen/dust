@@ -100,6 +100,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Typed JSON decoding**: `decodeJsonResult` and `decodeJsonObjectResult`
+  return structured syntax and root-shape failures without throwing, while the
+  existing database JSON helper keeps its throwing compatibility contract.
+
 - **Server clients**: `server.client_package` can target one package, while
   `server.client_packages` can split routes into separate packages using their
   existing tags. Dust derives separate standalone Dio clients for each

@@ -24,7 +24,7 @@ pub(super) fn has_supported_annotation(
 /// immediately followed by `(`. String literals are skipped, so the SQL handed
 /// to `@Query` does not contribute `count` from `count(*)`.
 pub(super) fn annotation_short_names(source: &str) -> Vec<&str> {
-    // shortcut: lexical candidates only; replace with resolved graph discovery in #114.
+    // shortcut: lexical candidates only; resolve declarations if discovery needs owner filtering.
     let mut names = Vec::new();
     for (index, _) in source.match_indices('@') {
         let Some((name, after)) = identifier_at(source, index + 1) else {

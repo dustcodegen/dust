@@ -19,8 +19,13 @@ one-way:
 | `dust_ir` | lowered Dust IR | generator features need new IR shape |
 | `dust_resolver` | annotation, type, and constructor resolution | parsed data needs semantic interpretation |
 | `dust_plugin_api` | plugin interfaces and shared workspace analysis | new plugin hooks or shared analysis rules |
-| `dust_plugin_derive` | `ToString`, `Eq`, `CopyWith` generation | core derive behavior changes |
-| `dust_plugin_serde` | JSON encode/decode generation | serde behavior or validation changes |
+| `dust_plugin_derive` | `ToString`, `Debug`, `Eq`, `CopyWith`, and `Validate` generation | core derive or validation behavior changes |
+| `dust_plugin_serde` | JSON encode/decode generation | serde annotations or JSON conversion contracts change |
+| `dust_http_client_plugin` | Dio HTTP client generation | HTTP requests, responses, streaming, or client output change |
+| `dust_server_plugin` | HTTP server and backend-derived client generation | server routes, extractors, or generated client contracts change |
+| `dust_route_plugin` | typed Navigator 2.0 route generation | Flutter route parsing, stacks, or page assembly changes |
+| `dust_state_plugin` | typed Flutter state generation | ViewModel, state, scope, or listener generation changes |
+| `dust_db_plugin` | SQL validation and Database, DAO, and FromRow generation | schema validation, SQL bindings, or row mapping changes |
 | `dust_emitter` | final `.g.dart` assembly and write path | file header, layout, or emission ordering changes |
 | `dust_workspace` | package root and package-config discovery | workspace/package resolution changes |
 | `dust_driver` | build, check, watch, clean, doctor orchestration | pipeline, cache, scheduling, or progress changes |

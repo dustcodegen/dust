@@ -36,7 +36,7 @@
 
 ## Checklist
 
-- [ ] I have followed the [Contributing Guidelines](CONTRIBUTING.md).
+- [ ] I have followed the [Contributing Guidelines](https://github.com/dustcodegen/dust/blob/main/CONTRIBUTING.md).
 - [ ] I have added tests for my changes.
 - [ ] I have updated the documentation (if applicable).
 - [ ] My code follows the project's engineering standards (No panics, determinism, etc.).

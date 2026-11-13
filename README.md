@@ -71,8 +71,8 @@ dust --version
 
 `dust upgrade` and both installers resolve releases from `dustcodegen/dust`.
 
-Dust packages have their own pub versions. When changing the CLI or packages,
-check the [compatibility guide](docs/usage/compatibility.md).
+The CLI and runtime packages release together. When changing versions, check
+the [compatibility guide](docs/usage/compatibility.md).
 
 ## Quick Start
 
