@@ -16,6 +16,9 @@ use crate::support::{
 #[path = "validation_tests/defaults.rs"]
 mod defaults;
 
+#[path = "validation_tests/skipped_nullable.rs"]
+mod skipped_nullable;
+
 #[path = "validation_tests/parameters.rs"]
 mod parameters;
 

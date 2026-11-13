@@ -50,6 +50,7 @@ python3 -m unittest discover -s scripts -p 'test_sdk*.py'
 
 python3 scripts/strict_generated_analyze.py \
   --package fixtures/serde_json_app
+(cd fixtures/serde_json_app && dart pub get && dart test)
 python3 scripts/strict_generated_analyze.py \
   --package fixtures/http_client_app
 python3 scripts/strict_generated_analyze.py \

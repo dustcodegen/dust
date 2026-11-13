@@ -16,6 +16,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `JsonHelper.decodeWithCodecResult`, returning typed JSON input and custom
   codec failures while keeping `decodeWithCodec` as the throwing adapter.
 
+### Fixed
+
+- Nullable skipped SerDe fields no longer require `defaultValue: null` or a
+  redundant-argument lint ignore. Non-nullable skipped fields still require a
+  valid explicit default; optional Dart defaults are preserved for nullable fields.
+
 ## [0.3.1] - 2026-11-02
 
 ## [0.3.0] - 2026-10-26

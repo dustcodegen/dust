@@ -47,6 +47,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Nullable skipped fields**: allow `skip` and `skipDeserializing` without
+  `defaultValue: null`, preserving Dart defaults and non-nullable validation.
 - **Dependency cache invalidation**: include the Rust dependency lockfile in
   generation fingerprints so runtime updates cannot reuse stale output proofs.
 - **Dependency parsing**: project valid Dart 3.13 constructor defaults without

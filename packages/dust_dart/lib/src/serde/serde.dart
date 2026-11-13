@@ -131,8 +131,10 @@ final class SerDe extends DeriveConfig {
 
   /// Fallback value used when deserialization omits the annotated field.
   ///
-  /// Fields skipped for deserialization with [skip] or [skipDeserializing]
-  /// must provide this value so generated constructors stay total.
+  /// Non-nullable fields skipped with [skip] or [skipDeserializing] must provide
+  /// this value. Nullable skipped fields may omit it: optional constructor or
+  /// field defaults are preserved, otherwise null is used. An explicit value,
+  /// including null, takes precedence over constructor defaults.
   final Object? defaultValue;
 
   /// Whether the field should be skipped for both serialization and

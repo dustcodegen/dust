@@ -208,6 +208,17 @@ fn emit_from_json_body(
 
     let mut values = Vec::new();
     for field in &class.fields {
+        if field.ty.is_nullable()
+            && field.serde.as_ref().is_some_and(|serde| {
+                serde.skip_deserializing && serde.default_value_source.is_none()
+            })
+            && !constructor
+                .params
+                .iter()
+                .any(|param| param.name == field.name && param.is_required)
+        {
+            continue;
+        }
         let field_var = names.local(&format!("{}Value", field.name)).to_owned();
         let value_expr = emit_field_decode(
             class,
